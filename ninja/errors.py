@@ -1,4 +1,5 @@
 import traceback
+from functools import partial
 from typing import TYPE_CHECKING, List, Dict, Any
 from django.conf import settings
 from django.http import HttpRequest, HttpResponse, Http404
@@ -25,29 +26,31 @@ class HttpError(Exception):
 
 
 def set_default_exc_handlers(api: "NinjaAPI"):
-    api.add_exception_handler(Exception, _default_exception)
-    api.add_exception_handler(Http404, _default_404)
-    api.add_exception_handler(HttpError, _default_http_error)
-    api.add_exception_handler(ValidationError, _default_validation_error)
+    api.add_exception_handler(Exception, partial(_default_exception, api=api))
+    api.add_exception_handler(Http404, partial(_default_404, api=api))
+    api.add_exception_handler(HttpError, partial(_default_http_error, api=api))
+    api.add_exception_handler(
+        ValidationError, partial(_default_validation_error, api=api)
+    )
 
 
-def _default_404(api: "NinjaAPI", request: HttpRequest, exc: Exception):
+def _default_404(request: HttpRequest, exc: Exception, api: "NinjaAPI"):
     return api.create_response(
         request, {"code": 404, "message": "Not Found"}, status=404
     )
 
 
-def _default_http_error(api: "NinjaAPI", request: HttpRequest, exc: Exception):
+def _default_http_error(request: HttpRequest, exc: Exception, api: "NinjaAPI"):
     return api.create_response(
         request, {"code": exc.status_code, "message": str(exc)}, status=exc.status_code
     )
 
 
-def _default_validation_error(api: "NinjaAPI", request: HttpRequest, exc: Exception):
+def _default_validation_error(request: HttpRequest, exc: Exception, api: "NinjaAPI"):
     return api.create_response(request, {"detail": exc.errors}, status=422)
 
 
-def _default_exception(api: "NinjaAPI", request: HttpRequest, exc: Exception):
+def _default_exception(request: HttpRequest, exc: Exception, api: "NinjaAPI"):
     if not settings.DEBUG:
         raise exc  # let django deal with it
 

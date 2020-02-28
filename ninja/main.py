@@ -286,9 +286,6 @@ class NinjaAPI:
 
     def add_exception_handler(self, exc_class: Exception, handler: Callable):
         assert issubclass(exc_class, Exception)
-        assert (
-            handler.__code__.co_argcount == 3
-        ), "Exception handler takes 3 arguments(api, request, exc)"
         self._exception_handlers[exc_class] = handler
 
     def exception_handler(self, exc_class: Type[Exception]) -> Callable:
@@ -305,7 +302,7 @@ class NinjaAPI:
         handler = self._lookup_exception_handler(exc)
         if handler is None:
             raise exc
-        return handler(self, request, exc)
+        return handler(request, exc)
 
     def _lookup_exception_handler(self, exc: Exception):
         for cls in type(exc).__mro__:

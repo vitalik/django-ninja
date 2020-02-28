@@ -13,7 +13,7 @@ class CustomException(Exception):
 
 
 @api.exception_handler(CustomException)
-def on_custom_error(api, request, exc):
+def on_custom_error(request, exc):
     return api.create_response(request, {"custom": True}, status=422)
 
 
