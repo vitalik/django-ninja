@@ -25,7 +25,7 @@ class ServiceUnavailableError(Exception):
 # initializing handler
 
 @api.exception_handler(ServiceUnavailableError)
-def service_unavailable(api, request, exc):
+def service_unavailable(request, exc):
     return api.create_response(
         request,
         {"message": "Please retry later"},
@@ -43,11 +43,10 @@ def some_operation(request):
 
 ```
 
-Exception handler function takes 3 arguments:
+Exception handler function takes 2 arguments:
 
- - **api** - NinjaAPI instance
  - **request** - Django http request
- - **exc** - actual exceptionn
+ - **exc** - actual exception
 
 function must return http response
 
@@ -88,6 +87,6 @@ from ninja.errors import ValidationError
 ...
 
 @api.exception_handler(ValidationError)
-def validation_errors(api, request, exc):
+def validation_errors(request, exc):
     return HttpResponse("Invalid input", status_code=422)
 ```
