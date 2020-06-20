@@ -8,4 +8,6 @@ htmlcov
 dist
 test.py
 
+docs/site
+
 .DS_Store
