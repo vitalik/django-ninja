@@ -1,0 +1,11 @@
+*.pyc
+.venv
+.vscode
+.mypy_cache
+.coverage
+htmlcov
+
+dist
+test.py
+
+.DS_Store

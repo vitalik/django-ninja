@@ -1,0 +1,12 @@
+Django==3.0.4
+pydantic==1.4
+
+# test
+pytest==5.4.1
+pytest-cov==2.8.1
+pytest-django==3.9.0
+
+# docs
+mkdocs==1.1.2
+mkdocs-material==5.1.7
+markdown-include==0.5.1

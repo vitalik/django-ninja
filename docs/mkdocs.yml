@@ -1,0 +1,24 @@
+site_name: NinjaAPI
+site_description: NinjaAPI - Django REST framework with high performance, easy to learn, fast to code.
+site_url: https://github.com/vitalik/django-ninja
+theme:
+  name: material
+  palette:
+    primary: green
+  logo: img/docs-logo.png
+  favicon: img/favicon.png
+  language: en
+nav:
+- Intro: index.md
+- Tutorial:
+  - tutorial/index.md
+  - tutorial/path-params.md
+  - tutorial/query-params.md
+  - tutorial/body.md
+  - tutorial/authentication.md
+markdown_extensions:
+- markdown_include.include
+- markdown.extensions.codehilite:
+    guess_lang: false
+- codehilite
+- admonition
