@@ -8,7 +8,7 @@ python3.6 get-pip.py --user
 cd -
 
 # Install deps
-python3.6 -m pip install --user -r requirements.txt
+python3.6 -m pip install --user -r requirements.dev.txt
 
 # build docs
 cd docs
