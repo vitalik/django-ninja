@@ -2,7 +2,7 @@
 
 ![Django Ninja](img/hero.png)
 
-NinjaAPI is a web framework for building APIs with Django and Python 3.6+ based type hints.
+Django Ninja is a web framework for building APIs with Django and Python 3.6+ based type hints.
 
 Key features
 
