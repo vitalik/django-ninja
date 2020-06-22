@@ -51,7 +51,7 @@ Now go to **urls.py** and add the following:
 ```Python hl_lines="3 7"
 from django.contrib import admin
 from django.urls import path
-from api import api
+from .api import api
 
 urlpatterns = [
     path("admin/", admin.site.urls),

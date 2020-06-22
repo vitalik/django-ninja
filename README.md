@@ -19,7 +19,7 @@ pip install django-ninja
 ## Usage
 
 
-In your django project create new `api.py` file:
+In your django project next to urls.py create new `api.py` file:
 
 ```Python
 from ninja import NinjaAPI
@@ -38,7 +38,7 @@ Now go to `urls.py` and add the following:
 
 ```Python hl_lines="3 7"
 ...
-from api import api
+from .api import api
 
 urlpatterns = [
     path("admin/", admin.site.urls),
