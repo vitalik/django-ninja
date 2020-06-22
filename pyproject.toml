@@ -4,6 +4,7 @@ build-backend = "flit_core.buildapi"
 
 [tool.flit.metadata]
 module = "ninja"
+dist-name = "django-ninja"
 author = "Vitaliy Kucheryaviy"
 author-email = "ppr.vitaly@gmail.com"
 home-page = "https://django-ninja.rest-framework.com"
