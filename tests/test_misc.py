@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from ninja.operation import is_pydantic_model
+from ninja.signature.details import is_pydantic_model
 
 
 def test_is_pydantic_model():
