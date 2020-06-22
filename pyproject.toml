@@ -1,0 +1,34 @@
+[build-system]
+requires = ["flit_core >=2,<4"]
+build-backend = "flit_core.buildapi"
+
+[tool.flit.metadata]
+module = "ninja"
+author = "Vitaliy Kucheryaviy"
+author-email = "ppr.vitaly@gmail.com"
+home-page = "https://django-ninja.rest-framework.com"
+classifiers = ["License :: OSI Approved :: MIT License"]
+
+requires = [
+    "Django >=2.0.13",
+    "pydantic >=1.4,<2.0.0"
+]
+description-file = "README.md"
+requires-python = ">=3.6"
+
+
+[tool.flit.metadata.urls]
+Documentation = "https://django-ninja.rest-framework.com"
+
+[tool.flit.metadata.requires-extra]
+test = [
+    "pytest",
+    "pytest-cov",
+    "pytest-django",
+    "black"
+]
+doc = [
+    "mkdocs",
+    "mkdocs-material",
+    "markdown-include"
+]
