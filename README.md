@@ -48,7 +48,7 @@ urlpatterns = [
 
 **That's it !**
 
-And you alredy have:
+And you already have:
  - API that receives HTTP GET request at /api/add
  - Takes, validates and type-casts GET parameters `a` and `b`
  - Decodes to JSON operation result
