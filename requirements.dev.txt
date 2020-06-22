@@ -1,4 +1,4 @@
-Django==3.0.4
+Django==3.0.7
 pydantic==1.4
 
 # test
