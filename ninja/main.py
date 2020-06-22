@@ -59,8 +59,10 @@ class NinjaAPI:
     def put(self, path: str, *, auth=NOT_SET):
         return self.default_router.put(path, auth=auth is NOT_SET and self.auth or auth)
 
-    def api_operation(self, methods: List[str], path: str, *, auth=None):
-        return self.default_router.api_operation(methods, path, auth=auth)
+    def api_operation(self, methods: List[str], path: str, *, auth=NOT_SET):
+        return self.default_router.api_operation(
+            methods, path, auth=auth is NOT_SET and self.auth or auth
+        )
 
     def add_router(self, prefix, router):
         self._routers.append((prefix, router))
