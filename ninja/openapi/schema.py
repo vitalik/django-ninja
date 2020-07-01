@@ -24,11 +24,11 @@ class OpenAPISchema(OrderedDict):
     def get_paths(self):
         result = {}
         for prefix, router in self.api._routers:
-            for path, operations in router.operations.items():
+            for path, path_view in router.operations.items():
                 full_path = "/".join([i for i in (prefix, path) if i])
                 full_path = "/" + self.path_prefix + full_path
                 full_path = full_path.replace("//", "/")
-                result[full_path] = self.methods(operations)
+                result[full_path] = self.methods(path_view.operations)
         return result
 
     def methods(self, operations: list):

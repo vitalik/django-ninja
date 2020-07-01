@@ -7,7 +7,7 @@ from django.http import QueryDict
 
 # TODO: this should be changed
 # maybe add here urlconf object and add urls from here
-class NinjaClient:
+class NinjaClientBase:
     def __init__(self, router_or_app):
         if isinstance(router_or_app, NinjaAPI):
             self.router = router_or_app.default_router
@@ -83,8 +83,15 @@ class NinjaClient:
             setattr(request, k, v)
         return request
 
+
+class NinjaClient(NinjaClientBase):
     def _call(self, func, request, kwargs):
         return NinjaResponse(func(request, **kwargs))
+
+
+class NinjaAsyncClient(NinjaClientBase):
+    async def _call(self, func, request, kwargs):
+        return NinjaResponse(await func(request, **kwargs))
 
 
 class NinjaResponse:

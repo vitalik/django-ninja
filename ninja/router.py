@@ -3,7 +3,7 @@ from typing import Callable, List
 
 from django.http import HttpResponseNotAllowed
 from django.urls import path as django_path
-from ninja.operation import Operation
+from ninja.operation import Operation, PathView
 from ninja.constants import NOT_SET
 
 
@@ -36,31 +36,18 @@ class Router:
     def add_api_operation(
         self, path: str, methods: List[str], view_func: Callable, *, auth=NOT_SET
     ):
-        op = Operation(path=path, methods=methods, view_func=view_func, auth=auth)
         if path not in self.operations:
-            self.operations[path] = []
-        self.operations[path].append(op)
+            self.operations[path] = PathView()
+        self.operations[path].append(
+            path=path, methods=methods, view_func=view_func, auth=auth
+        )
 
     def urls_paths(self, prefix: str):
-        for ep_path, ep_list in self.operations.items():
-            ep_path = ep_path.replace("{", "<").replace("}", ">")
-            route = "/".join([i for i in (prefix, ep_path) if i])
+        for path, path_view in self.operations.items():
+            path = path.replace("{", "<").replace("}", ">")
+            route = "/".join([i for i in (prefix, path) if i])
             # to skip lot of checks we simply treat doulbe slash as a mistake:
             route = route.replace("//", "/")
             route = route.lstrip("/")
-            yield django_path(route, self._operation_view(ep_list))
 
-    def _operation_view(self, operations: List[Operation]):
-        def wrapper(request, *a, **kw):
-            allowed_methods = set()
-            for ep in operations:
-                allowed_methods.update(ep.methods)
-                if request.method in ep.methods:
-                    return ep.run(request, *a, **kw)
-            return HttpResponseNotAllowed(
-                allowed_methods, content=b"Method not allowed"
-            )
-
-        wrapper.csrf_exempt = True
-        # TODO:   ^ this should probably be configurable in settings or Ninja app
-        return wrapper
+            yield django_path(route, path_view.get_view())

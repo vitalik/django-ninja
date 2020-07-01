@@ -1,5 +1,6 @@
 import re
 import inspect
+import asyncio
 from typing import Callable, Dict, Any, Set
 from pydantic.typing import ForwardRef, evaluate_forwardref
 
@@ -43,3 +44,7 @@ def make_forwardref(annotation: str, globalns: Dict[str, Any]):
 def get_path_param_names(path: str) -> Set[str]:
     "turns path string like /foo/{var}/path/{another}/end to set ['var', 'another']"
     return {item.strip("{}") for item in re.findall("{[^}]*}", path)}
+
+
+def is_async(callable: Callable):
+    return asyncio.iscoroutinefunction(callable)
