@@ -1,4 +1,4 @@
-# NinjaAPI - Fast Django REST Framework
+# Django Ninja - Fast Django REST Framework
 
 ![Django Ninja](img/hero.png)
 

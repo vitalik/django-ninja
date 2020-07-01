@@ -30,7 +30,7 @@ If you run this in your browser with <a href="http://localhost:8000/api/items/3"
 
 !!! tip
     Notice that the value your function received (and returned) is **3**, as a Python `int`, not a string `"3"`.
-    So, with just that type declaration, NinjaAPI gives you automatic request "parsing" and validation.
+    So, with just that type declaration, Django Ninja gives you automatic request "parsing" and validation.
 
 
 
@@ -75,7 +75,7 @@ You can as well use Schema to incapsulate path parameters that depend on each ot
 ```
 
 !!! note
-    Notice that here we used a `Path` source hint to let NinjaAPI know that this schema will be applied to path parameters.
+    Notice that here we used a `Path` source hint to let Django Ninja know that this schema will be applied to path parameters.
 
 ### Documentation
 And when you open your browser at <a href="http://localhost:8000/api/docs" target="_blank">http://localhost:8000/api/docs</a>, you will see an automatic, interactive, API documentation like:

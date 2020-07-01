@@ -1,4 +1,4 @@
-"""NinjaAPI - Fast Django REST framework"""
+"""Django Ninja - Fast Django REST framework"""
 
 __version__ = "0.2.0"
 

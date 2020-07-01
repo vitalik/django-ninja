@@ -2,7 +2,7 @@
 
 ## Intro
 
-**NinjaAPI** provides several tools to help you deal with authentication and authorization easily, rapidly, in a standard way, without having to study and learn <a href="https://swagger.io/docs/specification/authentication/" target="_blank">all the security specifications</a>.
+**Django Ninja** provides several tools to help you deal with authentication and authorization easily, rapidly, in a standard way, without having to study and learn <a href="https://swagger.io/docs/specification/authentication/" target="_blank">all the security specifications</a>.
 
 The core conecpt is that when you describe api operation you can define authenticaion object
 
@@ -98,7 +98,7 @@ GET /something HTTP/1.1
 Cookie: X-API-KEY=abcdef12345
 ```
 
-NinjaAPI comes with builtin classes to help you handle these cases.
+Django Ninja comes with builtin classes to help you handle these cases.
 
 
 #### in Query
@@ -147,6 +147,6 @@ The **`auth`** argument allows also to pass multiple authenticators:
 {!./src/tutorial/authentication/multiple01.py!}
 ```
 
-In this case **NinjaAPI** will first check they api key `GET`, and if not set or invalid will check the `header` key. And if both invalid will raise authentication error to response.
+In this case **Django Ninja** will first check they api key `GET`, and if not set or invalid will check the `header` key. And if both invalid will raise authentication error to response.
 
 

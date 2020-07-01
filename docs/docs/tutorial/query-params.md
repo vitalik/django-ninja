@@ -62,7 +62,7 @@ You can declare required or optional GET parameters same way as you declare pyth
 {!./src/tutorial/query/code02.py!}
 ```
 
-In this case NinjaAPI will always validate that you pass `q` param in GET, and `offset` param is optional integer
+In this case Django Ninja will always validate that you pass `q` param in GET, and `offset` param is optional integer
 
 ### GET parameters type conversion
 

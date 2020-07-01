@@ -97,7 +97,7 @@ But you would get the same editor support with <a href="https://www.jetbrains.co
 
 You can declare path parameters **and** body requests at the same time.
 
-**NinjaAPI** will recognize that the function parameters that match path parameters should be **taken from the path**, and that function parameters that are declared with `Schema` should be **taken from the request body**.
+**Django Ninja** will recognize that the function parameters that match path parameters should be **taken from the path**, and that function parameters that are declared with `Schema` should be **taken from the request body**.
 
 ```Python hl_lines="11 12"
 {!./src/tutorial/body/code02.py!}
@@ -107,7 +107,7 @@ You can declare path parameters **and** body requests at the same time.
 
 You can also declare **body**, **path** and **query** parameters, all at the same time.
 
-**NinjaAPI** will recognize each of them and take the data from the correct place.
+**Django Ninja** will recognize each of them and take the data from the correct place.
 
 ```Python hl_lines="11 12"
 {!./src/tutorial/body/code03.py!}
