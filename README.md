@@ -6,6 +6,13 @@
 
 **Django Ninja** is a web framework for building APIs with **Django** and Python 3.6+ based **type hints**.
 
+**Key features**
+
+ - **Easy**: Designed to be easy to use and intuitive.
+ - **Fast**: Very high performance thanks to Pydantic and **<a href="/async-support/">async support</a>**. 
+ - **Fast to code**: Type hints and automatic docs let's you focus only on business logic.
+ - **Standards-based**: Based on the open standards for APIs: **OpenAPI** (previously known as Swagger) and **JSON Schema**.
+
 
 
 ![Django Ninja REST Framework](docs/docs/img/benchmark.png)
