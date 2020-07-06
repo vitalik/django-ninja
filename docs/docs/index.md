@@ -11,7 +11,9 @@ Key features
  - **Fast to code**: Type hints and automatic docs let's you focus only on business logic.
  - **Standards-based**: Based on the open standards for APIs: **OpenAPI** (previously known as Swagger) and **JSON Schema**.
 
-This project was heavily inspired by <a href="https://fastapi.tiangolo.com/" target="_blank">FastApi</a> (developed by <a href="https://github.com/tiangolo" target="_blank">Sebastián Ramírez</a>)
+<a href="https://github.com/vitalik/django-ninja-benchmarks" target="_blank">Benchmarks</a>:
+
+![Django Ninja REST Framework](img/benchmark.png)
 
 ## Installation
 
@@ -106,3 +108,6 @@ def operation(a: Item):
     * Forms.
     * Files.
 * Automatic interactive API documentation
+
+This project was heavily inspired by <a href="https://fastapi.tiangolo.com/" target="_blank">FastAPI</a> (developed by <a href="https://github.com/tiangolo" target="_blank">Sebastián Ramírez</a>)
+

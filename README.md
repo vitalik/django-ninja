@@ -6,6 +6,10 @@
 
 **Django Ninja** is a web framework for building APIs with **Django** and Python 3.6+ based **type hints**.
 
+
+
+![Django Ninja REST Framework](docs/docs/img/benchmark.png)
+
 **Documentation**: https://django-ninja.rest-framework.com
 
 ---
