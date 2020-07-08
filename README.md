@@ -9,7 +9,7 @@
 **Key features**
 
  - **Easy**: Designed to be easy to use and intuitive.
- - **Fast**: Very high performance thanks to Pydantic and **<a href="/async-support/">async support</a>**. 
+ - **Fast**: Very high performance thanks to Pydantic and **<a href="https://django-ninja.rest-framework.com/async-support/">async support</a>**. 
  - **Fast to code**: Type hints and automatic docs let's you focus only on business logic.
  - **Standards-based**: Based on the open standards for APIs: **OpenAPI** (previously known as Swagger) and **JSON Schema**.
 
