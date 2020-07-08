@@ -210,7 +210,7 @@ all_blogs = await sync_to_async(Blog.objects.all)()
 Instead - use evaluation (with `list`):
 
 ```Python
-all_blogs = await sync_to_async(list)(Blog.objects.all)
+all_blogs = await sync_to_async(list)(Blog.objects.all())
 ...
 ```
 
