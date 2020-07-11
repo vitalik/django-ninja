@@ -2,8 +2,11 @@
 Since **version 3.1** Django comes with **async views support**. This allows you run efficently concurent views that are network/IO-bound.
 
 > <small>
-> *Note: as of July 2020 Django 3.1 is in beta.*
+> *Note: as of July 2020 Django 3.1 is in beta.* Use this command to install it:
 > </small>
+```
+pip install Django==3.1b1 django-ninja
+```
 
 Async views works more efficient when it comes to:
 
@@ -210,7 +213,7 @@ all_blogs = await sync_to_async(Blog.objects.all)()
 Instead - use evaluation (with `list`):
 
 ```Python
-all_blogs = await sync_to_async(list)(Blog.objects.all)
+all_blogs = await sync_to_async(list)(Blog.objects.all())
 ...
 ```
 
