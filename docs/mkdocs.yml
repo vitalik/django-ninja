@@ -18,13 +18,15 @@ theme:
     repo: fontawesome/brands/github-alt
 nav:
 - Intro: index.md
-- Tutorial:
+- Tutorial / Reference:
   - tutorial/index.md
   - tutorial/path-params.md
   - tutorial/query-params.md
   - tutorial/body.md
   - tutorial/authentication.md
 - async-support.md
+- help.md
+- releases.md
 markdown_extensions:
 - markdown_include.include
 - markdown.extensions.codehilite:

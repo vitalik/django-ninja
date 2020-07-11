@@ -78,5 +78,5 @@ You will see the automatic interactive API documentation (provided by <a href="h
 
 ## Next
 
- - To support this project - just simply give it a start on github.
  - Read full documentation here - **Documentation**: https://django-ninja.rest-framework.com
+ - To support this project - just simply give it a start on github. ![github star](docs/docs/img/github-star.png)
