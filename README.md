@@ -1,16 +1,10 @@
-
-
 <p align="center">
-
-![Django Ninja](docs/docs/img/logo-big.png)
-
+  <a href="https://django-ninja.rest-framework.com/"><img src="https://django-ninja.rest-framework.com/img/logo-big.png"></a>
+</p>
+<p align="center">
+    <em>Fast to learn, fast to code, fast to run</em>
 </p>
 
-<p align="center">
-
-Fast to learn, fast to code, fast to run
-
-</p>
 
 [![PyPI version](https://badge.fury.io/py/django-ninja.svg)](https://badge.fury.io/py/django-ninja)
 
