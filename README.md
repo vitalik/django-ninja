@@ -1,8 +1,20 @@
-# Django Ninja - Fast Django REST Framework
 
-![Django Ninja](docs/docs/img/hero.png)
+
+<p align="center">
+
+![Django Ninja](docs/docs/img/logo-big.png)
+
+</p>
+
+<p align="center">
+
+Fast to learn, fast to code, fast to run
+
+</p>
 
 [![PyPI version](https://badge.fury.io/py/django-ninja.svg)](https://badge.fury.io/py/django-ninja)
+
+# Django Ninja - Fast Django REST Framework
 
 **Django Ninja** is a web framework for building APIs with **Django** and Python 3.6+ based **type hints**.
 
