@@ -2,10 +2,10 @@
 Since **version 3.1** Django comes with **async views support**. This allows you run efficently concurent views that are network/IO-bound.
 
 > <small>
-> *Note: as of July 2020 Django 3.1 is in beta.* Use this command to install it:
+> *Note: as of 2020 Django 3.1 is in release candidate state.* Use this command to install it:
 > </small>
 ```
-pip install Django==3.1b1 django-ninja
+pip install Django==3.1rc1 django-ninja
 ```
 
 Async views works more efficient when it comes to:
