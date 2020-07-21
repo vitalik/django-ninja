@@ -1,0 +1,6 @@
+version: "3"
+services:
+  tester:
+    build:
+      context: ../../
+      dockerfile: tests/env-matrix/Dockerfile
