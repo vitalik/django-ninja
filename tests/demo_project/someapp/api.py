@@ -23,12 +23,12 @@ def create_event(request, event: EventSchema):
     return event
 
 
-@router.get("")
-def list_events(request) -> List[EventSchema]:
+@router.get("", response=List[EventSchema])
+def list_events(request):
     return list(Event.objects.all())
 
 
-@router.get("/{id}")
-def get_event(request, id: int) -> EventSchema:
+@router.get("/{id}", response=EventSchema)
+def get_event(request, id: int):
     event = get_object_or_404(Event, id=id)
     return event

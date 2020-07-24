@@ -24,7 +24,6 @@ class ViewSignature:
             self.params.append(func_param)
 
         self.models = self._create_models()
-        self.response_model = self._create_response_model()
 
     def _create_models(self):
         grouping = OrderedDict()
@@ -99,14 +98,6 @@ class ViewSignature:
                 param_source = params.Query(arg.default)
 
         return FuncParam(name, param_source, annotation, is_collection)
-
-    def _create_response_model(self):
-        if self.signature.return_annotation == self.signature.empty:
-            return
-
-        attrs = {"__annotations__": {"response": self.signature.return_annotation}}
-
-        return type("Response", (pydantic.BaseModel,), attrs)
 
 
 def is_pydantic_model(cls):

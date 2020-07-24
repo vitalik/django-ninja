@@ -5,6 +5,7 @@ from typing import Callable, List, Any, Union, Optional, Sequence
 from ninja.responses import Response
 from ninja.errors import InvalidInput
 from ninja.constants import NOT_SET
+from ninja.schema import Schema
 from ninja.signature import ViewSignature, is_async
 
 
@@ -15,7 +16,8 @@ class Operation:
         methods: List[str],
         view_func: Callable,
         *,
-        auth: Optional[Union[Sequence[Callable], Callable, object]] = NOT_SET
+        auth: Optional[Union[Sequence[Callable], Callable, object]] = NOT_SET,
+        response: Any = None,
     ):
         self.is_async = False
         self.path = path
@@ -27,7 +29,7 @@ class Operation:
 
         self.signature = ViewSignature(self.path, self.view_func)
         self.models = self.signature.models
-        self.response_model = self.signature.response_model
+        self.response_model = self._create_response_model(response)
 
     def run(self, request, **kw):
         unauthorized = self._run_authentication(request)
@@ -73,6 +75,12 @@ class Operation:
                 errors.extend(items)
         return values, errors
 
+    def _create_response_model(self, response_param):
+        if response_param is None:
+            return
+        attrs = {"__annotations__": {"response": response_param}}
+        return type("Response", (Schema,), attrs)
+
 
 class AsyncOperation(Operation):
     def __init__(self, *args, **kwargs):
@@ -104,13 +112,18 @@ class PathView:
         methods: List[str],
         view_func: Callable,
         *,
-        auth: Optional[Union[Sequence[Callable], Callable, object]] = NOT_SET
+        auth: Optional[Union[Sequence[Callable], Callable, object]] = NOT_SET,
+        response=None,
     ):
         if is_async(view_func):
             self.is_async = True
-            operation = AsyncOperation(path, methods, view_func, auth=auth)
+            operation = AsyncOperation(
+                path, methods, view_func, auth=auth, response=response
+            )
         else:
-            operation = Operation(path, methods, view_func, auth=auth)
+            operation = Operation(
+                path, methods, view_func, auth=auth, response=response
+            )
 
         self.operations.append(operation)
 

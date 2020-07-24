@@ -5,4 +5,7 @@ from pydantic import BaseModel, validator
 # when used in django contetext
 # this module basicaly makes alias for it named Schema
 
-Schema = BaseModel
+
+class Schema(BaseModel):
+    class Config:
+        orm_mode = True

@@ -1,3 +1,4 @@
+from ninja import responses
 import pytest
 from pydantic import ValidationError, BaseModel
 from ninja import Router
@@ -13,13 +14,13 @@ router = Router()
 # and long functions will be even longer/unreadable...
 
 
-@router.get("/check_int")
-def check_int(request) -> int:
+@router.get("/check_int", response=int)
+def check_int(request):
     return "1"
 
 
-@router.get("/check_int2")
-def check_int2(request) -> int:
+@router.get("/check_int2", response=int)
+def check_int2(request):
     return "str"
 
 
@@ -39,23 +40,18 @@ class UserModel(BaseModel):
         orm_mode = True
 
 
-@router.get("/check_model")
-def check_model(request) -> UserModel:
+@router.get("/check_model", response=UserModel)
+def check_model(request):
     return User(1, "John", "Password")
 
 
-@router.get("/check_model_ref")
-def check_model_ref(request) -> "UserModel":
-    return User(1, "John", "Password")
-
-
-@router.get("/check_list_model")
-def check_list_model(request) -> List[UserModel]:
+@router.get("/check_list_model", response=List[UserModel])
+def check_list_model(request):
     return [User(1, "John", "Password")]
 
 
-@router.get("/check_union")
-def check_union(request, q: int) -> Union[int, UserModel]:
+@router.get("/check_union", response=Union[int, UserModel])
+def check_union(request, q: int):
     if q == 0:
         return 1
     if q == 1:
@@ -70,8 +66,7 @@ client = NinjaClient(router)
     "path,expected_response",
     [
         ("/check_int", 1),
-        ("/check_model", {"id": 1, "name": "John"}),
-        ("/check_model_ref", {"id": 1, "name": "John"}),  # the password is skipped
+        ("/check_model", {"id": 1, "name": "John"}),  # the password is skipped
         ("/check_list_model", [{"id": 1, "name": "John"}]),  # the password is skipped
         ("/check_union?q=0", 1),
         ("/check_union?q=1", {"id": 1, "name": "John"}),

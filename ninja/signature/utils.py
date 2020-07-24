@@ -18,13 +18,7 @@ def get_typed_signature(call: Callable) -> inspect.Signature:
         )
         for param in signature.parameters.values()
     ]
-    return_annotation = signature.return_annotation
-    if isinstance(return_annotation, str):
-        return_annotation = make_forwardref(return_annotation, globalns)
-
-    typed_signature = inspect.Signature(
-        typed_params, return_annotation=return_annotation
-    )
+    typed_signature = inspect.Signature(typed_params)
     return typed_signature
 
 

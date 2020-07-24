@@ -59,3 +59,48 @@ urlpatterns = [
 ]
 ```
 
+## Defining operation methods
+
+"Operation" can beone of the HTTP "methods".
+
+ - GET
+ - POST
+ - PUT
+ - DELETE
+ - PATCH
+ - ... and more
+
+
+Django Ninja comes with a decorator for each method:
+
+
+```Python hl_lines="1 5 9 13 17"
+@api.get("/path")
+def get_operation(request):
+    ...
+
+@api.post("/path")
+def post_operation(request):
+    ...
+
+@api.put("/path")
+def put_operation(request):
+    ...
+
+@api.delete("/path")
+def delete_operation(request):
+    ...
+
+@api.patch("/path")
+def patch_operation(request):
+    ...
+```
+
+if you need to handle multiple methods with single function you can use api
+
+
+```Python hl_lines="1"
+@api.api_operation(["POST", "PATCH"])
+def mixed(request):
+    ...
+```

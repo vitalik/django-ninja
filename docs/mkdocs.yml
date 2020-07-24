@@ -24,6 +24,7 @@ nav:
   - tutorial/query-params.md
   - tutorial/body.md
   - tutorial/authentication.md
+  - tutorial/response-schema.md
 - async-support.md
 - help.md
 - releases.md

@@ -38,30 +38,36 @@ class NinjaAPI:
         self.default_router = Router()
         self.add_router("", self.default_router)
 
-    def get(self, path: str, *, auth=NOT_SET):
-        return self.default_router.get(path, auth=auth is NOT_SET and self.auth or auth)
+    def get(self, path: str, *, auth=NOT_SET, response=None):
+        return self.default_router.get(
+            path, auth=auth is NOT_SET and self.auth or auth, response=response
+        )
 
-    def post(self, path: str, *, auth=NOT_SET):
+    def post(self, path: str, *, auth=NOT_SET, response=None):
         return self.default_router.post(
-            path, auth=auth is NOT_SET and self.auth or auth
+            path, auth=auth is NOT_SET and self.auth or auth, response=response
         )
 
-    def delete(self, path: str, *, auth=NOT_SET):
+    def delete(self, path: str, *, auth=NOT_SET, response=None):
         return self.default_router.delete(
-            path, auth=auth is NOT_SET and self.auth or auth
+            path, auth=auth is NOT_SET and self.auth or auth, response=response
         )
 
-    def patch(self, path: str, *, auth=NOT_SET):
+    def patch(self, path: str, *, auth=NOT_SET, response=None):
         return self.default_router.patch(
-            path, auth=auth is NOT_SET and self.auth or auth
+            path, auth=auth is NOT_SET and self.auth or auth, response=response
         )
 
-    def put(self, path: str, *, auth=NOT_SET):
-        return self.default_router.put(path, auth=auth is NOT_SET and self.auth or auth)
+    def put(self, path: str, *, auth=NOT_SET, response=None):
+        return self.default_router.put(
+            path, auth=auth is NOT_SET and self.auth or auth, response=response
+        )
 
-    def api_operation(self, methods: List[str], path: str, *, auth=NOT_SET):
+    def api_operation(
+        self, methods: List[str], path: str, *, auth=NOT_SET, response=None
+    ):
         return self.default_router.api_operation(
-            methods, path, auth=auth is NOT_SET and self.auth or auth
+            methods, path, auth=auth is NOT_SET and self.auth or auth, response=response
         )
 
     def add_router(self, prefix, router):
