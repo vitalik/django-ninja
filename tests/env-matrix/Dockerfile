@@ -31,10 +31,10 @@ RUN /install_env.sh 3.6.10  3.0.6   env-36-30
 RUN /install_env.sh 3.7.7   3.0.6   env-37-30
 RUN /install_env.sh 3.8.3   3.0.6   env-38-30
 
-# Django 3.1rc1
-RUN /install_env.sh 3.6.10  3.1rc1  env-36-31
-RUN /install_env.sh 3.7.7   3.1rc1  env-37-31
-RUN /install_env.sh 3.8.3   3.1rc1  env-38-31
+# Django 3.1
+RUN /install_env.sh 3.6.10  3.1     env-36-31
+RUN /install_env.sh 3.7.7   3.1     env-37-31
+RUN /install_env.sh 3.8.3   3.1     env-38-31
 
 COPY ninja /ninja
 COPY tests /tests
