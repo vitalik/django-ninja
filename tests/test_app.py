@@ -17,6 +17,11 @@ api = NinjaAPI()
 # and both routers have same path defined
 
 
+@api.get("")
+def emptypath(request):
+    return "/"
+
+
 @api.get("/get")
 def get(request):
     return f"this is {request.method}"
@@ -59,6 +64,7 @@ client = NinjaClient(api)
     # fmt: off
     "method,path,expected_status,expected_data",
     [
+        ("get",    "/",       200, "/"),
         ("get",    "/get",    200, "this is GET"),
         ("post",   "/post",   200, "this is POST"),
         ("put",    "/put",    200, "this is PUT"),

@@ -1,10 +1,10 @@
 from functools import partial
 from django.urls import path
-from .views import openapi_json, swagger, home
+from .views import openapi_json, swagger, default_home
 
 
 def get_openapi_urls(api: "NinjaAPI"):
-    result = [path("", partial(home, api=api), name=f"api-root")]
+    result = []
 
     if api.openapi_url:
         result.append(
@@ -29,3 +29,7 @@ def get_openapi_urls(api: "NinjaAPI"):
             )
 
     return result
+
+
+def get_root_url(api: "NinjaAPI"):
+    return path("", partial(default_home, api=api), name=f"api-root")

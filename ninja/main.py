@@ -2,7 +2,7 @@ import os
 from ninja.openapi import get_schema
 from typing import List, Optional, Tuple, Sequence, Union, Callable
 from django.urls import reverse
-from ninja.openapi.urls import get_openapi_urls
+from ninja.openapi.urls import get_openapi_urls, get_root_url
 from ninja.router import Router
 from ninja.errors import ConfigError
 from ninja.constants import NOT_SET
@@ -87,6 +87,8 @@ class NinjaAPI:
         for prefix, router in self._routers:
             for path in router.urls_paths(prefix):
                 result.append(path)
+
+        result.append(get_root_url(self))
         return result
 
     @property
