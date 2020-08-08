@@ -1,4 +1,7 @@
 from collections import OrderedDict
+from pydantic.schema import model_schema
+
+REF_PREFIX = "#/components/schemas/"
 
 
 def get_schema(api: "NinjaAPI", path_prefix=""):
@@ -59,7 +62,7 @@ class OpenAPISchema(OrderedDict):
         for model in operation.models:
             if model._in == "body":
                 continue
-            schema = model.schema()
+            schema = model_schema(model, ref_prefix=REF_PREFIX)
 
             properties = list(schema["properties"].items())
             if len(properties) == 1 and "definitions" in schema:
@@ -67,9 +70,9 @@ class OpenAPISchema(OrderedDict):
 
             required = set(schema.get("required", []))
             for name, details in schema["properties"].items():
-                result.append(
-                    {"in": model._in, "name": name, "required": name in required}
-                )
+                param = {"in": model._in, "name": name, "required": name in required}
+                param["schema"] = details
+                result.append(param)
         return result
 
     def request_body(self, operation):
@@ -78,9 +81,9 @@ class OpenAPISchema(OrderedDict):
         if not models:
             return {}
         assert len(models) == 1
-        schema = models[0].schema()
+        schema = model_schema(models[0], ref_prefix=REF_PREFIX)
 
-        # TODO: check if schema["definitions"] is unique - if not - workarond
+        # TODO: check if schema["definitions"] is unique - if not - workarond (maybe use pydantic.schema.schema(models)) to process list of models
         self.schemas.update(schema["definitions"])
 
         properties = list(
@@ -89,7 +92,7 @@ class OpenAPISchema(OrderedDict):
         assert len(properties) == 1
 
         name, details = properties[0]
-        ref = details["$ref"].replace("#/definitions/", "#/components/schemas/")
+        ref = details["$ref"]
 
         return {
             "content": {"application/json": {"schema": {"$ref": ref}}},

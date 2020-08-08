@@ -1,7 +1,8 @@
 from datetime import date
 from enum import Enum
+from json import encoder
 from pydantic import BaseModel
-from ninja import Router
+from ninja import NinjaAPI
 from client import NinjaClient
 
 
@@ -17,20 +18,20 @@ class Booking(BaseModel):
     room: RoomEnum = RoomEnum.double
 
 
-router = Router()
+api = NinjaAPI()
 
 
-@router.post("/book")
-def booking_request(request, booking: Booking):
+@api.post("/book")
+def create_booking(request, booking: Booking):
     return booking
 
 
-@router.get("/search")
-def booking_search(request, date: date, room: RoomEnum):
-    return {"date": date, "room": room}
+@api.get("/search")
+def booking_search(request, room: RoomEnum):
+    return {"room": room}
 
 
-client = NinjaClient(router)
+client = NinjaClient(api)
 
 
 def test_enums():
@@ -49,12 +50,43 @@ def test_enums():
     )
     assert response.status_code == 422
 
-    response = client.get("/search?date=2020-01-01&room=twin")
+    response = client.get("/search?room=twin")
     assert response.status_code == 200
-    assert response.json() == {
-        "date": "2020-01-01",
-        "room": "twin",
+    assert response.json() == {"room": "twin"}
+
+    response = client.get("/search?room=other")
+    assert response.status_code == 422
+
+
+def test_schema():
+    schema = api.get_openapi_schema()
+
+    from pprint import pprint
+
+    pprint(schema)
+
+    booking_shchema = schema["components"]["schemas"]["Booking"]
+    assert booking_shchema["properties"]["room"] == {
+        "default": "double",
+        "enum": ["double", "twin", "single"],
+        "title": "Room",
+        "type": "string",
     }
 
-    response = client.get("/search?date=2020-01-01&room=other")
-    assert response.status_code == 422
+    book_operation = schema["paths"]["/api/book"]["post"]
+    assert book_operation["requestBody"]["content"]["application/json"]["schema"] == {
+        "$ref": "#/components/schemas/Booking"
+    }
+
+    search_operation = schema["paths"]["/api/search"]["get"]
+    room_param = search_operation["parameters"][0]
+    assert room_param == {
+        "in": "query",
+        "name": "room",
+        "required": True,
+        "schema": {
+            "enum": ["double", "twin", "single"],
+            "title": "Room",
+            "type": "string",
+        },
+    }

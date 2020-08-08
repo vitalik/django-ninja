@@ -18,8 +18,24 @@ def test_examples():
         events_params = schema["paths"]["/events/{year}/{month}/{day}"]["get"][
             "parameters"
         ]
+        # print(events_params, "!!")
         assert events_params == [
-            {"in": "path", "name": "year", "required": True},
-            {"in": "path", "name": "month", "required": True},
-            {"in": "path", "name": "day", "required": True},
+            {
+                "in": "path",
+                "name": "year",
+                "required": True,
+                "schema": {"title": "Year", "type": "integer"},
+            },
+            {
+                "in": "path",
+                "name": "month",
+                "required": True,
+                "schema": {"title": "Month", "type": "integer"},
+            },
+            {
+                "in": "path",
+                "name": "day",
+                "required": True,
+                "schema": {"title": "Day", "type": "integer"},
+            },
         ]
