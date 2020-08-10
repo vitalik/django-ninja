@@ -1,7 +1,7 @@
 ## Intro
 Since **version 3.1** Django comes with **async views support**. This allows you run efficently concurent views that are network/IO-bound.
 
-
+```
 pip install Django==3.1 django-ninja
 ```
 
