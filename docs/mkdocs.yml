@@ -4,9 +4,9 @@ site_url: https://django-ninja.rest-framework.com
 repo_name: vitalik/django-ninja
 repo_url: https://github.com/vitalik/django-ninja
 edit_uri: ''
-# google_analytics:
-# - UA-170474207-1
-# - auto
+google_analytics:
+- UA-170474207-1
+- auto
 theme:
   name: material
   palette:
