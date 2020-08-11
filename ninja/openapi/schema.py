@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from pydantic.schema import model_schema
+from ninja.utils import normalize_path
 
 REF_PREFIX = "#/components/schemas/"
 
@@ -30,7 +31,7 @@ class OpenAPISchema(OrderedDict):
             for path, path_view in router.operations.items():
                 full_path = "/".join([i for i in (prefix, path) if i])
                 full_path = "/" + self.path_prefix + full_path
-                full_path = full_path.replace("//", "/")
+                full_path = normalize_path(full_path)
                 result[full_path] = self.methods(path_view.operations)
         return result
 

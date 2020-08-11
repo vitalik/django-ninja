@@ -5,6 +5,7 @@ from django.http import HttpResponseNotAllowed
 from django.urls import path as django_path
 from ninja.operation import Operation, PathView
 from ninja.constants import NOT_SET
+from ninja.utils import normalize_path
 
 
 class Router:
@@ -61,7 +62,7 @@ class Router:
             path = path.replace("{", "<").replace("}", ">")
             route = "/".join([i for i in (prefix, path) if i])
             # to skip lot of checks we simply treat doulbe slash as a mistake:
-            route = route.replace("//", "/")
+            route = normalize_path(route)
             route = route.lstrip("/")
 
             yield django_path(route, path_view.get_view())
