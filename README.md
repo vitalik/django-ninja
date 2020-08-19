@@ -6,6 +6,7 @@
 </p>
 
 
+![Test](https://github.com/vitalik/django-ninja/workflows/Test/badge.svg)
 [![PyPI version](https://badge.fury.io/py/django-ninja.svg)](https://badge.fury.io/py/django-ninja)
 
 # Django Ninja - Fast Django REST Framework
