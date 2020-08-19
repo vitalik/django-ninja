@@ -67,9 +67,12 @@ def test_schema():
 
     booking_shchema = schema["components"]["schemas"]["Booking"]
     assert booking_shchema["properties"]["room"] == {
-        "default": "double",
+        "$ref": "#/components/schemas/RoomEnum"
+    }
+    assert schema["components"]["schemas"]["RoomEnum"] == {
+        "description": "An enumeration.",
         "enum": ["double", "twin", "single"],
-        "title": "Room",
+        "title": "RoomEnum",
         "type": "string",
     }
 
@@ -85,8 +88,9 @@ def test_schema():
         "name": "room",
         "required": True,
         "schema": {
+            "title": "RoomEnum",
+            "description": "An enumeration.",
             "enum": ["double", "twin", "single"],
-            "title": "Room",
             "type": "string",
         },
     }

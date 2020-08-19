@@ -63,13 +63,23 @@ class OpenAPISchema(OrderedDict):
         for model in operation.models:
             if model._in == "body":
                 continue
+
             schema = model_schema(model, ref_prefix=REF_PREFIX)
 
-            properties = list(schema["properties"].items())
-            if len(properties) == 1 and "definitions" in schema:
-                schema = list(schema["definitions"].values())[0]
+            num_properties = len(schema["properties"])
+            if num_properties == 1 and "definitions" in schema:
+                prop_definition = list(schema["definitions"].values())[0]
+                if prop_definition["type"] == "object":
+                    # This is a specail case when we group multiple path or query arguemtns into single schema
+                    # https://django-ninja.rest-framework.com/tutorial/path-params/#using-schema
+                    schema = prop_definition
+                else:
+                    # resolving $refs (seems only for enum) # TODO: better keep that ref in components/schemas/
+                    prop_name = list(schema["properties"].keys())[0]
+                    schema["properties"][prop_name] = prop_definition
 
             required = set(schema.get("required", []))
+
             for name, details in schema["properties"].items():
                 param = {"in": model._in, "name": name, "required": name in required}
                 param["schema"] = details
@@ -84,8 +94,7 @@ class OpenAPISchema(OrderedDict):
         assert len(models) == 1
         schema = model_schema(models[0], ref_prefix=REF_PREFIX)
 
-        # TODO: check if schema["definitions"] is unique - if not - workarond (maybe use pydantic.schema.schema(models)) to process list of models
-        self.schemas.update(schema["definitions"])
+        self.add_schema_definitions(schema["definitions"])
 
         properties = list(
             [(k, v) for k, v in schema["properties"].items()]
@@ -120,3 +129,8 @@ class OpenAPISchema(OrderedDict):
         if self.securitySchemes:
             result["securitySchemes"] = self.securitySchemes
         return result
+
+    def add_schema_definitions(self, definitions: dict):
+        # TODO: check if schema["definitions"] are unique
+        # if not - workarond (maybe use pydantic.schema.schema(models)) to process list of models
+        self.schemas.update(definitions)

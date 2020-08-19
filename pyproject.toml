@@ -12,7 +12,7 @@ classifiers = ["License :: OSI Approved :: MIT License"]
 
 requires = [
     "Django >=2.0.13",
-    "pydantic >=1.4,<2.0.0"
+    "pydantic >=1.6,<2.0.0"
 ]
 description-file = "README.md"
 requires-python = ">=3.6"
