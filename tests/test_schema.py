@@ -1,18 +1,60 @@
-import pytest
-from ninja import NinjaAPI
-from django.test import Client
+from typing import List
+from ninja import Schema
+from ninja.schema import Field
+from django.db.models import QuerySet, Manager
 
 
-api = NinjaAPI()
+class FakeManager(Manager):
+    def __init__(self, items):
+        self._items = items
+
+    def all(self):
+        return self._items
+
+    def __str__(self):
+        return "FakeManager"
 
 
-@api.get("/test")
-def method(request, query: str, count: int):
-    return [query, count]
+class FakeQS(QuerySet):
+    def __init__(self, items):
+        self._result_cache = items
+        self._prefetch_related_lookups = False
+
+    def __str__(self):
+        return "FakeQS"
 
 
-def test_schema(client: Client):
-    assert client.get("/api/").status_code == 404
-    assert client.get("/api/docs").status_code == 200
-    assert client.get("/api/openapi.json").status_code == 200
-    # TODO: more schema tests
+class Tag:
+    def __init__(self, id, title):
+        self.id = id
+        self.title = title
+
+
+class User:
+    name = "John"
+    group_set = FakeManager([1, 2, 3])
+
+    @property
+    def tags(self):
+        return FakeQS([Tag(1, "foo"), Tag(2, "bar")])
+
+
+class TagSchema(Schema):
+    id: str
+    title: str
+
+
+class UserSchema(Schema):
+    name: str
+    groups: List[int] = Field(..., alias="group_set")
+    tags: List[TagSchema]
+
+
+def test_schema():
+    user = User()
+    schema = UserSchema.from_orm(user)
+    assert schema.dict() == {
+        "name": "John",
+        "groups": [1, 2, 3],
+        "tags": [{"id": "1", "title": "foo"}, {"id": "2", "title": "bar"}],
+    }

@@ -58,7 +58,9 @@ class Operation:
         if self.response_model is None:
             return Response(result)
 
-        result = self.response_model(response=result).dict()["response"]
+        resp_object = ResponseObject(result)
+        # ^ we need object because getter_dict seems work only with from_orm
+        result = self.response_model.from_orm(resp_object).dict()["response"]
         return Response(result)
 
     def _get_values(self, request, path_params):
@@ -84,7 +86,7 @@ class Operation:
 
 class AsyncOperation(Operation):
     def __init__(self, *args, **kwargs):
-        if django.VERSION < (3, 1):
+        if django.VERSION < (3, 1):  # pragma: no cover
             raise Exception("Async operations are supported only with Django 3.1+")
         super().__init__(*args, **kwargs)
         self.is_async = True
@@ -163,3 +165,10 @@ class PathView:
             None,
             HttpResponseNotAllowed(allowed_methods, content=b"Method not allowed"),
         )
+
+
+class ResponseObject(object):
+    "Basically this is just a helper to be able to pass response to from_orm"
+
+    def __init__(self, response):
+        self.response = response
