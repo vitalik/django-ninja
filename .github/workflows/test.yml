@@ -20,4 +20,6 @@ jobs:
       - name: Install Dependencies
         run: flit install --symlink
       - name: Test
-        run: pytest --cov=ninja tests
+        run: pytest --cov=ninja --cov-report=xml tests
+      - name: Coverage
+        uses: codecov/codecov-action@v1
