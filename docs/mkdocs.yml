@@ -18,6 +18,7 @@ theme:
     repo: fontawesome/brands/github-alt
 nav:
 - Intro: index.md
+- motivation.md
 - Tutorial / Reference:
   - tutorial/index.md
   - tutorial/path-params.md
@@ -26,7 +27,13 @@ nav:
   - tutorial/authentication.md
   - tutorial/response-schema.md
   - tutorial/routers.md
+  - tutorial/versioning.md
 - async-support.md
+- Enhancement Proposals:
+  - Intro: proposals/index.md
+  - proposals/cbv.md
+  - proposals/responses.md
+  - proposals/models.md
 - help.md
 - releases.md
 markdown_extensions:

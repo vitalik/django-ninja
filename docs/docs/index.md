@@ -10,6 +10,7 @@ Key features
  - **Fast**: Very high performance thanks to Pydantic and **<a href="/async-support/">async support</a>**. 
  - **Fast to code**: Type hints and automatic docs let's you focus only on business logic.
  - **Standards-based**: Based on the open standards for APIs: **OpenAPI** (previously known as Swagger) and **JSON Schema**.
+ - **Django friendly**: (obviously) have good integration with Django core an ORM.
 
 <a href="https://github.com/vitalik/django-ninja-benchmarks" target="_blank">Benchmarks</a>:
 

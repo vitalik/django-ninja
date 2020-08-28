@@ -25,7 +25,7 @@ def create_user(request, data: UserIn):
 
 Now let's define output schema, and pass it as `response` argument to @api.post:
 
-```Python hl_lines="6 9 10 13 18"
+```Python hl_lines="8 9 10 13 18"
 from ninja import Schema
 
 class UserIn(Schema):
@@ -115,4 +115,26 @@ If you execute this operation you should  get response like this:
         "owner": null
     },
 ]
+```
+
+## Returning querysets
+
+In the previous example we specifically converted queryset to to a list (and executing SQL query during evaluation).
+
+But you can avoid it and return a queryset as result and it will be automatically evaluated to List:
+
+```Python hl_lines="3"
+@api.get("/tasks", response=List[TaskSchema])
+def tasks(request):
+    return Task.objects.all()
+```
+
+### Note about async mode
+
+If your [async-support](operation is is async) this example will not work
+
+```Python hl_lines="2 3"
+@api.get("/tasks", response=List[TaskSchema])
+async def tasks(request):
+    return Task.objects.all()
 ```
