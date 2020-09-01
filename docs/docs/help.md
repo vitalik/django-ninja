@@ -4,7 +4,7 @@
 
 If you do like this project - there is tiny thing you can do to let us know that we are moving the right direction.
 
-Simply give django-ninja a <a href="https://github.com/vitalik/django-ninja" target="_blank">start on github</a> <a href="https://github.com/vitalik/django-ninja" target="_blank">![github star](img/github-star.png)</a>
+Simply give django-ninja a <a href="https://github.com/vitalik/django-ninja" target="_blank">star on github</a> <a href="https://github.com/vitalik/django-ninja" target="_blank">![github star](img/github-star.png)</a>
 
 OR share this url on social media: 
 ```
