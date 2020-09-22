@@ -16,7 +16,7 @@ class AuthBase:
             if attr.startswith("openapi_"):
                 name = attr.replace("openapi_", "", 1)
                 kwargs[name] = getattr(self, attr)
-        self.openapi_securty_schema = SecuritySchema(**kwargs)
+        self.openapi_security_schema = SecuritySchema(**kwargs)
 
     def __call__(self, request):
         raise NotImplementedError("Please implement call")
