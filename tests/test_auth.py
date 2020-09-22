@@ -14,7 +14,7 @@ from ninja.errors import ConfigError
 from client import NinjaClient
 
 
-def callble_auth(request):
+def callable_auth(request):
     return request.GET.get("auth")
 
 
@@ -48,7 +48,7 @@ class BearerAuth(HttpBearer):
             return token
 
 
-def demo_operaiton(request):
+def demo_operation(request):
     return {"auth": request.auth}
 
 
@@ -56,14 +56,14 @@ api = NinjaAPI()
 
 for path, auth in [
     ("django_auth", django_auth),
-    ("callable", callble_auth),
+    ("callable", callable_auth),
     ("apikeyquery", KeyQuery()),
     ("apikeyheader", KeyHeader()),
     ("apikeycookie", KeyCookie()),
     ("basic", BasicAuth()),
     ("bearer", BearerAuth()),
 ]:
-    api.get(f"/{path}", auth=auth)(demo_operaiton)
+    api.get(f"/{path}", auth=auth)(demo_operation)
 
 
 client = NinjaClient(api)
@@ -111,7 +111,7 @@ def test_schema():
         "KeyQuery": {"in": "query", "name": "key", "type": "apiKey"},
     }
     # TODO: Samename for schema check
-    # TOOD: check operation security attributes
+    # TODO: check operation security attributes
 
 
 def test_invalid_setup():
