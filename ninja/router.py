@@ -49,7 +49,7 @@ class Router:
     ):
         if path not in self.operations:
             self.operations[path] = PathView()
-        self.operations[path].append(
+        self.operations[path].add(
             path=path,
             methods=methods,
             view_func=view_func,

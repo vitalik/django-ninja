@@ -108,7 +108,7 @@ class PathView:
         self.operations = []
         self.is_async = False  # if at least one operation is async - will become True
 
-    def append(
+    def add(
         self,
         path: str,
         methods: List[str],
