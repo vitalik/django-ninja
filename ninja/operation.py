@@ -168,7 +168,7 @@ class PathView:
 
 
 class ResponseObject(object):
-    "Basically this is just a helper to be able to pass response to from_orm"
+    "Basically this is just a helper to be able to pass response to pydantic's from_orm"
 
     def __init__(self, response):
         self.response = response
