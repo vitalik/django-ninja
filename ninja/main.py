@@ -72,6 +72,7 @@ class NinjaAPI:
 
     def add_router(self, prefix, router):
         self._routers.append((prefix, router))
+        router.set_api_instance(self)
 
     @property
     def urls(self):

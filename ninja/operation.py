@@ -20,12 +20,14 @@ class Operation:
         response: Any = None,
     ):
         self.is_async = False
-        self.path = path
-        self.methods = methods
-        self.view_func = view_func
-        self.auth: Sequence[Callable] = []
-        if auth is not None and auth is not NOT_SET:
-            self.auth = isinstance(auth, Sequence) and auth or [auth]
+        self.path: str = path
+        self.methods: List[str] = methods
+        self.view_func: Callable = view_func
+        self.api = None
+
+        self.auth_param: Optional[Union[Sequence[Callable], Callable, object]] = auth
+        self.auth_callbacks: Sequence[Callable] = []
+        self._set_auth(auth)
 
         self.signature = ViewSignature(self.path, self.view_func)
         self.models = self.signature.models
@@ -42,10 +44,20 @@ class Operation:
         result = self.view_func(request, **values)
         return self._create_response(result)
 
+    def set_api_instance(self, api):
+        self.api = api
+        if self.auth_param == NOT_SET and api.auth != NOT_SET:
+            # if api instance have auth and operation not - then we set auth from api instance
+            self._set_auth(self.api.auth)
+
+    def _set_auth(self, auth: Optional[Union[Sequence[Callable], Callable, object]]):
+        if auth is not None and auth is not NOT_SET:
+            self.auth_callbacks = isinstance(auth, Sequence) and auth or [auth]
+
     def _run_authentication(self, request):
-        if not self.auth:
+        if not self.auth_callbacks:
             return
-        for callback in self.auth:
+        for callback in self.auth_callbacks:
             result = callback(request)
             if result is not None:
                 request.auth = result
@@ -128,6 +140,7 @@ class PathView:
             )
 
         self.operations.append(operation)
+        return operation
 
     def get_view(self):
         if self.is_async:

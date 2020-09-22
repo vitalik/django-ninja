@@ -10,7 +10,8 @@ from ninja.utils import normalize_path
 
 class Router:
     def __init__(self):
-        self.operations = OrderedDict()
+        self.operations = OrderedDict()  # TODO: better rename mto path_operations
+        self.api = None
 
     def get(self, path: str, *, auth=NOT_SET, response=None):
         return self.api_operation(["GET"], path, auth=auth, response=response)
@@ -49,19 +50,27 @@ class Router:
     ):
         if path not in self.operations:
             self.operations[path] = PathView()
-        self.operations[path].add(
+        operation = self.operations[path].add(
             path=path,
             methods=methods,
             view_func=view_func,
             auth=auth,
             response=response,
         )
+        if self.api:
+            operation.set_api_instance(self.api)
+
+    def set_api_instance(self, api):
+        self.api = api
+        for path_op in self.operations.values():
+            for op in path_op.operations:
+                op.set_api_instance(api)
 
     def urls_paths(self, prefix: str):
         for path, path_view in self.operations.items():
             path = path.replace("{", "<").replace("}", ">")
             route = "/".join([i for i in (prefix, path) if i])
-            # to skip lot of checks we simply treat doulbe slash as a mistake:
+            # to skip lot of checks we simply treat double slash as a mistake:
             route = normalize_path(route)
             route = route.lstrip("/")
 

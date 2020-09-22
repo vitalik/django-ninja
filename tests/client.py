@@ -10,10 +10,9 @@ from django.http import QueryDict
 class NinjaClientBase:
     def __init__(self, router_or_app):
         if isinstance(router_or_app, NinjaAPI):
-            self.router = router_or_app.default_router
+            self.urls = router_or_app.urls[0]
         else:
-            self.router = router_or_app
-        self.urls = list(self.router.urls_paths(""))
+            self.urls = list(router_or_app.urls_paths(""))
 
     def get(self, path, data={}, **request_params):
         return self.request("GET", path, data, **request_params)

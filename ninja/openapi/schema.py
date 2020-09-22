@@ -110,10 +110,10 @@ class OpenAPISchema(OrderedDict):
         }
 
     def operation_security(self, operation):
-        if not operation.auth:
+        if not operation.auth_callbacks:
             return
         result = []
-        for auth in operation.auth:
+        for auth in operation.auth_callbacks:
             if hasattr(auth, "openapi_security_schema"):
                 scopes = []  # TODO: scopes
                 name = auth.__class__.__name__
@@ -132,5 +132,5 @@ class OpenAPISchema(OrderedDict):
 
     def add_schema_definitions(self, definitions: dict):
         # TODO: check if schema["definitions"] are unique
-        # if not - workarond (maybe use pydantic.schema.schema(models)) to process list of models
+        # if not - workaround (maybe use pydantic.schema.schema(models)) to process list of models
         self.schemas.update(definitions)
