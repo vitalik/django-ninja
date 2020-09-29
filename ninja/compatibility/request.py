@@ -6,7 +6,7 @@ except ImportError:
     from .datastructures import CaseInsensitiveMapping
 
 
-# HttpHeaders copypated from django 3.0 codebase
+# HttpHeaders copypasted from django 3.0 codebase
 class HttpHeaders(CaseInsensitiveMapping):
     HTTP_PREFIX = "HTTP_"
     # PEP 333 gives two headers which aren't prepended with HTTP_.
