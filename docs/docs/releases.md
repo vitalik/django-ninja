@@ -1,5 +1,9 @@
 # Release Notes
 
+## 0.6.0
+
+ * Fixed router authentication (#20)
+ 
 ## 0.5.0
 
  * Responses now support querysets
