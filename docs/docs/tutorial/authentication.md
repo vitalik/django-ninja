@@ -4,15 +4,15 @@
 
 **Django Ninja** provides several tools to help you deal with authentication and authorization easily, rapidly, in a standard way, without having to study and learn <a href="https://swagger.io/docs/specification/authentication/" target="_blank">all the security specifications</a>.
 
-The core conecpt is that when you describe api operation you can define authenticaion object
+The core concept is that when you describe api operation you can define authentication object
 
 ```Python hl_lines="2 7"
 {!./src/tutorial/authentication/code001.py!}
 ```
 
-In this example client will be able to call `pets` method only if uses django session authentication (default is cookie based). Othervise a HTTP-401 error will be returned.
+In this example client will be able to call `pets` method only if uses django session authentication (default is cookie based). Otherwise, a HTTP-401 error will be returned.
 
-## Authomatic Openapi schema
+## Automatic Openapi schema
 
 Let's create an example where client in order to authenticate needs to pass a header :
 
@@ -59,7 +59,7 @@ api = NinjaAPI(auth=GlobalAuth())
 # def ...
 ```
 
-And if you need to overrule some thoe methods - you can do that on the opertaion level again by passing `auth` argument. In this example authentication will be disabled for `/token` operation:
+And if you need to overrule some those methods—you can do that on the operation level again by passing `auth` argument. In this example authentication will be disabled for `/token` operation:
 
 ```Python hl_lines="19"
 {!./src/tutorial/authentication/global01.py!}

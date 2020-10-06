@@ -92,7 +92,7 @@ http://localhost:8000/api/example?d=<strong>2020-01-01</strong>
 
 ### Using Schema
 
-You can as well use Schema to incapsulate GET parameters:
+You can as well use Schema to encapsulate GET parameters:
 
 ```Python hl_lines="1 2  5 6 7 8"
 {!./src/tutorial/query/code010.py!}

@@ -67,7 +67,7 @@ def events(request, year: int, month: int, day: int):
 
 ### Using Schema
 
-You can as well use Schema to incapsulate path parameters that depend on each other (and validate them as a group)
+You can as well use Schema to encapsulate path parameters that depend on each other (and validate them as a group)
 
 
 ```Python hl_lines="1 2  5 6 7 8 9 10 11 15"
