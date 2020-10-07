@@ -15,7 +15,7 @@ http://django-ninja.rest-framework.com
 
 You can inspect our docs for typos and spelling - and create pull requests or <a href="https://github.com/vitalik/django-ninja/issues" target="_blank">open an issue</a>
 
-Also you can put to issues suggesgtions to improve **django ninja**
+Also you can put to issues suggestions to improve **django ninja**
 
 Pull requests are always welcome.
 

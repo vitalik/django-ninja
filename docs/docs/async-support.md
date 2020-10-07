@@ -1,5 +1,5 @@
 ## Intro
-Since **version 3.1** Django comes with **async views support**. This allows you run efficently concurent views that are network/IO-bound.
+Since **version 3.1** Django comes with **async views support**. This allows you run efficiently concurrent views that are network/IO-bound.
 
 ```
 pip install Django==3.1 django-ninja
@@ -12,7 +12,7 @@ Async views works more efficient when it comes to:
  - processing disk data
 
 
-**Django Ninja** takes full advantate of async views and make a work with it very easy.
+**Django Ninja** takes full advantage of async views and make a work with it very easy.
 
 
 ## Quick example
@@ -54,12 +54,12 @@ pip install uvicorn
 And now to start the server:
 
 ```
-uvicorn yourproject.asgi:application --reload
+uvicorn your_project.asgi:application --reload
 ```
 
 
 > <small>
-> *Note: replace `yourproject` with your project package name*<br>
+> *Note: replace `your_project` with your project package name*<br>
 > *`--reload` flag used to automatically reload server if you do any changes to the code (do not use on production)*
 > </small>
 
@@ -70,7 +70,7 @@ uvicorn yourproject.asgi:application --reload
 
 Go to your browser and open <a href="http://127.0.0.1:8000/api/say-after?delay=3&word=hello" target="_blank">http://127.0.0.1:8000/api/say-after?delay=3&word=hello</a> (**delay=3**) - after a 3 seconds wait you should see "hello" message.
 
-But now let's flud this operation with **100 parrallel requests**:
+But now let's flood this operation with **100 parallel requests**:
 
 
 ```
@@ -98,9 +98,9 @@ Percentage of the requests served within a certain time (ms)
  100%   3083 (longest request)
 ```
 
-Based on the numbers - our service was able to handle each of the 100 concurent requests with just a little of overhead.
+Based on the numbers - our service was able to handle each of the 100 concurrent requests with just a little of overhead.
 
-To achieve the same concurency with wsgi and sync operation you would need to spin f.e. 10 workes with 10 threads each.
+To achieve the same concurrency with wsgi and sync operation you would need to spin f.e. 10 workers with 10 threads each.
 
 
 ## Mixing sync and async operations
@@ -173,7 +173,7 @@ async def search(request, post_id: int):
     blog = Blog.objects.get(pk=post_id)
     ...
 ```
-It throws an error. Untill async ORM not implemented you can use `sync_to_async()` adapter:
+It throws an error. Until async ORM is implemented you can use `sync_to_async()` adapter:
 
 ```Python hl_lines="1 3 9"
 from asgiref.sync import sync_to_async

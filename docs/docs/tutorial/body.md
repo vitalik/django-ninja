@@ -6,7 +6,7 @@ To declare a **request body**, you need to use **NinjaAPI `Schema`**.
 
 !!! info
     Under the hood **NinjaAPI** uses <a href="https://pydantic-docs.helpmanual.io/" class="external-link" target="_blank">Pydantic</a> models with all their power and benefits.
-    The alias `Schema` picked to avoid confuction in code with Django models.
+    The alias `Schema` picked to avoid confusion in code with Django models.
 
 ## Import Schema
 
@@ -26,7 +26,7 @@ Use standard Python types for all the attributes:
 {!./src/tutorial/body/code01.py!}
 ```
 
-Note: if you use **`None`** as default value for attrubute - it will become an optional in request body.
+Note: if you use **`None`** as default value for attribute - it will become an optional in request body.
 For example, this model above declares a JSON "`object`" (or Python `dict`) like:
 
 ```JSON

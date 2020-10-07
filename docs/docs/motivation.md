@@ -7,7 +7,7 @@ Indeed **Django Ninja** is heavily inspired by <a href="https://fastapi.tiangolo
 
 But there are few issues when it comes to join FastAPI and Django
 
-1) **FastAPI** declares to be ORM agonistic (meaning you can use it with SqlAlchemy or DjangoORM). But in reality Django ORM is not yet ready for async use (will be in version 3.2). And if you use it in sync mode - you can have a [closed connection issue](https://github.com/tiangolo/fastapi/issues/716) which you will have to overcome with lot's of crunches.
+1) **FastAPI** declares to be ORM agnostic (meaning you can use it with SqlAlchemy or DjangoORM). But in reality Django ORM is not yet ready for async use (will be in version 3.2). And if you use it in sync mode - you can have a [closed connection issue](https://github.com/tiangolo/fastapi/issues/716) which you will have to overcome with lot's of crunches.
 
 2) The dependency injection with arguments makes your code too much verbose when you rely on authentication and database session in your operations (which for some projects makes it like 99% of all operations)
 

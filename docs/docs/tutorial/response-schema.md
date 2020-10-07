@@ -1,8 +1,8 @@
 # Response Schema
 
-**Django Ninja** allows you define schema of your responses both for validatoin and documenation purposes.
+**Django Ninja** allows you define schema of your responses both for validation and documentation purposes.
 
-Let's check the the following example. Imagine you need to create api operation that creates a user. The **input** parameter whould be **username+password**, but **output** of this operation should be **id+username** (**without** the password).
+Let's check the the following example. Imagine you need to create api operation that creates a user. The **input** parameter would be **username+password**, but **output** of this operation should be **id+username** (**without** the password).
 
 Let's create input schema:
 
@@ -57,7 +57,7 @@ Django Ninja will use this `response` schema to:
 
 ## Nested objects
 
-There is also oten a need to return responses with some nested/child objects
+There is also often a need to return responses with some nested/child objects
 
 Let's check the following example - imagine we have a `Task` django model with `User` ForeignKey:
 

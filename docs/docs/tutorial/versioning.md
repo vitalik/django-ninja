@@ -59,7 +59,7 @@ Now you can go to different docs pages for each version:
 
 ## Different business logic
 
-Same way you can define different API for different compoenents or areas:
+Same way you can define different API for different components or areas:
 
 ```Python hl_lines="4 7"
 ...
