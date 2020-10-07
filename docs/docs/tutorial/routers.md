@@ -97,7 +97,7 @@ Finally let's group this together, in your project folder (next to urls.py) crea
 
 ```
 
-this will will be like:
+this will be like:
 
 ```Python
 from ninja import NinjaAPI
