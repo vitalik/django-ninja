@@ -2,7 +2,7 @@
 
 ## Do you like Django Ninja ?
 
-If you do like this project - there is tiny thing you can do to let us know that we are moving the right direction.
+If you do like this project - there is a tiny thing you can do to let us know that we are moving in the right direction.
 
 Simply give django-ninja a <a href="https://github.com/vitalik/django-ninja" target="_blank">star on github</a> <a href="https://github.com/vitalik/django-ninja" target="_blank">![github star](img/github-star.png)</a>
 
@@ -13,7 +13,7 @@ http://django-ninja.rest-framework.com
 
 ## Do you want to help us?
 
-You can inspect our docs for typos and spelling - and create pull requests or <a href="https://github.com/vitalik/django-ninja/issues" target="_blank">open an issue</a>
+You can inspect our docs for typos and spelling mistakes - and create pull requests or <a href="https://github.com/vitalik/django-ninja/issues" target="_blank">open an issue</a>
 
 Also you can put to issues suggestions to improve **django ninja**
 

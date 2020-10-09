@@ -5,14 +5,14 @@ Since **version 3.1** Django comes with **async views support**. This allows you
 pip install Django==3.1 django-ninja
 ```
 
-Async views works more efficient when it comes to:
+Async views work more efficiently when it comes to:
 
- - calling external APIs over network
+ - calling external APIs over the network
  - executing/waiting for database queries
  - processing disk data
 
 
-**Django Ninja** takes full advantage of async views and make a work with it very easy.
+**Django Ninja** takes full advantage of async views and makes  working with it very easy.
 
 
 ## Quick example
