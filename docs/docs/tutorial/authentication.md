@@ -4,13 +4,13 @@
 
 **Django Ninja** provides several tools to help you deal with authentication and authorization easily, rapidly, in a standard way, without having to study and learn <a href="https://swagger.io/docs/specification/authentication/" target="_blank">all the security specifications</a>.
 
-The core concept is that when you describe api operation you can define authentication object
+The core concept is that when you describe an api operation you can define an authentication object
 
 ```Python hl_lines="2 7"
 {!./src/tutorial/authentication/code001.py!}
 ```
 
-In this example client will be able to call `pets` method only if uses django session authentication (default is cookie based). Otherwise, a HTTP-401 error will be returned.
+In this example client will be able to call the `pets` method only if it uses django session authentication (default is cookie based). Otherwise, a HTTP-401 error will be returned.
 
 ## Automatic Openapi schema
 
@@ -59,7 +59,7 @@ api = NinjaAPI(auth=GlobalAuth())
 # def ...
 ```
 
-And if you need to overrule some those methods—you can do that on the operation level again by passing `auth` argument. In this example authentication will be disabled for `/token` operation:
+And if you need to overrule some of those methods you can do that on the operation level again by passing the `auth` argument. In this example authentication will be disabled for `/token` operation:
 
 ```Python hl_lines="19"
 {!./src/tutorial/authentication/global01.py!}
@@ -147,6 +147,6 @@ The **`auth`** argument allows also to pass multiple authenticators:
 {!./src/tutorial/authentication/multiple01.py!}
 ```
 
-In this case **Django Ninja** will first check they api key `GET`, and if not set or invalid will check the `header` key. And if both invalid will raise authentication error to response.
+In this case **Django Ninja** will first check the api key `GET`, and if not set or invalid will check the `header` key. And if both invalid will raise authentication error to response.
 
 
