@@ -1,6 +1,7 @@
 from collections import OrderedDict
-from pydantic.schema import model_schema
+
 from ninja.utils import normalize_path
+from pydantic.schema import model_schema
 
 REF_PREFIX = "#/components/schemas/"
 
@@ -86,28 +87,41 @@ class OpenAPISchema(OrderedDict):
                 result.append(param)
         return result
 
+    def _create_schema_ref_from_model(self, model):
+        schema = model_schema(model, ref_prefix=REF_PREFIX)
+        self.add_schema_definitions(schema.get("definitions"))
+        name, details = list(schema.get("properties").items())[0]
+
+        ref = details.get("$ref")
+        required = name in schema.get("required", {})
+        return ref, required
+
     def request_body(self, operation):
         # TODO: refactor
         models = [m for m in operation.models if m._in == "body"]
         if not models:
             return {}
         assert len(models) == 1
-        schema = model_schema(models[0], ref_prefix=REF_PREFIX)
 
-        self.add_schema_definitions(schema["definitions"])
-
-        properties = list(
-            [(k, v) for k, v in schema["properties"].items()]
-        )  # TODO: can be just list(schema["properties"].items()) ?
-        assert len(properties) == 1
-
-        name, details = properties[0]
-        ref = details["$ref"]
+        ref, required = self._create_schema_ref_from_model(models[0])
 
         return {
             "content": {"application/json": {"schema": {"$ref": ref}}},
-            "required": name in schema.get("required", {}),
+            "required": required,
         }
+
+    def responses(self, operation):
+        if operation.response_model:
+            ref, _ = self._create_schema_ref_from_model(operation.response_model)
+
+            return {
+                200: {
+                    "description": "OK",
+                    "content": {"application/json": {"schema": {"$ref": ref}}},
+                }
+            }
+        else:
+            return {200: {"description": "OK"}}
 
     def operation_security(self, operation):
         if not operation.auth_callbacks:
@@ -120,9 +134,6 @@ class OpenAPISchema(OrderedDict):
                 result.append({name: scopes})  # TODO: check if unique
                 self.securitySchemes[name] = auth.openapi_security_schema
         return result
-
-    def responses(self, operation):
-        return {200: {"description": "OK"}}
 
     def get_components(self):
         result = {"schemas": self.schemas}
