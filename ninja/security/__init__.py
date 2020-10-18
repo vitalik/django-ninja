@@ -1,7 +1,6 @@
 from ninja.security.apikey import APIKeyQuery, APIKeyCookie, APIKeyHeader
 from ninja.security.http import HttpBearer, HttpBasicAuth
+from ninja.security.session import SessionAuth
 
 
-def django_auth(request):
-    if request.user.is_authenticated:
-        return request.user
+django_auth = SessionAuth()

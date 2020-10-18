@@ -19,6 +19,12 @@
             SwaggerUIBundle.SwaggerUIStandalonePreset
             ],
             layout: "BaseLayout",
+        {% if api.csrf and csrf_token %}
+            requestInterceptor: (req) => {
+				req.headers['X-CSRFToken'] = "{{csrf_token}}"
+				return req;
+			},
+        {% endif %}
             deepLinking: true
         })
     </script>

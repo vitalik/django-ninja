@@ -7,6 +7,7 @@ from ninja.errors import InvalidInput
 from ninja.constants import NOT_SET
 from ninja.schema import Schema
 from ninja.signature import ViewSignature, is_async
+from ninja.utils import check_csrf
 
 
 class Operation:
@@ -34,9 +35,9 @@ class Operation:
         self.response_model = self._create_response_model(response)
 
     def run(self, request, **kw):
-        unauthorized = self._run_authentication(request)
-        if unauthorized:
-            return unauthorized
+        error = self._run_checks(request)
+        if error:
+            return error
 
         values, errors = self._get_values(request, kw)
         if errors:
@@ -54,9 +55,21 @@ class Operation:
         if auth is not None and auth is not NOT_SET:
             self.auth_callbacks = isinstance(auth, Sequence) and auth or [auth]
 
+    def _run_checks(self, request):
+        "Runs security checks for each operation"
+        # auth:
+        if self.auth_callbacks:
+            error = self._run_authentication(request)
+            if error:
+                return error
+
+        # csrf:
+        if self.api.csrf:
+            error = check_csrf(request, self.view_func)
+            if error:
+                return error
+
     def _run_authentication(self, request):
-        if not self.auth_callbacks:
-            return
         for callback in self.auth_callbacks:
             result = callback(request)
             if result is not None:
@@ -104,9 +117,9 @@ class AsyncOperation(Operation):
         self.is_async = True
 
     async def run(self, request, **kw):
-        unauthorized = self._run_authentication(request)
-        if unauthorized:
-            return unauthorized
+        error = self._run_checks(request)
+        if error:
+            return error
 
         values, errors = self._get_values(request, kw)
         if errors:
@@ -142,13 +155,18 @@ class PathView:
         self.operations.append(operation)
         return operation
 
+    def set_api_instance(self, api):
+        self.api = api
+        for op in self.operations:
+            op.set_api_instance(api)
+
     def get_view(self):
         if self.is_async:
             view = self._async_view
         else:
             view = self._sync_view
+
         view.__func__.csrf_exempt = True
-        # TODO:   ^ this should probably be configurable in settings or Ninja app
         return view
 
     def _sync_view(self, request, *a, **kw):

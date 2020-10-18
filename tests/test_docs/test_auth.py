@@ -21,7 +21,7 @@ def test_intro():
 def test_examples():
     from someapp.models import Client
 
-    api = NinjaAPI()
+    api = NinjaAPI(csrf=True)
     Client.objects.create(key="12345")
 
     with patch("builtins.api", api, create=True):

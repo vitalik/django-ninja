@@ -20,6 +20,7 @@ class NinjaAPI:
         openapi_url: Optional[str] = "/openapi.json",
         docs_url: Optional[str] = "/docs",
         urls_namespace: str = None,
+        csrf: bool = False,
         auth: Union[Sequence[Callable], Callable, object] = NOT_SET,
     ):
         self.title = title
@@ -28,11 +29,11 @@ class NinjaAPI:
         self.openapi_url = openapi_url
         self.docs_url = docs_url
         self.urls_namespace = urls_namespace or f"api-{self.version}"
+        self.csrf = csrf
+
         self.auth: Optional[Sequence[Callable]] = NOT_SET
         if auth is not None and auth is not NOT_SET:
             self.auth = isinstance(auth, Sequence) and auth or [auth]
-
-        self._validate()
 
         self._routers: List[Tuple[str, Router]] = []
         self.default_router = Router()
@@ -76,6 +77,7 @@ class NinjaAPI:
 
     @property
     def urls(self):
+        self._validate()
         return (
             self._get_urls(),
             "ninja",
@@ -103,6 +105,9 @@ class NinjaAPI:
         return get_schema(api=self, path_prefix=path_prefix)
 
     def _validate(self):
+        from ninja.security import APIKeyCookie
+
+        # 1) urls namespacing validation
         skip_registry = os.environ.get("NINJA_SKIP_REGISTRY", False)
         if not skip_registry and self.urls_namespace in NinjaAPI._registry:
             msg = [
@@ -114,3 +119,14 @@ class NinjaAPI:
             ]
             raise ConfigError("\n".join(msg))
         NinjaAPI._registry.append(self.urls_namespace)
+
+        # 2) csrf
+        if self.csrf is False:
+            for _prefix, router in self._routers:
+                for path_operation in router.operations.values():
+                    for operation in path_operation.operations:
+                        for auth in operation.auth_callbacks:
+                            if isinstance(auth, APIKeyCookie):
+                                raise ConfigError(
+                                    "Cookie Authentication must be used with CSRF. Please use NinjaAPI(csrf=True)"
+                                )

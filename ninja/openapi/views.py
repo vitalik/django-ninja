@@ -4,7 +4,7 @@ from django.urls import reverse
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    # if anyone konw a cleaner way to make mypy happy - welcome
+    # if anyone knows a cleaner way to make mypy happy - welcome
     from ninja import NinjaAPI  # pragma: no cover
 
 
@@ -23,13 +23,16 @@ def swagger(request, api: "NinjaAPI"):
     return render(
         request,
         "ninja/swagger.html",
-        {"api": api, "openapi_json_url": reverse(f"{api.urls_namespace}:openapi-json")},
+        {
+            "api": api,
+            "openapi_json_url": reverse(f"{api.urls_namespace}:openapi-json"),
+        },
     )
 
 
-def render(request, template_name, context=None):
+def render(request, template_name: str, context=None):
     """
-    I do not relly want ninja to be required in INSTALLED_APPS for now
+    I do not really want ninja to be required in INSTALLED_APPS for now
     that is why for now we use this render function to simulate django render
     """
     import os

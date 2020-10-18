@@ -12,6 +12,8 @@ class NinjaClientBase:
         if isinstance(router_or_app, NinjaAPI):
             self.urls = router_or_app.urls[0]
         else:
+            api = NinjaAPI()
+            router_or_app.set_api_instance(api)
             self.urls = list(router_or_app.urls_paths(""))
 
     def get(self, path, data={}, **request_params):
@@ -50,6 +52,8 @@ class NinjaClientBase:
         request.path = path
         request.body = ""
         request.COOKIES = {}
+        request._dont_enforce_csrf_checks = False
+        request.is_secure.return_value = False
 
         if "user" not in request_params:
             request.user.is_authenticated = False
@@ -58,7 +62,10 @@ class NinjaClientBase:
 
         request.META.update(
             dict(
-                [(f"HTTP_{k}", v) for k, v in request_params.pop("headers", {}).items()]
+                [
+                    (f"HTTP_{k.replace('-', '_')}", v)
+                    for k, v in request_params.pop("headers", {}).items()
+                ]
             )
         )
         if django.VERSION[:2] > (2, 1):

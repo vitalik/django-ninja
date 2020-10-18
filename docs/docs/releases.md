@@ -1,5 +1,10 @@
 # Release Notes
 
+
+## 0.7.0
+
+ * Added [csrf](/tutorial/csrf) configuration.
+
 ## 0.6.0
 
  * Fixed router authentication (#20)

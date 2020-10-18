@@ -28,6 +28,7 @@ nav:
   - tutorial/response-schema.md
   - tutorial/routers.md
   - tutorial/versioning.md
+  - tutorial/csrf.md
 - async-support.md
 - Enhancement Proposals:
   - Intro: proposals/index.md

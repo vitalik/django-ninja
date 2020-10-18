@@ -9,7 +9,7 @@ from client import NinjaClient
 api = NinjaAPI()
 
 
-# TODO: check if you add  operaiotn to the same path - it should raise a ConfigError that this path already exist
+# TODO: check if you add  operation to the same path - it should raise a ConfigError that this path already exist
 # make sure to check how this will work with versioning
 # and also check what will happen if you add same path in different routers
 #  api.add_router("", router1)
@@ -94,5 +94,6 @@ def test_validates():
         os.environ["NINJA_SKIP_REGISTRY"] = ""
         with pytest.raises(ConfigError):
             api2 = NinjaAPI()
+            urls = api2.urls
     finally:
         os.environ["NINJA_SKIP_REGISTRY"] = "yes"

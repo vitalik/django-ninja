@@ -52,7 +52,7 @@ def demo_operation(request):
     return {"auth": request.auth}
 
 
-api = NinjaAPI()
+api = NinjaAPI(csrf=True)
 
 for path, auth in [
     ("django_auth", django_auth),
@@ -109,6 +109,7 @@ def test_schema():
         "KeyCookie": {"in": "cookie", "name": "key", "type": "apiKey"},
         "KeyHeader": {"in": "header", "name": "key", "type": "apiKey"},
         "KeyQuery": {"in": "query", "name": "key", "type": "apiKey"},
+        "SessionAuth": {"in": "cookie", "name": "sessionid", "type": "apiKey"},
     }
     # TODO: Samename for schema check
     # TODO: check operation security attributes

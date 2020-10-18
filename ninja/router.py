@@ -10,7 +10,7 @@ from ninja.utils import normalize_path
 
 class Router:
     def __init__(self):
-        self.operations = OrderedDict()  # TODO: better rename mto path_operations
+        self.operations = OrderedDict()  # TODO: better rename to path_operations
         self.api = None
 
     def get(self, path: str, *, auth=NOT_SET, response=None):
@@ -49,8 +49,11 @@ class Router:
         response=None
     ):
         if path not in self.operations:
-            self.operations[path] = PathView()
-        operation = self.operations[path].add(
+            path_view = PathView()
+            self.operations[path] = path_view
+        else:
+            path_view = self.operations[path]
+        path_view.add(
             path=path,
             methods=methods,
             view_func=view_func,
@@ -58,13 +61,12 @@ class Router:
             response=response,
         )
         if self.api:
-            operation.set_api_instance(self.api)
+            path_view.set_api_instance(self.api)
 
     def set_api_instance(self, api):
         self.api = api
-        for path_op in self.operations.values():
-            for op in path_op.operations:
-                op.set_api_instance(api)
+        for path_view in self.operations.values():
+            path_view.set_api_instance(self.api)
 
     def urls_paths(self, prefix: str):
         for path, path_view in self.operations.items():
