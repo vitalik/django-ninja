@@ -10,7 +10,7 @@
 ## Problem
 
 An API operation is a callable which takes a request and parameters and returns a response. 
-But it is often a case in real world when you need to reuse same pices of code in multiple operations.
+But it is often a case in real world when you need to reuse same pieces of code in multiple operations.
 
 Let's take the following example:
 
@@ -39,7 +39,7 @@ Let's now create few API operations for it:
  - task details
  - complete task action
 
-All should validate that user can only acess his/her project's tasks (otherwise return 404)
+All should validate that user can only access his/her project's tasks (otherwise return 404)
 
 It can be something like this:
 
@@ -80,12 +80,12 @@ user_projects = request.user.project_set
 project = get_object_or_404(user_projects, id=project_id))
 ```
 
-You can extract it to a function, but it will just make it 3 lines smaller and still be pretty poluted...
+You can extract it to a function, but it will just make it 3 lines smaller and still be pretty polluted...
 
 
 ## Solution
 
-The proposal is to have alternative called "Class Based Operation" where you can decoreate with `path` decorator entire class:
+The proposal is to have alternative called "Class Based Operation" where you can decorate with `path` decorator entire class:
 
 
 ```Python hl_lines="7 8"
@@ -135,7 +135,7 @@ class Tasks:
 ```
 Which made main business operation focus only on tasks (that was exposed as `self.tasks` attribute)
 
-you can use both `api` and `router` instances to support class pathes
+you can use both `api` and `router` instances to support class paths
 
 ## Issue
 
@@ -143,7 +143,7 @@ The `__init__` method:
 
 ```def __init__(self, request, project_id=int):```
 
-Python do not support `async` keyword for `__init__`, so to support async operations - we need some other method for initalization, but `__init__` sounds most logical
+Python do not support `async` keyword for `__init__`, so to support async operations - we need some other method for initialization, but `__init__` sounds most logical
 
 
 ## Your thoughts/proposals

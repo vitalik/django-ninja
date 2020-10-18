@@ -53,7 +53,7 @@ class UserOut(Schema):
 
 ### ModelSchema
 
-Intoduce a **ModelSchema** that can reflect Django model:
+Introduce a **ModelSchema** that can reflect Django model:
 
 
 ```Python
@@ -75,7 +75,7 @@ class UserOut(ModelSchema):
 
 ### Passing all models fields
 
-If you want to create schema with **ALL** fileds, pass `'__all__'`:
+If you want to create schema with **ALL** fields, pass `'__all__'`:
 
 ```Python hl_lines="4"
 class UserOut(ModelSchema):
@@ -97,7 +97,7 @@ class UserOut(ModelSchema):
 
 ### Required/Not-required fields
 
-For some cases you migth want to override which fields are **required or not required** in API:
+For some cases you might want to override which fields are **required or not required** in API:
 
 ```Python
 class UserCreate(ModelSchema):
@@ -127,7 +127,7 @@ class UserPatch(ModelSchema):
 
 ```
 
-You can use `UserPatch` to update only few feids that were provided in request
+You can use `UserPatch` to update only few fields that were provided in request
 
 
 ### Relational fields
@@ -174,7 +174,7 @@ class PostSchema(ModelSchema):
 
 ## Issues
 
-The issue that by using model generated schemas you will loose that nice IDE support and typechecks, but on the other hand you might not use the attributes directly
+The issue that by using model generated schemas you will loose that nice IDE support and type checks, but on the other hand you might not use the attributes directly
 
 
 ## Your thoughts/proposals

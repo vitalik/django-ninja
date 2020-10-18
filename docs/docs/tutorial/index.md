@@ -61,7 +61,7 @@ urlpatterns = [
 
 ## Defining operation methods
 
-"Operation" can beone of the HTTP "methods".
+"Operation" can be one of the HTTP "methods".
 
  - GET
  - POST

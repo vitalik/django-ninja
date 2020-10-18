@@ -25,7 +25,7 @@ def login(request, payload: Auth):
 
 This will define that login operation can only return one type of response with `{token: xxx, expires: yyy}`
 
-But sometimes you need to define more then response schemas. Like when in case of authentiacation you can return
+But sometimes you need to define more then response schemas. Like when in case of authentication you can return
  - 200 successful -> token
  - 401 -> Unauthorized
  - 402 -> Payment required
@@ -36,7 +36,7 @@ In fact the [OpenAPI specification](https://swagger.io/docs/specification/descri
 
 ## Solution
 
-### 1) Via Uninon type hint
+### 1) Via Union type hint
 
 ```Python hl_lines="1 11"
 from typing import Union
@@ -82,12 +82,12 @@ def login(request, payload: Auth):
     - Can return different http codes
     - Fully compatible with Open api schema
  - **Cons**:
-    - Have to always return a status code number to mark which schma is outputting
+    - Have to always return a status code number to mark which schema is outputting
 
 
 ## Naming issues
 
-`response` seems a very generic name, maybe better use something like `response_schemas` (but seems to long), please give your thougthts on naming.
+`response` seems a very generic name, maybe better use something like `response_schemas` (but seems to long), please give your thoughts on naming.
 
 ## Your thoughts/proposals
 

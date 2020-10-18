@@ -1,8 +1,8 @@
 # Response Schema
 
-**Django Ninja** allows you define schema of your responses both for validatoin and documenation purposes.
+**Django Ninja** allows you define schema of your responses both for validation and documentation purposes.
 
-Let's check the the following example. Imagine you need to create api operation that creates a user. The **input** parameter whould be **username+password**, but **output** of this operation should be **id+username** (**without** the password).
+Let's check the following example. Imagine you need to create an api operation that creates a user. The **input** parameter would be **username+password**, but **output** of this operation should be **id+username** (**without** the password).
 
 Let's create input schema:
 
@@ -57,7 +57,7 @@ Django Ninja will use this `response` schema to:
 
 ## Nested objects
 
-There is also oten a need to return responses with some nested/child objects
+There is also often a need to return responses with some nested/child objects
 
 Let's check the following example - imagine we have a `Task` django model with `User` ForeignKey:
 
@@ -94,7 +94,7 @@ def tasks(request):
     return list(queryset)
 ```
 
-If you execute this operation you should  get response like this:
+If you execute this operation you should  get a response like this:
 
 ```JSON  hl_lines="6 7 8 9 16"
 [
@@ -119,9 +119,9 @@ If you execute this operation you should  get response like this:
 
 ## Returning querysets
 
-In the previous example we specifically converted queryset to to a list (and executing SQL query during evaluation).
+In the previous example we specifically converted a queryset into a list (and executing SQL query during evaluation).
 
-But you can avoid it and return a queryset as result and it will be automatically evaluated to List:
+But you can avoid it and return a queryset as a result and it will be automatically evaluated to List:
 
 ```Python hl_lines="3"
 @api.get("/tasks", response=List[TaskSchema])
@@ -131,7 +131,7 @@ def tasks(request):
 
 ### Note about async mode
 
-If your [async-support](operation is is async) this example will not work
+If your opertation is async [async-support](https://django-ninja.rest-framework.com/async-support) this example will not work
 
 ```Python hl_lines="2 3"
 @api.get("/tasks", response=List[TaskSchema])

@@ -82,7 +82,7 @@ def news_details(request, event_id: int):
 and blogs.
 
 
-Finally let's group this togenter, in your project folder (next to urls.py) create another api.py file with main NinjaAPI instance:
+Finally let's group this together, in your project folder (next to urls.py) create another api.py file with main NinjaAPI instance:
 
 ``` hl_lines="2"
 ├── myproject
@@ -97,7 +97,7 @@ Finally let's group this togenter, in your project folder (next to urls.py) crea
 
 ```
 
-this will will be like:
+this will be like:
 
 ```Python
 from ninja import NinjaAPI
