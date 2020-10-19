@@ -71,7 +71,7 @@ class OpenAPISchema(OrderedDict):
             if num_properties == 1 and "definitions" in schema:
                 prop_definition = list(schema["definitions"].values())[0]
                 if prop_definition["type"] == "object":
-                    # This is a specail case when we group multiple path or query arguemtns into single schema
+                    # This is a specail case when we group multiple path or query arguments into single schema
                     # https://django-ninja.rest-framework.com/tutorial/path-params/#using-schema
                     schema = prop_definition
                 else:
