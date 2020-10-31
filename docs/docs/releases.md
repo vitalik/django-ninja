@@ -1,5 +1,9 @@
 # Release Notes
 
+## 0.8.0
+
+ * Fixed [response schema output](https://github.com/vitalik/django-ninja/issues/19)
+ * Pydantic 1.7 support
 
 ## 0.7.0
 
