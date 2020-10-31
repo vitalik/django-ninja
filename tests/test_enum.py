@@ -65,10 +65,15 @@ def test_schema():
 
     pprint(schema)
 
-    booking_shchema = schema["components"]["schemas"]["Booking"]
-    assert booking_shchema["properties"]["room"] == {
-        "$ref": "#/components/schemas/RoomEnum"
-    }
+    booking_schema = schema["components"]["schemas"]["Booking"]
+    room_prop = booking_schema["properties"]["room"]
+
+    if "allOf" in room_prop:
+        # pydantic 1.7+ change:
+        assert room_prop["allOf"] == [{"$ref": "#/components/schemas/RoomEnum"}]
+    else:
+        assert room_prop == {"$ref": "#/components/schemas/RoomEnum"}
+
     assert schema["components"]["schemas"]["RoomEnum"] == {
         "description": "An enumeration.",
         "enum": ["double", "twin", "single"],
