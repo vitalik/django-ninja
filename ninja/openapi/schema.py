@@ -48,10 +48,12 @@ class OpenAPISchema(OrderedDict):
             # TODO: summary should be param of api.get(xxx, summary=yy)
             "summary": operation.view_func.__name__.title().replace("_", " "),
             "parameters": self.operation_parameters(operation),
-            "requestBody": self.request_body(operation),
             "responses": self.responses(operation),
-            "security": self.operation_security(operation),
         }
+
+        body = self.request_body(operation)
+        if body:
+            result["requestBody"] = body
 
         security = self.operation_security(operation)
         if security:
@@ -87,14 +89,16 @@ class OpenAPISchema(OrderedDict):
                 result.append(param)
         return result
 
-    def _create_schema_ref_from_model(self, model):
+    def _create_schema_from_model(self, model):
+        print(model.__fields__, "!!!")
         schema = model_schema(model, ref_prefix=REF_PREFIX)
-        self.add_schema_definitions(schema.get("definitions"))
-        name, details = list(schema.get("properties").items())[0]
+        print(schema, "!!@@@@")
+        self.add_schema_definitions(schema["definitions"])
+        name, details = list(schema["properties"].items())[0]
 
-        ref = details.get("$ref")
+        # ref = details["$ref"]
         required = name in schema.get("required", {})
-        return ref, required
+        return details, required
 
     def request_body(self, operation):
         # TODO: refactor
@@ -103,21 +107,21 @@ class OpenAPISchema(OrderedDict):
             return {}
         assert len(models) == 1
 
-        ref, required = self._create_schema_ref_from_model(models[0])
+        schema, required = self._create_schema_from_model(models[0])
 
         return {
-            "content": {"application/json": {"schema": {"$ref": ref}}},
+            "content": {"application/json": {"schema": schema}},
             "required": required,
         }
 
     def responses(self, operation):
         if operation.response_model:
-            ref, _ = self._create_schema_ref_from_model(operation.response_model)
+            schema, _ = self._create_schema_from_model(operation.response_model)
 
             return {
                 200: {
                     "description": "OK",
-                    "content": {"application/json": {"schema": {"$ref": ref}}},
+                    "content": {"application/json": {"schema": schema}},
                 }
             }
         else:

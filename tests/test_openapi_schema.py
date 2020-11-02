@@ -1,3 +1,4 @@
+from typing import List
 from ninja import NinjaAPI, Schema
 from django.test import Client
 
@@ -20,6 +21,11 @@ def method(request, data: Payload):
     return data.dict()
 
 
+@api.post("/test_list", response=List[Response])
+def method_list(request, data: List[Payload]):
+    return []
+
+
 def test_schema_views(client: Client):
     assert client.get("/api/").status_code == 404
     assert client.get("/api/docs").status_code == 200
@@ -28,7 +34,11 @@ def test_schema_views(client: Client):
 
 def test_schema():
     schema = api.get_openapi_schema()
+    from pprint import pprint
+
+    # --------------------------------------------------------------
     method = schema["paths"]["/api/test"]["post"]
+
     assert method["requestBody"] == {
         "content": {
             "application/json": {"schema": {"$ref": "#/components/schemas/Payload"}}
@@ -45,6 +55,37 @@ def test_schema():
             "description": "OK",
         }
     }
+
+    # --------------------------------------------------------------
+    method_list = schema["paths"]["/api/test_list"]["post"]
+
+    assert method_list["requestBody"] == {
+        "content": {
+            "application/json": {
+                "schema": {
+                    "items": {"$ref": "#/components/schemas/Payload"},
+                    "title": "Data",
+                    "type": "array",
+                }
+            }
+        },
+        "required": True,
+    }
+    assert method_list["responses"] == {
+        200: {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "items": {"$ref": "#/components/schemas/Response"},
+                        "title": "Response",
+                        "type": "array",
+                    }
+                }
+            },
+            "description": "OK",
+        }
+    }
+
     assert schema["components"]["schemas"] == {
         "Payload": {
             "properties": {
