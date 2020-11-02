@@ -90,9 +90,7 @@ class OpenAPISchema(OrderedDict):
         return result
 
     def _create_schema_from_model(self, model):
-        print(model.__fields__, "!!!")
         schema = model_schema(model, ref_prefix=REF_PREFIX)
-        print(schema, "!!@@@@")
         self.add_schema_definitions(schema["definitions"])
         name, details = list(schema["properties"].items())[0]
 

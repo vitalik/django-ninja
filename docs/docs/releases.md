@@ -1,7 +1,7 @@
 # Release Notes
 
 
-## 0.8.1
+## 0.8.2
 
  * Fixed extra bug for [response schema output](https://github.com/vitalik/django-ninja/issues/19) with `List[Item]` schema
 
