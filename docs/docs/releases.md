@@ -1,9 +1,10 @@
 # Release Notes
 
 
-## 0.8.2
+## 0.8.3
 
  * Fixed extra bug for [response schema output](https://github.com/vitalik/django-ninja/issues/19) with `List[Item]` schema
+ * Fixed [Composable query parameters #34](https://github.com/vitalik/django-ninja/issues/34)
 
 ## 0.8.0
 

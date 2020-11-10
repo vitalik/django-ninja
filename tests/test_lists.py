@@ -1,6 +1,6 @@
 import pytest
 from typing import List
-from ninja import Router, Query, Form
+from ninja import Router, Query, Form, Schema
 from pydantic import BaseModel
 from client import NinjaClient
 
@@ -50,6 +50,19 @@ def listviewdefault(request, body: List[int] = [1]):
     }
 
 
+class Filters(Schema):
+    tags: List[str] = []
+
+
+@router.post("/list4")
+def listview4(
+    request, filters: Filters = Query(...),
+):
+    return {
+        "filters": filters,
+    }
+
+
 client = NinjaClient(router)
 
 
@@ -81,6 +94,21 @@ client = NinjaClient(router)
             "/list-default",
             dict(json=[1, 2]),
             {"body": [1, 2]},
+        ),
+        (
+            "/list4?tags=a&tags=b",
+            {},
+            {"filters": {"tags": ["a", "b"]}},
+        ),
+        (
+            "/list4?tags=abc",
+            {},
+            {"filters": {"tags": ["abc"]}},
+        ),
+        (
+            "/list4",
+            {},
+            {"filters": {"tags": []}},
         ),
     ]
     # fmt: on

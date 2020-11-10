@@ -47,7 +47,7 @@ class ViewSignature:
             attrs["__annotations__"] = {i.name: i.annotation for i in args}
 
             # collection fields:
-            attrs["_collection_fields"] = [i.name for i in args if i.is_collection]
+            attrs["_collection_fields"] = detect_collection_fields(args)
 
             base_cls = cls._model
             # print([cls_name, (base_cls,), attrs])
@@ -111,3 +111,22 @@ def is_collection_type(annotation):
     # List[int]  =>  __origin__ = list, __args__ = int
     origin = getattr(annotation, "__origin__", None)
     return origin in (List, list, set, tuple)  # TODO: I gues we should handle only list
+
+
+def detect_collection_fields(args: List[FuncParam]):
+    """
+    QueryDict has values that are always lists, so we need to help django ninja to understand
+    better the input parameters if it's a list or a single value
+    This method detects attributes that should be treated by ninja as lists and returns this list as a result
+    """
+    result = [i.name for i in args if i.is_collection]
+
+    if len(args) == 1 and is_pydantic_model(args[0].annotation):
+        # There is a special case - when query param of form param is only one and it's defined as pydantic model
+        # In that case we need to detect collection
+        # see #34 for more details about the issue
+        for name, annotation in args[0].annotation.__annotations__.items():
+            if is_collection_type(annotation):
+                result.append(name)
+
+    return result
