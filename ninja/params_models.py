@@ -69,12 +69,6 @@ class FormModel(ParamModel):
 
 def _querydict_to_dict(cls, data: QueryDict):
     list_fields = getattr(cls, "_collection_fields", [])
-    # print("")
-    # print("----" * 10)
-    # print(data, list_fields)
-    # print(cls, dir(cls))
-    # print("++++" * 10)
-    # print(cls.__annotations__)
     result = {}
     for key in data.keys():
         if key in list_fields:
