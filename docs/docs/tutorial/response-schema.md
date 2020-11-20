@@ -138,3 +138,44 @@ If your opertation is async [async-support](https://django-ninja.rest-framework.
 async def tasks(request):
     return Task.objects.all()
 ```
+
+## Multiple Response Schemas
+
+
+Sometimes you need to define more then response schemas. Like when in case of authentication you can return:
+
+ - **200** successful -> token
+ - **401** -> Unauthorized
+ - **402** -> Payment required
+ - etc..
+
+In fact the [OpenAPI specification](https://swagger.io/docs/specification/describing-responses/) allows to pass multiple response schemas
+
+
+You can pass to `response` argument a dictionary where:
+
+ - key is a response code
+ - value is a schema for that code
+
+Also when you returning the result - y have to pass as well a status code, to tell Django Ninja which schema should be used for validation and serialization.
+
+
+Example:
+
+```Python hl_lines="9 12 14 16"
+class Token(Schema):
+    token: str
+    expires: date
+
+class Message(Schema):
+    message: str
+
+
+@api.post('/login', response={200: Token, 401: Message, 402: Message})
+def login(request, payload: Auth):
+    if auth_not_valid:
+        return 401, {'message': 'Unauthorized'}
+    if negative_balance:
+        return 402, {'message': 'Insufficient balance amount. Please proceed to a payment page.'}
+    return 200, {'token': xxx, ...}
+```

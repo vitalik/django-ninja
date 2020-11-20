@@ -1,6 +1,11 @@
 # Release Notes
 
 
+## 0.9.0
+
+ * [Multiple Response Schemas support](http://django-ninja.rest-framework.com/tutorial/response-schema/#multiple-response-schemas) (Thanks to @dozer133)
+
+
 ## 0.8.3
 
  * Fixed extra bug for [response schema output](https://github.com/vitalik/django-ninja/issues/19) with `List[Item]` schema
