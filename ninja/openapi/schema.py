@@ -114,14 +114,26 @@ class OpenAPISchema(OrderedDict):
 
     def responses(self, operation):
         if operation.response_model:
-            schema, _ = self._create_schema_from_model(operation.response_model)
-
-            return {
-                200: {
-                    "description": "OK",
-                    "content": {"application/json": {"schema": schema}},
+            if not isinstance(operation.response_model, dict):
+                schema, _ = self._create_schema_from_model(operation.response_model)
+                return {
+                    200: {
+                        "description": "OK",
+                        "content": {"application/json": {"schema": schema}},
+                    }
                 }
-            }
+            
+            responses = {}
+            for status, model in operation.response_model.items():
+                schema, _ = self._create_schema_from_model(model)
+                responses.update({
+                    status: {
+                        "description": "OK" if status > 100 and status < 300 else "Error",
+                        "content": {"application/json": {"schema": schema}},
+                    }
+                })
+
+            return responses
         else:
             return {200: {"description": "OK"}}
 
