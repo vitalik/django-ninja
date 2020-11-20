@@ -91,7 +91,8 @@ class OpenAPISchema(OrderedDict):
 
     def _create_schema_from_model(self, model):
         schema = model_schema(model, ref_prefix=REF_PREFIX)
-        self.add_schema_definitions(schema["definitions"])
+        if schema.get("definitions"):
+            self.add_schema_definitions(schema["definitions"])
         name, details = list(schema["properties"].items())[0]
 
         # ref = details["$ref"]
