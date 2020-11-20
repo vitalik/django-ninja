@@ -24,9 +24,11 @@ def check_int(request):
 def check_int2(request):
     return 200, "str"
 
+
 @router.get("/check_single_with_status", response=int)
 def check_single_with_status(request):
     return 302, 1
+
 
 @router.get("/check_response_schema", response={400: int})
 def check_response_schema(request):
@@ -47,6 +49,7 @@ class UserModel(BaseModel):
 
     class Config:
         orm_mode = True
+
 
 class ErrorModel(BaseModel):
     detail: str
@@ -82,7 +85,11 @@ client = NinjaClient(router)
         ("/check_int", 200, 1),
         ("/check_single_with_status", 302, 1),
         ("/check_model", 202, {"id": 1, "name": "John"}),  # the password is skipped
-        ("/check_list_model", 200, [{"id": 1, "name": "John"}]),  # the password is skipped
+        (
+            "/check_list_model",
+            200,
+            [{"id": 1, "name": "John"}],
+        ),  # the password is skipped
         ("/check_union?q=0", 200, 1),
         ("/check_union?q=1", 200, {"id": 1, "name": "John"}),
         ("/check_union?q=2", 400, {"detail": "error"}),

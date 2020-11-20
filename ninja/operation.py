@@ -86,7 +86,7 @@ class Operation:
             return result
         if self.response_model is None:
             return Response(result)
-        
+
         status = 200
         response_model = self.response_model
         if isinstance(result, tuple) and len(result) == 2:
@@ -94,7 +94,7 @@ class Operation:
             result = result[1]
         if isinstance(response_model, dict):
             if not status in response_model.keys():
-                raise ConfigError(f'Schema for status {status} is not set in response')
+                raise ConfigError(f"Schema for status {status} is not set in response")
             response_model = response_model[status]
 
         resp_object = ResponseObject(result)
