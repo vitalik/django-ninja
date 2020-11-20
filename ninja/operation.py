@@ -3,7 +3,7 @@ import django
 from django.http import HttpResponse, HttpResponseNotAllowed
 from typing import Callable, List, Any, Union, Optional, Sequence
 from ninja.responses import Response
-from ninja.errors import InvalidInput
+from ninja.errors import InvalidInput, ConfigError
 from ninja.constants import NOT_SET
 from ninja.schema import Schema
 from ninja.signature import ViewSignature, is_async
@@ -32,7 +32,11 @@ class Operation:
 
         self.signature = ViewSignature(self.path, self.view_func)
         self.models = self.signature.models
-        self.response_model = self._create_response_model(response)
+
+        if isinstance(response, dict):
+            self.response_model = self._create_response_model_multiple(response)
+        else:
+            self.response_model = self._create_response_model(response)
 
     def run(self, request, **kw):
         error = self._run_checks(request)
@@ -83,10 +87,20 @@ class Operation:
         if self.response_model is None:
             return Response(result)
 
+        status = 200
+        response_model = self.response_model
+        if isinstance(result, tuple) and len(result) == 2:
+            status = result[0]
+            result = result[1]
+        if isinstance(response_model, dict):
+            if status not in response_model.keys():
+                raise ConfigError(f"Schema for status {status} is not set in response")
+            response_model = response_model[status]
+
         resp_object = ResponseObject(result)
         # ^ we need object because getter_dict seems work only with from_orm
-        result = self.response_model.from_orm(resp_object).dict()["response"]
-        return Response(result)
+        result = response_model.from_orm(resp_object).dict()["response"]
+        return Response(result, status=status)
 
     def _get_values(self, request, path_params):
         values, errors = {}, []
@@ -101,6 +115,12 @@ class Operation:
                     items.append(i)
                 errors.extend(items)
         return values, errors
+
+    def _create_response_model_multiple(self, response_param):
+        # TODO: do not modify response_param, return copy instead
+        for status, model in response_param.items():
+            response_param[status] = self._create_response_model(model)
+        return response_param
 
     def _create_response_model(self, response_param):
         if response_param is None:

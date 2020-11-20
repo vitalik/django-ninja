@@ -7,5 +7,4 @@ You can create a proposal by making a pull request with a new page under [`docs/
 Please check current proposals:
 
  - [Class Based Operations](cbv)
- - [Response Schema](responses)
  - [Schemas from Django models](models)

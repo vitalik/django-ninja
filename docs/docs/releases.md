@@ -1,5 +1,8 @@
 # Release Notes
 
+## 0.9.0
+
+ * [Multiple Response Schemas support](http://django-ninja.rest-framework.com/tutorial/response-schema/#multiple-response-schemas) (Thanks to @dozer133)
 
 ## 0.8.4
 
