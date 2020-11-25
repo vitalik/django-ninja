@@ -40,6 +40,8 @@ Now, run it as usual:
 ./manage.py runserver
 ```
 
+note: you don't have to add django-ninja to your intalled apps.
+
 ## Check it
 
 Open your browser at <a href="http://127.0.0.1:8000/api/add?a=1&b=2" target="_blank">http://127.0.0.1:8000/api/add?a=1&b=2</a>
