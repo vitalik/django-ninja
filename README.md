@@ -21,6 +21,7 @@
  - **Fast to code**: Type hints and automatic docs let's you focus only on business logic.
  - **Standards-based**: Based on the open standards for APIs: **OpenAPI** (previously known as Swagger) and **JSON Schema**.
  - **Django friendly**: (obviously) have good integration with Django core an ORM.
+ - **Production ready**: Used by in multiple companies on live projects (If you use django-ninja and would like to publish your feedback - please email to ppr.vitaly@gmail.com)
 
 
 
@@ -89,3 +90,4 @@ You will see the automatic interactive API documentation (provided by <a href="h
 
  - Read full documentation here - **Documentation**: https://django-ninja.rest-framework.com
  - To support this project - just simply give it a star on github. ![github star](docs/docs/img/github-star.png)
+ - If you already using django-ninja - please share your feedback to ppr.vitaly@gmail.com
