@@ -21,7 +21,7 @@
  - **Fast to code**: Type hints and automatic docs let's you focus only on business logic.
  - **Standards-based**: Based on the open standards for APIs: **OpenAPI** (previously known as Swagger) and **JSON Schema**.
  - **Django friendly**: (obviously) have good integration with Django core an ORM.
- - **Production ready**: Used by in multiple companies on live projects (If you use django-ninja and would like to publish your feedback - please email to ppr.vitaly@gmail.com)
+ - **Production ready**: Used by multiple companies on live projects (If you use django-ninja and would like to publish your feedback - please email to ppr.vitaly@gmail.com)
 
 
 
