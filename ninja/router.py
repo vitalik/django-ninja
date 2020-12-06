@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Callable, List
+from typing import Callable, List, Optional
 
 from django.http import HttpResponseNotAllowed
 from django.urls import path as django_path
@@ -13,27 +13,139 @@ class Router:
         self.operations = OrderedDict()  # TODO: better rename to path_operations
         self.api = None
 
-    def get(self, path: str, *, auth=NOT_SET, response=None):
-        return self.api_operation(["GET"], path, auth=auth, response=response)
+    def get(
+        self,
+        path: str,
+        *,
+        auth=NOT_SET,
+        response=None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        deprecated: Optional[bool] = None,
+    ):
+        return self.api_operation(
+            ["GET"],
+            path,
+            auth=auth,
+            response=response,
+            summary=summary,
+            description=description,
+            tags=tags,
+            deprecated=deprecated,
+        )
 
-    def post(self, path: str, *, auth=NOT_SET, response=None):
-        return self.api_operation(["POST"], path, auth=auth, response=response)
+    def post(
+        self,
+        path: str,
+        *,
+        auth=NOT_SET,
+        response=None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        deprecated: Optional[bool] = None,
+    ):
+        return self.api_operation(
+            ["POST"],
+            path,
+            auth=auth,
+            response=response,
+            summary=summary,
+            description=description,
+            tags=tags,
+            deprecated=deprecated,
+        )
 
-    def delete(self, path: str, *, auth=NOT_SET, response=None):
-        return self.api_operation(["DELETE"], path, auth=auth, response=response)
+    def delete(
+        self,
+        path: str,
+        *,
+        auth=NOT_SET,
+        response=None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        deprecated: Optional[bool] = None,
+    ):
+        return self.api_operation(
+            ["DELETE"],
+            path,
+            auth=auth,
+            response=response,
+            summary=summary,
+            description=description,
+            tags=tags,
+            deprecated=deprecated,
+        )
 
-    def patch(self, path: str, *, auth=NOT_SET, response=None):
-        return self.api_operation(["PATCH"], path, auth=auth, response=response)
+    def patch(
+        self,
+        path: str,
+        *,
+        auth=NOT_SET,
+        response=None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        deprecated: Optional[bool] = None,
+    ):
+        return self.api_operation(
+            ["PATCH"],
+            path,
+            auth=auth,
+            response=response,
+            summary=summary,
+            description=description,
+            tags=tags,
+            deprecated=deprecated,
+        )
 
-    def put(self, path: str, *, auth=NOT_SET, response=None):
-        return self.api_operation(["PUT"], path, auth=auth, response=response)
+    def put(
+        self,
+        path: str,
+        *,
+        auth=NOT_SET,
+        response=None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        deprecated: Optional[bool] = None,
+    ):
+        return self.api_operation(
+            ["PUT"],
+            path,
+            auth=auth,
+            response=response,
+            summary=summary,
+            description=description,
+            tags=tags,
+            deprecated=deprecated,
+        )
 
     def api_operation(
-        self, methods: List[str], path: str, *, auth=NOT_SET, response=None
+        self,
+        methods: List[str],
+        path: str,
+        *,
+        auth=NOT_SET,
+        response=None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        deprecated: Optional[bool] = None,
     ):
         def decorator(view_func):
             self.add_api_operation(
-                path, methods, view_func, auth=auth, response=response
+                path,
+                methods,
+                view_func,
+                auth=auth,
+                response=response,
+                summary=summary,
+                description=description,
+                tags=tags,
+                deprecated=deprecated,
             )
             return view_func
 
@@ -46,7 +158,11 @@ class Router:
         view_func: Callable,
         *,
         auth=NOT_SET,
-        response=None
+        response=None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        deprecated: Optional[bool] = None,
     ):
         if path not in self.operations:
             path_view = PathView()
@@ -59,6 +175,10 @@ class Router:
             view_func=view_func,
             auth=auth,
             response=response,
+            summary=summary,
+            description=description,
+            tags=tags,
+            deprecated=deprecated,
         )
         if self.api:
             path_view.set_api_instance(self.api)

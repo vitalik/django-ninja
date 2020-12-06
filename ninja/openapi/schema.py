@@ -1,7 +1,12 @@
 from collections import OrderedDict
-
+from ninja.operation import Operation
 from ninja.utils import normalize_path
 from pydantic.schema import model_schema
+from typing import TYPE_CHECKING, Dict, Any
+
+if TYPE_CHECKING:
+    # if anyone knows a cleaner way to make mypy happy - welcome
+    from ninja import NinjaAPI  # pragma: no cover
 
 REF_PREFIX = "#/components/schemas/"
 
@@ -15,7 +20,7 @@ class OpenAPISchema(OrderedDict):
     def __init__(self, api: "NinjaAPI", path_prefix: str):
         self.api = api
         self.path_prefix = path_prefix
-        self.schemas = {}
+        self.schemas: Dict[str, Any] = {}
         self.securitySchemes = {}
         super().__init__(
             [
@@ -43,13 +48,21 @@ class OpenAPISchema(OrderedDict):
                 result[method.lower()] = self.operation_details(op)
         return result
 
-    def operation_details(self, operation):
+    def operation_details(self, operation: Operation):
         result = {
-            # TODO: summary should be param of api.get(xxx, summary=yy)
-            "summary": operation.view_func.__name__.title().replace("_", " "),
+            "summary": operation.summary,
             "parameters": self.operation_parameters(operation),
             "responses": self.responses(operation),
         }
+
+        if operation.description:
+            result["description"] = operation.description
+
+        if operation.tags:
+            result["tags"] = operation.tags
+
+        if operation.deprecated:
+            result["deprecated"] = operation.deprecated
 
         body = self.request_body(operation)
         if body:

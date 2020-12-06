@@ -28,6 +28,7 @@ nav:
   - tutorial/crud.md
   - tutorial/authentication.md
   - tutorial/routers.md
+  - tutorial/operation_params.md
   - tutorial/versioning.md
   - tutorial/csrf.md
 - async-support.md

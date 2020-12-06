@@ -1,4 +1,5 @@
 import pydantic
+import inspect
 from typing import Callable, List
 from collections import OrderedDict, namedtuple
 from ninja import params
@@ -13,6 +14,7 @@ class ViewSignature:
         self.view_func = view_func
         self.signature = get_typed_signature(self.view_func)
         self.path_params_names = get_path_param_names(path)
+        self.docstring = inspect.cleandoc(view_func.__doc__ or "")
 
         self.params = []
         for name, arg in self.signature.parameters.items():

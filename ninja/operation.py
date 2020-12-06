@@ -19,6 +19,10 @@ class Operation:
         *,
         auth: Optional[Union[Sequence[Callable], Callable, object]] = NOT_SET,
         response: Any = None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        deprecated: Optional[bool] = None,
     ):
         self.is_async = False
         self.path: str = path
@@ -37,6 +41,11 @@ class Operation:
             self.response_model = self._create_response_model_multiple(response)
         else:
             self.response_model = self._create_response_model(response)
+
+        self.summary = summary or self.view_func.__name__.title().replace("_", " ")
+        self.description = description or self.signature.docstring
+        self.tags = tags
+        self.deprecated = deprecated
 
     def run(self, request, **kw):
         error = self._run_checks(request)
@@ -153,6 +162,7 @@ class PathView:
         self.operations = []
         self.is_async = False  # if at least one operation is async - will become True
 
+    # TODO: rename to add_operation
     def add(
         self,
         path: str,
@@ -161,15 +171,35 @@ class PathView:
         *,
         auth: Optional[Union[Sequence[Callable], Callable, object]] = NOT_SET,
         response=None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        deprecated: Optional[bool] = None,
     ):
         if is_async(view_func):
             self.is_async = True
             operation = AsyncOperation(
-                path, methods, view_func, auth=auth, response=response
+                path,
+                methods,
+                view_func,
+                auth=auth,
+                response=response,
+                summary=summary,
+                description=description,
+                tags=tags,
+                deprecated=deprecated,
             )
         else:
             operation = Operation(
-                path, methods, view_func, auth=auth, response=response
+                path,
+                methods,
+                view_func,
+                auth=auth,
+                response=response,
+                summary=summary,
+                description=description,
+                tags=tags,
+                deprecated=deprecated,
             )
 
         self.operations.append(operation)

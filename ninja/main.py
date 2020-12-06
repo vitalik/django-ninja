@@ -39,36 +39,132 @@ class NinjaAPI:
         self.default_router = Router()
         self.add_router("", self.default_router)
 
-    def get(self, path: str, *, auth=NOT_SET, response=None):
+    def get(
+        self,
+        path: str,
+        *,
+        auth=NOT_SET,
+        response=None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        deprecated: Optional[bool] = None,
+    ):
         return self.default_router.get(
-            path, auth=auth is NOT_SET and self.auth or auth, response=response
+            path,
+            auth=auth is NOT_SET and self.auth or auth,
+            response=response,
+            summary=summary,
+            description=description,
+            tags=tags,
+            deprecated=deprecated,
         )
 
-    def post(self, path: str, *, auth=NOT_SET, response=None):
+    def post(
+        self,
+        path: str,
+        *,
+        auth=NOT_SET,
+        response=None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        deprecated: Optional[bool] = None,
+    ):
         return self.default_router.post(
-            path, auth=auth is NOT_SET and self.auth or auth, response=response
+            path,
+            auth=auth is NOT_SET and self.auth or auth,
+            response=response,
+            summary=summary,
+            description=description,
+            tags=tags,
+            deprecated=deprecated,
         )
 
-    def delete(self, path: str, *, auth=NOT_SET, response=None):
+    def delete(
+        self,
+        path: str,
+        *,
+        auth=NOT_SET,
+        response=None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        deprecated: Optional[bool] = None,
+    ):
         return self.default_router.delete(
-            path, auth=auth is NOT_SET and self.auth or auth, response=response
+            path,
+            auth=auth is NOT_SET and self.auth or auth,
+            response=response,
+            summary=summary,
+            description=description,
+            tags=tags,
+            deprecated=deprecated,
         )
 
-    def patch(self, path: str, *, auth=NOT_SET, response=None):
+    def patch(
+        self,
+        path: str,
+        *,
+        auth=NOT_SET,
+        response=None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        deprecated: Optional[bool] = None,
+    ):
         return self.default_router.patch(
-            path, auth=auth is NOT_SET and self.auth or auth, response=response
+            path,
+            auth=auth is NOT_SET and self.auth or auth,
+            response=response,
+            summary=summary,
+            description=description,
+            tags=tags,
+            deprecated=deprecated,
         )
 
-    def put(self, path: str, *, auth=NOT_SET, response=None):
+    def put(
+        self,
+        path: str,
+        *,
+        auth=NOT_SET,
+        response=None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        deprecated: Optional[bool] = None,
+    ):
         return self.default_router.put(
-            path, auth=auth is NOT_SET and self.auth or auth, response=response
+            path,
+            auth=auth is NOT_SET and self.auth or auth,
+            response=response,
+            summary=summary,
+            description=description,
+            tags=tags,
+            deprecated=deprecated,
         )
 
     def api_operation(
-        self, methods: List[str], path: str, *, auth=NOT_SET, response=None
+        self,
+        methods: List[str],
+        path: str,
+        *,
+        auth=NOT_SET,
+        response=None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        deprecated: Optional[bool] = None,
     ):
         return self.default_router.api_operation(
-            methods, path, auth=auth is NOT_SET and self.auth or auth, response=response
+            methods,
+            path,
+            auth=auth is NOT_SET and self.auth or auth,
+            response=response,
+            summary=summary,
+            description=description,
+            tags=tags,
+            deprecated=deprecated,
         )
 
     def add_router(self, prefix, router):
