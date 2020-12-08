@@ -20,7 +20,14 @@ class OpenAPISchema(OrderedDict):
         super().__init__(
             [
                 ("openapi", "3.0.2"),
-                ("info", {"title": api.title, "version": api.version}),
+                (
+                    "info",
+                    {
+                        "title": api.title,
+                        "version": api.version,
+                        "description": api.description,
+                    },
+                ),
                 ("paths", self.get_paths()),
                 ("components", self.get_components()),
             ]
