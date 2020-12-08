@@ -45,7 +45,11 @@ class Operation:
 
         values, errors = self._get_values(request, kw)
         if errors:
-            return Response({"detail": errors}, status=422)
+            if self.api.hide_get_values_errors:
+                error_data = "Values validation error hidden"
+            else:
+                error_data = {"detail": errors}
+            return Response(error_data, status=422)
         result = self.view_func(request, **values)
         return self._create_response(result)
 
@@ -143,7 +147,11 @@ class AsyncOperation(Operation):
 
         values, errors = self._get_values(request, kw)
         if errors:
-            return Response({"detail": errors}, status=422)
+            if self.api.hide_get_values_errors:
+                error_data = "Values validation error hidden"
+            else:
+                error_data = {"detail": errors}
+            return Response(error_data, status=422)
         result = await self.view_func(request, **values)
         return self._create_response(result)
 

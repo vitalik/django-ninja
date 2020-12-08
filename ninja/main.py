@@ -22,6 +22,7 @@ class NinjaAPI:
         urls_namespace: str = None,
         csrf: bool = False,
         auth: Union[Sequence[Callable], Callable, object] = NOT_SET,
+        hide_get_values_errors: bool = False,
     ):
         self.title = title
         self.version = version
@@ -30,6 +31,7 @@ class NinjaAPI:
         self.docs_url = docs_url
         self.urls_namespace = urls_namespace or f"api-{self.version}"
         self.csrf = csrf
+        self.hide_get_values_errors = hide_get_values_errors
 
         self.auth: Optional[Sequence[Callable]] = NOT_SET
         if auth is not None and auth is not NOT_SET:
