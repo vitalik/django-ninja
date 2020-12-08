@@ -45,7 +45,6 @@ class OpenAPISchema(OrderedDict):
 
     def operation_details(self, operation):
         result = {
-            # TODO: summary should be param of api.get(xxx, summary=yy)
             "tags": operation.tags,
             "summary": operation.summary
             or operation.view_func.__name__.title().replace("_", " "),
