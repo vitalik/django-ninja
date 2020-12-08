@@ -19,6 +19,8 @@ class Operation:
         *,
         auth: Optional[Union[Sequence[Callable], Callable, object]] = NOT_SET,
         response: Any = None,
+        summary: str = None,
+        tags: List[str] = None,
     ):
         self.is_async = False
         self.path: str = path
@@ -32,6 +34,9 @@ class Operation:
 
         self.signature = ViewSignature(self.path, self.view_func)
         self.models = self.signature.models
+
+        self.summary = summary
+        self.tags = tags
 
         if isinstance(response, dict):
             self.response_model = self._create_response_model_multiple(response)
@@ -161,15 +166,29 @@ class PathView:
         *,
         auth: Optional[Union[Sequence[Callable], Callable, object]] = NOT_SET,
         response=None,
+        summary: str = None,
+        tags: List[str] = None,
     ):
         if is_async(view_func):
             self.is_async = True
             operation = AsyncOperation(
-                path, methods, view_func, auth=auth, response=response
+                path,
+                methods,
+                view_func,
+                auth=auth,
+                response=response,
+                summary=summary,
+                tags=tags,
             )
         else:
             operation = Operation(
-                path, methods, view_func, auth=auth, response=response
+                path,
+                methods,
+                view_func,
+                auth=auth,
+                response=response,
+                summary=summary,
+                tags=tags,
             )
 
         self.operations.append(operation)
