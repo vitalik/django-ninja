@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, Tuple
 
 from django.http import HttpResponseNotAllowed
 from django.urls import path as django_path
@@ -12,6 +12,7 @@ class Router:
     def __init__(self):
         self.operations = OrderedDict()  # TODO: better rename to path_operations
         self.api = None
+        self._routers: List[Tuple[str, Router]] = []
 
     def get(
         self,
@@ -187,6 +188,8 @@ class Router:
         self.api = api
         for path_view in self.operations.values():
             path_view.set_api_instance(self.api)
+        for _, router in self._routers:
+            router.set_api_instance(api)
 
     def urls_paths(self, prefix: str):
         for path, path_view in self.operations.items():
@@ -197,3 +200,14 @@ class Router:
             route = route.lstrip("/")
 
             yield django_path(route, path_view.get_view())
+
+    def add_router(self, prefix, router):
+        self._routers.append((prefix, router))
+
+    def build_routers(self, prefix):
+        internal_routes = []
+        for inter_prefix, inter_router in self._routers:
+            _route = normalize_path("/".join((prefix, inter_prefix))).lstrip("/")
+            internal_routes = inter_router.build_routers(_route)
+
+        return [(prefix, self), *internal_routes]

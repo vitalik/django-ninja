@@ -168,7 +168,7 @@ class NinjaAPI:
         )
 
     def add_router(self, prefix, router):
-        self._routers.append((prefix, router))
+        self._routers.extend(router.build_routers(prefix))
         router.set_api_instance(self)
 
     @property
