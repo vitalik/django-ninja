@@ -1,5 +1,10 @@
 # Release Notes
 
+## 0.9.2
+
+ * [Operations OpenAPI parameters](http://django-ninja.rest-framework.com/tutorial/operation_params/)
+ * [OpenAPI description] (Thanks to @fojetin)
+
 ## 0.9.1
 
  * [Multiple Response Schemas support](http://django-ninja.rest-framework.com/tutorial/response-schema/#multiple-response-schemas) (Thanks to @dozer133)
