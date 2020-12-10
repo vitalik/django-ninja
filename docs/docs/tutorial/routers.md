@@ -2,6 +2,8 @@
 
 Real world applications almost never can fit all logic into a single file. 
 
+## Simple routers
+
 **Django Ninja** comes with an easy way to split your API into multiple modules.
 
 Let's say you have a django project with structure like this:
@@ -127,3 +129,47 @@ Now include api to your urls as usual and open your browser at `/api/docs` - you
 ![Swagger UI Routers](../img/routers-swagger.png)
 
 
+## Nested routers
+
+If you also wants put one router to other router to one other router, **Django Ninja** make is possible to include router into other router as many times as you like and finnaly include top router into main api instance. 
+
+```Python
+from django.contrib import admin
+from django.urls import path
+from .ninja import NinjaAPI, Router
+
+api = NinjaAPI()
+first_router = Router()
+second_router = Router()
+third_router = Router()
+
+
+@api.get("/add")
+def add(request, a: int, b: int):
+    return {"result": a + b}
+
+
+@first_router.get("/add")
+def add(request, a: int, b: int):
+    return {"result": a + b}
+
+
+@second_router.get("/add")
+def add(request, a: int, b: int):
+    return {"result": a + b}
+
+
+@third_router.get("/add")
+def add(request, a: int, b: int):
+    return {"result": a + b}
+
+
+second_router.add_router("l3", third_router)
+first_router.add_router("l2", second_router)
+api.add_router("l1", first_router)
+
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("api/", api.urls),
+]
+```
