@@ -126,7 +126,7 @@ api.add_router("/blogs/", blogs_router)
 Now include api to your urls as usual and open your browser at `/api/docs` - you should see all your routers combined into single api:
 
 
-![Swagger UI Routers](../img/routers-swagger.png)
+![Swagger UI Simple Routers](../img/simple-routers-swagger.png)
 
 
 ## Nested routers
@@ -173,3 +173,17 @@ urlpatterns = [
     path("api/", api.urls),
 ]
 ```
+
+Now you have next endpoints:
+
+`/api/add`
+
+`/api/l1/add`
+
+`/api/l1/l2/add`
+
+`/api/l1/l2/l3/add`
+
+So all info about them in `/api/docs`
+
+![Swagger UI Nested Routers](../img/nested-routers-swagger.png)
