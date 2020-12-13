@@ -32,7 +32,7 @@ flit install --deps develop --symlink
  and finally check the resulting coverage of your contribution did not suffer
  
  ```
- pytest --cov=ninja  tests
+ pytest --cov=ninja --cov-report term-missing tests
  ```
  
 ## Code style
