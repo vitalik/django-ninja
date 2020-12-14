@@ -9,17 +9,17 @@ api = NinjaAPI()
 
 @api.get("/endpoint")
 def global_op(request):
-    pass
+    return "global"
 
 
 @first_router.get("/endpoint")
 def router_op(request):
-    pass
+    return "first"
 
 
 @second_router.get("/endpoint")
 def router_op(request):
-    pass
+    return "second"
 
 
 first_router.add_router("/second", second_router)
@@ -32,9 +32,9 @@ client = NinjaClient(api)
 @pytest.mark.parametrize(
     "path,expected_status,expected_response",
     [
-        ("/endpoint", 200, None),
-        ("/first/endpoint", 200, None),
-        ("/first/second/endpoint", 200, None),
+        ("/endpoint", 200, "global"),
+        ("/first/endpoint", 200, "first"),
+        ("/first/second/endpoint", 200, "second"),
     ],
 )
 def test_inheritance_responses(path, expected_status, expected_response):
