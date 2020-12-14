@@ -1,8 +1,6 @@
-# Multiple routers
+# Routers
 
 Real world applications almost never can fit all logic into a single file. 
-
-## Simple routers
 
 **Django Ninja** comes with an easy way to split your API into multiple modules.
 
@@ -131,14 +129,20 @@ Now include api to your urls as usual and open your browser at `/api/docs` - you
 
 ## Nested routers
 
-If you also wants put one router to other router to one other router, **Django Ninja** make is possible to include router into other router as many times as you like and finnaly include top router into main api instance. 
+There also times when you need to split your logic even more. **Django Ninja** make is possible to include router into other router as many times as you like and finally include top router into main api instance.
 
-```Python
+
+Basically what it means that you have `add_router` both on `api` instance and `router` instance:
+
+
+
+```Python hl_lines="7 8 9 32 33 34"
 from django.contrib import admin
 from django.urls import path
-from .ninja import NinjaAPI, Router
+from ninja import NinjaAPI, Router
 
 api = NinjaAPI()
+
 first_router = Router()
 second_router = Router()
 third_router = Router()
@@ -174,16 +178,14 @@ urlpatterns = [
 ]
 ```
 
-Now you have next endpoints:
+Now you have the following endpoints:
 
-`/api/add`
-
-`/api/l1/add`
-
-`/api/l1/l2/add`
-
-`/api/l1/l2/l3/add`
-
-So all info about them in `/api/docs`
+```
+/api/add
+/api/l1/add
+/api/l1/l2/add
+/api/l1/l2/l3/add
+```
+See the automatically generated docs:
 
 ![Swagger UI Nested Routers](../img/nested-routers-swagger.png)
