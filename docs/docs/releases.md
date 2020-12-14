@@ -1,6 +1,6 @@
 # Release Notes
 
-## 0.9.3
+## 0.9.4
 
  * [Nested routers support](https://django-ninja.rest-framework.com/tutorial/routers/#nested-routers)  (Thanks to @fojetin)
 
