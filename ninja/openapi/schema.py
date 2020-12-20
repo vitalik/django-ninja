@@ -56,7 +56,9 @@ class OpenAPISchema(OrderedDict):
         return result
 
     def operation_details(self, operation: Operation):
+        op_id = operation.operation_id or self.api.get_openapi_operation_id(operation)
         result = {
+            "operationId": op_id,
             "summary": operation.summary,
             "parameters": self.operation_parameters(operation),
             "responses": self.responses(operation),

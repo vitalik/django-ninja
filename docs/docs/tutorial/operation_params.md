@@ -75,11 +75,45 @@ def create_order(request, order: Order):
 ![Summary`](../img/operation_description_docstring.png)
 
 
+## OpenAPI operationId
+
+OpenAPI `operationId` is an optional unique string used to identify an operation. If provided, these IDs must be unique among all operations described in your API.
+
+By default Django Ninja sets it to `module name` + `function name`
+
+if you want ot set it individually for each operation use `operation_id` argument:
+
+```Python hl_lines="2"
+...
+@api.post("/tasks", operation_id="create_task")
+def new_task(request):
+    ...
+```
+
+And if you want ot override global behavior - you can inherit NinjaAPI instance and override `get_openapi_operation_id` method
+
+it will be called to each operation, that you defined, so you can set your custom naming logic
+
+```Python hl_lines="5 6 7 9"
+from ninja import NinjaAPI
+
+class MySuperApi(NinjaAPI):
+
+    def get_openapi_operation_id(self, operation):
+        # here you can access operation ( .path , .view_func, etc) 
+        return ...
+
+api = MySuperApi()
+
+@api.get(...)
+...
+```
+
 
 
 ## Deprecating Operation
 
-If you need to mark an operation as deprecated without removing it, use the argumetn `deprecated`:
+If you need to mark an operation as deprecated without removing it, use the argument `deprecated`:
 
 ```Python hl_lines="1"
 @api.post("/make-order/", deprecated=True)

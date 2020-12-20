@@ -1,4 +1,5 @@
 import os
+from ninja import openapi
 from ninja.openapi import get_schema
 from typing import List, Optional, Tuple, Sequence, Union, Callable
 from django.urls import reverse
@@ -45,6 +46,7 @@ class NinjaAPI:
         *,
         auth=NOT_SET,
         response=None,
+        operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
@@ -54,6 +56,7 @@ class NinjaAPI:
             path,
             auth=auth is NOT_SET and self.auth or auth,
             response=response,
+            operation_id=operation_id,
             summary=summary,
             description=description,
             tags=tags,
@@ -66,6 +69,7 @@ class NinjaAPI:
         *,
         auth=NOT_SET,
         response=None,
+        operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
@@ -75,6 +79,7 @@ class NinjaAPI:
             path,
             auth=auth is NOT_SET and self.auth or auth,
             response=response,
+            operation_id=operation_id,
             summary=summary,
             description=description,
             tags=tags,
@@ -87,6 +92,7 @@ class NinjaAPI:
         *,
         auth=NOT_SET,
         response=None,
+        operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
@@ -96,6 +102,7 @@ class NinjaAPI:
             path,
             auth=auth is NOT_SET and self.auth or auth,
             response=response,
+            operation_id=operation_id,
             summary=summary,
             description=description,
             tags=tags,
@@ -108,6 +115,7 @@ class NinjaAPI:
         *,
         auth=NOT_SET,
         response=None,
+        operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
@@ -117,6 +125,7 @@ class NinjaAPI:
             path,
             auth=auth is NOT_SET and self.auth or auth,
             response=response,
+            operation_id=operation_id,
             summary=summary,
             description=description,
             tags=tags,
@@ -129,6 +138,7 @@ class NinjaAPI:
         *,
         auth=NOT_SET,
         response=None,
+        operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
@@ -138,6 +148,7 @@ class NinjaAPI:
             path,
             auth=auth is NOT_SET and self.auth or auth,
             response=response,
+            operation_id=operation_id,
             summary=summary,
             description=description,
             tags=tags,
@@ -151,6 +162,7 @@ class NinjaAPI:
         *,
         auth=NOT_SET,
         response=None,
+        operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
@@ -161,6 +173,7 @@ class NinjaAPI:
             path,
             auth=auth is NOT_SET and self.auth or auth,
             response=response,
+            operation_id=operation_id,
             summary=summary,
             description=description,
             tags=tags,
@@ -199,6 +212,11 @@ class NinjaAPI:
         if path_prefix is None:
             path_prefix = self.root_path
         return get_schema(api=self, path_prefix=path_prefix)
+
+    def get_openapi_operation_id(self, operation: "Operation"):
+        name = operation.view_func.__name__
+        module = operation.view_func.__module__
+        return (module + "_" + name).replace(".", "_")
 
     def _validate(self):
         from ninja.security import APIKeyCookie

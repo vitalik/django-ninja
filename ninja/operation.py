@@ -19,6 +19,7 @@ class Operation:
         *,
         auth: Optional[Union[Sequence[Callable], Callable, object]] = NOT_SET,
         response: Any = None,
+        operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
@@ -42,6 +43,7 @@ class Operation:
         else:
             self.response_model = self._create_response_model(response)
 
+        self.operation_id = operation_id
         self.summary = summary or self.view_func.__name__.title().replace("_", " ")
         self.description = description or self.signature.docstring
         self.tags = tags
@@ -171,6 +173,7 @@ class PathView:
         *,
         auth: Optional[Union[Sequence[Callable], Callable, object]] = NOT_SET,
         response=None,
+        operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
@@ -184,6 +187,7 @@ class PathView:
                 view_func,
                 auth=auth,
                 response=response,
+                operation_id=operation_id,
                 summary=summary,
                 description=description,
                 tags=tags,
@@ -196,6 +200,7 @@ class PathView:
                 view_func,
                 auth=auth,
                 response=response,
+                operation_id=operation_id,
                 summary=summary,
                 description=description,
                 tags=tags,

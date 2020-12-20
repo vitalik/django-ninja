@@ -4,7 +4,7 @@ from ninja import NinjaAPI
 api = NinjaAPI()
 
 
-@api.get("/operation1")
+@api.get("/operation1", operation_id="my_id")
 def operation_1(request):
     """
     This will be in description
@@ -39,6 +39,11 @@ def test_schema():
     op4 = schema["paths"]["/api/operation4"]["get"]
 
     pprint(op1)
+    assert op1["operationId"] == "my_id"
+    assert op2["operationId"] == "test_openapi_params_operation2"
+    assert op3["operationId"] == "test_openapi_params_operation3"
+    assert op4["operationId"] == "test_openapi_params_operation4"
+
     assert op1["summary"] == "Operation 1"
     assert op2["summary"] == "Operation2"
     assert op3["summary"] == "Summary from argument"
