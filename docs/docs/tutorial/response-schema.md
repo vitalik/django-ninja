@@ -131,7 +131,7 @@ def tasks(request):
 
 ### Note about async mode
 
-If your opertation is async [async-support](https://django-ninja.rest-framework.com/async-support) this example will not work
+If your operation is async [async-support](https://django-ninja.rest-framework.com/async-support) this example will not work
 
 ```Python hl_lines="2 3"
 @api.get("/tasks", response=List[TaskSchema])
