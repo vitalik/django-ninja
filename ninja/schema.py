@@ -19,14 +19,12 @@ class DjangoGetter(GetterDict):
     def get(self, key: Any, default: Any = None) -> Any:
         result = super().get(key, default)
 
-        print(key, result, type(result))
-
         if isinstance(result, Manager):
             return list(result.all())
 
         elif isinstance(result, QuerySet):
             return list(result)
-        
+
         elif isinstance(result, FieldFile):
             if not result:
                 return None
