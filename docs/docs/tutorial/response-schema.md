@@ -139,6 +139,34 @@ async def tasks(request):
     return Task.objects.all()
 ```
 
+
+## FileField and ImageField
+
+**Django Ninja** by default converts files and images (declared with `FileField` or `ImageField`) to `string` urls
+
+Example
+
+```Python hl_lines="3"
+class Picture(models.Model):
+    title = models.CharField(max_length=100)
+    image = models.ImageField(upload_to='images')
+```
+
+if you need to output to response image field, declare schema for it as the following:
+```Python hl_lines="3"
+class PictureSchema(Schema):
+    title: str
+    image: str
+```
+
+once you output this to response, url will be automatically generated for each object:
+```JSON
+{
+    "title": "Zebra",
+    "image": "/static/images/zebra.jpg"
+}
+```
+
 ## Multiple Response Schemas
 
 
