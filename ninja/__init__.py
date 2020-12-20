@@ -1,6 +1,6 @@
 """Django Ninja - Fast Django REST framework"""
 
-__version__ = "0.9.4"
+__version__ = "0.9.5"
 
 from ninja.main import NinjaAPI
 from ninja.params import Query, Path, Header, Cookie, Body, Form
