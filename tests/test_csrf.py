@@ -1,4 +1,8 @@
+from django.views.decorators import csrf
+import pytest
 from ninja import NinjaAPI
+from ninja.security import APIKeyCookie
+from ninja.errors import ConfigError
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from client import NinjaClient
@@ -48,3 +52,20 @@ def test_csrf_on():
 
     # exempt check
     assert client.post("/post/csrf_exempt", COOKIES=COOKIES).status_code == 200
+
+
+def test_raises_on_cookie_auth():
+    "It should raise if user picked Cookie based auth and csrf=False"
+
+    class Auth(APIKeyCookie):
+        def authenticate(self, request, key):
+            return request.COOKIES[key] == "foo"
+
+    api = NinjaAPI(auth=Auth(), csrf=False)
+
+    @api.get("/some")
+    def some_method(request):
+        pass
+
+    with pytest.raises(ConfigError):
+        api._validate()
