@@ -190,10 +190,8 @@ class NinjaAPI:
         return (
             self._get_urls(),
             "ninja",
-            # under nested namespace,
-            # wo only need last part for register
-            # use full part to `reverse`
             self.urls_namespace.split(":")[-1],
+            # ^ if api included into nested urls, we only care about last bit here
         )
 
     def _get_urls(self):
