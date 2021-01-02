@@ -20,7 +20,7 @@ jobs:
         uses: actions/setup-python@v1
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install Django
+      - name: Install core
         run: pip install "Django${{ matrix.django-version }}" pydantic
       - name: Install tests
         run: pip install pytest pytest-asyncio pytest-django
