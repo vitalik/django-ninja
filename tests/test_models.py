@@ -142,6 +142,10 @@ def test_invalid_body():
     assert response.status_code == 422, response.content
     assert response.json() == {
         "detail": [
-            {"loc": ["body"], "msg": "Invalid JSON", "type": "json.parse_error",}
+            {
+                "loc": ["body"],
+                "msg": "Cannot parse request body",
+                "type": "parse_error",
+            }
         ]
     }

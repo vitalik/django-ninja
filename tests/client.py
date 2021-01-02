@@ -105,6 +105,10 @@ class NinjaResponse:
         self._response = http_response
         self.status_code = http_response.status_code
         self.content = http_response.content
+        # TODO: getattr that accessing self._response
 
     def json(self):
         return json_loads(self.content)
+
+    def __getitem__(self, key):
+        return self._response[key]

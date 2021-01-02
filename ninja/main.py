@@ -1,10 +1,13 @@
 import os
-from ninja import openapi
+
+from django.http import HttpRequest, HttpResponse
 from ninja.openapi import get_schema
-from typing import List, Optional, Tuple, Sequence, Union, Callable
+from typing import Any, List, Optional, Tuple, Sequence, Union, Callable
 from django.urls import reverse
 from ninja.openapi.urls import get_openapi_urls, get_root_url
+from ninja.parser import Parser
 from ninja.router import Router
+from ninja.renderers import JSONRenderer, BaseRenderer
 from ninja.errors import ConfigError
 from ninja.constants import NOT_SET
 
@@ -23,6 +26,8 @@ class NinjaAPI:
         urls_namespace: str = None,
         csrf: bool = False,
         auth: Union[Sequence[Callable], Callable, object] = NOT_SET,
+        renderer: Optional[BaseRenderer] = None,
+        parser: Optional[Parser] = None,
     ):
         self.title = title
         self.version = version
@@ -31,6 +36,8 @@ class NinjaAPI:
         self.docs_url = docs_url
         self.urls_namespace = urls_namespace or f"api-{self.version}"
         self.csrf = csrf
+        self.renderer = renderer or JSONRenderer()
+        self.parser = parser or Parser()
 
         self.auth: Optional[Sequence[Callable]] = NOT_SET
         if auth is not None and auth is not NOT_SET:
@@ -208,6 +215,13 @@ class NinjaAPI:
     def root_path(self):
         name = f"{self.urls_namespace}:api-root"
         return reverse(name)
+
+    def create_response(self, request: HttpRequest, data: Any, status: int = 200):
+        content = self.renderer.render(request, data, response_status=status)
+        content_type = "{}; charset={}".format(
+            self.renderer.media_type, self.renderer.charset
+        )
+        return HttpResponse(content, status=status, content_type=content_type)
 
     def get_openapi_schema(self, path_prefix=None):
         if path_prefix is None:

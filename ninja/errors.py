@@ -3,21 +3,21 @@ class ConfigError(Exception):
 
 
 class InvalidInput(Exception):
-    "pydantic's ValidationError compatible"
+    "pydantic's ValidationError compatible error"
 
     def __init__(self, msg, errors):
-        super()
+        super()  # TODO: ? no __init__ ?
         self._errors = errors
 
     def errors(self):
         return self._errors
 
 
-class InvalidBodyJson(InvalidInput):
+class InvalidBody(InvalidInput):
     def __init__(self, msg):
         details = {
             "loc": (),  # < top level will set it to "body"
-            "msg": "Invalid JSON",
-            "type": "json.parse_error",
+            "msg": "Cannot parse request body",
+            "type": "parse_error",
         }
         super().__init__(msg, [details])

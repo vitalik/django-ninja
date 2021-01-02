@@ -1,8 +1,8 @@
+from django.http.request import HttpRequest
 import pydantic
 import django
 from django.http import HttpResponse, HttpResponseNotAllowed
 from typing import Callable, List, Any, Union, Optional, Sequence
-from ninja.responses import Response
 from ninja.errors import InvalidInput, ConfigError
 from ninja.constants import NOT_SET
 from ninja.schema import Schema
@@ -56,9 +56,9 @@ class Operation:
 
         values, errors = self._get_values(request, kw)
         if errors:
-            return Response({"detail": errors}, status=422)
+            return self.api.create_response(request, {"detail": errors}, status=422)
         result = self.view_func(request, **values)
-        return self._create_response(result)
+        return self._result_to_response(request, result)
 
     def set_api_instance(self, api):
         self.api = api
@@ -90,13 +90,13 @@ class Operation:
             if result is not None:
                 request.auth = result
                 return
-        return Response({"detail": "Unauthorized"}, status=401)
+        return self.api.create_response(request, {"detail": "Unauthorized"}, status=401)
 
-    def _create_response(self, result: Any):
+    def _result_to_response(self, request: HttpRequest, result: Any):
         if isinstance(result, HttpResponse):
             return result
         if self.response_model is None:
-            return Response(result)
+            return self.api.create_response(request, result)
 
         status = 200
         response_model = self.response_model
@@ -111,13 +111,13 @@ class Operation:
         resp_object = ResponseObject(result)
         # ^ we need object because getter_dict seems work only with from_orm
         result = response_model.from_orm(resp_object).dict()["response"]
-        return Response(result, status=status)
+        return self.api.create_response(request, result, status=status)
 
     def _get_values(self, request, path_params):
         values, errors = {}, []
         for model in self.models:
             try:
-                data = model.resolve(request, path_params)
+                data = model.resolve(request, self.api, path_params)
                 values.update(data)
             except (pydantic.ValidationError, InvalidInput) as e:
                 items = []
@@ -154,9 +154,9 @@ class AsyncOperation(Operation):
 
         values, errors = self._get_values(request, kw)
         if errors:
-            return Response({"detail": errors}, status=422)
+            return self.api.create_response(request, {"detail": errors}, status=422)
         result = await self.view_func(request, **values)
-        return self._create_response(result)
+        return self._result_to_response(request, result)
 
 
 class PathView:
@@ -179,33 +179,23 @@ class PathView:
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
     ):
+        OperationClass = Operation
         if is_async(view_func):
             self.is_async = True
-            operation = AsyncOperation(
-                path,
-                methods,
-                view_func,
-                auth=auth,
-                response=response,
-                operation_id=operation_id,
-                summary=summary,
-                description=description,
-                tags=tags,
-                deprecated=deprecated,
-            )
-        else:
-            operation = Operation(
-                path,
-                methods,
-                view_func,
-                auth=auth,
-                response=response,
-                operation_id=operation_id,
-                summary=summary,
-                description=description,
-                tags=tags,
-                deprecated=deprecated,
-            )
+            OperationClass = AsyncOperation
+
+        operation = OperationClass(
+            path,
+            methods,
+            view_func,
+            auth=auth,
+            response=response,
+            operation_id=operation_id,
+            summary=summary,
+            description=description,
+            tags=tags,
+            deprecated=deprecated,
+        )
 
         self.operations.append(operation)
         return operation
