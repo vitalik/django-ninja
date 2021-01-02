@@ -1,0 +1,30 @@
+name: Full Test
+
+on:
+  push:
+    branches:
+      - development
+
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ '3.6', '3.7', '3.8', '3.9']
+        django-version: [ '2.0.13', '2.1.15', '2.2.17', '3.0.11', '3.1.4']
+    
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Flit
+        run: pip install flit
+      - name: Install Django
+        run: pip install Django==${{ matrix.django-version }}
+      - name: Install Dependencies
+        run: flit install --symlink
+      - name: Test
+        run: pytest
