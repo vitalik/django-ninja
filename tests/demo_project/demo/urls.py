@@ -6,7 +6,7 @@ from someapp.api import router
 
 api_v1 = NinjaAPI()
 api_v1.add_router("events", router)
-# TODO: check ^ for possible mistakes like `/events` `evetns/``
+# TODO: check ^ for possible mistakes like `/events` `events/``
 
 
 api_v2 = NinjaAPI(version="2.0.0")

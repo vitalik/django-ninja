@@ -9,11 +9,6 @@ from typing import List, Union
 router = Router()
 
 
-# TODO: Return annotaion is not good
-# results are not always matching the type
-# and long functions will be even longer/unreadable...
-
-
 @router.get("/check_int", response=int)
 def check_int(request):
     return "1"
