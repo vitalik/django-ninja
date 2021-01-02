@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.6', '3.7', '3.8', '3.9']
-        django-version: ['3.0.11', '3.1.4']
+        django-version: ['<2.1', '<2.2', '<3.0', '<3.1', '<3.2']
     
     steps:
       - uses: actions/checkout@v2
@@ -23,8 +23,10 @@ jobs:
       - name: Install Flit
         run: pip install flit
       - name: Install Django
-        run: pip install Django==${{ matrix.django-version }}
-      - name: Install Dependencies
-        run: flit install --symlink
+        run: pip install "Django${{ matrix.django-version }}"
+      - name: Install pydantic
+        run: flit install pydantic
+      - name: Install tests
+        run: flit install pytest pytest-asyncio pytest-django
       - name: Test
         run: pytest
