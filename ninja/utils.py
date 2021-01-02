@@ -12,4 +12,5 @@ def normalize_path(path: str) -> str:
 def check_csrf(request: HttpRequest, callback: Callable):
     mware = CsrfViewMiddleware(lambda: None)
     request.csrf_processing_done = False
+    mware.process_request(request)
     return mware.process_view(request, callback, [], {})
