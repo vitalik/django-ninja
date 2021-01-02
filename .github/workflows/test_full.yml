@@ -20,13 +20,9 @@ jobs:
         uses: actions/setup-python@v1
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install Flit
-        run: pip install flit
       - name: Install Django
-        run: pip install "Django${{ matrix.django-version }}"
-      - name: Install pydantic
-        run: flit install pydantic
+        run: pip install "Django${{ matrix.django-version }}" pydantic
       - name: Install tests
-        run: flit install pytest pytest-asyncio pytest-django
+        run: pip install pytest pytest-asyncio pytest-django
       - name: Test
         run: pytest
