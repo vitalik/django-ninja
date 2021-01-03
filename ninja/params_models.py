@@ -56,7 +56,6 @@ class BodyModel(ParamModel):
             try:
                 return api.parser.parse_body(request)
             except Exception as e:
-                print(e)
                 raise InvalidBody(e)
 
 

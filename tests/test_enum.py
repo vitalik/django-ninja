@@ -61,10 +61,6 @@ def test_enums():
 def test_schema():
     schema = api.get_openapi_schema()
 
-    from pprint import pprint
-
-    pprint(schema)
-
     booking_schema = schema["components"]["schemas"]["Booking"]
     room_prop = booking_schema["properties"]["room"]
 

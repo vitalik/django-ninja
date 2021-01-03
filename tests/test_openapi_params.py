@@ -30,7 +30,6 @@ def operation4(request):
 
 def test_schema():
     schema = api.get_openapi_schema()
-    from pprint import pprint
 
     # --------------------------------------------------------------
     op1 = schema["paths"]["/api/operation1"]["get"]
@@ -38,7 +37,6 @@ def test_schema():
     op3 = schema["paths"]["/api/operation3"]["get"]
     op4 = schema["paths"]["/api/operation4"]["get"]
 
-    pprint(op1)
     assert op1["operationId"] == "my_id"
     assert op2["operationId"] == "test_openapi_params_operation2"
     assert op3["operationId"] == "test_openapi_params_operation3"
