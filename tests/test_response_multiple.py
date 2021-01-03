@@ -2,6 +2,7 @@ from ninja.errors import ConfigError
 import pytest
 from pydantic import ValidationError, BaseModel
 from ninja import NinjaAPI
+from ninja.responses import codes_2xx, codes_3xx
 from client import NinjaClient
 from typing import List, Union
 
@@ -27,6 +28,13 @@ def check_single_with_status(request):
 @api.get("/check_response_schema", response={400: int})
 def check_response_schema(request):
     return 200, 1
+
+
+@api.get(
+    "/check_multiple_codes", response={codes_2xx: int, codes_3xx: str, ...: float},
+)
+def check_multiple_codes(request, code: int):
+    return code, 1
 
 
 class User:
@@ -78,15 +86,19 @@ client = NinjaClient(api)
     [
         ("/check_int", 200, 1),
         ("/check_single_with_status", 302, 1),
-        ("/check_model", 202, {"id": 1, "name": "John"}),  # the password is skipped
-        (
-            "/check_list_model",
-            200,
-            [{"id": 1, "name": "John"}],
-        ),  # the password is skipped
+        ("/check_model", 202, {"id": 1, "name": "John"}),  # ! the password is skipped
+        ("/check_list_model", 200, [{"id": 1, "name": "John"}]),
         ("/check_union?q=0", 200, 1),
         ("/check_union?q=1", 200, {"id": 1, "name": "John"}),
         ("/check_union?q=2", 400, {"detail": "error"}),
+        ("/check_multiple_codes?code=200", 200, 1),
+        ("/check_multiple_codes?code=201", 201, 1),
+        ("/check_multiple_codes?code=202", 202, 1),
+        ("/check_multiple_codes?code=206", 206, 1),
+        ("/check_multiple_codes?code=300", 300, "1"),
+        ("/check_multiple_codes?code=308", 308, "1"),
+        ("/check_multiple_codes?code=400", 400, 1.0),
+        ("/check_multiple_codes?code=500", 500, 1.0),
     ],
 )
 def test_responses(path, expected_status, expected_response):

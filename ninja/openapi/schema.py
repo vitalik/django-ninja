@@ -149,6 +149,8 @@ class OpenAPISchema(OrderedDict):
             responses = {}
             for status, model in operation.response_model.items():
                 schema, _ = self._create_schema_from_model(model)
+                if status == Ellipsis:
+                    continue  # it's not yet clear what it means if user want's to output any other code
                 responses.update(
                     {
                         status: {

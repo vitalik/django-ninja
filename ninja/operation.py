@@ -1,8 +1,7 @@
-from django.http.request import HttpRequest
 import pydantic
 import django
-from django.http import HttpResponse, HttpResponseNotAllowed
-from typing import Callable, List, Any, Union, Optional, Sequence
+from django.http import HttpResponse, HttpRequest, HttpResponseNotAllowed
+from typing import Callable, Iterable, List, Any, Union, Optional, Sequence
 from ninja.errors import InvalidInput, ConfigError
 from ninja.constants import NOT_SET
 from ninja.schema import Schema
@@ -104,9 +103,14 @@ class Operation:
             status = result[0]
             result = result[1]
         if isinstance(response_model, dict):
-            if status not in response_model.keys():
-                raise ConfigError(f"Schema for status {status} is not set in response")
-            response_model = response_model[status]
+            if status in response_model:
+                response_model = response_model[status]
+            elif Ellipsis in response_model:
+                response_model = response_model[Ellipsis]
+            else:
+                raise ConfigError(
+                    f"Schema for status {status} is not set in response {response_model.keys()}"
+                )
 
         resp_object = ResponseObject(result)
         # ^ we need object because getter_dict seems work only with from_orm
@@ -128,10 +132,12 @@ class Operation:
         return values, errors
 
     def _create_response_model_multiple(self, response_param):
-        # TODO: do not modify response_param, return copy instead
-        for status, model in response_param.items():
-            response_param[status] = self._create_response_model(model)
-        return response_param
+        result = {}
+        for key, model in response_param.items():
+            status_codes = isinstance(key, Iterable) and key or [key]
+            for code in status_codes:
+                result[code] = self._create_response_model(model)
+        return result
 
     def _create_response_model(self, response_param):
         if response_param is None:
