@@ -1,5 +1,4 @@
 from pydantic.fields import FieldInfo, ModelField
-from pydantic import BaseConfig
 from typing import Any
 from ninja import params_models
 
@@ -72,3 +71,7 @@ class Body(Param):
 
 class Form(Param):
     _model = params_models.FormModel
+
+
+class File(Param):
+    _model = params_models.FileModel

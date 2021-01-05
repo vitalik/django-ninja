@@ -59,6 +59,7 @@ class NinjaClientBase:
             request.user.is_authenticated = False
 
         request.META = request_params.pop("META", {})
+        request.FILES = request_params.pop("FILES", {})
 
         request.META.update(
             dict(

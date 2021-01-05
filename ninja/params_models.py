@@ -64,3 +64,10 @@ class FormModel(ParamModel):
     def get_request_data(cls, request, api, path_params):
         list_fields = getattr(cls, "_collection_fields", [])
         return api.parser.parse_querydict(request.POST, list_fields, request)
+
+
+class FileModel(ParamModel):
+    @classmethod
+    def get_request_data(cls, request, api, path_params):
+        list_fields = getattr(cls, "_collection_fields", [])
+        return api.parser.parse_querydict(request.FILES, list_fields, request)
