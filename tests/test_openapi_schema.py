@@ -1,6 +1,8 @@
 from typing import List
+from unittest.mock import patch
 from ninja import NinjaAPI, Schema
-from django.test import Client
+from django.test import Client, override_settings
+from copy import copy
 
 
 api = NinjaAPI()
@@ -30,6 +32,20 @@ def test_schema_views(client: Client):
     assert client.get("/api/").status_code == 404
     assert client.get("/api/docs").status_code == 200
     assert client.get("/api/openapi.json").status_code == 200
+
+
+def test_schema_views_no_INSTALLED_APPS(client: Client):
+    "Making sure that cdn and included js works fine"
+    from django.conf import settings
+
+    # removing ninja from settings:
+    INSTALLED_APPS = [i for i in settings.INSTALLED_APPS if i != "ninja"]
+
+    @override_settings(INSTALLED_APPS=INSTALLED_APPS)
+    def call_docs():
+        assert client.get("/api/docs").status_code == 200
+
+    call_docs()
 
 
 def test_schema():

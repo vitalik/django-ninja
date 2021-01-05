@@ -1,5 +1,7 @@
 from ninja.responses import Response
 from django.http import Http404
+from django.conf import settings
+from django.shortcuts import render
 from django.urls import reverse
 from typing import TYPE_CHECKING
 
@@ -20,26 +22,29 @@ def openapi_json(request, api: "NinjaAPI"):
 
 
 def swagger(request, api: "NinjaAPI"):
-    return render(
-        request,
-        "ninja/swagger.html",
-        {
-            "api": api,
-            "openapi_json_url": reverse(f"{api.urls_namespace}:openapi-json"),
-        },
-    )
-
-
-def render(request, template_name: str, context=None):
     """
     I do not really want ninja to be required in INSTALLED_APPS for now
-    that is why for now we use this render function to simulate django render
+    so we automatically detect - if ninja is in INSTALLED_APPS - then we render with django.shortcuts.render
+    otherwise - rendering custom html with swagger js from cdn
     """
+    context = {
+        "api": api,
+        "openapi_json_url": reverse(f"{api.urls_namespace}:openapi-json"),
+    }
+    if "ninja" in settings.INSTALLED_APPS:
+        return render(request, "ninja/swagger.html", context)
+    else:
+        return swagger_cdn(request, context)
+
+
+def swagger_cdn(request, context=None):
     import os
     from django.template import Template, RequestContext
     from django.http import HttpResponse
 
-    tpl_file = os.path.join(os.path.dirname(__file__), "../templates", template_name)
+    tpl_file = os.path.join(
+        os.path.dirname(__file__), "../templates/ninja/swagger_cdn.html"
+    )
     with open(tpl_file) as f:
         tpl = Template(f.read())
     html = tpl.render(RequestContext(request, context))
