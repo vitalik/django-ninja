@@ -20,7 +20,7 @@
  - **Fast**: Very high performance thanks to Pydantic and **<a href="https://django-ninja.rest-framework.com/async-support/">async support</a>**. 
  - **Fast to code**: Type hints and automatic docs let's you focus only on business logic.
  - **Standards-based**: Based on the open standards for APIs: **OpenAPI** (previously known as Swagger) and **JSON Schema**.
- - **Django friendly**: (obviously) have good integration with Django core an ORM.
+ - **Django friendly**: (obviously) have good integration with Django core and ORM.
  - **Production ready**: Used by multiple companies on live projects (If you use django-ninja and would like to publish your feedback - please email to ppr.vitaly@gmail.com)
 
 
