@@ -25,6 +25,26 @@ def test_files():
     assert response.json() == {"name": "test.txt", "data": "data123"}
 
 
+def test_schema():
+    schema = api.get_openapi_schema()
+    method = schema["paths"]["/api/file"]["post"]
+    assert method["requestBody"] == {
+        "content": {
+            "multipart/form-data": {
+                "schema": {
+                    "title": "FileParams",
+                    "required": ["file"],
+                    "type": "object",
+                    "properties": {
+                        "file": {"title": "File", "type": "string", "format": "binary"}
+                    },
+                }
+            }
+        },
+        "required": True,
+    }
+
+
 def test_invalid_file():
     with pytest.raises(ValueError):
-        UploadedFile.validate("not_a_file")
+        UploadedFile._validate("not_a_file")

@@ -10,6 +10,8 @@ if TYPE_CHECKING:
 
 REF_PREFIX = "#/components/schemas/"
 
+BODY_PARAMS = {"body", "form", "file"}
+
 
 def get_schema(api: "NinjaAPI", path_prefix=""):
     openapi = OpenAPISchema(api, path_prefix)
@@ -86,7 +88,7 @@ class OpenAPISchema(OrderedDict):
     def operation_parameters(self, operation):
         result = []
         for model in operation.models:
-            if model._in == "body":
+            if model._in in BODY_PARAMS:
                 continue
 
             schema = model_schema(model, ref_prefix=REF_PREFIX)
@@ -123,17 +125,33 @@ class OpenAPISchema(OrderedDict):
 
     def request_body(self, operation):
         # TODO: refactor
-        models = [m for m in operation.models if m._in == "body"]
+        models = [m for m in operation.models if m._in in BODY_PARAMS]
         if not models:
             return {}
         assert len(models) == 1
 
-        schema, required = self._create_schema_from_model(models[0])
+        model = models[0]
+        content_type = self.get_body_content_type(model)
+
+        if model._in == "body":
+            schema, required = self._create_schema_from_model(model)
+        else:
+            assert model._in in ("form", "file")
+            schema = model_schema(model, ref_prefix=REF_PREFIX)
+            required = True
 
         return {
-            "content": {"application/json": {"schema": schema}},
+            "content": {content_type: {"schema": schema}},
             "required": required,
         }
+
+    def get_body_content_type(self, model):
+        types = {
+            "body": "application/json",
+            "form": "application/x-www-form-urlencoded",
+            "file": "multipart/form-data",
+        }
+        return types[model._in]
 
     def responses(self, operation):
         if operation.response_model:
