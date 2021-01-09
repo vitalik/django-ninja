@@ -24,12 +24,16 @@ nav:
   - tutorial/path-params.md
   - tutorial/query-params.md
   - tutorial/body.md
+  - tutorial/form-params.md
+  - tutorial/file-params.md
   - tutorial/response-schema.md
   - tutorial/crud.md
   - tutorial/authentication.md
   - tutorial/routers.md
   - tutorial/operation_params.md
   - tutorial/versioning.md
+  - tutorial/request-parsers.md
+  - tutorial/response-renderers.md
   - tutorial/csrf.md
 - async-support.md
 - Enhancement Proposals:

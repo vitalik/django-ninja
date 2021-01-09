@@ -26,14 +26,21 @@ Note: if you do not annotate your arguments - it will be treated as `str` types:
 ```Python hl_lines="2"
 @api.get("/weapons")
 def list_weapons(request, limit, offset):
-    return weapons[offset : offset + limit]
+    # type(limit) == str
+    # type(offset) == str
 ```
 
 ### Defaults
 
-As query parameters are not a fixed part of a path, they can be optional and can have default values.
+As query parameters are not a fixed part of a path, they can be optional and can have default values:
 
-In the example above they have default values of `offset=0` and `limit=10`.
+```Python hl_lines="2"
+@api.get("/weapons")
+def list_weapons(request, limit: int = 10, offset: int = 0):
+    return weapons[offset : offset + limit]
+```
+
+In the example above we set default values of `offset=0` and `limit=10`.
 
 So, going to the URL:
 ```

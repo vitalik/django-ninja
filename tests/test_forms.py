@@ -41,3 +41,14 @@ def test_schema():
         },
         "required": True,
     }
+
+
+# TODO: Fix schema for this case:
+# class Credentials(Schema):
+#     username: str
+#     password: str
+
+
+# @api.post("/login")
+# def login(request, credentials: Credentials = Form(...)):
+#     return {'username': credentials.username}
