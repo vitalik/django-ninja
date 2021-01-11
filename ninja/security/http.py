@@ -27,7 +27,6 @@ class HttpBearer(HttpAuthBase, ABC):
         parts = auth_value.split(" ")
 
         if parts[0].lower() != "bearer":
-            print(f"Unexpected auth - '{auth_value}'")
             return None
         token = " ".join(parts[1:])
         return self.authenticate(request, token)
@@ -54,7 +53,6 @@ class HttpBasicAuth(HttpAuthBase, ABC):  # TODO: maybe HttpBasicAuthBase
         try:
             username, password = self.decode_authorization(auth_value)
         except DecodeError as e:
-            print(e)
             return None
         return self.authenticate(request, username, password)
 
@@ -77,5 +75,4 @@ class HttpBasicAuth(HttpAuthBase, ABC):  # TODO: maybe HttpBasicAuthBase
             username, password = b64decode(user_pass_encoded).decode().split(":", 1)
             return unquote(username), unquote(password)
         except Exception as e:
-            print(e)
             raise DecodeError("Invlid Authorization header") from e
