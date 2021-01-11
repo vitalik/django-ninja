@@ -52,7 +52,7 @@ class HttpBasicAuth(HttpAuthBase, ABC):  # TODO: maybe HttpBasicAuthBase
 
         try:
             username, password = self.decode_authorization(auth_value)
-        except DecodeError as e:
+        except DecodeError:
             return None
         return self.authenticate(request, username, password)
 
@@ -69,10 +69,10 @@ class HttpBasicAuth(HttpAuthBase, ABC):  # TODO: maybe HttpBasicAuthBase
         elif len(parts) == 2 and parts[0].lower() == "basic":
             user_pass_encoded = parts[1]
         else:
-            raise DecodeError("Invlid Authorization header")
+            raise DecodeError("Invalid Authorization header")
 
         try:
             username, password = b64decode(user_pass_encoded).decode().split(":", 1)
             return unquote(username), unquote(password)
-        except Exception as e:
-            raise DecodeError("Invlid Authorization header") from e
+        except ValueError as e:
+            raise DecodeError("Invalid Authorization header") from e
