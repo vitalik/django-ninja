@@ -13,6 +13,9 @@ This tutorial assumes that you know at least some basics of the <a href="https:/
 pip install django-ninja
 ```
 
+!!! note
+    It is not required, but you can as well put `ninja` to `INSTALLED_APPS`. In that case Swagger UI will be loaded from included js bundle (otherwise js bundle comes from CDN)
+
 
 ## Create django project
 
@@ -96,7 +99,7 @@ def patch_operation(request):
     ...
 ```
 
-if you need to handle multiple methods with single function you can use api
+if you need to handle multiple methods with single function you can use `api_operation` method:
 
 
 ```Python hl_lines="1"
