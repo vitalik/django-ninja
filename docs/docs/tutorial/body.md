@@ -2,10 +2,10 @@
 
 Request bodies are typically used with “create” and “update” operations (POST, PUT, PATCH). For example, when creating a resource using POST or PUT, the request body usually contains the representation of the resource to be created.
 
-To declare a **request body**, you need to use **NinjaAPI `Schema`**.
+To declare a **request body**, you need to use **Django Ninja `Schema`**.
 
 !!! info
-    Under the hood **NinjaAPI** uses <a href="https://pydantic-docs.helpmanual.io/" class="external-link" target="_blank">Pydantic</a> models with all their power and benefits.
+    Under the hood **Django Ninja** uses <a href="https://pydantic-docs.helpmanual.io/" class="external-link" target="_blank">Pydantic</a> models with all their power and benefits.
     The alias `Schema` was picked to avoid confusion in code with Django models.
 
 ## Import Schema
@@ -60,7 +60,7 @@ To add it to your *path operation*, declare it the same way you declared path an
 
 ## Results
 
-With just that Python type declaration, **NinjaAPI** will:
+With just that Python type declaration, **Django Ninja** will:
 
 * Read the body of the request as JSON.
 * Convert the corresponding types (if needed).

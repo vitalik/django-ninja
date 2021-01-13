@@ -1,6 +1,6 @@
 # Tutorial - Intro
 
-This tutorial shows you how to use **NinjaAPI** with most of its features. 
+This tutorial shows you how to use **Django Ninja** with most of its features. 
 It is also built to work as a reference documentation.
 So you can come back and see exactly what you need.
 
