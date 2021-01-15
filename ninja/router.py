@@ -222,6 +222,6 @@ class Router:
         internal_routes = []
         for inter_prefix, inter_router in self._routers:
             _route = normalize_path("/".join((prefix, inter_prefix))).lstrip("/")
-            internal_routes = inter_router.build_routers(_route)
+            internal_routes.extend(inter_router.build_routers(_route))
 
         return [(prefix, self), *internal_routes]
