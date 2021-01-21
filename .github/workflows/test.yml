@@ -4,11 +4,9 @@ on:
   push:
     branches:
       - master
-  pull_request:
-    types: [assigned, opened, synchronize, reopened]
 
 jobs:
-  test:
+  test_coverage:
     runs-on: ubuntu-latest
     
     steps:
@@ -16,7 +14,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v1
         with:
-          python-version: 3.6
+          python-version: 3.8
       - name: Install Flit
         run: pip install flit
       - name: Install Dependencies
