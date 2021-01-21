@@ -2,8 +2,8 @@ name: Full Test
 
 on:
   push:
-    branches:
-      - development
+  pull_request:
+    types: [assigned, opened, synchronize, reopened]
 
 
 jobs:
