@@ -9,8 +9,13 @@ def test_examples():
 
     with patch("builtins.api", api, create=True):
         import docs.src.tutorial.path.code010
+        import docs.src.tutorial.path.code02
+        import docs.src.tutorial.path.code01
 
         client = NinjaClient(api)
+
+        response = client.get("/items/123")
+        assert response.json() == {"item_id": 123}
 
         response = client.get("/events/2020/1/1")
         assert response.json() == {"date": "2020-01-01"}
