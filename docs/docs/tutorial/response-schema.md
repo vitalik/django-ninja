@@ -207,3 +207,46 @@ def login(request, payload: Auth):
         return 402, {'message': 'Insufficient balance amount. Please proceed to a payment page.'}
     return 200, {'token': xxx, ...}
 ```
+
+## Multiple response codes
+
+In the previous example you see that we kind of repeated 2 times  `Message` schema:
+
+```
+...401: Message, 402: Message}
+```
+
+to avoid this duplication you can as well use multiple codes per schema:
+
+```Python hl_lines="2 5 8 10"
+...
+from ninja.responses import codes_4xx
+
+
+@api.post('/login', response={200: Token, codes_4xx: Message})
+def login(request, payload: Auth):
+    if auth_not_valid:
+        return 401, {'message': 'Unauthorized'}
+    if negative_balance:
+        return 402, {'message': 'Insufficient balance amount. Please proceed to a payment page.'}
+    return 200, {'token': xxx, ...}
+```
+
+Django Ninja comes with the following http codes:
+
+```Python
+from ninja.responses import codes_1xx
+from ninja.responses import codes_2xx
+from ninja.responses import codes_3xx
+from ninja.responses import codes_4xx
+from ninja.responses import codes_5xx
+```
+
+you can create your own range with frozenset
+
+```Python
+my_codes = frozenset({416, 418, 425, 429, 451})
+...
+@api.post('/login', response={200: Token, my_codes: Message})
+...
+```
