@@ -23,6 +23,10 @@ class Operation:
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
+        by_alias: bool = False,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = False,
     ):
         self.is_async = False
         self.path: str = path
@@ -47,6 +51,12 @@ class Operation:
         self.description = description or self.signature.docstring
         self.tags = tags
         self.deprecated = deprecated
+
+        # Exporting models params
+        self.by_alias = by_alias
+        self.exclude_unset = exclude_unset
+        self.exclude_defaults = exclude_defaults
+        self.exclude_none = exclude_none
 
     def run(self, request, **kw):
         error = self._run_checks(request)
@@ -114,7 +124,12 @@ class Operation:
 
         resp_object = ResponseObject(result)
         # ^ we need object because getter_dict seems work only with from_orm
-        result = response_model.from_orm(resp_object).dict()["response"]
+        result = response_model.from_orm(resp_object).dict(
+            by_alias=self.by_alias,
+            exclude_unset=self.exclude_unset,
+            exclude_defaults=self.exclude_defaults,
+            exclude_none=self.exclude_none,
+        )["response"]
         return self.api.create_response(request, result, status=status)
 
     def _get_values(self, request, path_params):
@@ -184,6 +199,10 @@ class PathView:
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
+        by_alias: bool = False,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = False,
     ):
         OperationClass = Operation
         if is_async(view_func):
@@ -201,6 +220,10 @@ class PathView:
             description=description,
             tags=tags,
             deprecated=deprecated,
+            by_alias=by_alias,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
         )
 
         self.operations.append(operation)

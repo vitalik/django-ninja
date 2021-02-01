@@ -25,6 +25,10 @@ class Router:
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
+        by_alias: bool = False,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = False,
     ):
         return self.api_operation(
             ["GET"],
@@ -36,6 +40,10 @@ class Router:
             description=description,
             tags=tags,
             deprecated=deprecated,
+            by_alias=by_alias,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
         )
 
     def post(
@@ -49,6 +57,10 @@ class Router:
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
+        by_alias: bool = False,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = False,
     ):
         return self.api_operation(
             ["POST"],
@@ -60,6 +72,10 @@ class Router:
             description=description,
             tags=tags,
             deprecated=deprecated,
+            by_alias=by_alias,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
         )
 
     def delete(
@@ -73,6 +89,10 @@ class Router:
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
+        by_alias: bool = False,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = False,
     ):
         return self.api_operation(
             ["DELETE"],
@@ -84,6 +104,10 @@ class Router:
             description=description,
             tags=tags,
             deprecated=deprecated,
+            by_alias=by_alias,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
         )
 
     def patch(
@@ -97,6 +121,10 @@ class Router:
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
+        by_alias: bool = False,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = False,
     ):
         return self.api_operation(
             ["PATCH"],
@@ -108,6 +136,10 @@ class Router:
             description=description,
             tags=tags,
             deprecated=deprecated,
+            by_alias=by_alias,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
         )
 
     def put(
@@ -121,6 +153,10 @@ class Router:
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
+        by_alias: bool = False,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = False,
     ):
         return self.api_operation(
             ["PUT"],
@@ -132,6 +168,10 @@ class Router:
             description=description,
             tags=tags,
             deprecated=deprecated,
+            by_alias=by_alias,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
         )
 
     def api_operation(
@@ -146,6 +186,10 @@ class Router:
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
+        by_alias: bool = False,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = False,
     ):
         def decorator(view_func):
             self.add_api_operation(
@@ -159,6 +203,10 @@ class Router:
                 description=description,
                 tags=tags,
                 deprecated=deprecated,
+                by_alias=by_alias,
+                exclude_unset=exclude_unset,
+                exclude_defaults=exclude_defaults,
+                exclude_none=exclude_none,
             )
             return view_func
 
@@ -177,6 +225,10 @@ class Router:
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
+        by_alias: bool = False,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = False,
     ):
         if path not in self.operations:
             path_view = PathView()
@@ -194,6 +246,10 @@ class Router:
             description=description,
             tags=tags,
             deprecated=deprecated,
+            by_alias=by_alias,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
         )
         if self.api:
             path_view.set_api_instance(self.api)
