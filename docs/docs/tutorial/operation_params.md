@@ -125,4 +125,23 @@ It will be marked as deprecated in the json schema an in the interactive docs:
 
 ![Deprecated](../img/deprecated.png)
 
+## Response output options
+
+There are few arguments that lets you tune responses output:
+
+### by_alias
+
+whether field aliases should be used as keys in the response; default `False`
+
+### exclude_unset
+
+whether fields which were not set when creating the schema and have their default values should be excluded from the response; default `False`
+
+### exclude_defaults
+
+whether fields which are equal to their default values (whether set or otherwise) should be excluded from the response; default `False`
+
+### exclude_none
+
+whether fields which are equal to None should be excluded from the response; default `False`
 

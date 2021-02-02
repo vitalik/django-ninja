@@ -58,6 +58,10 @@ class NinjaAPI:
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
+        by_alias: bool = False,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = False,
     ):
         return self.default_router.get(
             path,
@@ -68,6 +72,10 @@ class NinjaAPI:
             description=description,
             tags=tags,
             deprecated=deprecated,
+            by_alias=by_alias,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
         )
 
     def post(
@@ -81,6 +89,10 @@ class NinjaAPI:
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
+        by_alias: bool = False,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = False,
     ):
         return self.default_router.post(
             path,
@@ -91,6 +103,10 @@ class NinjaAPI:
             description=description,
             tags=tags,
             deprecated=deprecated,
+            by_alias=by_alias,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
         )
 
     def delete(
@@ -104,6 +120,10 @@ class NinjaAPI:
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
+        by_alias: bool = False,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = False,
     ):
         return self.default_router.delete(
             path,
@@ -114,6 +134,10 @@ class NinjaAPI:
             description=description,
             tags=tags,
             deprecated=deprecated,
+            by_alias=by_alias,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
         )
 
     def patch(
@@ -127,6 +151,10 @@ class NinjaAPI:
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
+        by_alias: bool = False,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = False,
     ):
         return self.default_router.patch(
             path,
@@ -137,6 +165,10 @@ class NinjaAPI:
             description=description,
             tags=tags,
             deprecated=deprecated,
+            by_alias=by_alias,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
         )
 
     def put(
@@ -150,6 +182,10 @@ class NinjaAPI:
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
+        by_alias: bool = False,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = False,
     ):
         return self.default_router.put(
             path,
@@ -160,6 +196,10 @@ class NinjaAPI:
             description=description,
             tags=tags,
             deprecated=deprecated,
+            by_alias=by_alias,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
         )
 
     def api_operation(
@@ -174,6 +214,10 @@ class NinjaAPI:
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
+        by_alias: bool = False,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = False,
     ):
         return self.default_router.api_operation(
             methods,
@@ -185,6 +229,10 @@ class NinjaAPI:
             description=description,
             tags=tags,
             deprecated=deprecated,
+            by_alias=by_alias,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
         )
 
     def add_router(self, prefix, router):
