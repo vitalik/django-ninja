@@ -9,9 +9,10 @@ from ninja.utils import normalize_path
 
 
 class Router:
-    def __init__(self):
+    def __init__(self, auth=NOT_SET):
         self.operations = OrderedDict()  # TODO: better rename to path_operations
         self.api = None
+        self.auth = auth
         self._routers: List[Tuple[str, Router]] = []
 
     def get(
@@ -197,6 +198,7 @@ class Router:
                 methods,
                 view_func,
                 auth=auth,
+                router_auth=self.auth,
                 response=response,
                 operation_id=operation_id,
                 summary=summary,
@@ -219,6 +221,7 @@ class Router:
         view_func: Callable,
         *,
         auth=NOT_SET,
+        router_auth=NOT_SET,
         response=None,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
@@ -240,6 +243,7 @@ class Router:
             methods=methods,
             view_func=view_func,
             auth=auth,
+            router_auth=router_auth,
             response=response,
             operation_id=operation_id,
             summary=summary,

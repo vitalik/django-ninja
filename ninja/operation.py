@@ -17,6 +17,7 @@ class Operation:
         view_func: Callable,
         *,
         auth: Optional[Union[Sequence[Callable], Callable, object]] = NOT_SET,
+        router_auth: Optional[Union[Sequence[Callable], Callable, object]] = NOT_SET,
         response: Any = None,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
@@ -35,6 +36,9 @@ class Operation:
         self.api = None
 
         self.auth_param: Optional[Union[Sequence[Callable], Callable, object]] = auth
+        self.router_auth_param: Optional[
+            Union[Sequence[Callable], Callable, object]
+        ] = router_auth
         self.auth_callbacks: Sequence[Callable] = []
         self._set_auth(auth)
 
@@ -71,9 +75,15 @@ class Operation:
 
     def set_api_instance(self, api):
         self.api = api
-        if self.auth_param == NOT_SET and api.auth != NOT_SET:
-            # if api instance have auth and operation not - then we set auth from api instance
-            self._set_auth(self.api.auth)
+        if self.auth_param == NOT_SET:
+            if self.router_auth_param != NOT_SET:
+                # if router instance have auth and operation not - then we set auth from router instance
+                self._set_auth(self.router_auth_param)
+                return
+
+            if api.auth != NOT_SET:
+                # if api instance have auth and operation not - then we set auth from api instance
+                self._set_auth(self.api.auth)
 
     def _set_auth(self, auth: Optional[Union[Sequence[Callable], Callable, object]]):
         if auth is not None and auth is not NOT_SET:
@@ -193,6 +203,7 @@ class PathView:
         view_func: Callable,
         *,
         auth: Optional[Union[Sequence[Callable], Callable, object]] = NOT_SET,
+        router_auth: Optional[Union[Sequence[Callable], Callable, object]] = NOT_SET,
         response=None,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
@@ -214,6 +225,7 @@ class PathView:
             methods,
             view_func,
             auth=auth,
+            router_auth=router_auth,
             response=response,
             operation_id=operation_id,
             summary=summary,

@@ -65,6 +65,44 @@ And if you need to overrule some of those methods you can do that on the operati
 {!./src/tutorial/authentication/global01.py!}
 ```
 
+## Router authentication 
+
+In case you need to secure methods for some router ([Routers](/tutorial/routers/) are described in the next chapter) of your application - you can pass `auth` argument to a `Router` constructor:
+
+
+```Python hl_lines="11 19"
+from ninja import NinjaAPI, Form, Router
+from ninja.security import HttpBearer
+
+class GlobalAuth(HttpBearer):
+    def authenticate(self, request, token):
+        if token == "supersecret":
+            return token
+
+
+class RouterAuth(HttpBearer):
+    def authenticate(self, request, token):
+        if token == "pupersecret":
+            return token
+
+
+api = NinjaAPI(auth=GlobalAuth())
+router = Router(auth=RouterAuth())
+
+# @router.get(...)
+# def ...
+
+# @router.post(...)
+# def ...
+
+api.add_router('/prefix/', router)
+```
+Router auth has a higher priority than Global one. Operation auth has a higher priority than Router one.
+
+```Python hl_lines="19"
+{!./src/tutorial/authentication/router01.py!}
+```
+
 ## Available auth options
 
 ### Custom function

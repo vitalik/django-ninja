@@ -15,6 +15,12 @@ class KeyQuery2(APIKeyQuery):
             return key
 
 
+class KeyQuery3(APIKeyQuery):
+    def authenticate(self, request, key):
+        if key == "k3":
+            return key
+
+
 api = NinjaAPI(auth=KeyQuery1())
 
 
@@ -50,6 +56,21 @@ def router_operation_auth(request):
 
 api.add_router("", router)
 
+router2 = Router(auth=KeyQuery3())
+
+
+@router2.get("/router-operation")  # should come from router auth
+def router_operation(request):
+    return {"auth": str(request.auth)}
+
+
+@router2.get("/router-operation-auth", auth=KeyQuery2())
+def router_operation_auth(request):
+    return {"auth": str(request.auth)}
+
+
+api.add_router("/router-level-auth/", router2)
+
 # ---- end router --------------------
 
 client = NinjaClient(api)
@@ -78,3 +99,11 @@ def test_router_auth():
 
     assert client.get("/router-operation-auth?key=k1").status_code == 401
     assert client.get("/router-operation-auth?key=k2").json() == {"auth": "k2"}
+
+    assert client.get("/router-level-auth/router-operation").status_code == 401
+    assert client.get("/router-level-auth/router-operation?key=k1").status_code == 401
+    assert client.get("/router-level-auth/router-operation?key=k3").json() == {"auth": "k3"}
+
+    assert client.get("/router-level-auth/router-operation-auth?key=k1").status_code == 401
+    assert client.get("/router-level-auth/router-operation-auth?key=k3").status_code == 401
+    assert client.get("/router-level-auth/router-operation-auth?key=k2").json() == {"auth": "k2"}
