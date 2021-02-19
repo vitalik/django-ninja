@@ -23,4 +23,5 @@ Pull requests are always welcome.
 
 Do not hesitate - go to <a href="https://github.com/vitalik/django-ninja/issues" target="_blank">github issues</a> and create your question or describe a problem. Will try to address quickly.
 
+Join the chat at <a href="https://discord.gg/dgE4SNUDTB" target="_blank">Discord server</a>
 
