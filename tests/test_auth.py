@@ -63,7 +63,7 @@ for path, auth in [
     ("basic", BasicAuth()),
     ("bearer", BearerAuth()),
 ]:
-    api.get(f"/{path}", auth=auth)(demo_operation)
+    api.get(f"/{path}", auth=auth, operation_id=path)(demo_operation)
 
 
 client = NinjaClient(api)

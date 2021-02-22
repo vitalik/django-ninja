@@ -31,7 +31,8 @@ def check_response_schema(request):
 
 
 @api.get(
-    "/check_multiple_codes", response={codes_2xx: int, codes_3xx: str, ...: float},
+    "/check_multiple_codes",
+    response={codes_2xx: int, codes_3xx: str, ...: float},
 )
 def check_multiple_codes(request, code: int):
     return code, 1

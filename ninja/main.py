@@ -276,11 +276,6 @@ class NinjaAPI:
             path_prefix = self.root_path
         return get_schema(api=self, path_prefix=path_prefix)
 
-    def get_openapi_operation_id(self, operation: "Operation"):
-        name = operation.view_func.__name__
-        module = operation.view_func.__module__
-        return (module + "_" + name).replace(".", "_")
-
     def _validate(self):
         from ninja.security import APIKeyCookie
 

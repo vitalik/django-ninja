@@ -38,6 +38,7 @@ class Operation:
         self.auth_callbacks: Sequence[Callable] = []
         self._set_auth(auth)
 
+        self.operation_id = operation_id or self._get_operation_id_from_view_func()
         self.signature = ViewSignature(self.path, self.view_func)
         self.models = self.signature.models
 
@@ -46,7 +47,6 @@ class Operation:
         else:
             self.response_model = self._create_response_model(response)
 
-        self.operation_id = operation_id
         self.summary = summary or self.view_func.__name__.title().replace("_", " ")
         self.description = description or self.signature.docstring
         self.tags = tags
@@ -57,6 +57,11 @@ class Operation:
         self.exclude_unset = exclude_unset
         self.exclude_defaults = exclude_defaults
         self.exclude_none = exclude_none
+
+    def _get_operation_id_from_view_func(self):
+        name = self.view_func.__name__
+        module = self.view_func.__module__
+        return (module + "_" + name).replace(".", "_")
 
     def run(self, request, **kw):
         error = self._run_checks(request)
@@ -71,6 +76,17 @@ class Operation:
 
     def set_api_instance(self, api):
         self.api = api
+
+        for _, router in api._routers:
+            for _, path_view in router.operations.items():
+                if any(
+                    self != operation and self.operation_id == operation.operation_id
+                    for operation in path_view.operations
+                ):
+                    raise ValueError(
+                        f"Operation id {self.operation_id} is already taken, please rename your function or set the id manually"
+                    )
+
         if self.auth_param == NOT_SET and api.auth != NOT_SET:
             # if api instance have auth and operation not - then we set auth from api instance
             self._set_auth(self.api.auth)

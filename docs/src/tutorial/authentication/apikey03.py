@@ -11,5 +11,5 @@ cookie_key = CookieKey()
 
 
 @api.get("/cookiekey", auth=cookie_key)
-def apikey(request):
+def apikey3(request):
     return f"Token = {request.auth}"

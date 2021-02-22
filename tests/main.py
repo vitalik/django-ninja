@@ -5,7 +5,9 @@ router = Router()
 
 
 @router.get("/text")
-def get_text(request,):
+def get_text(
+    request,
+):
     return "Hello World"
 
 

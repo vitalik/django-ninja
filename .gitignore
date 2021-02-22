@@ -1,5 +1,7 @@
 *.pyc
-.venv
+*venv
+*.sqlite3
+
 .vscode
 .mypy_cache
 .coverage

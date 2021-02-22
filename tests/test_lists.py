@@ -12,7 +12,9 @@ router = Router()
 
 @router.post("/list1")
 def listview1(
-    request, query: List[int] = Query(...), form: List[int] = Form(...),
+    request,
+    query: List[int] = Query(...),
+    form: List[int] = Form(...),
 ):
     return {
         "query": query,
@@ -22,7 +24,9 @@ def listview1(
 
 @router.post("/list2")
 def listview2(
-    request, body: List[int], query: List[int] = Query(...),
+    request,
+    body: List[int],
+    query: List[int] = Query(...),
 ):
     return {
         "query": query,
@@ -56,7 +60,8 @@ class Filters(Schema):
 
 @router.post("/list4")
 def listview4(
-    request, filters: Filters = Query(...),
+    request,
+    filters: Filters = Query(...),
 ):
     return {
         "filters": filters,

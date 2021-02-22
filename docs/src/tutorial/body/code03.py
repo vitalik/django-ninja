@@ -9,5 +9,5 @@ class Item(Schema):
 
 
 @api.post("/items/{item_id}")
-def update(request, item_id: int, item: Item, q: str):
+def update3(request, item_id: int, item: Item, q: str):
     return {"item_id": item_id, "item": item.dict(), "q": q}
