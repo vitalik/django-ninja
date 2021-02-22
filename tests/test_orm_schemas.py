@@ -61,7 +61,6 @@ def test_all_fields():
         imagefield = models.ImageField()
         integerfield = models.IntegerField()
         nullbooleanfield = models.NullBooleanField()
-        positivebigintegerfield = models.PositiveBigIntegerField()
         positiveintegerfield = models.PositiveIntegerField()
         positivesmallintegerfield = models.PositiveSmallIntegerField()
         slugfield = models.SlugField()
@@ -122,10 +121,6 @@ def test_all_fields():
             "imagefield": {"title": "Imagefield", "type": "string"},
             "integerfield": {"title": "Integerfield", "type": "integer"},
             "nullbooleanfield": {"title": "Nullbooleanfield", "type": "boolean"},
-            "positivebigintegerfield": {
-                "title": "Positivebigintegerfield",
-                "type": "integer",
-            },
             "positiveintegerfield": {
                 "title": "Positiveintegerfield",
                 "type": "integer",
@@ -160,7 +155,6 @@ def test_all_fields():
             "imagefield",
             "integerfield",
             "nullbooleanfield",
-            "positivebigintegerfield",
             "positiveintegerfield",
             "positivesmallintegerfield",
             "slugfield",
@@ -176,17 +170,18 @@ def test_all_fields():
 @pytest.mark.skipif(
     django.VERSION < (3, 1), reason="json field introduced in django 3.1"
 )
-def test_json_field():
-    class ModelWithJson(models.Model):
+def test_django_31_fields():
+    class ModelNewFields(models.Model):
         jsonfield = models.JSONField()
+        positivebigintegerfield = models.PositiveBigIntegerField()
 
         class Meta:
             app_label = "tests"
 
-    Schema = create_schema(ModelWithJson, name="TestSchema")
+    Schema = create_schema(ModelNewFields)
     print(Schema.schema())
     assert Schema.schema() == {
-        "title": "TestSchema",
+        "title": "ModelNewFields",
         "type": "object",
         "properties": {
             "id": {"title": "Id", "type": "integer"},
@@ -195,8 +190,12 @@ def test_json_field():
                 "type": "string",
                 "format": "json-string",
             },
+            "positivebigintegerfield": {
+                "title": "Positivebigintegerfield",
+                "type": "integer",
+            },
         },
-        "required": ["jsonfield"],
+        "required": ["jsonfield", "positivebigintegerfield"],
     }
 
 
