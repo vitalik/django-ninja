@@ -1,6 +1,7 @@
 import pytest
 from typing import List
 from unittest.mock import Mock
+import django
 from django.db.models import Manager
 from django.db import models
 from ninja.errors import ConfigError
@@ -59,7 +60,6 @@ def test_all_fields():
         ipaddressfield = models.IPAddressField()
         imagefield = models.ImageField()
         integerfield = models.IntegerField()
-        jsonfield = models.JSONField()
         nullbooleanfield = models.NullBooleanField()
         positivebigintegerfield = models.PositiveBigIntegerField()
         positiveintegerfield = models.PositiveIntegerField()
@@ -121,11 +121,6 @@ def test_all_fields():
             },
             "imagefield": {"title": "Imagefield", "type": "string"},
             "integerfield": {"title": "Integerfield", "type": "integer"},
-            "jsonfield": {
-                "title": "Jsonfield",
-                "type": "string",
-                "format": "json-string",
-            },
             "nullbooleanfield": {"title": "Nullbooleanfield", "type": "boolean"},
             "positivebigintegerfield": {
                 "title": "Positivebigintegerfield",
@@ -164,7 +159,6 @@ def test_all_fields():
             "ipaddressfield",
             "imagefield",
             "integerfield",
-            "jsonfield",
             "nullbooleanfield",
             "positivebigintegerfield",
             "positiveintegerfield",
@@ -176,6 +170,33 @@ def test_all_fields():
             "urlfield",
             "uuidfield",
         ],
+    }
+
+
+@pytest.mark.skipif(
+    django.VERSION < (3, 1), reason="json field introduced in django 3.1"
+)
+def test_json_field():
+    class ModelWithJson(models.Model):
+        jsonfield = models.JSONField()
+
+        class Meta:
+            app_label = "tests"
+
+    Schema = create_schema(ModelWithJson, name="TestSchema")
+    print(Schema.schema())
+    assert Schema.schema() == {
+        "title": "TestSchema",
+        "type": "object",
+        "properties": {
+            "id": {"title": "Id", "type": "integer"},
+            "jsonfield": {
+                "title": "Jsonfield",
+                "type": "string",
+                "format": "json-string",
+            },
+        },
+        "required": ["jsonfield"],
     }
 
 
