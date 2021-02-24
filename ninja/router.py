@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from functools import partialmethod
 from typing import Callable, List, Optional, Tuple
 
 from django.http import HttpResponseNotAllowed
@@ -13,166 +14,6 @@ class Router:
         self.operations = OrderedDict()  # TODO: better rename to path_operations
         self.api = None
         self._routers: List[Tuple[str, Router]] = []
-
-    def get(
-        self,
-        path: str,
-        *,
-        auth=NOT_SET,
-        response=None,
-        operation_id: Optional[str] = None,
-        summary: Optional[str] = None,
-        description: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-        deprecated: Optional[bool] = None,
-        by_alias: bool = False,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
-    ):
-        return self.api_operation(
-            ["GET"],
-            path,
-            auth=auth,
-            response=response,
-            operation_id=operation_id,
-            summary=summary,
-            description=description,
-            tags=tags,
-            deprecated=deprecated,
-            by_alias=by_alias,
-            exclude_unset=exclude_unset,
-            exclude_defaults=exclude_defaults,
-            exclude_none=exclude_none,
-        )
-
-    def post(
-        self,
-        path: str,
-        *,
-        auth=NOT_SET,
-        response=None,
-        operation_id: Optional[str] = None,
-        summary: Optional[str] = None,
-        description: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-        deprecated: Optional[bool] = None,
-        by_alias: bool = False,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
-    ):
-        return self.api_operation(
-            ["POST"],
-            path,
-            auth=auth,
-            response=response,
-            operation_id=operation_id,
-            summary=summary,
-            description=description,
-            tags=tags,
-            deprecated=deprecated,
-            by_alias=by_alias,
-            exclude_unset=exclude_unset,
-            exclude_defaults=exclude_defaults,
-            exclude_none=exclude_none,
-        )
-
-    def delete(
-        self,
-        path: str,
-        *,
-        auth=NOT_SET,
-        response=None,
-        operation_id: Optional[str] = None,
-        summary: Optional[str] = None,
-        description: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-        deprecated: Optional[bool] = None,
-        by_alias: bool = False,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
-    ):
-        return self.api_operation(
-            ["DELETE"],
-            path,
-            auth=auth,
-            response=response,
-            operation_id=operation_id,
-            summary=summary,
-            description=description,
-            tags=tags,
-            deprecated=deprecated,
-            by_alias=by_alias,
-            exclude_unset=exclude_unset,
-            exclude_defaults=exclude_defaults,
-            exclude_none=exclude_none,
-        )
-
-    def patch(
-        self,
-        path: str,
-        *,
-        auth=NOT_SET,
-        response=None,
-        operation_id: Optional[str] = None,
-        summary: Optional[str] = None,
-        description: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-        deprecated: Optional[bool] = None,
-        by_alias: bool = False,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
-    ):
-        return self.api_operation(
-            ["PATCH"],
-            path,
-            auth=auth,
-            response=response,
-            operation_id=operation_id,
-            summary=summary,
-            description=description,
-            tags=tags,
-            deprecated=deprecated,
-            by_alias=by_alias,
-            exclude_unset=exclude_unset,
-            exclude_defaults=exclude_defaults,
-            exclude_none=exclude_none,
-        )
-
-    def put(
-        self,
-        path: str,
-        *,
-        auth=NOT_SET,
-        response=None,
-        operation_id: Optional[str] = None,
-        summary: Optional[str] = None,
-        description: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-        deprecated: Optional[bool] = None,
-        by_alias: bool = False,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
-    ):
-        return self.api_operation(
-            ["PUT"],
-            path,
-            auth=auth,
-            response=response,
-            operation_id=operation_id,
-            summary=summary,
-            description=description,
-            tags=tags,
-            deprecated=deprecated,
-            by_alias=by_alias,
-            exclude_unset=exclude_unset,
-            exclude_defaults=exclude_defaults,
-            exclude_none=exclude_none,
-        )
 
     def api_operation(
         self,
@@ -211,6 +52,12 @@ class Router:
             return view_func
 
         return decorator
+
+    delete = partialmethod(api_operation, ["DELETE"])
+    get = partialmethod(api_operation, ["GET"])
+    patch = partialmethod(api_operation, ["PATCH"])
+    post = partialmethod(api_operation, ["POST"])
+    put = partialmethod(api_operation, ["PUT"])
 
     def add_api_operation(
         self,
