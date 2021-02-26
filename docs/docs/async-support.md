@@ -1,5 +1,5 @@
 ## Intro
-Since **version 3.1** Django comes with **async views support**. This allows you run efficiently concurrent views that are network/IO-bound.
+Since **version 3.1**, Django comes with **async views support**. This allows you run efficient concurrent views that are network and/or IO bound.
 
 ```
 pip install Django==3.1 django-ninja
@@ -9,17 +9,17 @@ Async views work more efficiently when it comes to:
 
  - calling external APIs over the network
  - executing/waiting for database queries
- - processing disk data
+ - reading/writing from/to disk drives
 
 
-**Django Ninja** takes full advantage of async views and makes  working with it very easy.
+**Django Ninja** takes full advantage of async views and makes it very easy to work with them.
 
 
 ## Quick example
 
 ### Code
 
-Let's take an example - we have an api operation that does some work (currently just sleeps for provided number of seconds) and returns a word
+Let's take an example.  We have an API operation that does some work (currently just sleeps for provided number of seconds) and returns a word:
 
 ```Python hl_lines="5"
 import time
@@ -30,7 +30,7 @@ def say_after(request, delay: int, word: str):
     return {"saying": word}
 ```
 
-To make this code asynchronous - all you have to do is add **`async`** keyword to a function (and use async aware libraries for work processing - in our case we will replace stdlib `sleep` with `asyncio.sleep`): 
+To make this code asynchronous, all you have to do is add the **`async`** keyword to a function (and use async aware libraries for work processing - in our case we will replace the stdlib `sleep` with `asyncio.sleep`): 
 
 
 ```Python hl_lines="1 4 5"
@@ -44,14 +44,14 @@ async def say_after(request, delay: int, word: str):
 
 ### Run
 
-To run this code you need an ASGI server like <a href="https://www.uvicorn.org/" target="_blank">Uvicorn</a> or <a href="https://github.com/django/daphne" target="_blank">Daphne</a>. Let's use uvicorn for example:
+To run this code you need an ASGI server like <a href="https://www.uvicorn.org/" target="_blank">Uvicorn</a> or <a href="https://github.com/django/daphne" target="_blank">Daphne</a>. Let's use Uvicorn for, example:
 
-To install uvicorn use:
+To install Uvicorn, use:
 ```
 pip install uvicorn
 ```
 
-And now to start the server:
+Then start the server:
 
 ```
 uvicorn your_project.asgi:application --reload
@@ -64,20 +64,21 @@ uvicorn your_project.asgi:application --reload
 > </small>
 
 !!! note
-    You can run async views with `manage.py runserver` but it does not work well with some libraries. So at this time (July 2020) it is recommended to use ASGI servers like Uvicorn or Daphne.
+    You can run async views with `manage.py runserver`, but it does not work well with some libraries, so at this time (July 2020) it is recommended to use ASGI servers like Uvicorn or Daphne.
 
 ### Test
 
-Go to your browser and open <a href="http://127.0.0.1:8000/api/say-after?delay=3&word=hello" target="_blank">http://127.0.0.1:8000/api/say-after?delay=3&word=hello</a> (**delay=3**) - after a 3 seconds wait you should see "hello" message.
+Go to your browser and open <a href="http://127.0.0.1:8000/api/say-after?delay=3&word=hello" target="_blank">http://127.0.0.1:8000/api/say-after?delay=3&word=hello</a> (**delay=3**)
+After a 3-second wait you should see the "hello" message.
 
-But now let's flood this operation with **100 parallel requests**:
+Now let's flood this operation with **100 parallel requests**:
 
 
 ```
 ab -c 100 -n 100 "http://127.0.0.1:8000/api/say-after?delay=3&word=hello"
 ```
 
-will result to something like this:
+which will result in something like this:
 ```
 Connection Times (ms)
               min  mean[+/-sd] median   max
@@ -98,14 +99,14 @@ Percentage of the requests served within a certain time (ms)
  100%   3083 (longest request)
 ```
 
-Based on the numbers - our service was able to handle each of the 100 concurrent requests with just a little of overhead.
+Based on the numbers, our service was able to handle each of the 100 concurrent requests with just a little overhead.
 
-To achieve the same concurrency with wsgi and sync operation you would need to spin f.e. 10 workers with 10 threads each.
+To achieve the same concurrency with WSGI and sync operations you would need to spin up about 10 workers with 10 threads each!
 
 
 ## Mixing sync and async operations
 
-Keep in mind that you can use **both sync and async operations** in your project - **Django Ninja** will route it automatically:
+Keep in mind that you can use **both sync and async operations** in your project, and **Django Ninja** will route it automatically:
 
 
 ```Python hl_lines="2 7"
@@ -126,7 +127,7 @@ async def say_after_async(request, delay: int, word: str):
 
 ## Elasticsearch example
 
-Let's take a real life case. For this example let's use latest version of elasticsearch that comes with async support:
+Let's take a real world use case. For this example, let's use the latest version of Elasticsearch that now comes with async support:
 
 
 
@@ -134,7 +135,7 @@ Let's take a real life case. For this example let's use latest version of elasti
 pip install elasticsearch>=7.8.0
 ```
 
-And now instead of `Elasticsearch` class  use `AsyncElasticsearch` and `await` results:
+And now instead of the `Elasticsearch` class, use the `AsyncElasticsearch` class and `await` the results:
 
 
 ```Python hl_lines="2 7 11 12"
@@ -160,12 +161,12 @@ async def search(request, q: str):
 
 ## Using ORM
 
-Currently (July 2020) Certain key parts of Django are not able to operate safely in an async environment, as they have global state that is not coroutine-aware. These parts of Django are classified as “async-unsafe”, and are protected from execution in an async environment. **The ORM** is the main example, but there are other parts that are also protected in this way.
+Currently, (July 2020) certain key parts of Django are not able to operate safely in an async environment, as they have global state that is not coroutine-aware. These parts of Django are classified as “async-unsafe”, and are protected from execution in an async environment. **The ORM** is the main example, but there are other parts that are also protected in this way.
 
-Learn more about async safety here <a href="https://docs.djangoproject.com/en/3.1/topics/async/#async-safety" target="_blank">https://docs.djangoproject.com/en/3.1/topics/async/#async-safety</a>
+Learn more about async safety here: <a href="https://docs.djangoproject.com/en/3.1/topics/async/#async-safety" target="_blank">https://docs.djangoproject.com/en/3.1/topics/async/#async-safety</a>
 
 
-So if you do this:
+So, if you do this:
 
 ```Python hl_lines="3"
 @api.get("/blog/{post_id}")
@@ -173,7 +174,7 @@ async def search(request, post_id: int):
     blog = Blog.objects.get(pk=post_id)
     ...
 ```
-It throws an error. Until async ORM is implemented you can use `sync_to_async()` adapter:
+it throws an error. Until the async ORM is implemented, you can use the `sync_to_async()` adapter:
 
 ```Python hl_lines="1 3 9"
 from asgiref.sync import sync_to_async
@@ -188,7 +189,7 @@ async def search(request, post_id: int):
     ...
 ```
 
-or shorter:
+or even shorter:
 
 ```Python hl_lines="3"
 @api.get("/blog/{post_id}")
@@ -197,17 +198,15 @@ async def search(request, post_id: int):
     ...
 ```
 
-There is a common **GOTCHA**: Django querysets are lazy evaluated (database query happens only when you start iterating):
-
-so this will *not work*:
+There is a common **GOTCHA**: Django queryset's are lazily evaluated (database query happens only when you start iterating), so this will **not** work:
 
 ```Python
 all_blogs = await sync_to_async(Blog.objects.all)()
-# it will throw an error later when you try iterate over all_blogs
+# it will throw an error later when you try to iterate over all_blogs
 ...
 ```
 
-Instead - use evaluation (with `list`):
+Instead, use evaluation (with `list`):
 
 ```Python
 all_blogs = await sync_to_async(list)(Blog.objects.all())
