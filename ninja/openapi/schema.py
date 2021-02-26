@@ -113,8 +113,8 @@ class OpenAPISchema(OrderedDict):
                 result.append(param)
         return result
 
-    def _create_schema_from_model(self, model):
-        schema = model_schema(model, ref_prefix=REF_PREFIX)
+    def _create_schema_from_model(self, model, by_alias=True):
+        schema = model_schema(model, ref_prefix=REF_PREFIX, by_alias=by_alias)
         if schema.get("definitions"):
             self.add_schema_definitions(schema["definitions"])
         name, details = list(schema["properties"].items())[0]
@@ -156,7 +156,9 @@ class OpenAPISchema(OrderedDict):
     def responses(self, operation):
         if operation.response_model:
             if not isinstance(operation.response_model, dict):
-                schema, _ = self._create_schema_from_model(operation.response_model)
+                schema, _ = self._create_schema_from_model(
+                    operation.response_model, by_alias=False
+                )
                 return {
                     200: {
                         "description": "OK",
@@ -166,7 +168,7 @@ class OpenAPISchema(OrderedDict):
 
             responses = {}
             for status, model in operation.response_model.items():
-                schema, _ = self._create_schema_from_model(model)
+                schema, _ = self._create_schema_from_model(model, by_alias=False)
                 if status == Ellipsis:
                     continue  # it's not yet clear what it means if user want's to output any other code
                 responses.update(
@@ -205,4 +207,5 @@ class OpenAPISchema(OrderedDict):
     def add_schema_definitions(self, definitions: dict):
         # TODO: check if schema["definitions"] are unique
         # if not - workaround (maybe use pydantic.schema.schema(models)) to process list of models
+        # assert set(definitions.keys()) - set(self.schemas.keys()) == set()
         self.schemas.update(definitions)
