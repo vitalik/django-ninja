@@ -1,7 +1,7 @@
 # Tutorial - Intro
 
 This tutorial shows you how to use **Django Ninja** with most of its features. 
-It is also built to work as a reference documentation.
+It is also built to work as reference documentation.
 So you can come back and see exactly what you need.
 
 This tutorial assumes that you know at least some basics of the <a href="https://www.djangoproject.com/" target="_blank">Django Framework</a> like how to create a project and run it.
