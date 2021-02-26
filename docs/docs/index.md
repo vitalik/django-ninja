@@ -62,7 +62,7 @@ Now you've just created an API that:
 
 Now go to <a href="http://127.0.0.1:8000/api/docs" target="_blank">http://127.0.0.1:8000/api/docs</a>
 
-You will see the automatic interactive API documentation (provided by the <a href="https://github.com/swagger-api/swagger-ui" target="_blank">Swagger UI</a>):
+You will see the automatic, interactive API documentation (provided by the <a href="https://github.com/swagger-api/swagger-ui" target="_blank">Swagger UI</a>):
 
 
 ![Swagger UI](img/index-swagger-ui.png)
