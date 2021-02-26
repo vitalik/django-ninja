@@ -1,15 +1,15 @@
 # Motivation
 
 !!! quote
-    **Django Ninja** looks basically the same as **FastAPI**. So, why not just FastAPI?
+    **Django Ninja** looks basically the same as **FastAPI**, so why not just use FastAPI?
 
-Indeed **Django Ninja** is heavily inspired by <a href="https://fastapi.tiangolo.com/" target="_blank">FastAPI</a> (developed by <a href="https://github.com/tiangolo" target="_blank">Sebastián Ramírez</a>)
+Indeed, **Django Ninja** is heavily inspired by <a href="https://fastapi.tiangolo.com/" target="_blank">FastAPI</a> (developed by <a href="https://github.com/tiangolo" target="_blank">Sebastián Ramírez</a>)
 
-But there are few issues when it comes to join FastAPI and Django
+That said, there are few issues when it comes to getting FastAPI and Django to work together properly:
 
-1) **FastAPI** declares to be ORM agnostic (meaning you can use it with SqlAlchemy or DjangoORM). But in reality Django ORM is not yet ready for async use (will be in version 3.2). And if you use it in sync mode - you can have a [closed connection issue](https://github.com/tiangolo/fastapi/issues/716) which you will have to overcome with lot's of crunches.
+1) **FastAPI** declares to be ORM agnostic (meaning you can use it with SQLAlchemy or the Django ORM), but in reality the Django ORM is not yet ready for async use (it will be in version 3.2), and if you use it in sync mode, you can have a [closed connection issue](https://github.com/tiangolo/fastapi/issues/716) which you will have to overcome with a **lot** of effort.
 
-2) The dependency injection with arguments makes your code too much verbose when you rely on authentication and database session in your operations (which for some projects makes it like 99% of all operations)
+2) The dependency injection with arguments makes your code too verbose when you rely on authentication and database sessions in your operations (which for some projects is about 99% of all operations).
 
 ```Python hl_lines="25 26"
 ...
@@ -42,15 +42,15 @@ def read_user(
         ... use db with current_user ....
 ```
 
-3) Since word `model` in django is "reserved" for ORM = it becomes very unclear when you mix django orm into Pydantic/FastAPI model naming convention. 
+3) Since the word `model` in Django is "reserved" for use by the ORM, it becomes very confusing when you mix the Django ORM with Pydantic/FastAPI model naming conventions. 
 
-### Django Ninja
+### Presenting: Django Ninja
 
-Django Ninja addresses all those issues and includes a great integration with Django (ORM, urls, views, auth and more...)
+Django Ninja addresses all those issues, and integrates very well with Django (ORM, urls, views, auth and more)
 
 #### Main Features
 
-1) Since you can have multiple NinjaAPI instances - you can run [multiple API versions](/tutorial/versioning) inside one django project
+1) Since you can have multiple Django Ninja API instances - you can run [multiple API versions](/tutorial/versioning) inside one Django project.
 
 ```Python
 api_v1 = NinjaAPI(version='1.0', auth=token_auth)
@@ -69,7 +69,7 @@ urlpatterns = [
 ]
 ```
 
-2) Django Ninja Schema - is integrated with ORM so you [can serialize querysets](/tutorial/response-schema/#returning-querysets) or ORM objects:
+2) The Django Ninja 'Schema' class is integrated with the ORM, so you can [serialize querysets](/tutorial/response-schema/#returning-querysets) or ORM objects:
 
 ```Python
 @api.get("/tasks", response=List[TaskSchema])
@@ -82,6 +82,6 @@ def tasks_details(request):
     task = Task.objects.first()
     return task
 ```
-3) Soon you should be able to [create Schema's from Django Models](/proposals/models/)
+3) Soon you should be able to [create Schema's from Django Models](/proposals/models/).
 
-4) Instead of dependency arguments **Django Ninja** uses `request` instance attributes (same way as regular django views) - see more details on [Authentication](/tutorial/authentication/)
+4) Instead of dependency arguments, **Django Ninja** uses `request` instance attributes (in the same way as regular Django views) - more detail at [Authentication](/tutorial/authentication/).
