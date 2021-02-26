@@ -62,7 +62,7 @@ Now you've just created an API that:
 
 Now go to <a href="http://127.0.0.1:8000/api/docs" target="_blank">http://127.0.0.1:8000/api/docs</a>
 
-You will see the automatic, interactive API documentation (provided by the <a href="https://github.com/swagger-api/swagger-ui" target="_blank">OpenAPI / Swagger UI</a>):
+You will see the automatic, interactive API documentation (provided by the <a href="https://github.com/swagger-api/swagger-ui" target="_blank">Swagger UI</a>):
 
 
 ![Swagger UI](img/index-swagger-ui.png)
@@ -70,7 +70,7 @@ You will see the automatic, interactive API documentation (provided by the <a hr
 
 ## Recap
 
-In summary, you declare the types of parameters, body, etc. **once only**, as function parameters. 
+In summary, you declare the types of parameters, body, etc. **once**, as function parameters. 
 
 You do that with standard modern Python types.
 
@@ -103,13 +103,13 @@ def operation(a: Item):
 * Validation of data:
     * Automatic and clear errors when the data is invalid
     * Validation, even for deeply nested JSON objects
-* <abbr title="also known as: serialization, parsing, marshalling">Conversion</abbr> of input data coming from the network, to Python data and types, and reading from:
+* <abbr title="also known as: serialization, parsing, marshalling">Conversion</abbr> of input data coming from the network, to Python data and types. Reading from:
     * JSON
     * Path parameters
     * Query parameters
     * Cookies
     * Headers
-    * Forms
+    * Forms.
     * Files
 * Automatic, interactive API documentation
 
