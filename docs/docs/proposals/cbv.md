@@ -2,22 +2,21 @@
 
 
 !!! warning ""
-    This is just a proposal and it is **not present in library code**. But eventually this can be a part of Django Ninja.
+    This is just a proposal and it is **not present in library code**, but eventually this can be a part of Django Ninja.
 
     Please consider adding likes/dislikes or comments in [github issue](https://github.com/vitalik/django-ninja/issues/15) to express your feeling about this proposal
 
 
 ## Problem
 
-An API operation is a callable which takes a request and parameters and returns a response. 
-But it is often a case in real world when you need to reuse same pieces of code in multiple operations.
+An API operation is a callable which takes a request and parameters and returns a response, but it is often a case in real world when you need to reuse the same pieces of code in multiple operations.
 
 Let's take the following example:
 
- - We have a TODO application with Projects and Tasks
- - Each project have multiple tasks
- - and as well each project may have an owner(user)
- - other users should not be able to access project they not owe
+ - we have a Todo application with Projects and Tasks
+ - each project has multiple tasks
+ - each project may also have an owner (user)
+ - users should not be able to access projects they do not own
 
 Model structure is something like this:
 
@@ -33,13 +32,13 @@ class Task(models.Model):
 ```
 
 
-Let's now create few API operations for it:
+Now, let's create a few API operations for it:
 
- - list of tasks for project
- - task details
- - complete task action
+ - a list of tasks for the project
+ - some task details
+ - a 'complete task' action
 
-All should validate that user can only access his/her project's tasks (otherwise return 404)
+The code should validate that a user can only access his/her own project's tasks (otherwise, return 404)
 
 It can be something like this:
 
@@ -73,19 +72,19 @@ def complete(request, task_id: int):
 ```
 
 
-As you can see - these lines are getting repeated pretty often to check permission:
+As you can see, these lines are getting repeated pretty often to check permission:
 
 ```Python hl_lines="1 2 "
 user_projects = request.user.project_set
 project = get_object_or_404(user_projects, id=project_id))
 ```
 
-You can extract it to a function, but it will just make it 3 lines smaller and still be pretty polluted...
+You can extract it to a function, but it will just make it 3 lines smaller, and it will still be pretty polluted ...
 
 
 ## Solution
 
-The proposal is to have alternative called "Class Based Operation" where you can decorate with `path` decorator entire class:
+The proposal is to have alternative called "Class Based Operation" where you can decorate the entire class with a `path` decorator:
 
 
 ```Python hl_lines="7 8"
@@ -122,7 +121,7 @@ class Tasks:
 
 ```
 
-All common initiation and permission check landed in constructor:
+All common initiation and permission checks are placed in the constructor:
 ```Python hl_lines="5 6 7"
 @router.path('/project/{project_id}/tasks')
 class Tasks:
@@ -133,9 +132,9 @@ class Tasks:
         self.tasks = self.project.task_set.all()
     
 ```
-Which made main business operation focus only on tasks (that was exposed as `self.tasks` attribute)
+This makes the main business operation focus only on tasks (exposed as the `self.tasks` attribute)
 
-you can use both `api` and `router` instances to support class paths
+You can use both `api` and `router` instances to support class paths.
 
 ## Issue
 
@@ -143,7 +142,7 @@ The `__init__` method:
 
 ```def __init__(self, request, project_id=int):```
 
-Python do not support `async` keyword for `__init__`, so to support async operations - we need some other method for initialization, but `__init__` sounds most logical
+Python doesn't support the `async` keyword for `__init__`, so to support async operations we need some other method for initialization, but `__init__` sounds the most logical.
 
 
 ## Your thoughts/proposals
