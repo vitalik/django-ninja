@@ -18,7 +18,7 @@ pip install django-ninja
 
 ## Create django project
 
-(If you already have an existing Django project, skip to the next step)
+(If you already have an existing Django project, skip to the next step).
 
 Start a new Django project (or use an existing one).
 
