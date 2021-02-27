@@ -6,7 +6,7 @@ class InvalidInput(Exception):
     "pydantic's ValidationError compatible error"
 
     def __init__(self, msg, errors):
-        super()  # TODO: ? no __init__ ?
+        super().__init__(msg)
         self._errors = errors
 
     def errors(self):
