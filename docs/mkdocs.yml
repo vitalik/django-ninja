@@ -34,6 +34,7 @@ nav:
   - tutorial/versioning.md
   - tutorial/request-parsers.md
   - tutorial/response-renderers.md
+  - tutorial/errors.md
   - tutorial/csrf.md
 - async-support.md
 - Enhancement Proposals:
