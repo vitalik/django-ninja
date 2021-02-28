@@ -1,10 +1,9 @@
 # Tutorial - Intro
 
 This tutorial shows you how to use **Django Ninja** with most of its features. 
-It is also built to work as a reference documentation.
-So you can come back and see exactly what you need.
+It is also built to work as reference documentation.
 
-This tutorial assumes that you know at least some basics of the <a href="https://www.djangoproject.com/" target="_blank">Django Framework</a> like how to create a project and run it.
+This tutorial assumes that you know at least some basics of the <a href="https://www.djangoproject.com/" target="_blank">Django Framework</a>, like how to create a project and run it.
 
 
 ## Installation
@@ -14,14 +13,14 @@ pip install django-ninja
 ```
 
 !!! note
-    It is not required, but you can as well put `ninja` to `INSTALLED_APPS`. In that case Swagger UI will be loaded from included js bundle (otherwise js bundle comes from CDN)
+    It is not required, but you can also put `ninja` to `INSTALLED_APPS`. In that case the OpenAPI/Swagger UI will be loaded from the included js bundle (otherwise js bundle comes from a CDN).
 
 
 ## Create django project
 
-(if you already have existing django project - skip to the next step)
+(If you already have an existing Django project, skip to the next step).
 
-Start a new django project (or use existing).
+Start a new Django project (or use an existing one).
 
 ```
 django-admin startproject myproject
@@ -30,7 +29,7 @@ django-admin startproject myproject
 
 ## First steps
 
-Let's create a module for our API - create an **api.py** file next to **urls.py**:
+Let's create a module for our API - create an **api.py** file in the same directory location as **urls.py**:
 
 
 `api.py`
@@ -64,7 +63,7 @@ urlpatterns = [
 
 ## Defining operation methods
 
-"Operation" can be one of the HTTP "methods".
+"Operation" can be one of the HTTP "methods":
 
  - GET
  - POST
@@ -99,7 +98,7 @@ def patch_operation(request):
     ...
 ```
 
-if you need to handle multiple methods with single function you can use `api_operation` method:
+If you need to handle multiple methods with a single function, you can use the `api_operation` method:
 
 
 ```Python hl_lines="1"

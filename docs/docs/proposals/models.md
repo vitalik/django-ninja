@@ -1,18 +1,16 @@
 # Models to Schemas
 
 !!! warning ""
-    This is just a proposal and it is **not present in library code**. But eventually this can be a part of Django Ninja.
+    This is just a proposal, and it is **not present in library code**, but eventually this can be a part of Django Ninja.
 
-    Please consider adding likes/dislikes or comments in [github issue](https://github.com/vitalik/django-ninja/issues/17) to express your feeling about this proposal
+    Please consider adding likes/dislikes or comments in [github issue](https://github.com/vitalik/django-ninja/issues/17) to express your feelings about this proposal.
 
 
 ## Problem
 
-Schemas are very useful to define your validation rules and responses.
+Schemas are very useful to define your validation rules and responses, but sometimes you need to reflect your database models into schemas and keep changes in sync.
 
-But sometimes you need to reflect your database models into schemas and keep changes in sync.
-
-Like if you have model and schema:
+For example, if you have a model and schema:
 
 ```Python
 
@@ -28,7 +26,7 @@ class UserOut(Schema):
     name: str = None
 ```
 
-and then you need to extend a database field, you need to not forget to add it to schema as well:
+If you need to extend a database field, you need to remember to add it to the schema as well:
 
 ```Python hl_lines="4 11"
 
@@ -53,7 +51,7 @@ class UserOut(Schema):
 
 ### ModelSchema
 
-Introduce a **ModelSchema** that can reflect Django model:
+Introduce a **ModelSchema** class that can reflect the Django model:
 
 
 ```Python
@@ -75,7 +73,7 @@ class UserOut(ModelSchema):
 
 ### Passing all models fields
 
-If you want to create schema with **ALL** fields, pass `'__all__'`:
+If you want to create a schema with **ALL** fields, pass `'__all__'`:
 
 ```Python hl_lines="4"
 class UserOut(ModelSchema):
@@ -84,7 +82,7 @@ class UserOut(ModelSchema):
         fields = '__all__'
 ```
 
-OR if you want to pass all fields but **exclude** few - use `exclude`:
+OR if you want to pass all fields but **exclude** a few, use `exclude`:
 
 ```Python hl_lines="4"
 class UserOut(ModelSchema):
@@ -95,9 +93,9 @@ class UserOut(ModelSchema):
 ```
 
 
-### Required/Not-required fields
+### Required and not-required fields
 
-For some cases you might want to override which fields are **required or not required** in API:
+For some cases you might want to override which fields are **required or not required** in the API:
 
 ```Python
 class UserCreate(ModelSchema):
@@ -113,7 +111,7 @@ class UserPatch(ModelSchema):
         fields = '__all__'
         not_required = '__all__'
 
-# will result to these schemas:
+# will result in these schemas:
 #
 # class UserCreate(Schema):
 #     email: str
@@ -127,12 +125,12 @@ class UserPatch(ModelSchema):
 
 ```
 
-You can use `UserPatch` to update only few fields that were provided in request
+You can use `UserPatch` to update only a few fields that were provided in the request.
 
 
 ### Relational fields
 
-If you have fields that are ForeignKey's or ManyToManyField - by default it will map to it's primary keys:
+If you have fields that are ForeignKey's or ManyToManyField, by default it will map to its primary keys:
 
 ```Python hl_lines="4 5 14 20 21"
 # model 
@@ -159,7 +157,7 @@ class PostSchema(ModelSchema):
 
 ```
 
-If you need to expand to nested models - define needed schemas:
+If you need to expand to nested models, just define the required schemas:
 
 ```Python hl_lines="2 3"
 class PostSchema(ModelSchema):
@@ -174,11 +172,11 @@ class PostSchema(ModelSchema):
 
 ## Issues
 
-The issue that by using model generated schemas you will loose that nice IDE support and type checks, but on the other hand you might not use the attributes directly
+By using model generated schemas you will lose the nice IDE support and type checks, but on the other hand, you might not use the attributes directly.
 
 
 ## Your thoughts/proposals
 
-Please give you thoughts/likes/dislikes about this proposal in the [github issue](https://github.com/vitalik/django-ninja/issues/17)
+Please give you thoughts/likes/dislikes about this proposal in the [github issue](https://github.com/vitalik/django-ninja/issues/17).
 
 
