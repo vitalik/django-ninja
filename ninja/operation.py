@@ -2,7 +2,8 @@ import pydantic
 import django
 from django.http import HttpResponse, HttpRequest, HttpResponseNotAllowed
 from typing import Callable, Iterable, List, Any, Union, Optional, Sequence
-from ninja.errors import InvalidInput, ConfigError
+
+from ninja.errors import ConfigError, ValidationError
 from ninja.constants import NOT_SET
 from ninja.schema import Schema
 from ninja.signature import ViewSignature, is_async
@@ -62,12 +63,12 @@ class Operation:
         error = self._run_checks(request)
         if error:
             return error
-
-        values, errors = self._get_values(request, kw)
-        if errors:
-            return self.api.create_response(request, {"detail": errors}, status=422)
-        result = self.view_func(request, **values)
-        return self._result_to_response(request, result)
+        try:
+            values = self._get_values(request, kw)
+            result = self.view_func(request, **values)
+            return self._result_to_response(request, result)
+        except Exception as e:
+            return self.api.on_exception(request, e)
 
     def set_api_instance(self, api):
         self.api = api
@@ -138,13 +139,15 @@ class Operation:
             try:
                 data = model.resolve(request, self.api, path_params)
                 values.update(data)
-            except (pydantic.ValidationError, InvalidInput) as e:
+            except pydantic.ValidationError as e:
                 items = []
                 for i in e.errors():
                     i["loc"] = (model._in,) + i["loc"]
                     items.append(i)
                 errors.extend(items)
-        return values, errors
+        if errors:
+            raise ValidationError(errors)
+        return values
 
     def _create_response_model_multiple(self, response_param):
         result = {}
@@ -172,12 +175,12 @@ class AsyncOperation(Operation):
         error = self._run_checks(request)
         if error:
             return error
-
-        values, errors = self._get_values(request, kw)
-        if errors:
-            return self.api.create_response(request, {"detail": errors}, status=422)
-        result = await self.view_func(request, **values)
-        return self._result_to_response(request, result)
+        try:
+            values = self._get_values(request, kw)
+            result = await self.view_func(request, **values)
+            return self._result_to_response(request, result)
+        except Exception as e:
+            return self.api.on_exception(request, e)
 
 
 class PathView:

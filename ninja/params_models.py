@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from ninja.compatibility import get_headers
-from ninja.errors import InvalidBody
+from ninja.errors import HttpError
 
 
 class ParamModel(BaseModel):
@@ -13,7 +13,7 @@ class ParamModel(BaseModel):
         varname = getattr(cls, "_single_attr", None)
         if varname:
             data = {varname: data}
-        # TODO: I guess if data is not dict - raise an InvalidInput
+        # TODO: I guess if data is not dict - raise an HttpBadRequest
         return cls(**data)
 
 
@@ -56,7 +56,7 @@ class BodyModel(ParamModel):
             try:
                 return api.parser.parse_body(request)
             except Exception as e:
-                raise InvalidBody(e)
+                raise HttpError(400, "Cannot parse request body")
 
 
 class FormModel(ParamModel):

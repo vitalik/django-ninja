@@ -2,13 +2,13 @@ import os
 
 from django.http import HttpRequest, HttpResponse
 from ninja.openapi import get_schema
-from typing import Any, List, Optional, Tuple, Sequence, Union, Callable
+from typing import Any, List, Optional, Tuple, Sequence, Union, Callable, Type
 from django.urls import reverse
 from ninja.openapi.urls import get_openapi_urls, get_root_url
 from ninja.parser import Parser
 from ninja.router import Router
 from ninja.renderers import JSONRenderer, BaseRenderer
-from ninja.errors import ConfigError
+from ninja.errors import ConfigError, set_default_exc_handlers
 from ninja.constants import NOT_SET
 
 
@@ -38,6 +38,9 @@ class NinjaAPI:
         self.csrf = csrf
         self.renderer = renderer or JSONRenderer()
         self.parser = parser or Parser()
+
+        self._exception_handlers = {}
+        self.set_default_exception_handlers()
 
         self.auth: Optional[Sequence[Callable]] = NOT_SET
         if auth is not None and auth is not NOT_SET:
@@ -280,6 +283,34 @@ class NinjaAPI:
         name = operation.view_func.__name__
         module = operation.view_func.__module__
         return (module + "_" + name).replace(".", "_")
+
+    def add_exception_handler(self, exc_class: Exception, handler: Callable):
+        assert issubclass(exc_class, Exception)
+        assert (
+            handler.__code__.co_argcount == 3
+        ), "Exception handler takes 3 arguments(api, request, exc)"
+        self._exception_handlers[exc_class] = handler
+
+    def exception_handler(self, exc_class: Type[Exception]) -> Callable:
+        def decorator(func: Callable) -> Callable:
+            self.add_exception_handler(exc_class, func)
+            return func
+
+        return decorator
+
+    def set_default_exception_handlers(self):
+        set_default_exc_handlers(self)
+
+    def on_exception(self, request, exc: Type[Exception]):
+        handler = self._lookup_exception_handler(exc)
+        if handler is None:
+            raise exc
+        return handler(self, request, exc)
+
+    def _lookup_exception_handler(self, exc: Exception):
+        for cls in type(exc).__mro__:
+            if cls in self._exception_handlers:
+                return self._exception_handlers[cls]
 
     def _validate(self):
         from ninja.security import APIKeyCookie

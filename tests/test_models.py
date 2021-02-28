@@ -139,13 +139,8 @@ def test_models(path, kwargs, expected_response):
 
 def test_invalid_body():
     response = client.post("/test1", body="invalid")
-    assert response.status_code == 422, response.content
+    assert response.status_code == 400, response.content
     assert response.json() == {
-        "detail": [
-            {
-                "loc": ["body"],
-                "msg": "Cannot parse request body",
-                "type": "parse_error",
-            }
-        ]
+        "code": 400,
+        "message": "Cannot parse request body",
     }
