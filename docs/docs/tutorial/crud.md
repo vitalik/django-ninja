@@ -3,9 +3,9 @@
 
 **CRUD**  - **C**reate, **R**etrieve, **U**pdate, **D**elete are the four basic functions of persistent storage.
 
-This example will show you how to implement these functions with **Django Ninja**
+This example will show you how to implement these functions with **Django Ninja**.
 
-Let's say you have the following django models that you need to perform these operations with:
+Let's say you have the following Django models that you need to perform these operations on:
 
 
 ```Python
@@ -20,11 +20,11 @@ class Employee(models.Model):
     birthdate = models.DateField(null=True, blank=True)
 ```
 
-Now let's create CRUD operations for Employee model
+Now let's create CRUD operations for the Employee model.
 
 ## Create
 
-To create an employee lets define a INPUT schema:
+To create an employee lets define an INPUT schema:
 
 ```Python
 from datetime import date
@@ -49,15 +49,15 @@ def create_employee(request, payload: EmployeeIn):
 ```
 
 !!! tip
-    `Schema` objects have `.dict()` attribute with all the schema attributes represented as dict
+    `Schema` objects have `.dict()` attribute with all the schema attributes represented as a dict.
 
-    You can pass it as `**kwargs` to django model `create` meothod (or model `__init__`)
+    You can pass it as `**kwargs` to the Django model's `create` method (or model `__init__`).
 
 ## Retrieve
 
 ### Single object
 
-Now to get employee we will define schema that will describe how our responses will look like. Here we will basically use same schema as `EmployeeIn` but will add extra attribute `id`:
+Now to get employee we will define a schema that will describe what our responses will look like. Here we will basically use the same schema as `EmployeeIn`, but will add an extra attribute `id`:
 
 
 ```Python hl_lines="2"
@@ -70,9 +70,9 @@ class EmployeeOut(Schema):
 ```
 
 !!! note
-    Defining response schemas are not really required. But when you do define it you will get results validation, documentation and automatic ORM objects to JSON converting.
+    Defining response schemas are not really required, but when you do define it you will get results validation, documentation and automatic ORM objects to JSON conversions.
 
-We will use this schema as `response` type for our get employee view:
+We will use this schema as the `response` type for our `GET` employee view:
 
 
 ```Python hl_lines="1"
@@ -82,7 +82,7 @@ def get_employee(request, employee_id: int):
     return employee
 ```
 
-Notice that we simply returned employee ORM object, without a need to convert it to dict. The `response` schema does automatic result validation and converting to JSON:
+Notice that we simply returned an employee ORM object, without a need to convert it to a dict. The `response` schema does automatic result validation and conversion to JSON:
 ```Python hl_lines="4"
 @api.get("/employees/{employee_id}", response=EmployeeOut)
 def get_employee(request, employee_id: int):
@@ -92,7 +92,7 @@ def get_employee(request, employee_id: int):
 
 ### List of objects
 
-To output list of employees we can reuse the same schema `EmployeeOut`. We will just set `response` schema to a *List* or `EmployeeOut`
+To output a list of employees, we can reuse the same `EmployeeOut` schema. We will just set the `response` schema to a *List* of `EmployeeOut`.
 ```Python hl_lines="3"
 from typing import List
 
@@ -102,7 +102,7 @@ def list_employees(request):
     return qs
 ```
 
-Another cool trick - notice we just returned a ORM queryset:
+Another cool trick - notice we just returned a Django ORM queryset:
 
 ```Python hl_lines="4"
 @api.get("/employees", response=List[EmployeeOut])
@@ -110,13 +110,13 @@ def list_employees(request):
     qs = Employee.objects.all()
     return qs
 ```
-But it automatically getting evaluated, validated and converted to JSON list
+It automatically gets evaluated, validated and converted to a JSON list!
 
 
 
 ## Update
 
-The update is pretty trivial, we just use `PUT` method and also pass employee_id:
+Update is pretty trivial. We just use the `PUT` method and also pass `employee_id`:
 
 ```Python hl_lines="1"
 @api.put("/employees/{employee_id}")
@@ -130,7 +130,7 @@ def update_employee(request, employee_id: int, payload: EmployeeIn):
 
 **Note**
 
-Here we used `payload.dict` function to set all object attribute:
+Here we used the `payload.dict` method to set all object attributes:
 
 `for attr, value in payload.dict().items()`
 
@@ -146,7 +146,7 @@ employee.birthdate = payload.birthdate
 
 ## Delete
 
-The deletion is pretty simple - we just get employee by id and delete it from DB:
+Delete is also pretty simple. We just get employee by `id` and delete it from the DB:
 
 
 ```Python hl_lines="1 2 4"
@@ -159,7 +159,7 @@ def delete_employee(request, employee_id: int):
 
 ## Final code
 
-Here is a full CRUD code:
+Here's a full CRUD example:
 
 
 ```Python
