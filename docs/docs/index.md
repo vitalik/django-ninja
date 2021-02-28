@@ -2,7 +2,7 @@
 
 ![Django Ninja](img/hero.png)
 
-Django Ninja is a web framework for building APIs with Django and Python 3.6+ based type hints.
+Django Ninja is a web framework for building APIs with Django and Python 3.6+ type hints.
 
 Key features:
 
@@ -11,7 +11,7 @@ Key features:
  - **Fast to code**: Type hints and automatic docs lets you focus only on business logic.
  - **Standards-based**: Based on the open standards for APIs: **OpenAPI** (previously known as Swagger) and **JSON Schema**.
  - **Django friendly**: (obviously) has good integration with the Django core and ORM.
- - **Production ready**: Used by multiple companies on live projects (If you use django-ninja and would like to publish your feedback - please email ppr.vitaly@gmail.com)
+ - **Production ready**: Used by multiple companies on live projects (If you use Django Ninja and would like to publish your feedback, please email ppr.vitaly@gmail.com).
 
 <a href="https://github.com/vitalik/django-ninja-benchmarks" target="_blank">Benchmarks</a>:
 
@@ -25,7 +25,7 @@ pip install django-ninja
 
 ## Quick Example
 
-Start a new django project (or use an existing one)
+Start a new Django project (or use an existing one)
 ```
 django-admin startproject apidemo
 ```
@@ -62,12 +62,7 @@ Now you've just created an API that:
 
 Now go to <a href="http://127.0.0.1:8000/api/docs" target="_blank">http://127.0.0.1:8000/api/docs</a>
 
-<<<<<<< HEAD
 You will see the automatic, interactive API documentation (provided by the <a href="https://github.com/swagger-api/swagger-ui" target="_blank">OpenAPI / Swagger UI</a>):
-=======
-You will see the automatic, interactive API documentation (provided by the <a href="https://github.com/swagger-api/swagger-ui" target="_blank">Swagger UI</a>):
->>>>>>> Improve sentence
-
 
 ![Swagger UI](img/index-swagger-ui.png)
 

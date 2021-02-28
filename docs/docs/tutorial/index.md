@@ -13,10 +13,11 @@ pip install django-ninja
 ```
 
 !!! note
-    It is not required, but you can also put `ninja` to `INSTALLED_APPS`. In that case the OpenAPI/Swagger UI will be loaded from the included js bundle (otherwise js bundle comes from a CDN).
+    It is not required, but you can also put `ninja` to `INSTALLED_APPS`.
+    In that case the OpenAPI/Swagger UI will be loaded (faster) from the included JavaScript bundle (otherwise the JavaScript bundle comes from a CDN).
 
 
-## Create django project
+## Create a Django project
 
 (If you already have an existing Django project, skip to the next step).
 
@@ -29,7 +30,7 @@ django-admin startproject myproject
 
 ## First steps
 
-Let's create a module for our API - create an **api.py** file in the same directory location as **urls.py**:
+Let's create a module for our API.  Create an **api.py** file in the same directory location as **urls.py**:
 
 
 `api.py`
