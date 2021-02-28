@@ -1,16 +1,17 @@
 # Request parsers
 
-In most cases default content type for REST apis is JSON. But in a case you need to work with other content types (like yaml, xml, csv) or use faster JSON parsers Django Ninja provides `parser` configuration.
+In most cases, the default content type for REST API's is JSON, but in case you need to work with other content types (like YAML, XML, CSV) or use faster JSON parsers, Django Ninja provides a `parser` configuration.
 
 ```Python
 api = NinjaAPI(parser=MyYamlParser())
 ```
 
-To create your own parser you need to extend ninja.parser.Parser class and override `parse_body` method.
+To create your own parser, you need to extend the `ninja.parser.Parser` class, and override the `parse_body` method.
+
 
 ## Example YAML Parser
 
-Let's crate our custom YAML parser:
+Let's create our custom YAML parser:
 
 ```Python hl_lines="4 8 9"
 import yaml
@@ -40,7 +41,7 @@ def operation(request, payload: Payload):
 
 ```
 
-Now if you send yaml like this as request body:
+If you now send YAML like this as the request body:
 
 ```YAML
 ints:
@@ -50,7 +51,7 @@ string: hello
 f: 3.14
 ```
 
-it will be correctly parsed and you shoud have json output like this:
+it will be correctly parsed, and you should have JSON output like this:
 
 
 ```JSON
@@ -67,7 +68,7 @@ it will be correctly parsed and you shoud have json output like this:
 
 ## Example ORJSON Parser
 
-[orjson](https://github.com/ijl/orjson#orjson) is a fast, correct JSON library for Python. It benchmarks as the fastest Python library for JSON and is more correct than the standard json library or other third-party libraries.
+[orjson](https://github.com/ijl/orjson#orjson) is a fast, accurate JSON library for Python. It benchmarks as the fastest Python library for JSON and is more accurate than the standard `json` library or other third-party libraries.
 
 ```
 pip install orjson
