@@ -2,19 +2,19 @@
 
 ## Intro
 
-**Django Ninja** provides several tools to help you deal with authentication and authorization easily, rapidly, in a standard way, without having to study and learn <a href="https://swagger.io/docs/specification/authentication/" target="_blank">all the security specifications</a>.
+**Django Ninja** provides several tools to help you deal with authentication and authorization easily, rapidly, in a standard way, and without having to study and learn <a href="https://swagger.io/docs/specification/authentication/" target="_blank">all the security specifications</a>.
 
-The core concept is that when you describe an api operation you can define an authentication object
+The core concept is that when you describe an API operation, you can define an authentication object.
 
 ```Python hl_lines="2 7"
 {!./src/tutorial/authentication/code001.py!}
 ```
 
-In this example client will be able to call the `pets` method only if it uses django session authentication (default is cookie based). Otherwise, a HTTP-401 error will be returned.
+In this example, the client will only be able to call the `pets` method if it uses Django session authentication (the default is cookie based), otherwise an HTTP-401 error will be returned.
 
-## Automatic Openapi schema
+## Automatic OpenAPI schema
 
-Let's create an example where client in order to authenticate needs to pass a header :
+Here's an example where the client, in order to authenticate, needs to pass a header:
 
 `Authorization: Bearer supersecret`
 
@@ -22,21 +22,21 @@ Let's create an example where client in order to authenticate needs to pass a he
 {!./src/tutorial/authentication/bearer01.py!}
 ```
 
-Now go to docs at <a href="http://localhost:8000/api/docs" target="_blank">http://localhost:8000/api/docs</a>:
+Now go to the docs at <a href="http://localhost:8000/api/docs" target="_blank">http://localhost:8000/api/docs</a>.
 
 
 ![Swagger UI Auth](../img/auth-swagger-ui.png)
 
-When you click **Authorize** button you will get a prompt to input your authentication token
+Now, when you click the **Authorize** button, you will get a prompt to input your authentication token.
 
 ![Swagger UI Auth](../img/auth-swagger-ui-prompt.png)
 
-Now if you do test calls - the Authorization header will passed for every request.
+When you do test calls, the Authorization header will be passed for every request.
 
 
 ## Global authentication 
 
-In case you need to secure **all** methods of your api - you can pass `auth` argument to a `NinjaAPI` constructor:
+In case you need to secure **all** methods of your API, you can pass the `auth` argument to the `NinjaAPI` constructor:
 
 
 ```Python hl_lines="11 19"
@@ -59,7 +59,7 @@ api = NinjaAPI(auth=GlobalAuth())
 # def ...
 ```
 
-And if you need to overrule some of those methods you can do that on the operation level again by passing the `auth` argument. In this example authentication will be disabled for `/token` operation:
+And, if you need to overrule some of those methods, you can do that on the operation level again by passing the `auth` argument. In this example, authentication will be disabled for the `/token` operation:
 
 ```Python hl_lines="19"
 {!./src/tutorial/authentication/global01.py!}
@@ -70,7 +70,7 @@ And if you need to overrule some of those methods you can do that on the operati
 ### Custom function
 
 
-The "`auth=`" argument accepts any Callable object. **NinjaAPI** passes authentication only if callable object returns a **not None** value. This return value will be assigned to `request.auth` attribute.
+The "`auth=`" argument accepts any Callable object. **NinjaAPI** passes authentication only if the callable object returns a **not None** value. This return value will be assigned to the `request.auth` attribute.
 
 ```Python hl_lines="1 2 3 6"
 {!./src/tutorial/authentication/code002.py!}
@@ -79,7 +79,7 @@ The "`auth=`" argument accepts any Callable object. **NinjaAPI** passes authenti
 
 ### API Key
 
-Some APIs use API keys for authorization. An API key is a token that a client provides when making API calls. The key can be sent in the query string:
+Some API's use API keys for authorization. An API key is a token that a client provides when making API calls to identify itself. The key can be sent in the query string:
 ```
 GET /something?api_key=abcdef12345
 ```
@@ -98,7 +98,7 @@ GET /something HTTP/1.1
 Cookie: X-API-KEY=abcdef12345
 ```
 
-Django Ninja comes with builtin classes to help you handle these cases.
+Django Ninja comes with built in classes to help you handle these cases.
 
 
 #### in Query
@@ -107,9 +107,9 @@ Django Ninja comes with builtin classes to help you handle these cases.
 {!./src/tutorial/authentication/apikey01.py!}
 ```
 
-In this example we take a token from `GET['api_key']` and find a `Client` in database that corresponds to this key. The Client instance will be set to `request.auth` attribute
+In this example we take a token from `GET['api_key']` and find a `Client` in the database that corresponds to this key. The Client instance will be set to the `request.auth` attribute.
 
-Note: **`param_name`** - is the name of GET parameter that will be checked for. If not set - default "`key`" will be used.
+Note: **`param_name`** is the name of the GET parameter that will be checked for. If not set, the default of "`key`" will be used.
 
 
 #### in Header
@@ -141,12 +141,11 @@ Note: **`param_name`** - is the name of GET parameter that will be checked for. 
 
 ## Multiple authenticators
 
-The **`auth`** argument allows also to pass multiple authenticators:
+The **`auth`** argument also allows you to pass multiple authenticators:
 
 ```Python hl_lines="18"
 {!./src/tutorial/authentication/multiple01.py!}
 ```
 
-In this case **Django Ninja** will first check the api key `GET`, and if not set or invalid will check the `header` key. And if both invalid will raise authentication error to response.
-
-
+In this case **Django Ninja** will first check the API key `GET`, and if not set or invalid will check the `header` key.
+If both are invalid, it will raise an authentication error to the response.
