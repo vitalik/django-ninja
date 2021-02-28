@@ -1,8 +1,8 @@
 # Form data
 
-**Django Ninja** also allows you to parse and validate `request.POST` data (aka `application x-www-form-urlencoded` or `multipart/form-data`)
+**Django Ninja** also allows you to parse and validate `request.POST` data (aka `application x-www-form-urlencoded` or `multipart/form-data`).
 
-Here is a quick example:
+Here's a quick example:
 
 ```Python hl_lines="1 4"
 from ninja import NinjaAPI, Form
@@ -14,7 +14,7 @@ def login(request, username: str = Form(...), password: str = Form(...)):
 
 Note the following:
 
-1) You need to import `Form` mark from ninja
+1) You need to import the `Form` class from `ninja`
 ```Python
 from ninja import Form
 ```
