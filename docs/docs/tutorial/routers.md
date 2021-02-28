@@ -1,10 +1,10 @@
 # Routers
 
-Real world applications almost never can fit all logic into a single file. 
+Real world applications can almost never fit all logic into a single file. 
 
-**Django Ninja** comes with an easy way to split your API into multiple modules.
+**Django Ninja** comes with an easy way to split your API into multiple modules using Routers.
 
-Let's say you have a django project with structure like this:
+Let's say you have a Django project with a structure like this:
 
 
 ```
@@ -22,7 +22,7 @@ Let's say you have a django project with structure like this:
 └── manage.py
 ```
 
-To add APIs to each of the application, lets create an `api.py` module in each:
+To add API's to each of the Django applications, create an `api.py` module in each app:
 
 ``` hl_lines="5 9 13"
 ├── myproject
@@ -42,7 +42,7 @@ To add APIs to each of the application, lets create an `api.py` module in each:
 └── manage.py
 ```
 
-Now lets add few operations to `events/api.py`. The trick is that instead of NinjaAPI class you need to use **Router** class:
+Now let's add a few operations to `events/api.py`. The trick is that instead of using the `NinjaAPI` class, you use the **Router** class:
 
 ```python  hl_lines="1 4 6 13"
 from ninja import Router
@@ -63,7 +63,7 @@ def event_details(request, event_id: int):
     return {"title": event.title, "details": event.details}
 ```
 
-Then do the same for news:
+Then do the same for the `news` app with `news/api.py`:
 
 ```python  hl_lines="1 4"
 from ninja import Router
@@ -79,10 +79,11 @@ def list_news(request):
 def news_details(request, event_id: int):
     ...
 ```
-and blogs.
+and then also `blogs/api.py`.
 
 
-Finally let's group this together, in your project folder (next to urls.py) create another api.py file with main NinjaAPI instance:
+Finally, let's group them together.
+In your top level project folder (next to `urls.py`), create another `api.py` file with the main `NinjaAPI` instance:
 
 ``` hl_lines="2"
 ├── myproject
@@ -97,7 +98,7 @@ Finally let's group this together, in your project folder (next to urls.py) crea
 
 ```
 
-this will be like:
+It should look like this:
 
 ```Python
 from ninja import NinjaAPI
@@ -106,7 +107,7 @@ api = NinjaAPI()
 
 ```
 
-Now we import all the routers from apps, and include them into main api instance:
+Now we import all the routers from the various apps, and include them into the main API instance:
 
 ```Python hl_lines="2 3 4 8 9 10"
 from ninja import NinjaAPI
@@ -121,7 +122,7 @@ api.add_router("/news/", news_router)
 api.add_router("/blogs/", blogs_router)
 ```
 
-Now include api to your urls as usual and open your browser at `/api/docs` - you should see all your routers combined into single api:
+Now, include `api` to your urls as usual and open your browser at `/api/docs`, and you should see all your routers combined into a single API:
 
 
 ![Swagger UI Simple Routers](../img/simple-routers-swagger.png)
@@ -129,10 +130,11 @@ Now include api to your urls as usual and open your browser at `/api/docs` - you
 
 ## Nested routers
 
-There also times when you need to split your logic even more. **Django Ninja** make is possible to include router into other router as many times as you like and finally include top router into main api instance.
+There are also times when you need to split your logic up even more.
+**Django Ninja** makes it possible to include a router into another router as many times as you like, and finally include the top level router into the main api instance.
 
 
-Basically what it means that you have `add_router` both on `api` instance and `router` instance:
+Basically, what that means is that you have `add_router` both on the `api` instance and on the `router` instance:
 
 
 
@@ -186,6 +188,7 @@ Now you have the following endpoints:
 /api/l1/l2/add
 /api/l1/l2/l3/add
 ```
-See the automatically generated docs:
+
+Great! Now go have a look at the automatically generated docs:
 
 ![Swagger UI Nested Routers](../img/nested-routers-swagger.png)
