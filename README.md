@@ -12,16 +12,17 @@
 
 # Django Ninja - Fast Django REST Framework
 
-**Django Ninja** is a web framework for building APIs with **Django** and Python 3.6+ based **type hints**.
+**Django Ninja** is a web framework for building APIs with **Django** and Python 3.6+ **type hints**.
 
-**Key features**
 
- - **Easy**: Designed to be easy to use and intuitive.
- - **Fast**: Very high performance thanks to Pydantic and **<a href="https://django-ninja.rest-framework.com/async-support/">async support</a>**. 
- - **Fast to code**: Type hints and automatic docs let's you focus only on business logic.
- - **Standards-based**: Based on the open standards for APIs: **OpenAPI** (previously known as Swagger) and **JSON Schema**.
- - **Django friendly**: (obviously) have good integration with Django core and ORM.
- - **Production ready**: Used by multiple companies on live projects (If you use django-ninja and would like to publish your feedback - please email to ppr.vitaly@gmail.com)
+ **Key features:**
+
+  - **Easy**: Designed to be easy to use and intuitive.
+  - **FAST execution**: Very high performance thanks to **<a href="https://pydantic-docs.helpmanual.io" target="_blank">Pydantic</a>** and **<a href="/async-support/">async support</a>**.
+  - **Fast to code**: Type hints and automatic docs lets you focus only on business logic.
+  - **Standards-based**: Based on the open standards for APIs: **OpenAPI** (previously known as Swagger) and **JSON Schema**.
+  - **Django friendly**: (obviously) has good integration with the Django core and ORM.
+  - **Production ready**: Used by multiple companies on live projects (If you use django-ninja and would like to publish your feedback, please email ppr.vitaly@gmail.com).
 
 
 
@@ -71,11 +72,12 @@ urlpatterns = [
 
 **That's it !**
 
-And you already have:
- - API that receives HTTP GET request at /api/add
- - Takes, validates and type-casts GET parameters `a` and `b`
- - Decodes to JSON operation result
- - Generates an **OpenAPI schema** for defined operation
+Now you've just created an API that:
+
+ - receives an HTTP GET request at `/api/add`
+ - takes, validates and type-casts GET parameters `a` and `b`
+ - decodes the result to JSON
+ - generates an OpenAPI schema for defined operation
 
 ### Interactive API docs
 
@@ -86,8 +88,8 @@ You will see the automatic interactive API documentation (provided by <a href="h
 
 ![Swagger UI](docs/docs/img/index-swagger-ui.png)
 
-## Next
+## What next?
 
- - Read full documentation here - **Documentation**: https://django-ninja.rest-framework.com
- - To support this project - just simply give it a star on github. ![github star](docs/docs/img/github-star.png)
- - If you already using django-ninja - please share your feedback to ppr.vitaly@gmail.com
+ - Read the full documentation here - **Documentation**: https://django-ninja.rest-framework.com
+ - To support this project, please give star it on Github. ![github star](docs/docs/img/github-star.png)
+ - If you already using django-ninja, please share your feedback to ppr.vitaly@gmail.com

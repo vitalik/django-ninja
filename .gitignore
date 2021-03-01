@@ -11,3 +11,4 @@ test.py
 docs/site
 
 .DS_Store
+.idea

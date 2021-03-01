@@ -1,10 +1,11 @@
 # Response renderers
 
-Most common response type for REST API is usually JSON. Django Ninja also has support for defining your own custom renderers, which gives you the flexibility to design your own media types.
+The most common response type for a REST API is usually JSON.
+Django Ninja also has support for defining your own custom renderers, which gives you the flexibility to design your own media types.
 
-## Create renderer
+## Create a renderer
 
-To create your own renderer you need to inherit `ninja.renderers.BaseRenderer` and override `render` method. Then you can pass instance of your class to NinjaAPI as `renderer` argument:
+To create your own renderer, you need to inherit `ninja.renderers.BaseRenderer` and override the `render` method. Then you can pass an instance of your class to `NinjaAPI` as the `renderer` argument:
 
 ```Python hl_lines="5 8 9"
 from ninja import NinjaAPI
@@ -20,19 +21,19 @@ class MyRenderer(BaseRenderer):
 api = NinjaAPI(renderer=MyRenderer())
 ```
 
-`render` method takes the following arguments:
- - request - HttpRequest object 
- - data - object that need to be serialized
- - response_status - int - http status code that will be returned to client
+The `render` method takes the following arguments:
+ - request -> HttpRequest object 
+ - data -> object that needs to be serialized
+ - response_status as an `int` -> the HTTP status code that will be returned to the client
 
-you need also define `media_type` attribute on the class to set content-type header for the response
+You need also define the `media_type` attribute on the class to set the content-type header for the response.
 
 
 ## ORJSON renderer example:
 
-[orjson](https://github.com/ijl/orjson#orjson) is a fast, correct JSON library for Python. It benchmarks as the fastest Python library for JSON and is more correct than the standard json library or other third-party libraries. It serializes dataclass, datetime, numpy, and UUID instances natively.
+[orjson](https://github.com/ijl/orjson#orjson) is a fast, accurate JSON library for Python. It benchmarks as the fastest Python library for JSON and is more accurate than the standard `json` library or other third-party libraries. It also serializes dataclass, datetime, numpy, and UUID instances natively.
 
-Here is an example renderer class that uses orjson:
+Here's an example renderer class that uses `orjson`:
 
 
 ```Python hl_lines="9 10"
@@ -55,7 +56,7 @@ api = NinjaAPI(renderer=ORJSONRenderer())
 ## XML renderer example:
 
 
-Let's create renderer that outputs all responses as xml:
+This is how you create a renderer that outputs all responses as XML:
 
 
 ```Python hl_lines="8 11"
@@ -103,4 +104,3 @@ class XMLRenderer(BaseRenderer):
 api = NinjaAPI(renderer=XMLRenderer())
 ```
 *(Copyright note: this code is basically copied from [DRF-xml](https://jpadilla.github.io/django-rest-framework-xml/))*
-
