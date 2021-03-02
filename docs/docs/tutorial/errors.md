@@ -90,3 +90,19 @@ from ninja.errors import ValidationError
 def validation_errors(request, exc):
     return HttpResponse("Invalid input", status_code=422)
 ```
+
+
+## Throwing HTTP responses with exceptions
+
+As an alternative to custom exceptions and writing handlers for it - you can as well throw http exception that will lead to returning a http response with desired code
+
+
+```Python
+from ninja.errors import HttpError
+
+@api.get("/some/resource")
+def some_operation(request):
+    if True:
+        raise HttpError(503, "Service Unavailable. Please retry later.")
+
+```
