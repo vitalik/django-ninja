@@ -1,7 +1,7 @@
 import pytest
 import django
 from django.http import Http404
-from ninja import NinjaAPI
+from ninja import NinjaAPI, Schema
 from client import NinjaClient, NinjaAsyncClient
 
 
@@ -17,8 +17,12 @@ def on_custom_error(request, exc):
     return api.create_response(request, {"custom": True}, status=422)
 
 
-@api.get("/error/{code}")
-def err_thrower(request, code: str):
+class Payload(Schema):
+    test: int
+
+
+@api.post("/error/{code}")
+def err_thrower(request, code: str, payload: Payload = None):
     if code == "base":
         raise RuntimeError("test")
     if code == "404":
@@ -33,21 +37,35 @@ client = NinjaClient(api)
 def test_default_handler(settings):
     settings.DEBUG = True
 
-    response = client.get("/error/base")
+    response = client.post("/error/base")
     assert response.status_code == 500
     assert b"RuntimeError: test" in response.content
 
+    response = client.post("/error/custom", body="invalid_json")
+    assert response.status_code == 400
+    assert response.json() == {
+        "code": 400,
+        "message": "Cannot parse request body (Expecting value: line 1 column 1 (char 0))",
+    }
+
     settings.DEBUG = False
     with pytest.raises(RuntimeError):
-        response = client.get("/error/base")
+        response = client.post("/error/base")
+
+    response = client.post("/error/custom", body="invalid_json")
+    assert response.status_code == 400
+    assert response.json() == {
+        "code": 400,
+        "message": "Cannot parse request body",
+    }
 
 
 def test_exceptions():
-    response = client.get("/error/404")
+    response = client.post("/error/404")
     assert response.status_code == 404
     assert response.json() == {"code": 404, "message": "Not Found"}
 
-    response = client.get("/error/custom")
+    response = client.post("/error/custom")
     assert response.status_code == 422
     assert response.json() == {"custom": True}
 

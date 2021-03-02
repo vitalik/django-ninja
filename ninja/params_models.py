@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from django.conf import settings
 from ninja.compatibility import get_headers
 from ninja.errors import HttpError
 
@@ -56,7 +57,10 @@ class BodyModel(ParamModel):
             try:
                 return api.parser.parse_body(request)
             except Exception as e:
-                raise HttpError(400, "Cannot parse request body")
+                msg = "Cannot parse request body"
+                if settings.DEBUG:
+                    msg += f" ({e})"
+                raise HttpError(400, msg)
 
 
 class FormModel(ParamModel):
