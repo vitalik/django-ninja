@@ -23,5 +23,3 @@ jobs:
         run: pytest --cov=ninja --cov-report=xml tests
       - name: Coverage
         uses: codecov/codecov-action@v1
-      - name: Codestyle
-        run: black --check ninja
