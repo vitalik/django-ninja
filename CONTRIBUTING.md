@@ -48,13 +48,14 @@ make test-cov
  
 ## Code style
 
-Django Ninja uses `black` and `isort` for style check
+Django Ninja uses `black`, `isort` and `flake8` for style check
 
 Before your commit please check your code with:
 
 ```
 black --check ninja
 isort --check ninja
+flake8 ninja
 ```
 
 or using Makefile:

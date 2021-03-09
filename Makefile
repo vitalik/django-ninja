@@ -10,6 +10,7 @@ install: ## Install dependencies
 lint: ## Run code linters
 	black --check ninja
 	isort --check ninja
+	flake8 ninja
 
 fmt format: ## Run code formatters
 	black ninja

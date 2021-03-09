@@ -41,3 +41,5 @@ jobs:
         run: black --check ninja
       - name: isort
         run: isort --check ninja
+      - name: Flake8
+        run: flake8 ninja
