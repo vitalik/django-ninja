@@ -1,5 +1,15 @@
 import os
-from typing import Any, Callable, List, Optional, Sequence, Tuple, Type, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    Union,
+)
 
 from django.http import HttpRequest, HttpResponse
 from django.urls import reverse
@@ -11,6 +21,9 @@ from ninja.openapi.urls import get_openapi_urls, get_root_url
 from ninja.parser import Parser
 from ninja.renderers import BaseRenderer, JSONRenderer
 from ninja.router import Router
+
+if TYPE_CHECKING:
+    from .operation import Operation
 
 
 class NinjaAPI:
