@@ -1,10 +1,11 @@
-import pydantic
-import django
-from django.http import HttpResponse, HttpRequest, HttpResponseNotAllowed
-from typing import Callable, Iterable, List, Any, Union, Optional, Sequence
+from typing import Any, Callable, Iterable, List, Optional, Sequence, Union
 
-from ninja.errors import ConfigError, ValidationError
+import django
+import pydantic
+from django.http import HttpRequest, HttpResponse, HttpResponseNotAllowed
+
 from ninja.constants import NOT_SET
+from ninja.errors import ConfigError, ValidationError
 from ninja.schema import Schema
 from ninja.signature import ViewSignature, is_async
 from ninja.utils import check_csrf

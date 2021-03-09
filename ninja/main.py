@@ -1,15 +1,29 @@
 import os
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    Union,
+)
 
 from django.http import HttpRequest, HttpResponse
-from ninja.openapi import get_schema
-from typing import Any, List, Optional, Tuple, Sequence, Union, Callable, Type
 from django.urls import reverse
+
+from ninja.constants import NOT_SET
+from ninja.errors import ConfigError, set_default_exc_handlers
+from ninja.openapi import get_schema
 from ninja.openapi.urls import get_openapi_urls, get_root_url
 from ninja.parser import Parser
+from ninja.renderers import BaseRenderer, JSONRenderer
 from ninja.router import Router
-from ninja.renderers import JSONRenderer, BaseRenderer
-from ninja.errors import ConfigError, set_default_exc_handlers
-from ninja.constants import NOT_SET
+
+if TYPE_CHECKING:
+    from .operation import Operation
 
 
 class NinjaAPI:

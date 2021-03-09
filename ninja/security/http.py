@@ -1,5 +1,6 @@
 from base64 import b64decode
 from urllib.parse import unquote
+
 from ninja.compatibility import get_headers
 from ninja.security.base import AuthBase
 

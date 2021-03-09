@@ -1,5 +1,6 @@
-from pydantic import BaseModel
 from django.conf import settings
+from pydantic import BaseModel
+
 from ninja.compatibility import get_headers
 from ninja.errors import HttpError
 

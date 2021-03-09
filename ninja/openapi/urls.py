@@ -1,6 +1,12 @@
 from functools import partial
+from typing import TYPE_CHECKING
+
 from django.urls import path
-from .views import openapi_json, swagger, default_home
+
+from .views import default_home, openapi_json, swagger
+
+if TYPE_CHECKING:
+    from ninja import NinjaAPI
 
 
 def get_openapi_urls(api: "NinjaAPI"):
@@ -32,4 +38,4 @@ def get_openapi_urls(api: "NinjaAPI"):
 
 
 def get_root_url(api: "NinjaAPI"):
-    return path("", partial(default_home, api=api), name=f"api-root")
+    return path("", partial(default_home, api=api), name="api-root")

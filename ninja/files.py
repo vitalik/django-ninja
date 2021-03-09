@@ -1,4 +1,5 @@
-from typing import Type, Iterable, Callable, Any
+from typing import Any, Callable, Iterable, Type
+
 from django.core.files.uploadedfile import UploadedFile as DjangoUploadedFile
 
 

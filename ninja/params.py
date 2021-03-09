@@ -1,5 +1,7 @@
-from pydantic.fields import FieldInfo, ModelField
 from typing import Any
+
+from pydantic.fields import FieldInfo, ModelField
+
 from ninja import params_models
 
 

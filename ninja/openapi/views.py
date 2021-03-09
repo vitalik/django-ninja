@@ -1,9 +1,11 @@
-from ninja.responses import Response
-from django.http import Http404
+from typing import TYPE_CHECKING
+
 from django.conf import settings
+from django.http import Http404
 from django.shortcuts import render
 from django.urls import reverse
-from typing import TYPE_CHECKING
+
+from ninja.responses import Response
 
 if TYPE_CHECKING:
     # if anyone knows a cleaner way to make mypy happy - welcome
@@ -39,8 +41,9 @@ def swagger(request, api: "NinjaAPI"):
 
 def swagger_cdn(request, context=None):
     import os
-    from django.template import Template, RequestContext
+
     from django.http import HttpResponse
+    from django.template import RequestContext, Template
 
     tpl_file = os.path.join(
         os.path.dirname(__file__), "../templates/ninja/swagger_cdn.html"

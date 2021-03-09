@@ -1,9 +1,9 @@
 import traceback
 from functools import partial
-from typing import TYPE_CHECKING, List, Dict, Any
-from django.conf import settings
-from django.http import HttpRequest, HttpResponse, Http404
+from typing import TYPE_CHECKING, Any, Dict, List
 
+from django.conf import settings
+from django.http import Http404, HttpRequest, HttpResponse
 
 if TYPE_CHECKING:
     from ninja import NinjaAPI  # pragma: no cover
