@@ -37,12 +37,13 @@ flit install --deps develop --symlink
  
 ## Code style
 
-Django Ninja uses `black` for style check
+Django Ninja uses `black` and `isort` for style check
 
 Before your commit please check/format your code with:
 
 ```
 black ./ninja
+isort ./ninja
 ```
  
 ## Docs

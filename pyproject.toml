@@ -56,7 +56,8 @@ test = [
     "pytest-cov",
     "pytest-django",
     "pytest-asyncio",
-    "black"
+    "black",
+    "isort"
 ]
 doc = [
     "mkdocs",
