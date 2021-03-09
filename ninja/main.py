@@ -23,7 +23,7 @@ from ninja.renderers import BaseRenderer, JSONRenderer
 from ninja.router import Router
 
 if TYPE_CHECKING:
-    from .operation import Operation
+    from .operation import Operation  # pragma: no cover
 
 
 class NinjaAPI:

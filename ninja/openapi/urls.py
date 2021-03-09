@@ -6,7 +6,7 @@ from django.urls import path
 from .views import default_home, openapi_json, swagger
 
 if TYPE_CHECKING:
-    from ninja import NinjaAPI
+    from ninja import NinjaAPI  # pragma: no cover
 
 
 def get_openapi_urls(api: "NinjaAPI"):
