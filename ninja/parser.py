@@ -1,6 +1,7 @@
 import json
 from typing import List
-from django.http import QueryDict, HttpRequest
+
+from django.http import HttpRequest, QueryDict
 
 
 class Parser:

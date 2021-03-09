@@ -1,6 +1,6 @@
 from typing import Any, List
-from ninja.orm.factory import create_schema
 
+from ninja.orm.factory import create_schema
 
 # GOAL:
 # from ninja.orm import S, L

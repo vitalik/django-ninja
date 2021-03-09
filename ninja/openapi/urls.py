@@ -1,6 +1,8 @@
 from functools import partial
+
 from django.urls import path
-from .views import openapi_json, swagger, default_home
+
+from .views import default_home, openapi_json, swagger
 
 
 def get_openapi_urls(api: "NinjaAPI"):

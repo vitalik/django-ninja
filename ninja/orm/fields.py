@@ -1,12 +1,12 @@
 import datetime
 from decimal import Decimal
+from typing import List, Tuple
 from uuid import UUID
-from typing import Tuple, List
+
 from django.db.models import ManyToManyField
 from django.db.models.fields import Field
 from pydantic import IPvAnyAddress, Json
 from pydantic.fields import FieldInfo
-
 
 TYPES = {
     "AutoField": int,

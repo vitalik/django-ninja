@@ -1,10 +1,11 @@
-import pydantic
 import inspect
-from typing import Callable, List
 from collections import OrderedDict, namedtuple
-from ninja import params
-from ninja.signature.utils import get_typed_signature, get_path_param_names
+from typing import Callable, List
 
+import pydantic
+
+from ninja import params
+from ninja.signature.utils import get_path_param_names, get_typed_signature
 
 FuncParam = namedtuple("FuncParam", ["name", "source", "annotation", "is_collection"])
 

@@ -1,4 +1,5 @@
 from django.conf import settings
+
 from ninja.security.apikey import APIKeyCookie
 
 

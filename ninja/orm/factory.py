@@ -1,11 +1,12 @@
-from typing import Union, List, Optional
 from collections import OrderedDict
+from typing import List, Optional, Union
+
+from django.db.models import ManyToManyRel, ManyToOneRel
 from pydantic import create_model as create_pydantic_model
-from django.db.models import ManyToOneRel, ManyToManyRel
-from ninja.schema import Schema
+
 from ninja.errors import ConfigError
 from ninja.orm.fields import get_schema_field
-
+from ninja.schema import Schema
 
 # MAYBE:
 # Schema = create_schema(Model, exclude=['id'])

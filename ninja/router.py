@@ -3,8 +3,9 @@ from typing import Callable, List, Optional, Tuple
 
 from django.http import HttpResponseNotAllowed
 from django.urls import path as django_path
-from ninja.operation import Operation, PathView
+
 from ninja.constants import NOT_SET
+from ninja.operation import Operation, PathView
 from ninja.utils import normalize_path
 
 

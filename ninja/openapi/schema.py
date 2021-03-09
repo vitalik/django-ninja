@@ -1,8 +1,10 @@
 from collections import OrderedDict
+from typing import TYPE_CHECKING, Any, Dict
+
+from pydantic.schema import model_schema
+
 from ninja.operation import Operation
 from ninja.utils import normalize_path
-from pydantic.schema import model_schema
-from typing import TYPE_CHECKING, Dict, Any
 
 if TYPE_CHECKING:
     # if anyone knows a cleaner way to make mypy happy - welcome

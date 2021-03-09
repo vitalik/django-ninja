@@ -1,6 +1,8 @@
 import json
 from typing import Any
+
 from django.http import HttpRequest
+
 from ninja.responses import NinjaJSONEncoder
 
 

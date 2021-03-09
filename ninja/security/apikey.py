@@ -1,5 +1,5 @@
-from ninja.security.base import AuthBase
 from ninja.compatibility.request import get_headers
+from ninja.security.base import AuthBase
 
 
 class APIKeyBase(AuthBase):
