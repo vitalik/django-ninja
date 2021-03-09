@@ -36,7 +36,7 @@ jobs:
         with:
           python-version: 3.8
       - name: Install Dependencies
-        run: pip install black isort
+        run: pip install black isort flake8
       - name: Black
         run: black --check ninja
       - name: isort
