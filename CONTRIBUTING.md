@@ -15,35 +15,65 @@ Once you have it - to install all dependencies required for development and test
 flit install --deps develop --symlink
 ```
 
- Once done you can check if all works with 
- 
- ```
- pytest .
- ```
- 
- 
- Now you are ready to make your contribution
- 
- 
- When you done:
- 
- Please make sure you made tests to cover your functionality 
- 
- and finally check the resulting coverage of your contribution did not suffer
- 
- ```
- pytest --cov=ninja --cov-report term-missing tests
- ```
+Once done you can check if all works with 
+
+```
+pytest .
+```
+
+or using Makefile:
+
+```
+make test
+```
+
+Now you are ready to make your contribution
+
+
+When you done:
+
+Please make sure you made tests to cover your functionality 
+
+and finally check the resulting coverage of your contribution did not suffer
+
+```
+pytest --cov=ninja --cov-report term-missing tests
+```
+
+or using Makefile:
+
+```
+make test-cov
+```
  
 ## Code style
 
 Django Ninja uses `black` and `isort` for style check
 
-Before your commit please check/format your code with:
+Before your commit please check your code with:
 
 ```
-black ./ninja
-isort ./ninja
+black --check ninja
+isort --check ninja
+```
+
+or using Makefile:
+
+```
+make lint
+```
+
+Or reformat your code with:
+
+```
+black ninja
+isort ninja
+```
+
+or using Makefile:
+
+```
+make fmt
 ```
  
 ## Docs
