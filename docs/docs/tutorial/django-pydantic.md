@@ -20,7 +20,7 @@ def create_schema(
 ```
 
 
-Let's take an example:
+Take this example:
 
 ```Python hl_lines="2 4"
 form django.contrib.auth.model import User
@@ -44,10 +44,10 @@ UserSchema = create_schema(User)
 ```
 
 !!! Warning
-    By default create_schema builds a schema with ALL model fields.
-    This can lead to accidental unwanted data exposure (like hashed password in the above example).
+    By default `create_schema` builds a schema with ALL model fields.
+    This can lead to accidental unwanted data exposure (like hashed password, in the above example).
     <br>
-    Please always use `fields` or `exclude` arguments to explicitly define list of attributes
+    **Always** use `fields` or `exclude` arguments to explicitly define list of attributes.
 
 ### using `fields`
 
@@ -83,7 +83,7 @@ UserSchema = create_schema(User, exclude=[
 
 ### using `depth`
 
-`depth` argument allows you to introspect django model into the Related fields(ForeignKey, OneToOne, ManyToMany)
+The `depth` argument allows you to introspect the Django model into the Related fields(ForeignKey, OneToOne, ManyToMany).
 
 ```Python hl_lines="1 7"
 UserSchema = create_schema(User, depth=1, fields=['username', 'groups'])
