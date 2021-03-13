@@ -93,3 +93,11 @@ You will see the automatic interactive API documentation (provided by <a href="h
  - Read the full documentation here - **Documentation**: https://django-ninja.rest-framework.com
  - To support this project, please give star it on Github. ![github star](docs/docs/img/github-star.png)
  - If you already using django-ninja, please share your feedback to ppr.vitaly@gmail.com
+
+
+<hr>
+
+[![code-on](./docs/docs/img/logo_code-on.svg)](https://code-on.be)
+
+Sponsert by [Code-on](https://code-on.be)  
+If you are look to build project with django-ninja get in touch!

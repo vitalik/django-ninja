@@ -114,3 +114,9 @@ def operation(a: Item):
 
 This project was heavily inspired by <a href="https://fastapi.tiangolo.com/" target="_blank">FastAPI</a> (developed by <a href="https://github.com/tiangolo" target="_blank">Sebastián Ramírez</a>)
 
+<hr>
+
+[![code-on](img/logo_code-on.svg)](https://code-on.be)
+
+Sponsert by [Code-on](https://code-on.be)  
+If you are look to build project with django-ninja get in touch!
