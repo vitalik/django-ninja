@@ -135,7 +135,7 @@ If you have fields that are ForeignKey's or ManyToManyField, by default it will 
 ```Python hl_lines="4 5 14 20 21"
 # model 
 class Post():
-    titie = models.CharField(...)
+    title = models.CharField(...)
     owner = models.ForeignKey('auth.User', ...)
     tags = models.ManyToManyField('blog.Tag', blank=True)
 
