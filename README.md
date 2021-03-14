@@ -97,7 +97,7 @@ You will see the automatic interactive API documentation (provided by <a href="h
 
 <hr>
 
-[![code-on](./docs/docs/img/logo_code-on.svg)](https://code-on.be)
+<img src="https://code-on.be/code-on_logo.svg" height="100">  
 
 Sponsert by [Code-on](https://code-on.be)  
-If you are look to build project with django-ninja get in touch!
+If you are looking to build a project with Django-Ninja get in [touch!](https://code-on.be)

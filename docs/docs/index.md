@@ -116,7 +116,7 @@ This project was heavily inspired by <a href="https://fastapi.tiangolo.com/" tar
 
 <hr>
 
-[![code-on](img/logo_code-on.svg)](https://code-on.be)
+<img src="https://code-on.be/code-on_logo.svg" height="100">  
 
 Sponsert by [Code-on](https://code-on.be)  
-If you are look to build project with django-ninja get in touch!
+If you are looking to build a project with Django-Ninja get in [touch!](https://code-on.be)
