@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import TYPE_CHECKING, Any, Dict
 
 from pydantic.schema import model_schema
@@ -20,7 +19,7 @@ def get_schema(api: "NinjaAPI", path_prefix=""):
     return openapi
 
 
-class OpenAPISchema(OrderedDict):
+class OpenAPISchema(dict):
     def __init__(self, api: "NinjaAPI", path_prefix: str):
         self.api = api
         self.path_prefix = path_prefix

@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import Callable, List, Optional, Tuple
 
 from django.urls import path as django_path
@@ -10,7 +9,7 @@ from ninja.utils import normalize_path
 
 class Router:
     def __init__(self):
-        self.operations = OrderedDict()  # TODO: better rename to path_operations
+        self.operations = {}  # TODO: better rename to path_operations
         self.api = None
         self._routers: List[Tuple[str, Router]] = []
 
