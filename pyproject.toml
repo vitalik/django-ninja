@@ -57,7 +57,9 @@ test = [
     "pytest-asyncio",
     "black",
     "isort",
-    "flake8"
+    "flake8",
+    "mypy",
+    "django-stubs",
 ]
 doc = [
     "mkdocs",

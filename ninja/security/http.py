@@ -1,62 +1,70 @@
+from abc import ABC, abstractmethod
 from base64 import b64decode
+from typing import Any, Optional, Tuple
 from urllib.parse import unquote
+
+from django.http import HttpRequest
 
 from ninja.compatibility import get_headers
 from ninja.security.base import AuthBase
 
-
-class HttpAuthBase(AuthBase):
-    openapi_type = "http"
+__all__ = ["HttpAuthBase", "HttpBearer", "DecodeError", "HttpBasicAuth"]
 
 
-class HttpBearer(HttpAuthBase):
-    openapi_scheme = "bearer"
-    header = "Authorization"
+class HttpAuthBase(AuthBase, ABC):
+    openapi_type: str = "http"
 
-    def __call__(self, request):
+
+class HttpBearer(HttpAuthBase, ABC):
+    openapi_scheme: str = "bearer"
+    header: str = "Authorization"
+
+    def __call__(self, request: HttpRequest) -> Optional[Any]:
         headers = get_headers(request)
         auth_value = headers.get(self.header)
         if not auth_value:
-            return
+            return None
         parts = auth_value.split(" ")
 
         if parts[0].lower() != "bearer":
             print(f"Unexpected auth - '{auth_value}'")
-            return
+            return None
         token = " ".join(parts[1:])
         return self.authenticate(request, token)
 
-    def authenticate(self, request, token):
-        raise NotImplementedError("Please implement authenticate(self, request, token)")
+    @abstractmethod
+    def authenticate(self, request: HttpRequest, token: str) -> Optional[Any]:
+        pass
 
 
 class DecodeError(Exception):
     pass
 
 
-class HttpBasicAuth(HttpAuthBase):  # TODO: maybe HttpBasicAuthBase
+class HttpBasicAuth(HttpAuthBase, ABC):  # TODO: maybe HttpBasicAuthBase
     openapi_scheme = "basic"
     header = "Authorization"
 
-    def __call__(self, request):
+    def __call__(self, request: HttpRequest) -> Optional[Any]:
         headers = get_headers(request)
         auth_value = headers.get(self.header)
         if not auth_value:
-            return
+            return None
 
         try:
             username, password = self.decode_authorization(auth_value)
         except DecodeError as e:
             print(e)
-            return
+            return None
         return self.authenticate(request, username, password)
 
-    def authenticate(self, request, username, password):
-        raise NotImplementedError(
-            "Please implement authenticate(self, request, username, password)"
-        )
+    @abstractmethod
+    def authenticate(
+        self, request: HttpRequest, username: str, password: str
+    ) -> Optional[Any]:
+        pass
 
-    def decode_authorization(self, value):
+    def decode_authorization(self, value: str) -> Tuple[str, str]:
         parts = value.split(" ")
         if len(parts) == 1:
             user_pass_encoded = parts[0]

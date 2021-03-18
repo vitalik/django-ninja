@@ -11,6 +11,7 @@ lint: ## Run code linters
 	black --check ninja
 	isort --check ninja
 	flake8 ninja
+	mypy ninja
 
 fmt format: ## Run code formatters
 	black ninja

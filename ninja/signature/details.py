@@ -1,17 +1,25 @@
 import inspect
 from collections import OrderedDict, namedtuple
-from typing import Callable, List
+from typing import Any, Callable, Dict, List
 
 import pydantic
 
 from ninja import params
 from ninja.signature.utils import get_path_param_names, get_typed_signature
 
+__all__ = [
+    "FuncParam",
+    "ViewSignature",
+    "is_pydantic_model",
+    "is_collection_type",
+    "detect_collection_fields",
+]
+
 FuncParam = namedtuple("FuncParam", ["name", "source", "annotation", "is_collection"])
 
 
 class ViewSignature:
-    def __init__(self, path: str, view_func: Callable):
+    def __init__(self, path: str, view_func: Callable) -> None:
         self.view_func = view_func
         self.signature = get_typed_signature(self.view_func)
         self.path_params_names = get_path_param_names(path)
@@ -28,8 +36,8 @@ class ViewSignature:
 
         self.models = self._create_models()
 
-    def _create_models(self):
-        grouping = OrderedDict()
+    def _create_models(self) -> List[Any]:
+        grouping: Dict[Any, List[FuncParam]] = OrderedDict()
         for param in self.params:
             d_type = type(param.source)
             if d_type not in grouping:
@@ -59,7 +67,7 @@ class ViewSignature:
             result.append(model_cls)
         return result
 
-    def _get_param_type(self, name, arg):
+    def _get_param_type(self, name: str, arg: inspect.Parameter) -> FuncParam:
         # _EMPTY = self.signature.empty
         annotation = arg.annotation
 
@@ -103,20 +111,20 @@ class ViewSignature:
         return FuncParam(name, param_source, annotation, is_collection)
 
 
-def is_pydantic_model(cls):
+def is_pydantic_model(cls: Any) -> bool:
     try:
         return issubclass(cls, pydantic.BaseModel)
     except TypeError:
         return False
 
 
-def is_collection_type(annotation):
+def is_collection_type(annotation: Any) -> bool:
     # List[int]  =>  __origin__ = list, __args__ = int
     origin = getattr(annotation, "__origin__", None)
     return origin in (List, list, set, tuple)  # TODO: I gues we should handle only list
 
 
-def detect_collection_fields(args: List[FuncParam]):
+def detect_collection_fields(args: List[FuncParam]) -> List[str]:
     """
     QueryDict has values that are always lists, so we need to help django ninja to understand
     better the input parameters if it's a list or a single value

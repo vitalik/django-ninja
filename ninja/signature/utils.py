@@ -1,9 +1,19 @@
 import asyncio
 import inspect
 import re
-from typing import Any, Callable, Dict, Set
+from typing import Any, Callable, Set
 
 from pydantic.typing import ForwardRef, evaluate_forwardref
+
+from ninja.types import DictStrAny
+
+__all__ = [
+    "get_typed_signature",
+    "get_typed_annotation",
+    "make_forwardref",
+    "get_path_param_names",
+    "is_async",
+]
 
 
 def get_typed_signature(call: Callable) -> inspect.Signature:
@@ -23,17 +33,16 @@ def get_typed_signature(call: Callable) -> inspect.Signature:
     return typed_signature
 
 
-def get_typed_annotation(param: inspect.Parameter, globalns: Dict[str, Any]) -> Any:
+def get_typed_annotation(param: inspect.Parameter, globalns: DictStrAny) -> Any:
     annotation = param.annotation
     if isinstance(annotation, str):
         annotation = make_forwardref(annotation, globalns)
     return annotation
 
 
-def make_forwardref(annotation: str, globalns: Dict[str, Any]):
-    annotation = ForwardRef(annotation)
-    annotation = evaluate_forwardref(annotation, globalns, globalns)
-    return annotation
+def make_forwardref(annotation: str, globalns: DictStrAny) -> Any:
+    forward_ref = ForwardRef(annotation)
+    return evaluate_forwardref(forward_ref, globalns, globalns)
 
 
 def get_path_param_names(path: str) -> Set[str]:
@@ -41,5 +50,5 @@ def get_path_param_names(path: str) -> Set[str]:
     return {item.strip("{}") for item in re.findall("{[^}]*}", path)}
 
 
-def is_async(callable: Callable):
+def is_async(callable: Callable) -> bool:
     return asyncio.iscoroutinefunction(callable)

@@ -1,31 +1,33 @@
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Any, Dict
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type
 
+from pydantic import BaseModel
 from pydantic.schema import model_schema
 
 from ninja.operation import Operation
+from ninja.types import DictStrAny
 from ninja.utils import normalize_path
 
 if TYPE_CHECKING:
     # if anyone knows a cleaner way to make mypy happy - welcome
     from ninja import NinjaAPI  # pragma: no cover
 
-REF_PREFIX = "#/components/schemas/"
+REF_PREFIX: str = "#/components/schemas/"
 
-BODY_PARAMS = {"body", "form", "file"}
+BODY_PARAMS: Set[str] = {"body", "form", "file"}
 
 
-def get_schema(api: "NinjaAPI", path_prefix=""):
+def get_schema(api: "NinjaAPI", path_prefix: str = "") -> "OpenAPISchema":
     openapi = OpenAPISchema(api, path_prefix)
     return openapi
 
 
 class OpenAPISchema(OrderedDict):
-    def __init__(self, api: "NinjaAPI", path_prefix: str):
+    def __init__(self, api: "NinjaAPI", path_prefix: str) -> None:
         self.api = api
         self.path_prefix = path_prefix
-        self.schemas: Dict[str, Any] = {}
-        self.securitySchemes = {}
+        self.schemas: DictStrAny = {}
+        self.securitySchemes: DictStrAny = {}
         super().__init__(
             [
                 ("openapi", "3.0.2"),
@@ -42,7 +44,7 @@ class OpenAPISchema(OrderedDict):
             ]
         )
 
-    def get_paths(self):
+    def get_paths(self) -> DictStrAny:
         result = {}
         for prefix, router in self.api._routers:
             for path, path_view in router.operations.items():
@@ -52,14 +54,14 @@ class OpenAPISchema(OrderedDict):
                 result[full_path] = self.methods(path_view.operations)
         return result
 
-    def methods(self, operations: list):
+    def methods(self, operations: list) -> DictStrAny:
         result = {}
         for op in operations:
             for method in op.methods:
                 result[method.lower()] = self.operation_details(op)
         return result
 
-    def operation_details(self, operation: Operation):
+    def operation_details(self, operation: Operation) -> DictStrAny:
         op_id = operation.operation_id or self.api.get_openapi_operation_id(operation)
         result = {
             "operationId": op_id,
@@ -87,7 +89,7 @@ class OpenAPISchema(OrderedDict):
 
         return result
 
-    def operation_parameters(self, operation):
+    def operation_parameters(self, operation: Operation) -> List[DictStrAny]:
         result = []
         for model in operation.models:
             if model._in in BODY_PARAMS:
@@ -115,7 +117,9 @@ class OpenAPISchema(OrderedDict):
                 result.append(param)
         return result
 
-    def _create_schema_from_model(self, model, by_alias=True):
+    def _create_schema_from_model(
+        self, model: Type[BaseModel], by_alias: bool = True
+    ) -> Tuple[Any, bool]:
         schema = model_schema(model, ref_prefix=REF_PREFIX, by_alias=by_alias)
         if schema.get("definitions"):
             self.add_schema_definitions(schema["definitions"])
@@ -125,7 +129,7 @@ class OpenAPISchema(OrderedDict):
         required = name in schema.get("required", {})
         return details, required
 
-    def request_body(self, operation):
+    def request_body(self, operation: Operation) -> DictStrAny:
         # TODO: refactor
         models = [m for m in operation.models if m._in in BODY_PARAMS]
         if not models:
@@ -147,7 +151,7 @@ class OpenAPISchema(OrderedDict):
             "required": required,
         }
 
-    def get_body_content_type(self, model):
+    def get_body_content_type(self, model: Any) -> str:
         types = {
             "body": "application/json",
             "form": "application/x-www-form-urlencoded",
@@ -155,7 +159,7 @@ class OpenAPISchema(OrderedDict):
         }
         return types[model._in]
 
-    def responses(self, operation):
+    def responses(self, operation: Operation) -> Dict[int, DictStrAny]:
         if operation.response_model:
             if not isinstance(operation.response_model, dict):
                 schema, _ = self._create_schema_from_model(
@@ -188,25 +192,25 @@ class OpenAPISchema(OrderedDict):
         else:
             return {200: {"description": "OK"}}
 
-    def operation_security(self, operation):
+    def operation_security(self, operation: Operation) -> Optional[List[DictStrAny]]:
         if not operation.auth_callbacks:
-            return
+            return None
         result = []
         for auth in operation.auth_callbacks:
             if hasattr(auth, "openapi_security_schema"):
-                scopes = []  # TODO: scopes
+                scopes: List[DictStrAny] = []  # TODO: scopes
                 name = auth.__class__.__name__
                 result.append({name: scopes})  # TODO: check if unique
-                self.securitySchemes[name] = auth.openapi_security_schema
+                self.securitySchemes[name] = auth.openapi_security_schema  # type: ignore
         return result
 
-    def get_components(self):
+    def get_components(self) -> DictStrAny:
         result = {"schemas": self.schemas}
         if self.securitySchemes:
             result["securitySchemes"] = self.securitySchemes
         return result
 
-    def add_schema_definitions(self, definitions: dict):
+    def add_schema_definitions(self, definitions: dict) -> None:
         # TODO: check if schema["definitions"] are unique
         # if not - workaround (maybe use pydantic.schema.schema(models)) to process list of models
         # assert set(definitions.keys()) - set(self.schemas.keys()) == set()

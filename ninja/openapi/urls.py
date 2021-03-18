@@ -1,15 +1,18 @@
 from functools import partial
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 from django.urls import path
+from django.urls.resolvers import URLPattern
 
 from .views import default_home, openapi_json, swagger
 
 if TYPE_CHECKING:
     from ninja import NinjaAPI  # pragma: no cover
 
+__all__ = ["get_openapi_urls", "get_root_url"]
 
-def get_openapi_urls(api: "NinjaAPI"):
+
+def get_openapi_urls(api: "NinjaAPI") -> List[URLPattern]:
     result = []
 
     if api.openapi_url:
@@ -37,5 +40,5 @@ def get_openapi_urls(api: "NinjaAPI"):
     return result
 
 
-def get_root_url(api: "NinjaAPI"):
+def get_root_url(api: "NinjaAPI") -> URLPattern:
     return path("", partial(default_home, api=api), name="api-root")

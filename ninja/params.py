@@ -1,8 +1,10 @@
-from typing import Any
+from typing import Any, Optional
 
 from pydantic.fields import FieldInfo, ModelField
 
 from ninja import params_models
+
+__all__ = ["Param", "Path", "Query", "Header", "Cookie", "Body", "Form", "File"]
 
 
 class Param(FieldInfo):
@@ -29,7 +31,7 @@ class Param(FieldInfo):
         self.deprecated = deprecated
         # self.param_name: str = None
         # self.param_type: Any = None
-        self.model_field: ModelField = None
+        self.model_field: Optional[ModelField] = None
         super().__init__(
             default,
             alias=alias,
@@ -46,7 +48,7 @@ class Param(FieldInfo):
         )
 
     @classmethod
-    def _in(cls):
+    def _in(cls) -> str:
         "Openapi param.in value"
         return cls.__name__.lower()
 

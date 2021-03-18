@@ -1,19 +1,24 @@
 import json
-from typing import List
+from typing import List, cast
 
-from django.http import HttpRequest, QueryDict
+from django.http import HttpRequest
+from django.utils.datastructures import MultiValueDict
+
+from ninja.types import DictStrAny
+
+__all__ = ["Parser"]
 
 
 class Parser:
     "Default json parser"
 
-    def parse_body(self, request: HttpRequest):
-        return json.loads(request.body)
+    def parse_body(self, request: HttpRequest) -> DictStrAny:
+        return cast(DictStrAny, json.loads(request.body))
 
     def parse_querydict(
-        self, data: QueryDict, list_fields: List[str], request: HttpRequest
-    ):
-        result = {}
+        self, data: MultiValueDict, list_fields: List[str], request: HttpRequest
+    ) -> DictStrAny:
+        result: DictStrAny = {}
         for key in data.keys():
             if key in list_fields:
                 result[key] = data.getlist(key)
