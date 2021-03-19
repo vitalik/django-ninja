@@ -25,7 +25,7 @@ from ninja.types import DictStrAny
 from ninja.utils import check_csrf
 
 if TYPE_CHECKING:
-    from ninja import NinjaAPI
+    from ninja import NinjaAPI  # pragma: no cover
 
 __all__ = ["Operation", "PathView", "ResponseObject"]
 

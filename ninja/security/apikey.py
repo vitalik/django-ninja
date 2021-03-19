@@ -23,11 +23,11 @@ class APIKeyBase(AuthBase, ABC):
 
     @abstractmethod
     def _get_key(self, request: HttpRequest) -> Optional[str]:
-        pass
+        pass  # pragma: no cover
 
     @abstractmethod
     def authenticate(self, request: HttpRequest, key: Optional[str]) -> Optional[Any]:
-        pass
+        pass  # pragma: no cover
 
 
 class APIKeyQuery(APIKeyBase, ABC):

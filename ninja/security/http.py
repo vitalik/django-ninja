@@ -34,7 +34,7 @@ class HttpBearer(HttpAuthBase, ABC):
 
     @abstractmethod
     def authenticate(self, request: HttpRequest, token: str) -> Optional[Any]:
-        pass
+        pass  # pragma: no cover
 
 
 class DecodeError(Exception):
@@ -62,7 +62,7 @@ class HttpBasicAuth(HttpAuthBase, ABC):  # TODO: maybe HttpBasicAuthBase
     def authenticate(
         self, request: HttpRequest, username: str, password: str
     ) -> Optional[Any]:
-        pass
+        pass  # pragma: no cover
 
     def decode_authorization(self, value: str) -> Tuple[str, str]:
         parts = value.split(" ")

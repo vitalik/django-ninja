@@ -27,4 +27,4 @@ class AuthBase(ABC):
 
     @abstractmethod
     def __call__(self, request: HttpRequest) -> Optional[Any]:
-        pass
+        pass  # pragma: no cover

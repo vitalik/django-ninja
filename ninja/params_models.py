@@ -10,7 +10,7 @@ from ninja.errors import HttpError
 from ninja.types import DictStrAny
 
 if TYPE_CHECKING:
-    from ninja import NinjaAPI
+    from ninja import NinjaAPI  # pragma: no cover
 
 __all__ = [
     "ParamModel",
@@ -32,7 +32,7 @@ class ParamModel(BaseModel, ABC):
     def get_request_data(
         cls, request: HttpRequest, api: "NinjaAPI", path_params: DictStrAny
     ) -> Optional[DictStrAny]:
-        pass
+        pass  # pragma: no cover
 
     @classmethod
     def resolve(
