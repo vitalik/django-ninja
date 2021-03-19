@@ -1,4 +1,7 @@
+from typing import Callable
+
 import django
+from django.http import HttpRequest
 
 try:
     from django.utils.datastructures import CaseInsensitiveMapping
@@ -41,6 +44,8 @@ def get_headers_old(request):
 def get_headers_v3(request):
     return request.headers
 
+
+get_headers: Callable[[HttpRequest], HttpHeaders]
 
 if django.VERSION[0] < 3:
     get_headers = get_headers_old

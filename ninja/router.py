@@ -1,25 +1,34 @@
 from collections import OrderedDict
-from typing import Callable, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, Iterator, List, Optional, Tuple
 
-from django.urls import path as django_path
+from django.urls import URLPattern, path as django_path
 
 from ninja.constants import NOT_SET
 from ninja.operation import PathView
+from ninja.types import Decorator, TCallable
 from ninja.utils import normalize_path
+
+if TYPE_CHECKING:
+    from ninja import NinjaAPI
+
+
+__all__ = ["Router"]
 
 
 class Router:
-    def __init__(self):
-        self.operations = OrderedDict()  # TODO: better rename to path_operations
-        self.api = None
+    def __init__(self) -> None:
+        self.operations: Dict[
+            str, PathView
+        ] = OrderedDict()  # TODO: better rename to path_operations
+        self.api: Optional["NinjaAPI"] = None
         self._routers: List[Tuple[str, Router]] = []
 
     def get(
         self,
         path: str,
         *,
-        auth=NOT_SET,
-        response=None,
+        auth: Any = NOT_SET,
+        response: Any = None,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
@@ -29,7 +38,7 @@ class Router:
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
-    ):
+    ) -> Decorator:
         return self.api_operation(
             ["GET"],
             path,
@@ -50,8 +59,8 @@ class Router:
         self,
         path: str,
         *,
-        auth=NOT_SET,
-        response=None,
+        auth: Any = NOT_SET,
+        response: Any = None,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
@@ -61,7 +70,7 @@ class Router:
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
-    ):
+    ) -> Decorator:
         return self.api_operation(
             ["POST"],
             path,
@@ -82,8 +91,8 @@ class Router:
         self,
         path: str,
         *,
-        auth=NOT_SET,
-        response=None,
+        auth: Any = NOT_SET,
+        response: Any = None,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
@@ -93,7 +102,7 @@ class Router:
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
-    ):
+    ) -> Decorator:
         return self.api_operation(
             ["DELETE"],
             path,
@@ -114,8 +123,8 @@ class Router:
         self,
         path: str,
         *,
-        auth=NOT_SET,
-        response=None,
+        auth: Any = NOT_SET,
+        response: Any = None,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
@@ -125,7 +134,7 @@ class Router:
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
-    ):
+    ) -> Decorator:
         return self.api_operation(
             ["PATCH"],
             path,
@@ -146,8 +155,8 @@ class Router:
         self,
         path: str,
         *,
-        auth=NOT_SET,
-        response=None,
+        auth: Any = NOT_SET,
+        response: Any = None,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
@@ -157,7 +166,7 @@ class Router:
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
-    ):
+    ) -> Decorator:
         return self.api_operation(
             ["PUT"],
             path,
@@ -179,8 +188,8 @@ class Router:
         methods: List[str],
         path: str,
         *,
-        auth=NOT_SET,
-        response=None,
+        auth: Any = NOT_SET,
+        response: Any = None,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
@@ -190,8 +199,8 @@ class Router:
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
-    ):
-        def decorator(view_func):
+    ) -> Decorator:
+        def decorator(view_func: TCallable) -> TCallable:
             self.add_api_operation(
                 path,
                 methods,
@@ -218,8 +227,8 @@ class Router:
         methods: List[str],
         view_func: Callable,
         *,
-        auth=NOT_SET,
-        response=None,
+        auth: Any = NOT_SET,
+        response: Any = None,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
@@ -229,7 +238,7 @@ class Router:
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
-    ):
+    ) -> None:
         if path not in self.operations:
             path_view = PathView()
             self.operations[path] = path_view
@@ -254,14 +263,16 @@ class Router:
         if self.api:
             path_view.set_api_instance(self.api)
 
-    def set_api_instance(self, api):
+        return None
+
+    def set_api_instance(self, api: "NinjaAPI") -> None:
         self.api = api
         for path_view in self.operations.values():
             path_view.set_api_instance(self.api)
         for _, router in self._routers:
             router.set_api_instance(api)
 
-    def urls_paths(self, prefix: str):
+    def urls_paths(self, prefix: str) -> Iterator[URLPattern]:
         for path, path_view in self.operations.items():
             path = path.replace("{", "<").replace("}", ">")
             route = "/".join([i for i in (prefix, path) if i])
@@ -271,10 +282,10 @@ class Router:
 
             yield django_path(route, path_view.get_view())
 
-    def add_router(self, prefix, router):
+    def add_router(self, prefix: str, router: "Router") -> None:
         self._routers.append((prefix, router))
 
-    def build_routers(self, prefix):
+    def build_routers(self, prefix: str) -> List[Tuple[str, "Router"]]:
         internal_routes = []
         for inter_prefix, inter_router in self._routers:
             _route = normalize_path("/".join((prefix, inter_prefix))).lstrip("/")

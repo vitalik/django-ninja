@@ -1,6 +1,10 @@
-from typing import Any, List
+from typing import Any, List, Type
 
+from ninja import Schema
 from ninja.orm.factory import create_schema
+
+__all__ = ["S", "L"]
+
 
 # GOAL:
 # from ninja.orm import S, L
@@ -10,10 +14,10 @@ from ninja.orm.factory import create_schema
 # L(Job) -> List[Job]
 
 
-def S(model: Any, **kwargs):
+def S(model: Any, **kwargs: Any) -> Type[Schema]:
     return create_schema(model, **kwargs)
 
 
-def L(model: Any, **kwargs):
+def L(model: Any, **kwargs: Any) -> List[Any]:
     schema = S(model, **kwargs)
-    return List[schema]
+    return List[schema]  # type: ignore

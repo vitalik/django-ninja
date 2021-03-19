@@ -1,13 +1,46 @@
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Optional, Type, TypeVar
+
 from django.conf import settings
+from django.http import HttpRequest
 from pydantic import BaseModel
 
 from ninja.compatibility import get_headers
 from ninja.errors import HttpError
+from ninja.types import DictStrAny
+
+if TYPE_CHECKING:
+    from ninja import NinjaAPI
+
+__all__ = [
+    "ParamModel",
+    "QueryModel",
+    "PathModel",
+    "HeaderModel",
+    "CookieModel",
+    "BodyModel",
+    "FormModel",
+    "FileModel",
+]
+
+TModel = TypeVar("TModel", bound="ParamModel")
 
 
-class ParamModel(BaseModel):
+class ParamModel(BaseModel, ABC):
     @classmethod
-    def resolve(cls, request, api, path_params):
+    @abstractmethod
+    def get_request_data(
+        cls, request: HttpRequest, api: "NinjaAPI", path_params: DictStrAny
+    ) -> Optional[DictStrAny]:
+        pass
+
+    @classmethod
+    def resolve(
+        cls: Type[TModel],
+        request: HttpRequest,
+        api: "NinjaAPI",
+        path_params: DictStrAny,
+    ) -> TModel:
         data = cls.get_request_data(request, api, path_params)
         if data is None:
             return cls()
@@ -21,20 +54,26 @@ class ParamModel(BaseModel):
 
 class QueryModel(ParamModel):
     @classmethod
-    def get_request_data(cls, request, api, path_params):
+    def get_request_data(
+        cls, request: HttpRequest, api: "NinjaAPI", path_params: DictStrAny
+    ) -> Optional[DictStrAny]:
         list_fields = getattr(cls, "_collection_fields", [])
         return api.parser.parse_querydict(request.GET, list_fields, request)
 
 
 class PathModel(ParamModel):
     @classmethod
-    def get_request_data(cls, request, api, path_params):
+    def get_request_data(
+        cls, request: HttpRequest, api: "NinjaAPI", path_params: DictStrAny
+    ) -> Optional[DictStrAny]:
         return path_params
 
 
 class HeaderModel(ParamModel):
     @classmethod
-    def get_request_data(cls, request, api, path_params):
+    def get_request_data(
+        cls, request: HttpRequest, api: "NinjaAPI", path_params: DictStrAny
+    ) -> Optional[DictStrAny]:
         data = {}
         headers = get_headers(request)
         for name, field in cls.__fields__.items():
@@ -47,13 +86,17 @@ class HeaderModel(ParamModel):
 
 class CookieModel(ParamModel):
     @classmethod
-    def get_request_data(cls, request, api, path_params):
+    def get_request_data(
+        cls, request: HttpRequest, api: "NinjaAPI", path_params: DictStrAny
+    ) -> Optional[DictStrAny]:
         return request.COOKIES
 
 
 class BodyModel(ParamModel):
     @classmethod
-    def get_request_data(cls, request, api, path_params):
+    def get_request_data(
+        cls, request: HttpRequest, api: "NinjaAPI", path_params: DictStrAny
+    ) -> Optional[DictStrAny]:
         if request.body:
             try:
                 return api.parser.parse_body(request)
@@ -63,16 +106,22 @@ class BodyModel(ParamModel):
                     msg += f" ({e})"
                 raise HttpError(400, msg)
 
+        return None
+
 
 class FormModel(ParamModel):
     @classmethod
-    def get_request_data(cls, request, api, path_params):
+    def get_request_data(
+        cls, request: HttpRequest, api: "NinjaAPI", path_params: DictStrAny
+    ) -> Optional[DictStrAny]:
         list_fields = getattr(cls, "_collection_fields", [])
         return api.parser.parse_querydict(request.POST, list_fields, request)
 
 
 class FileModel(ParamModel):
     @classmethod
-    def get_request_data(cls, request, api, path_params):
+    def get_request_data(
+        cls, request: HttpRequest, api: "NinjaAPI", path_params: DictStrAny
+    ) -> Optional[DictStrAny]:
         list_fields = getattr(cls, "_collection_fields", [])
         return api.parser.parse_querydict(request.FILES, list_fields, request)
