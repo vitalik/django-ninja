@@ -39,17 +39,13 @@ def set_default_exc_handlers(api: "NinjaAPI") -> None:
 
 
 def _default_404(request: HttpRequest, exc: Exception, api: "NinjaAPI") -> HttpResponse:
-    return api.create_response(
-        request, {"code": 404, "message": "Not Found"}, status=404
-    )
+    return api.create_response(request, {"detail": "Not Found"}, status=404)
 
 
 def _default_http_error(
     request: HttpRequest, exc: HttpError, api: "NinjaAPI"
 ) -> HttpResponse:
-    return api.create_response(
-        request, {"code": exc.status_code, "message": str(exc)}, status=exc.status_code
-    )
+    return api.create_response(request, {"detail": str(exc)}, status=exc.status_code)
 
 
 def _default_validation_error(
