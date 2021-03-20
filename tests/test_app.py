@@ -97,3 +97,4 @@ def test_validates():
             urls = api2.urls
     finally:
         os.environ["NINJA_SKIP_REGISTRY"] = "yes"
+

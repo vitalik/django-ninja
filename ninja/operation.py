@@ -214,9 +214,9 @@ class PathView:
     def __init__(self) -> None:
         self.operations: List[Operation] = []
         self.is_async = False  # if at least one operation is async - will become True
+        self.url_name: Optional[str] = None
 
-    # TODO: rename to add_operation
-    def add(
+    def add_operation(
         self,
         path: str,
         methods: List[str],
@@ -233,7 +233,11 @@ class PathView:
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
+        url_name: Optional[str] = None,
     ) -> Operation:
+        if url_name:
+            self.url_name = url_name
+
         OperationClass = Operation
         if is_async(view_func):
             self.is_async = True

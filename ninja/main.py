@@ -86,6 +86,7 @@ class NinjaAPI:
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
+        url_name: Optional[str] = None,
     ) -> Decorator:
         return self.default_router.get(
             path,
@@ -100,6 +101,7 @@ class NinjaAPI:
             exclude_unset=exclude_unset,
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
+            url_name=url_name,
         )
 
     def post(
@@ -117,6 +119,7 @@ class NinjaAPI:
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
+        url_name: Optional[str] = None,
     ) -> Decorator:
         return self.default_router.post(
             path,
@@ -131,6 +134,7 @@ class NinjaAPI:
             exclude_unset=exclude_unset,
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
+            url_name=url_name,
         )
 
     def delete(
@@ -148,6 +152,7 @@ class NinjaAPI:
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
+        url_name: Optional[str] = None,
     ) -> Decorator:
         return self.default_router.delete(
             path,
@@ -162,6 +167,7 @@ class NinjaAPI:
             exclude_unset=exclude_unset,
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
+            url_name=url_name,
         )
 
     def patch(
@@ -179,6 +185,7 @@ class NinjaAPI:
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
+        url_name: Optional[str] = None,
     ) -> Decorator:
         return self.default_router.patch(
             path,
@@ -193,6 +200,7 @@ class NinjaAPI:
             exclude_unset=exclude_unset,
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
+            url_name=url_name,
         )
 
     def put(
@@ -210,6 +218,7 @@ class NinjaAPI:
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
+        url_name: Optional[str] = None,
     ) -> Decorator:
         return self.default_router.put(
             path,
@@ -224,6 +233,7 @@ class NinjaAPI:
             exclude_unset=exclude_unset,
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
+            url_name=url_name,
         )
 
     def api_operation(
@@ -242,6 +252,7 @@ class NinjaAPI:
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
+        url_name: Optional[str] = None,
     ) -> Decorator:
         return self.default_router.api_operation(
             methods,
@@ -257,6 +268,7 @@ class NinjaAPI:
             exclude_unset=exclude_unset,
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
+            url_name=url_name,
         )
 
     def add_router(self, prefix: str, router: Router) -> None:
@@ -355,7 +367,7 @@ class NinjaAPI:
         # 2) csrf
         if self.csrf is False:
             for _prefix, router in self._routers:
-                for path_operation in router.operations.values():
+                for path_operation in router.path_operations.values():
                     for operation in path_operation.operations:
                         for auth in operation.auth_callbacks:
                             if isinstance(auth, APIKeyCookie):

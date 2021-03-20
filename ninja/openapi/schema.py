@@ -47,7 +47,7 @@ class OpenAPISchema(OrderedDict):
     def get_paths(self) -> DictStrAny:
         result = {}
         for prefix, router in self.api._routers:
-            for path, path_view in router.operations.items():
+            for path, path_view in router.path_operations.items():
                 full_path = "/".join([i for i in (prefix, path) if i])
                 full_path = "/" + self.path_prefix + full_path
                 full_path = normalize_path(full_path)
