@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from ninja.constants import NOT_SET
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type
 
 from pydantic import BaseModel
@@ -9,7 +10,6 @@ from ninja.types import DictStrAny
 from ninja.utils import normalize_path
 
 if TYPE_CHECKING:
-    # if anyone knows a cleaner way to make mypy happy - welcome
     from ninja import NinjaAPI  # pragma: no cover
 
 REF_PREFIX: str = "#/components/schemas/"
@@ -160,37 +160,22 @@ class OpenAPISchema(OrderedDict):
         return types[model._in]
 
     def responses(self, operation: Operation) -> Dict[int, DictStrAny]:
-        if operation.response_model:
-            if not isinstance(operation.response_model, dict):
-                schema, _ = self._create_schema_from_model(
-                    operation.response_model, by_alias=False
-                )
-                return {
-                    200: {
-                        "description": "OK",
-                        "content": {"application/json": {"schema": schema}},
-                    }
-                }
+        assert bool(operation.response_models), f"{operation.response_models} empty"
 
-            responses = {}
-            for status, model in operation.response_model.items():
+        result = {}
+        for status, model in operation.response_models.items():
+
+            if status == Ellipsis:
+                continue  # it's not yet clear what it means if user want's to output any other code
+
+            description = status < 300 and "OK" or "Error"
+            details = {status: {"description": description}}
+            if model not in [None, NOT_SET]:
                 schema, _ = self._create_schema_from_model(model, by_alias=False)
-                if status == Ellipsis:
-                    continue  # it's not yet clear what it means if user want's to output any other code
-                responses.update(
-                    {
-                        status: {
-                            "description": "OK"
-                            if status > 100 and status < 300
-                            else "Error",
-                            "content": {"application/json": {"schema": schema}},
-                        }
-                    }
-                )
+                details[status]["content"] = {"application/json": {"schema": schema}}
+            result.update(details)
 
-            return responses
-        else:
-            return {200: {"description": "OK"}}
+        return result
 
     def operation_security(self, operation: Operation) -> Optional[List[DictStrAny]]:
         if not operation.auth_callbacks:

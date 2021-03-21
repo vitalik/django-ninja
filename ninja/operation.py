@@ -38,7 +38,7 @@ class Operation:
         view_func: Callable,
         *,
         auth: Optional[Union[Sequence[Callable], Callable, object]] = NOT_SET,
-        response: Any = None,
+        response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
@@ -62,11 +62,13 @@ class Operation:
         self.signature = ViewSignature(self.path, self.view_func)
         self.models = self.signature.models
 
-        self.response_model: Any
-        if isinstance(response, dict):
-            self.response_model = self._create_response_model_multiple(response)
+        self.response_models: Dict[str, Optional[Type[Schema]]]
+        if response == NOT_SET:
+            self.response_models = {200: NOT_SET}
+        elif isinstance(response, dict):
+            self.response_models = self._create_response_model_multiple(response)
         else:
-            self.response_model = self._create_response_model(response)
+            self.response_models = {200: self._create_response_model(response)}
 
         self.operation_id = operation_id
         self.summary = summary or self.view_func.__name__.title().replace("_", " ")
@@ -128,25 +130,39 @@ class Operation:
         return self.api.create_response(request, {"detail": "Unauthorized"}, status=401)
 
     def _result_to_response(self, request: HttpRequest, result: Any) -> HttpResponse:
+        """
+        The protocol for results
+         - if HttpResponse - returns as is
+         - if tuple with 2 elements - means http_code + body
+         - otherwise it's a body
+        """
         if isinstance(result, HttpResponse):
             return result
-        if self.response_model is None:
-            return self.api.create_response(request, result)
 
-        status = 200
-        response_model = self.response_model
+        status: int = 200
+        if len(self.response_models) == 1:
+            status = list(self.response_models.keys())[0]
+
         if isinstance(result, tuple) and len(result) == 2:
             status = result[0]
             result = result[1]
-        if isinstance(response_model, dict):
-            if status in response_model:
-                response_model = response_model[status]
-            elif Ellipsis in response_model:
-                response_model = response_model[Ellipsis]
-            else:
-                raise ConfigError(
-                    f"Schema for status {status} is not set in response {response_model.keys()}"
-                )
+
+        if status in self.response_models:
+            response_model = self.response_models[status]
+        elif Ellipsis in self.response_models:
+            response_model = self.response_models[Ellipsis]
+        else:
+            raise ConfigError(
+                f"Schema for status {status} is not set in response {self.response_models.keys()}"
+            )
+
+        if response_model == NOT_SET:
+            return self.api.create_response(request, result, status=status)
+
+        if response_model is None:
+            return HttpResponse(status=status)
+            # TODO: ^ maybe self.api.create_empty_response ?
+            # return self.api.create_response(request, result, status=status)
 
         resp_object = ResponseObject(result)
         # ^ we need object because getter_dict seems work only with from_orm
@@ -223,7 +239,7 @@ class PathView:
         view_func: Callable,
         *,
         auth: Optional[Union[Sequence[Callable], Callable, object]] = NOT_SET,
-        response: Any = None,
+        response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,

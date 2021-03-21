@@ -76,7 +76,7 @@ class NinjaAPI:
         path: str,
         *,
         auth: Any = NOT_SET,
-        response: Any = None,
+        response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
@@ -109,7 +109,7 @@ class NinjaAPI:
         path: str,
         *,
         auth: Any = NOT_SET,
-        response: Any = None,
+        response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
@@ -142,7 +142,7 @@ class NinjaAPI:
         path: str,
         *,
         auth: Any = NOT_SET,
-        response: Any = None,
+        response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
@@ -175,7 +175,7 @@ class NinjaAPI:
         path: str,
         *,
         auth: Any = NOT_SET,
-        response: Any = None,
+        response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
@@ -208,7 +208,7 @@ class NinjaAPI:
         path: str,
         *,
         auth: Any = NOT_SET,
-        response: Any = None,
+        response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
@@ -242,7 +242,7 @@ class NinjaAPI:
         path: str,
         *,
         auth: Any = NOT_SET,
-        response: Any = None,
+        response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
@@ -301,7 +301,7 @@ class NinjaAPI:
         return reverse(name)
 
     def create_response(
-        self, request: HttpRequest, data: Any, status: int = 200
+        self, request: HttpRequest, data: Any, *, status: int = 200
     ) -> HttpResponse:
         content = self.renderer.render(request, data, response_status=status)
         content_type = "{}; charset={}".format(
