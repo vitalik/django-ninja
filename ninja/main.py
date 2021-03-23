@@ -271,7 +271,18 @@ class NinjaAPI:
             url_name=url_name,
         )
 
-    def add_router(self, prefix: str, router: Router) -> None:
+    def add_router(
+        self,
+        prefix: str,
+        router: Router,
+        *,
+        auth: Any = NOT_SET,
+        tags: Optional[List[str]] = None,
+    ) -> None:
+        if auth != NOT_SET:
+            router.auth = auth
+        if tags is not None:
+            router.tags = tags
         self._routers.extend(router.build_routers(prefix))
         router.set_api_instance(self)
 

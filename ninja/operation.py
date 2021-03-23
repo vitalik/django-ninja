@@ -25,7 +25,7 @@ from ninja.types import DictStrAny
 from ninja.utils import check_csrf
 
 if TYPE_CHECKING:
-    from ninja import NinjaAPI  # pragma: no cover
+    from ninja import NinjaAPI, Router  # pragma: no cover
 
 __all__ = ["Operation", "PathView", "ResponseObject"]
 
@@ -93,16 +93,22 @@ class Operation:
         except Exception as e:
             return self.api.on_exception(request, e)
 
-    def set_api_instance(self, api: "NinjaAPI") -> None:
+    def set_api_instance(self, api: "NinjaAPI", router: "Router") -> None:
         self.api = api
-        if self.auth_param == NOT_SET and api.auth != NOT_SET:
-            # if api instance have auth and operation not - then we set auth from api instance
-            self._set_auth(self.api.auth)
+        if self.auth_param == NOT_SET:
+            if api.auth != NOT_SET:
+                self._set_auth(self.api.auth)
+            if router.auth != NOT_SET:
+                self._set_auth(router.auth)
+
+        if self.tags is None:
+            if router.tags is not None:
+                self.tags = router.tags
 
     def _set_auth(
         self, auth: Optional[Union[Sequence[Callable], Callable, object]]
     ) -> None:
-        if auth is not None and auth is not NOT_SET:
+        if auth is not None and auth is not NOT_SET:  # TODO: can it even happen ?
             self.auth_callbacks = isinstance(auth, Sequence) and auth or [auth]  # type: ignore
 
     def _run_checks(self, request: HttpRequest) -> Optional[HttpResponse]:
@@ -279,10 +285,10 @@ class PathView:
         self.operations.append(operation)
         return operation
 
-    def set_api_instance(self, api: "NinjaAPI") -> None:
+    def set_api_instance(self, api: "NinjaAPI", router: "Router") -> None:
         self.api = api
         for op in self.operations:
-            op.set_api_instance(api)
+            op.set_api_instance(api, router)
 
     def get_view(self) -> Callable:
         view: Callable

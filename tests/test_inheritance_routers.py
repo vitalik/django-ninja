@@ -11,26 +11,32 @@ def global_op(request):
 
 
 first_router = Router()
+
+
 @first_router.get("/endpoint")
 def router_op(request):
     return "first"
 
 
 second_router_one = Router()
+
+
 @second_router_one.get("endpoint_1")
 def router_op(request):
     return "second 1"
 
 
 second_router_two = Router()
+
+
 @second_router_two.get("endpoint_2")
 def router_op(request):
     return "second 2"
 
 
-first_router.add_router("/second", second_router_one)
-first_router.add_router("/second", second_router_two)
-api.add_router("/first", first_router)
+first_router.add_router("/second", second_router_one, tags=["one"])
+first_router.add_router("/second", second_router_two, tags=["two"])
+api.add_router("/first", first_router, tags=["global"])
 
 
 client = NinjaClient(api)
@@ -49,3 +55,16 @@ def test_inheritance_responses(path, expected_status, expected_response):
     response = client.get(path)
     assert response.status_code == expected_status, response.content
     assert response.json() == expected_response
+
+
+def test_tags():
+    schema = api.get_openapi_schema()
+    # print(schema)
+    glob = schema["paths"]["/api/first/endpoint"]["get"]
+    assert glob["tags"] == ["global"]
+
+    e1 = schema["paths"]["/api/first/second/endpoint_1"]["get"]
+    assert e1["tags"] == ["one"]
+
+    e2 = schema["paths"]["/api/first/second/endpoint_2"]["get"]
+    assert e2["tags"] == ["two"]

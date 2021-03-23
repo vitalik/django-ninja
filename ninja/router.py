@@ -26,9 +26,13 @@ __all__ = ["Router"]
 
 
 class Router:
-    def __init__(self) -> None:
-        self.path_operations: Dict[str, PathView] = OrderedDict()
+    def __init__(
+        self, *, auth: Any = NOT_SET, tags: Optional[List[str]] = None
+    ) -> None:
         self.api: Optional["NinjaAPI"] = None
+        self.auth = auth
+        self.tags = tags
+        self.path_operations: Dict[str, PathView] = OrderedDict()
         self._routers: List[Tuple[str, Router]] = []
 
     def get(
@@ -283,16 +287,18 @@ class Router:
             url_name=url_name,
         )
         if self.api:
-            path_view.set_api_instance(self.api)
+            path_view.set_api_instance(self.api, self)
 
         return None
 
-    def set_api_instance(self, api: "NinjaAPI") -> None:
+    def set_api_instance(
+        self, api: "NinjaAPI", parent_router: Optional["Router"] = None
+    ) -> None:
         self.api = api
         for path_view in self.path_operations.values():
-            path_view.set_api_instance(self.api)
+            path_view.set_api_instance(self.api, self)
         for _, router in self._routers:
-            router.set_api_instance(api)
+            router.set_api_instance(api, self)
 
     def urls_paths(self, prefix: str) -> Iterator[URLPattern]:
         for path, path_view in self.path_operations.items():
@@ -306,7 +312,18 @@ class Router:
                 route, path_view.get_view(), name=cast(str, path_view.url_name)
             )
 
-    def add_router(self, prefix: str, router: "Router") -> None:
+    def add_router(
+        self,
+        prefix: str,
+        router: "Router",
+        *,
+        auth: Any = NOT_SET,
+        tags: Optional[List[str]] = None,
+    ) -> None:
+        if auth != NOT_SET:
+            router.auth = auth
+        if tags is not None:
+            router.tags = tags
         self._routers.append((prefix, router))
 
     def build_routers(self, prefix: str) -> List[Tuple[str, "Router"]]:
