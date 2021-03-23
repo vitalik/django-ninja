@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import Dict, Iterator, List, Optional, Tuple, Type, Union, cast
 
 from django.db.models import Field, ManyToManyRel, ManyToOneRel, Model
@@ -79,7 +78,7 @@ class SchemaFactory:
         exclude: Optional[List[str]] = None,
     ) -> Iterator[Field]:
         "Returns iterator for model fields based on `exclude` or `fields` arguments"
-        all_fields = OrderedDict([(f.name, f) for f in self._model_fields(model)])
+        all_fields = {f.name: f for f in self._model_fields(model)}
 
         if not fields and not exclude:
             for f in all_fields.values():

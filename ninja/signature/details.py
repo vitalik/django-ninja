@@ -1,5 +1,5 @@
 import inspect
-from collections import OrderedDict, namedtuple
+from collections import defaultdict, namedtuple
 from typing import Any, Callable, Dict, List
 
 import pydantic
@@ -37,11 +37,9 @@ class ViewSignature:
         self.models = self._create_models()
 
     def _create_models(self) -> List[Any]:
-        grouping: Dict[Any, List[FuncParam]] = OrderedDict()
+        grouping: Dict[Any, List[FuncParam]] = defaultdict(list)
         for param in self.params:
             d_type = type(param.source)
-            if d_type not in grouping:
-                grouping[d_type] = []
             grouping[d_type].append(param)
 
         result = []

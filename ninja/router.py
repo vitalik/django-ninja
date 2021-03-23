@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -32,7 +31,7 @@ class Router:
         self.api: Optional["NinjaAPI"] = None
         self.auth = auth
         self.tags = tags
-        self.path_operations: Dict[str, PathView] = OrderedDict()
+        self.path_operations: Dict[str, PathView] = {}
         self._routers: List[Tuple[str, Router]] = []
 
     def get(
