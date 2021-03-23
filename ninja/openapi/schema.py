@@ -169,7 +169,7 @@ class OpenAPISchema(OrderedDict):
                 continue  # it's not yet clear what it means if user want's to output any other code
 
             description = status < 300 and "OK" or "Error"
-            details = {status: {"description": description}}
+            details: Dict[int, Any] = {status: {"description": description}}
             if model not in [None, NOT_SET]:
                 schema, _ = self._create_schema_from_model(model, by_alias=False)
                 details[status]["content"] = {"application/json": {"schema": schema}}

@@ -62,7 +62,7 @@ class Operation:
         self.signature = ViewSignature(self.path, self.view_func)
         self.models = self.signature.models
 
-        self.response_models: Dict[str, Optional[Type[Schema]]]
+        self.response_models: Dict[Any, Any]
         if response == NOT_SET:
             self.response_models = {200: NOT_SET}
         elif isinstance(response, dict):
