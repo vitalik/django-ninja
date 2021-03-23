@@ -3,6 +3,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    Dict,
     List,
     Optional,
     Sequence,
@@ -12,18 +13,24 @@ from typing import (
 )
 
 from django.http import HttpRequest, HttpResponse
-from django.urls import reverse
+from django.urls import URLPattern, reverse
 
 from ninja.constants import NOT_SET
 from ninja.errors import ConfigError, set_default_exc_handlers
 from ninja.openapi import get_schema
+from ninja.openapi.schema import OpenAPISchema
 from ninja.openapi.urls import get_openapi_urls, get_root_url
 from ninja.parser import Parser
 from ninja.renderers import BaseRenderer, JSONRenderer
-from ninja.router import Router
+from ninja.router import Decorator, Router
 
 if TYPE_CHECKING:
     from .operation import Operation  # pragma: no cover
+
+__all__ = ["NinjaAPI"]
+
+Exc = Union[Exception, Type[Exception]]
+ExcHandler = Callable[[HttpRequest, Exc], HttpResponse]
 
 
 class NinjaAPI:
@@ -37,7 +44,7 @@ class NinjaAPI:
         description: str = "",
         openapi_url: Optional[str] = "/openapi.json",
         docs_url: Optional[str] = "/docs",
-        urls_namespace: str = None,
+        urls_namespace: Optional[str] = None,
         csrf: bool = False,
         auth: Union[Sequence[Callable], Callable, object] = NOT_SET,
         renderer: Optional[BaseRenderer] = None,
@@ -53,12 +60,12 @@ class NinjaAPI:
         self.renderer = renderer or JSONRenderer()
         self.parser = parser or Parser()
 
-        self._exception_handlers = {}
+        self._exception_handlers: Dict[Exc, ExcHandler] = {}
         self.set_default_exception_handlers()
 
         self.auth: Optional[Sequence[Callable]] = NOT_SET
         if auth is not None and auth is not NOT_SET:
-            self.auth = isinstance(auth, Sequence) and auth or [auth]
+            self.auth = isinstance(auth, Sequence) and auth or [auth]  # type: ignore
 
         self._routers: List[Tuple[str, Router]] = []
         self.default_router = Router()
@@ -68,8 +75,8 @@ class NinjaAPI:
         self,
         path: str,
         *,
-        auth=NOT_SET,
-        response=None,
+        auth: Any = NOT_SET,
+        response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
@@ -79,7 +86,8 @@ class NinjaAPI:
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
-    ):
+        url_name: Optional[str] = None,
+    ) -> Decorator:
         return self.default_router.get(
             path,
             auth=auth is NOT_SET and self.auth or auth,
@@ -93,14 +101,15 @@ class NinjaAPI:
             exclude_unset=exclude_unset,
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
+            url_name=url_name,
         )
 
     def post(
         self,
         path: str,
         *,
-        auth=NOT_SET,
-        response=None,
+        auth: Any = NOT_SET,
+        response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
@@ -110,7 +119,8 @@ class NinjaAPI:
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
-    ):
+        url_name: Optional[str] = None,
+    ) -> Decorator:
         return self.default_router.post(
             path,
             auth=auth is NOT_SET and self.auth or auth,
@@ -124,14 +134,15 @@ class NinjaAPI:
             exclude_unset=exclude_unset,
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
+            url_name=url_name,
         )
 
     def delete(
         self,
         path: str,
         *,
-        auth=NOT_SET,
-        response=None,
+        auth: Any = NOT_SET,
+        response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
@@ -141,7 +152,8 @@ class NinjaAPI:
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
-    ):
+        url_name: Optional[str] = None,
+    ) -> Decorator:
         return self.default_router.delete(
             path,
             auth=auth is NOT_SET and self.auth or auth,
@@ -155,14 +167,15 @@ class NinjaAPI:
             exclude_unset=exclude_unset,
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
+            url_name=url_name,
         )
 
     def patch(
         self,
         path: str,
         *,
-        auth=NOT_SET,
-        response=None,
+        auth: Any = NOT_SET,
+        response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
@@ -172,7 +185,8 @@ class NinjaAPI:
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
-    ):
+        url_name: Optional[str] = None,
+    ) -> Decorator:
         return self.default_router.patch(
             path,
             auth=auth is NOT_SET and self.auth or auth,
@@ -186,14 +200,15 @@ class NinjaAPI:
             exclude_unset=exclude_unset,
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
+            url_name=url_name,
         )
 
     def put(
         self,
         path: str,
         *,
-        auth=NOT_SET,
-        response=None,
+        auth: Any = NOT_SET,
+        response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
@@ -203,7 +218,8 @@ class NinjaAPI:
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
-    ):
+        url_name: Optional[str] = None,
+    ) -> Decorator:
         return self.default_router.put(
             path,
             auth=auth is NOT_SET and self.auth or auth,
@@ -217,6 +233,7 @@ class NinjaAPI:
             exclude_unset=exclude_unset,
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
+            url_name=url_name,
         )
 
     def api_operation(
@@ -224,8 +241,8 @@ class NinjaAPI:
         methods: List[str],
         path: str,
         *,
-        auth=NOT_SET,
-        response=None,
+        auth: Any = NOT_SET,
+        response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
@@ -235,7 +252,8 @@ class NinjaAPI:
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
-    ):
+        url_name: Optional[str] = None,
+    ) -> Decorator:
         return self.default_router.api_operation(
             methods,
             path,
@@ -250,14 +268,26 @@ class NinjaAPI:
             exclude_unset=exclude_unset,
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
+            url_name=url_name,
         )
 
-    def add_router(self, prefix, router):
+    def add_router(
+        self,
+        prefix: str,
+        router: Router,
+        *,
+        auth: Any = NOT_SET,
+        tags: Optional[List[str]] = None,
+    ) -> None:
+        if auth != NOT_SET:
+            router.auth = auth
+        if tags is not None:
+            router.tags = tags
         self._routers.extend(router.build_routers(prefix))
         router.set_api_instance(self)
 
     @property
-    def urls(self):
+    def urls(self) -> Tuple[Any, ...]:
         self._validate()
         return (
             self._get_urls(),
@@ -266,7 +296,7 @@ class NinjaAPI:
             # ^ if api included into nested urls, we only care about last bit here
         )
 
-    def _get_urls(self):
+    def _get_urls(self) -> List[URLPattern]:
         result = get_openapi_urls(self)
 
         for prefix, router in self._routers:
@@ -277,28 +307,32 @@ class NinjaAPI:
         return result
 
     @property
-    def root_path(self):
+    def root_path(self) -> str:
         name = f"{self.urls_namespace}:api-root"
         return reverse(name)
 
-    def create_response(self, request: HttpRequest, data: Any, status: int = 200):
+    def create_response(
+        self, request: HttpRequest, data: Any, *, status: int = 200
+    ) -> HttpResponse:
         content = self.renderer.render(request, data, response_status=status)
         content_type = "{}; charset={}".format(
             self.renderer.media_type, self.renderer.charset
         )
         return HttpResponse(content, status=status, content_type=content_type)
 
-    def get_openapi_schema(self, path_prefix=None):
+    def get_openapi_schema(self, path_prefix: Optional[str] = None) -> OpenAPISchema:
         if path_prefix is None:
             path_prefix = self.root_path
         return get_schema(api=self, path_prefix=path_prefix)
 
-    def get_openapi_operation_id(self, operation: "Operation"):
+    def get_openapi_operation_id(self, operation: "Operation") -> str:
         name = operation.view_func.__name__
         module = operation.view_func.__module__
         return (module + "_" + name).replace(".", "_")
 
-    def add_exception_handler(self, exc_class: Exception, handler: Callable):
+    def add_exception_handler(
+        self, exc_class: Type[Exception], handler: ExcHandler
+    ) -> None:
         assert issubclass(exc_class, Exception)
         self._exception_handlers[exc_class] = handler
 
@@ -309,21 +343,23 @@ class NinjaAPI:
 
         return decorator
 
-    def set_default_exception_handlers(self):
+    def set_default_exception_handlers(self) -> None:
         set_default_exc_handlers(self)
 
-    def on_exception(self, request, exc: Type[Exception]):
+    def on_exception(self, request: HttpRequest, exc: Exc) -> HttpResponse:
         handler = self._lookup_exception_handler(exc)
         if handler is None:
             raise exc
         return handler(request, exc)
 
-    def _lookup_exception_handler(self, exc: Exception):
+    def _lookup_exception_handler(self, exc: Exc) -> Optional[ExcHandler]:
         for cls in type(exc).__mro__:
             if cls in self._exception_handlers:
                 return self._exception_handlers[cls]
 
-    def _validate(self):
+        return None
+
+    def _validate(self) -> None:
         from ninja.security import APIKeyCookie
 
         # 1) urls namespacing validation
@@ -342,7 +378,7 @@ class NinjaAPI:
         # 2) csrf
         if self.csrf is False:
             for _prefix, router in self._routers:
-                for path_operation in router.operations.values():
+                for path_operation in router.path_operations.values():
                     for operation in path_operation.operations:
                         for auth in operation.auth_callbacks:
                             if isinstance(auth, APIKeyCookie):

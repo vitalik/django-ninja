@@ -1,24 +1,45 @@
-from typing import Callable, List, Optional, Tuple
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    cast,
+)
 
-from django.urls import path as django_path
+from django.urls import URLPattern, path as django_path
 
 from ninja.constants import NOT_SET
 from ninja.operation import PathView
+from ninja.types import Decorator, TCallable
 from ninja.utils import normalize_path
+
+if TYPE_CHECKING:
+    from ninja import NinjaAPI  # pragma: no cover
+
+
+__all__ = ["Router"]
 
 
 class Router:
-    def __init__(self):
-        self.operations = {}  # TODO: better rename to path_operations
-        self.api = None
+    def __init__(
+        self, *, auth: Any = NOT_SET, tags: Optional[List[str]] = None
+    ) -> None:
+        self.api: Optional["NinjaAPI"] = None
+        self.auth = auth
+        self.tags = tags
+        self.path_operations: Dict[str, PathView] = {}
         self._routers: List[Tuple[str, Router]] = []
 
     def get(
         self,
         path: str,
         *,
-        auth=NOT_SET,
-        response=None,
+        auth: Any = NOT_SET,
+        response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
@@ -28,7 +49,8 @@ class Router:
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
-    ):
+        url_name: Optional[str] = None,
+    ) -> Decorator:
         return self.api_operation(
             ["GET"],
             path,
@@ -43,14 +65,15 @@ class Router:
             exclude_unset=exclude_unset,
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
+            url_name=url_name,
         )
 
     def post(
         self,
         path: str,
         *,
-        auth=NOT_SET,
-        response=None,
+        auth: Any = NOT_SET,
+        response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
@@ -60,7 +83,8 @@ class Router:
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
-    ):
+        url_name: Optional[str] = None,
+    ) -> Decorator:
         return self.api_operation(
             ["POST"],
             path,
@@ -75,14 +99,15 @@ class Router:
             exclude_unset=exclude_unset,
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
+            url_name=url_name,
         )
 
     def delete(
         self,
         path: str,
         *,
-        auth=NOT_SET,
-        response=None,
+        auth: Any = NOT_SET,
+        response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
@@ -92,7 +117,8 @@ class Router:
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
-    ):
+        url_name: Optional[str] = None,
+    ) -> Decorator:
         return self.api_operation(
             ["DELETE"],
             path,
@@ -107,14 +133,15 @@ class Router:
             exclude_unset=exclude_unset,
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
+            url_name=url_name,
         )
 
     def patch(
         self,
         path: str,
         *,
-        auth=NOT_SET,
-        response=None,
+        auth: Any = NOT_SET,
+        response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
@@ -124,7 +151,8 @@ class Router:
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
-    ):
+        url_name: Optional[str] = None,
+    ) -> Decorator:
         return self.api_operation(
             ["PATCH"],
             path,
@@ -139,14 +167,15 @@ class Router:
             exclude_unset=exclude_unset,
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
+            url_name=url_name,
         )
 
     def put(
         self,
         path: str,
         *,
-        auth=NOT_SET,
-        response=None,
+        auth: Any = NOT_SET,
+        response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
@@ -156,7 +185,8 @@ class Router:
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
-    ):
+        url_name: Optional[str] = None,
+    ) -> Decorator:
         return self.api_operation(
             ["PUT"],
             path,
@@ -171,6 +201,7 @@ class Router:
             exclude_unset=exclude_unset,
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
+            url_name=url_name,
         )
 
     def api_operation(
@@ -178,8 +209,8 @@ class Router:
         methods: List[str],
         path: str,
         *,
-        auth=NOT_SET,
-        response=None,
+        auth: Any = NOT_SET,
+        response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
@@ -189,8 +220,9 @@ class Router:
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
-    ):
-        def decorator(view_func):
+        url_name: Optional[str] = None,
+    ) -> Decorator:
+        def decorator(view_func: TCallable) -> TCallable:
             self.add_api_operation(
                 path,
                 methods,
@@ -206,6 +238,7 @@ class Router:
                 exclude_unset=exclude_unset,
                 exclude_defaults=exclude_defaults,
                 exclude_none=exclude_none,
+                url_name=url_name,
             )
             return view_func
 
@@ -217,8 +250,8 @@ class Router:
         methods: List[str],
         view_func: Callable,
         *,
-        auth=NOT_SET,
-        response=None,
+        auth: Any = NOT_SET,
+        response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
@@ -228,13 +261,14 @@ class Router:
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
-    ):
-        if path not in self.operations:
+        url_name: Optional[str] = None,
+    ) -> None:
+        if path not in self.path_operations:
             path_view = PathView()
-            self.operations[path] = path_view
+            self.path_operations[path] = path_view
         else:
-            path_view = self.operations[path]
-        path_view.add(
+            path_view = self.path_operations[path]
+        path_view.add_operation(
             path=path,
             methods=methods,
             view_func=view_func,
@@ -249,31 +283,49 @@ class Router:
             exclude_unset=exclude_unset,
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
+            url_name=url_name,
         )
         if self.api:
-            path_view.set_api_instance(self.api)
+            path_view.set_api_instance(self.api, self)
 
-    def set_api_instance(self, api):
+        return None
+
+    def set_api_instance(
+        self, api: "NinjaAPI", parent_router: Optional["Router"] = None
+    ) -> None:
         self.api = api
-        for path_view in self.operations.values():
-            path_view.set_api_instance(self.api)
+        for path_view in self.path_operations.values():
+            path_view.set_api_instance(self.api, self)
         for _, router in self._routers:
-            router.set_api_instance(api)
+            router.set_api_instance(api, self)
 
-    def urls_paths(self, prefix: str):
-        for path, path_view in self.operations.items():
+    def urls_paths(self, prefix: str) -> Iterator[URLPattern]:
+        for path, path_view in self.path_operations.items():
             path = path.replace("{", "<").replace("}", ">")
             route = "/".join([i for i in (prefix, path) if i])
             # to skip lot of checks we simply treat double slash as a mistake:
             route = normalize_path(route)
             route = route.lstrip("/")
 
-            yield django_path(route, path_view.get_view())
+            yield django_path(
+                route, path_view.get_view(), name=cast(str, path_view.url_name)
+            )
 
-    def add_router(self, prefix, router):
+    def add_router(
+        self,
+        prefix: str,
+        router: "Router",
+        *,
+        auth: Any = NOT_SET,
+        tags: Optional[List[str]] = None,
+    ) -> None:
+        if auth != NOT_SET:
+            router.auth = auth
+        if tags is not None:
+            router.tags = tags
         self._routers.append((prefix, router))
 
-    def build_routers(self, prefix):
+    def build_routers(self, prefix: str) -> List[Tuple[str, "Router"]]:
         internal_routes = []
         for inter_prefix, inter_router in self._routers:
             _route = normalize_path("/".join((prefix, inter_prefix))).lstrip("/")

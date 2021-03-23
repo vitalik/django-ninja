@@ -1,12 +1,16 @@
 import datetime
 from decimal import Decimal
-from typing import List, Tuple
+from typing import List, Tuple, Type, TypeVar, no_type_check
 from uuid import UUID
 
 from django.db.models import ManyToManyField
 from django.db.models.fields import Field
 from pydantic import IPvAnyAddress, Json
 from pydantic.fields import FieldInfo
+
+from ninja.openapi.schema import OpenAPISchema
+
+__all__ = ["create_m2m_link_type", "get_schema_field", "get_related_field_schema"]
 
 TYPES = {
     "AutoField": int,
@@ -36,9 +40,12 @@ TYPES = {
     "UUIDField": UUID,
 }
 
+TModel = TypeVar("TModel")
 
-def create_m2m_link_type(type_):
-    class M2MLink(type_):
+
+@no_type_check
+def create_m2m_link_type(type_: Type[TModel]) -> Type[TModel]:
+    class M2MLink(type_):  # type: ignore
         @classmethod
         def __get_validators__(cls):
             yield cls.validate
@@ -50,6 +57,7 @@ def create_m2m_link_type(type_):
     return M2MLink
 
 
+@no_type_check
 def get_schema_field(field: Field, *, depth: int = 0) -> Tuple:
     alias = None
     default = ...
@@ -74,7 +82,7 @@ def get_schema_field(field: Field, *, depth: int = 0) -> Tuple:
         pk_type = TYPES.get(internal_type, int)
         if field.one_to_many or field.many_to_many:
             m2m_type = create_m2m_link_type(pk_type)
-            python_type = List[m2m_type]
+            python_type = List[m2m_type]  # type: ignore
         else:
             python_type = pk_type
 
@@ -111,7 +119,8 @@ def get_schema_field(field: Field, *, depth: int = 0) -> Tuple:
     )
 
 
-def get_related_field_schema(field: Field, *, depth: int):
+@no_type_check
+def get_related_field_schema(field: Field, *, depth: int) -> Tuple[OpenAPISchema]:
     from ninja.orm import create_schema
 
     model = field.related_model
@@ -120,7 +129,7 @@ def get_related_field_schema(field: Field, *, depth: int):
     if not field.concrete and field.auto_created or field.null:
         default = None
     if isinstance(field, ManyToManyField):
-        schema = List[schema]
+        schema = List[schema]  # type: ignore
 
     return (
         schema,

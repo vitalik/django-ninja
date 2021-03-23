@@ -17,7 +17,7 @@ class EventSchema(BaseModel):
         orm_mode = True
 
 
-@router.post("/create")
+@router.post("/create", url_name="event-create-url-name")
 def create_event(request, event: EventSchema):
     Event.objects.create(**event.dict())
     return event

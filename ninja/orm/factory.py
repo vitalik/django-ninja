@@ -1,6 +1,6 @@
-from typing import List, Optional, Union
+from typing import Dict, Iterator, List, Optional, Tuple, Type, Union, cast
 
-from django.db.models import ManyToManyRel, ManyToOneRel
+from django.db.models import Field, ManyToManyRel, ManyToOneRel, Model
 from pydantic import create_model as create_pydantic_model
 
 from ninja.errors import ConfigError
@@ -20,20 +20,24 @@ from ninja.schema import Schema
 #     orm_instance = payload.orm.apply(Model.objects.get(id=id))
 #     orm_instance.save()
 
+__all__ = ["SchemaFactory", "factory", "create_schema"]
+
+SchemaKey = Tuple[Type[Model], str, int, str, str]
+
 
 class SchemaFactory:
-    def __init__(self):
-        self.schemas = {}
+    def __init__(self) -> None:
+        self.schemas: Dict[SchemaKey, Type[Schema]] = {}
 
     def create_schema(
         self,
-        model,
+        model: Type[Model],
         *,
         name: str = "",
         depth: int = 0,
         fields: Optional[List[str]] = None,
         exclude: Optional[List[str]] = None,
-    ):
+    ) -> Type[Schema]:
         name = name or model.__name__
 
         if fields and exclude:
@@ -48,28 +52,31 @@ class SchemaFactory:
             python_type, field_info = get_schema_field(fld, depth=depth)
             definitions[fld.name] = (python_type, field_info)
 
-        schema = create_pydantic_model(name, __base__=Schema, **definitions)
+        schema = cast(
+            Type[Schema],
+            create_pydantic_model(name, __base__=Schema, **definitions),  # type: ignore
+        )
         self.schemas[key] = schema
         return schema
 
     def get_key(
         self,
-        model,
+        model: Type[Model],
         name: str,
         depth: int,
-        fields: Union[str, List[str]],
+        fields: Union[str, List[str], None],
         exclude: Optional[List[str]],
-    ):
+    ) -> SchemaKey:
         "returns a hashable value for all given parameters"
         # TODO: must be a test that compares all kwargs from init to get_key
-        return (model, name, depth, str(fields), str(exclude))
+        return model, name, depth, str(fields), str(exclude)
 
     def _selected_model_fields(
         self,
-        model,
+        model: Type[Model],
         fields: Optional[List[str]] = None,
         exclude: Optional[List[str]] = None,
-    ):
+    ) -> Iterator[Field]:
         "Returns iterator for model fields based on `exclude` or `fields` arguments"
         all_fields = {f.name: f for f in self._model_fields(model)}
 
@@ -89,13 +96,13 @@ class SchemaFactory:
                 if f.name not in exclude:
                     yield f
 
-    def _model_fields(self, model):
+    def _model_fields(self, model: Type[Model]) -> Iterator[Field]:
         "returns iterator with all the fields that can be part of schema"
         for fld in model._meta.get_fields():
             if isinstance(fld, (ManyToOneRel, ManyToManyRel)):
                 # skipping relations
                 continue
-            yield fld
+            yield cast(Field, fld)
 
 
 factory = SchemaFactory()

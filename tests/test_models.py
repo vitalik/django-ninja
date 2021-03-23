@@ -141,6 +141,5 @@ def test_invalid_body():
     response = client.post("/test1", body="invalid")
     assert response.status_code == 400, response.content
     assert response.json() == {
-        "code": 400,
-        "message": "Cannot parse request body",
+        "detail": "Cannot parse request body",
     }

@@ -122,27 +122,28 @@ def test_invalid_setup():
     request.headers = headers
 
     class MyAuth1(AuthBase):
-        pass
+        def __call__(self, *args, **kwargs):
+            pass
 
     class MyAuth2(AuthBase):
         openapi_type = "my"
 
     with pytest.raises(ConfigError):
         MyAuth1()(request)
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(TypeError):
         MyAuth2()(request)
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(TypeError):
         APIKeyCookie()(request)
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(TypeError):
         APIKeyHeader()(request)
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(TypeError):
         APIKeyQuery()(request)
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(TypeError):
         HttpBearer()(request)
 
     headers = {"Authorization": "Basic YWRtaW46c2VjcmV0"}
     request.META = {"HTTP_" + k: v for k, v in headers.items()}
     request.headers = headers
 
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(TypeError):
         HttpBasicAuth()(request)

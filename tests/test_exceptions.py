@@ -44,8 +44,7 @@ def test_default_handler(settings):
     response = client.post("/error/custom", body="invalid_json")
     assert response.status_code == 400
     assert response.json() == {
-        "code": 400,
-        "message": "Cannot parse request body (Expecting value: line 1 column 1 (char 0))",
+        "detail": "Cannot parse request body (Expecting value: line 1 column 1 (char 0))",
     }
 
     settings.DEBUG = False
@@ -55,15 +54,14 @@ def test_default_handler(settings):
     response = client.post("/error/custom", body="invalid_json")
     assert response.status_code == 400
     assert response.json() == {
-        "code": 400,
-        "message": "Cannot parse request body",
+        "detail": "Cannot parse request body",
     }
 
 
 def test_exceptions():
     response = client.post("/error/404")
     assert response.status_code == 404
-    assert response.json() == {"code": 404, "message": "Not Found"}
+    assert response.json() == {"detail": "Not Found"}
 
     response = client.post("/error/custom")
     assert response.status_code == 422

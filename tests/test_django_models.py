@@ -1,5 +1,6 @@
 from someapp.models import Event
 from django.test import Client
+from django.urls import reverse
 from ninja import NinjaAPI
 import pytest
 
@@ -21,6 +22,11 @@ def test_with_client(client: Client):
     response = client.get("/api/events/1")
     assert response.status_code == 200
     assert response.json() == test_item
+
+
+def test_reverse():
+    # check that url reversing works
+    assert reverse("api-1.0.0:event-create-url-name") == "/api/events/create"
 
 
 def json_payload(data):

@@ -1,21 +1,33 @@
+from typing import Any, FrozenSet
+
 from django.core.serializers.json import DjangoJSONEncoder
 from django.http import JsonResponse
 from pydantic import BaseModel
 
+__all__ = [
+    "NinjaJSONEncoder",
+    "Response",
+    "codes_1xx",
+    "codes_2xx",
+    "codes_3xx",
+    "codes_4xx",
+    "codes_5xx",
+]
+
 
 class NinjaJSONEncoder(DjangoJSONEncoder):
-    def default(self, o):
+    def default(self, o: Any) -> Any:
         if isinstance(o, BaseModel):
             return o.dict()
         return super().default(o)
 
 
 class Response(JsonResponse):
-    def __init__(self, data, **kwargs):
+    def __init__(self, data: Any, **kwargs: Any) -> None:
         super().__init__(data, encoder=NinjaJSONEncoder, safe=False, **kwargs)
 
 
-def resp_codes(from_code: int, to_code: int) -> frozenset:
+def resp_codes(from_code: int, to_code: int) -> FrozenSet[int]:
     return frozenset(range(from_code, to_code + 1))
 
 

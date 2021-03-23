@@ -1,10 +1,10 @@
-from ninja.errors import ConfigError
 import pytest
-from pydantic import ValidationError, BaseModel
-from ninja import NinjaAPI
-from ninja.responses import codes_2xx, codes_3xx
-from client import NinjaClient
 from typing import List, Union
+from pydantic import ValidationError
+from ninja import NinjaAPI, Schema
+from ninja.responses import codes_2xx, codes_3xx
+from ninja.errors import ConfigError
+from client import NinjaClient
 
 
 api = NinjaAPI()
@@ -21,13 +21,20 @@ def check_int2(request):
 
 
 @api.get("/check_single_with_status", response=int)
-def check_single_with_status(request):
-    return 302, 1
+def check_single_with_status(request, code: int):
+    return code, 1
 
 
 @api.get("/check_response_schema", response={400: int})
 def check_response_schema(request):
     return 200, 1
+
+
+@api.get("/check_no_content", response={204: None})
+def check_no_content(request, return_code: bool):
+    if return_code:
+        return 204, None
+    return  # None
 
 
 @api.get(
@@ -44,16 +51,13 @@ class User:
         self.password = password
 
 
-class UserModel(BaseModel):
+class UserModel(Schema):
     id: int
     name: str
     # skipping password output to responses
 
-    class Config:
-        orm_mode = True
 
-
-class ErrorModel(BaseModel):
+class ErrorModel(Schema):
     detail: str
 
 
@@ -85,7 +89,7 @@ client = NinjaClient(api)
     "path,expected_status,expected_response",
     [
         ("/check_int", 200, 1),
-        ("/check_single_with_status", 302, 1),
+        ("/check_single_with_status?code=200", 200, 1),
         ("/check_model", 202, {"id": 1, "name": "John"}),  # ! the password is skipped
         ("/check_list_model", 200, [{"id": 1, "name": "John"}]),
         ("/check_union?q=0", 200, 1),
@@ -148,6 +152,20 @@ def test_schema():
     }
 
 
+def test_no_content():
+    response = client.get("/check_no_content?return_code=1")
+    assert response.status_code == 204
+    assert response.content == b""
+
+    response = client.get("/check_no_content?return_code=0")
+    assert response.status_code == 204
+    assert response.content == b""
+
+    schema = api.get_openapi_schema()
+    details = schema["paths"]["/api/check_no_content"]["get"]["responses"]
+    assert details == {204: {"description": "OK"}}
+
+
 def test_validates():
     with pytest.raises(ValidationError):
         client.get("/check_int2")
@@ -157,3 +175,6 @@ def test_validates():
 
     with pytest.raises(ConfigError):
         client.get("/check_response_schema")
+
+    with pytest.raises(ConfigError):
+        client.get("/check_single_with_status?code=300")

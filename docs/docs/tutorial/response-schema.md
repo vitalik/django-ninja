@@ -67,7 +67,7 @@ from django.db import models
 class Task(models.Model):
     title = models.CharField(max_length=200)
     is_completed = models.BooleanField(default=False)
-    owner: models.ForeignKey("auth.User", null=True, blank=True)
+    owner = models.ForeignKey("auth.User", null=True, blank=True)
 ```
 
 Now let's output all tasks, and for each task, output some fields about the user.
