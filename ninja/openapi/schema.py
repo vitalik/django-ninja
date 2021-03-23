@@ -1,10 +1,10 @@
 from collections import OrderedDict
-from ninja.constants import NOT_SET
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type
 
 from pydantic import BaseModel
 from pydantic.schema import model_schema
 
+from ninja.constants import NOT_SET
 from ninja.operation import Operation
 from ninja.types import DictStrAny
 from ninja.utils import normalize_path
