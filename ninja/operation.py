@@ -130,7 +130,7 @@ class Operation:
     def _run_authentication(self, request: HttpRequest) -> Optional[HttpResponse]:
         for callback in self.auth_callbacks:
             result = callback(request)
-            if result is not None:
+            if result:
                 request.auth = result  # type: ignore
                 return None
         return self.api.create_response(request, {"detail": "Unauthorized"}, status=401)
