@@ -251,3 +251,13 @@ my_codes = frozenset({416, 418, 425, 429, 451})
 @api.post('/login', response={200: Token, my_codes: Message})
 ...
 ```
+
+
+## Empty responses
+
+Some responses, such as `204 No Content`, have no body. To indicate the response body is empty mark `response` argument with `None` instead of Schema:
+
+```Python hl_lines="1 3"
+@api.post("/no_content", response={204: None})
+def no_content(request):
+    return 204, None
