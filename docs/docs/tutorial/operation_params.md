@@ -154,3 +154,16 @@ def some_hiden_operation(request):
     pass
 ```
 
+
+## url_name
+Allows you to set api endpoint url name (using [django path's naming](https://docs.djangoproject.com/en/3.1/topics/http/urls/#reversing-namespaced-urls))
+```Python hl_lines="1 7"
+@api.post("/tasks", url_name='tasks')
+def some_operation(request):
+    pass
+
+# then you can get the url with
+
+reverse('api-1.0.0:tasks')
+```
+
