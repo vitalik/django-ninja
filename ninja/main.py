@@ -324,13 +324,21 @@ class NinjaAPI:
         return reverse(name)
 
     def create_response(
-        self, request: HttpRequest, data: Any, *, status: int = 200
+        self,
+        request: HttpRequest,
+        data: Any,
+        *,
+        status: int = 200,
+        headers: Optional[Dict[str, str]] = None,
     ) -> HttpResponse:
         content = self.renderer.render(request, data, response_status=status)
+        # TODO: maybe renderer should actually create HttpResponse object ? accept headers arg ?
         content_type = "{}; charset={}".format(
             self.renderer.media_type, self.renderer.charset
         )
-        return HttpResponse(content, status=status, content_type=content_type)
+        return HttpResponse(
+            content, status=status, content_type=content_type, headers=headers
+        )
 
     def get_openapi_schema(self, path_prefix: Optional[str] = None) -> OpenAPISchema:
         if path_prefix is None:
