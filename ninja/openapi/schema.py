@@ -50,12 +50,16 @@ class OpenAPISchema(dict):
                 full_path = "/".join([i for i in (prefix, path) if i])
                 full_path = "/" + self.path_prefix + full_path
                 full_path = normalize_path(full_path)
-                result[full_path] = self.methods(path_view.operations)
+                path_methods = self.methods(path_view.operations)
+                if path_methods:
+                    result[full_path] = self.methods(path_view.operations)
         return result
 
     def methods(self, operations: list) -> DictStrAny:
         result = {}
         for op in operations:
+            if not op.include_in_schema:
+                continue
             for method in op.methods:
                 result[method.lower()] = self.operation_details(op)
         return result

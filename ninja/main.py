@@ -87,6 +87,7 @@ class NinjaAPI:
         exclude_defaults: bool = False,
         exclude_none: bool = False,
         url_name: Optional[str] = None,
+        include_in_schema: bool = True,
     ) -> Decorator:
         return self.default_router.get(
             path,
@@ -102,6 +103,7 @@ class NinjaAPI:
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
             url_name=url_name,
+            include_in_schema=include_in_schema,
         )
 
     def post(
@@ -120,6 +122,7 @@ class NinjaAPI:
         exclude_defaults: bool = False,
         exclude_none: bool = False,
         url_name: Optional[str] = None,
+        include_in_schema: bool = True,
     ) -> Decorator:
         return self.default_router.post(
             path,
@@ -135,6 +138,7 @@ class NinjaAPI:
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
             url_name=url_name,
+            include_in_schema=include_in_schema,
         )
 
     def delete(
@@ -153,6 +157,7 @@ class NinjaAPI:
         exclude_defaults: bool = False,
         exclude_none: bool = False,
         url_name: Optional[str] = None,
+        include_in_schema: bool = True,
     ) -> Decorator:
         return self.default_router.delete(
             path,
@@ -168,6 +173,7 @@ class NinjaAPI:
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
             url_name=url_name,
+            include_in_schema=include_in_schema,
         )
 
     def patch(
@@ -186,6 +192,7 @@ class NinjaAPI:
         exclude_defaults: bool = False,
         exclude_none: bool = False,
         url_name: Optional[str] = None,
+        include_in_schema: bool = True,
     ) -> Decorator:
         return self.default_router.patch(
             path,
@@ -201,6 +208,7 @@ class NinjaAPI:
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
             url_name=url_name,
+            include_in_schema=include_in_schema,
         )
 
     def put(
@@ -219,6 +227,7 @@ class NinjaAPI:
         exclude_defaults: bool = False,
         exclude_none: bool = False,
         url_name: Optional[str] = None,
+        include_in_schema: bool = True,
     ) -> Decorator:
         return self.default_router.put(
             path,
@@ -234,6 +243,7 @@ class NinjaAPI:
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
             url_name=url_name,
+            include_in_schema=include_in_schema,
         )
 
     def api_operation(
@@ -253,6 +263,7 @@ class NinjaAPI:
         exclude_defaults: bool = False,
         exclude_none: bool = False,
         url_name: Optional[str] = None,
+        include_in_schema: bool = True,
     ) -> Decorator:
         return self.default_router.api_operation(
             methods,
@@ -269,6 +280,7 @@ class NinjaAPI:
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
             url_name=url_name,
+            include_in_schema=include_in_schema,
         )
 
     def add_router(

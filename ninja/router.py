@@ -50,6 +50,7 @@ class Router:
         exclude_defaults: bool = False,
         exclude_none: bool = False,
         url_name: Optional[str] = None,
+        include_in_schema: bool = True,
     ) -> Decorator:
         return self.api_operation(
             ["GET"],
@@ -66,6 +67,7 @@ class Router:
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
             url_name=url_name,
+            include_in_schema=include_in_schema,
         )
 
     def post(
@@ -84,6 +86,7 @@ class Router:
         exclude_defaults: bool = False,
         exclude_none: bool = False,
         url_name: Optional[str] = None,
+        include_in_schema: bool = True,
     ) -> Decorator:
         return self.api_operation(
             ["POST"],
@@ -100,6 +103,7 @@ class Router:
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
             url_name=url_name,
+            include_in_schema=include_in_schema,
         )
 
     def delete(
@@ -118,6 +122,7 @@ class Router:
         exclude_defaults: bool = False,
         exclude_none: bool = False,
         url_name: Optional[str] = None,
+        include_in_schema: bool = True,
     ) -> Decorator:
         return self.api_operation(
             ["DELETE"],
@@ -134,6 +139,7 @@ class Router:
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
             url_name=url_name,
+            include_in_schema=include_in_schema,
         )
 
     def patch(
@@ -152,6 +158,7 @@ class Router:
         exclude_defaults: bool = False,
         exclude_none: bool = False,
         url_name: Optional[str] = None,
+        include_in_schema: bool = True,
     ) -> Decorator:
         return self.api_operation(
             ["PATCH"],
@@ -168,6 +175,7 @@ class Router:
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
             url_name=url_name,
+            include_in_schema=include_in_schema,
         )
 
     def put(
@@ -186,6 +194,7 @@ class Router:
         exclude_defaults: bool = False,
         exclude_none: bool = False,
         url_name: Optional[str] = None,
+        include_in_schema: bool = True,
     ) -> Decorator:
         return self.api_operation(
             ["PUT"],
@@ -202,6 +211,7 @@ class Router:
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
             url_name=url_name,
+            include_in_schema=include_in_schema,
         )
 
     def api_operation(
@@ -221,6 +231,7 @@ class Router:
         exclude_defaults: bool = False,
         exclude_none: bool = False,
         url_name: Optional[str] = None,
+        include_in_schema: bool = True,
     ) -> Decorator:
         def decorator(view_func: TCallable) -> TCallable:
             self.add_api_operation(
@@ -239,6 +250,7 @@ class Router:
                 exclude_defaults=exclude_defaults,
                 exclude_none=exclude_none,
                 url_name=url_name,
+                include_in_schema=include_in_schema,
             )
             return view_func
 
@@ -262,6 +274,7 @@ class Router:
         exclude_defaults: bool = False,
         exclude_none: bool = False,
         url_name: Optional[str] = None,
+        include_in_schema: bool = True,
     ) -> None:
         if path not in self.path_operations:
             path_view = PathView()
@@ -284,6 +297,7 @@ class Router:
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
             url_name=url_name,
+            include_in_schema=include_in_schema,
         )
         if self.api:
             path_view.set_api_instance(self.api, self)

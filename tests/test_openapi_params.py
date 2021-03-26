@@ -28,10 +28,15 @@ def operation4(request):
     return {"tags": True}
 
 
-def test_schema():
-    schema = api.get_openapi_schema()
+@api.get("/not-included", include_in_schema=False)
+def not_included(request):
+    return True
 
-    # --------------------------------------------------------------
+
+schema = api.get_openapi_schema()
+
+
+def test_schema():
     op1 = schema["paths"]["/api/operation1"]["get"]
     op2 = schema["paths"]["/api/operation2"]["get"]
     op3 = schema["paths"]["/api/operation3"]["get"]
@@ -55,3 +60,13 @@ def test_schema():
     assert op3["description"] == "description arg"
 
     assert op4["tags"] == ["tag1", "tag2"]
+
+
+def test_not_included():
+    assert list(schema["paths"].keys()) == [
+        "/api/operation1",
+        "/api/operation2",
+        "/api/operation3",
+        "/api/operation4",
+    ]
+    # checking that "/not-included" is not there

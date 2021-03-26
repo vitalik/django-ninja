@@ -144,3 +144,13 @@ Whether fields which are equal to their default values (whether set or otherwise
 ### exclude_none
 
 Whether fields which are equal to `None` should be excluded from the response (defaults to `False`).
+
+
+## Include/Exclude operation from schema(docs)
+If you need to exclude some operation from OpenAPI schema use `include_in_schema` argument:
+```Python hl_lines="1"
+@api.post("/hidden", include_in_schema=False)
+def some_hiden_operation(request):
+    pass
+```
+

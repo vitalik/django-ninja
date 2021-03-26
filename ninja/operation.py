@@ -48,6 +48,7 @@ class Operation:
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
+        include_in_schema: bool = True,
     ) -> None:
         self.is_async = False
         self.path: str = path
@@ -75,6 +76,7 @@ class Operation:
         self.description = description or self.signature.docstring
         self.tags = tags
         self.deprecated = deprecated
+        self.include_in_schema = include_in_schema
 
         # Exporting models params
         self.by_alias = by_alias
@@ -256,6 +258,7 @@ class PathView:
         exclude_defaults: bool = False,
         exclude_none: bool = False,
         url_name: Optional[str] = None,
+        include_in_schema: bool = True,
     ) -> Operation:
         if url_name:
             self.url_name = url_name
@@ -280,6 +283,7 @@ class PathView:
             exclude_unset=exclude_unset,
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
+            include_in_schema=include_in_schema,
         )
 
         self.operations.append(operation)
