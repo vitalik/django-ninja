@@ -149,3 +149,17 @@ The **`auth`** argument also allows you to pass multiple authenticators:
 
 In this case **Django Ninja** will first check the API key `GET`, and if not set or invalid will check the `header` key.
 If both are invalid, it will raise an authentication error to the response.
+
+
+## Router authentication
+
+Use `auth` argument on Router to apply authenticator to all operations declared in it:
+
+```Python
+api.add_router("/events/", events_router, auth=BasicAuth())
+```
+
+or using router constructor
+```Python
+router = Router(auth=BasicAuth())
+```

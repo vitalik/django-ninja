@@ -19,6 +19,18 @@ Tagged operations may be handled differently by various tools and libraries. For
 
 ![Summary`](../img/operation_tags.png)
 
+### Router tags
+
+You can use `tags` argument to apply tags to all operations declared by router:
+
+```Python
+api.add_router("/events/", events_router, tags=["events"])
+
+# or using constructor: 
+
+router = Router(tags=["events"])
+```
+
 
 ## Operation: Summary
 

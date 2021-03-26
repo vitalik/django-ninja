@@ -128,6 +128,33 @@ Now, include `api` to your urls as usual and open your browser at `/api/docs`, a
 ![Swagger UI Simple Routers](../img/simple-routers-swagger.png)
 
 
+## Router authentication
+
+Use `auth` argument to apply authenticator to all operations declared by router:
+
+```Python
+api.add_router("/events/", events_router, auth=BasicAuth())
+```
+
+or using router constructor
+```Python
+router = Router(auth=BasicAuth())
+```
+
+## Router tags
+
+You can use `tags` argument to apply tags to all operations declared by router:
+
+```Python
+api.add_router("/events/", events_router, tags=["events"])
+```
+
+or using router constructor
+```Python
+router = Router(tags=["events"])
+```
+
+
 ## Nested routers
 
 There are also times when you need to split your logic up even more.
