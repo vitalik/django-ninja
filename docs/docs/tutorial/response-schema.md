@@ -261,3 +261,28 @@ Some responses, such as `204 No Content`, have no body. To indicate the response
 @api.post("/no_content", response={204: None})
 def no_content(request):
     return 204, None
+```
+
+
+## Self-referencing schemes
+
+Sometimes you need to create a schema that has reference to itself, or tree-structure objects.
+
+To do that you need:
+
+ - set a type of you schema in quotes
+ - use `update_forward_refs` method to apply self referencing types
+
+```Python hl_lines="3 6"
+class Organization(Schema):
+    title: str
+    part_of: 'Organization' = None     #!! note the type in quotes here !!
+
+
+Organization.update_forward_refs()  # !!! this is important
+
+
+@api.get('/organizations', response=List[Organization])
+def list_organizations(request):
+    ...
+```
