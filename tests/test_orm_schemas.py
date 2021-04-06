@@ -167,6 +167,22 @@ def test_all_fields():
     }
 
 
+def test_bigautofield():
+    class ModelBigAuto(models.Model):
+        bigautofiled = models.BigAutoField(primary_key=True)
+
+        class Meta:
+            app_label = "tests"
+
+    SchemaCls = create_schema(ModelBigAuto)
+    print(SchemaCls.schema())
+    assert SchemaCls.schema() == {
+        "title": "ModelBigAuto",
+        "type": "object",
+        "properties": {"bigautofiled": {"title": "Bigautofiled", "type": "integer"}},
+    }
+
+
 @pytest.mark.skipif(
     django.VERSION < (3, 1), reason="json field introduced in django 3.1"
 )

@@ -14,6 +14,7 @@ __all__ = ["create_m2m_link_type", "get_schema_field", "get_related_field_schema
 
 TYPES = {
     "AutoField": int,
+    "BigAutoField": int,
     "BigIntegerField": int,
     "BinaryField": bytes,
     "BooleanField": bool,
