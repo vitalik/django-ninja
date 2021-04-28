@@ -59,7 +59,6 @@ class ViewSignature:
             attrs["_collection_fields"] = detect_collection_fields(args)
 
             base_cls = cls._model
-            # print([cls_name, (base_cls,), attrs])
             model_cls = type(cls_name, (base_cls,), attrs)
             # TODO: https://pydantic-docs.helpmanual.io/usage/models/#dynamic-model-creation - check if anything special in create_model method that I did not use
             result.append(model_cls)

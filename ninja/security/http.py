@@ -1,14 +1,19 @@
+import logging
 from abc import ABC, abstractmethod
 from base64 import b64decode
 from typing import Any, Optional, Tuple
 from urllib.parse import unquote
 
+from django.conf import settings
 from django.http import HttpRequest
 
 from ninja.compatibility import get_headers
 from ninja.security.base import AuthBase
 
 __all__ = ["HttpAuthBase", "HttpBearer", "DecodeError", "HttpBasicAuth"]
+
+
+logger = logging.getLogger("django")
 
 
 class HttpAuthBase(AuthBase, ABC):
@@ -26,8 +31,9 @@ class HttpBearer(HttpAuthBase, ABC):
             return None
         parts = auth_value.split(" ")
 
-        if parts[0].lower() != "bearer":
-            print(f"Unexpected auth - '{auth_value}'")
+        if parts[0].lower() != self.openapi_scheme:
+            if settings.DEBUG:
+                logger.error(f"Unexpected auth - '{auth_value}'")
             return None
         token = " ".join(parts[1:])
         return self.authenticate(request, token)
@@ -54,7 +60,8 @@ class HttpBasicAuth(HttpAuthBase, ABC):  # TODO: maybe HttpBasicAuthBase
         try:
             username, password = self.decode_authorization(auth_value)
         except DecodeError as e:
-            print(e)
+            if settings.DEBUG:
+                logger.exception(e)
             return None
         return self.authenticate(request, username, password)
 
@@ -71,11 +78,10 @@ class HttpBasicAuth(HttpAuthBase, ABC):  # TODO: maybe HttpBasicAuthBase
         elif len(parts) == 2 and parts[0].lower() == "basic":
             user_pass_encoded = parts[1]
         else:
-            raise DecodeError("Invlid Authorization header")
+            raise DecodeError("Invalid Authorization header")
 
         try:
             username, password = b64decode(user_pass_encoded).decode().split(":", 1)
             return unquote(username), unquote(password)
-        except Exception as e:
-            print(e)
-            raise DecodeError("Invlid Authorization header") from e
+        except Exception as e:  # dear contributors please do not change to valueerror - here can be multiple exceptions
+            raise DecodeError("Invalid Authorization header") from e

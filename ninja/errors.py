@@ -1,3 +1,4 @@
+import logging
 import traceback
 from functools import partial
 from typing import TYPE_CHECKING, List
@@ -11,6 +12,9 @@ if TYPE_CHECKING:
     from ninja import NinjaAPI  # pragma: no cover
 
 __all__ = ["ConfigError", "ValidationError", "HttpError", "set_default_exc_handlers"]
+
+
+logger = logging.getLogger("django")
 
 
 class ConfigError(Exception):
@@ -39,7 +43,10 @@ def set_default_exc_handlers(api: "NinjaAPI") -> None:
 
 
 def _default_404(request: HttpRequest, exc: Exception, api: "NinjaAPI") -> HttpResponse:
-    return api.create_response(request, {"detail": "Not Found"}, status=404)
+    msg = "Not Found"
+    if settings.DEBUG:
+        msg += f": {exc}"
+    return api.create_response(request, {"detail": msg}, status=404)
 
 
 def _default_http_error(
@@ -60,5 +67,6 @@ def _default_exception(
     if not settings.DEBUG:
         raise exc  # let django deal with it
 
+    logger.exception(exc)
     tb = traceback.format_exc()
     return HttpResponse(tb, status=500, content_type="text/plain")

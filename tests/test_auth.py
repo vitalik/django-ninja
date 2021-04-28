@@ -96,7 +96,8 @@ class MockUser(str):
         ("/bearer", dict(headers={"Authorization": "Invalid bearertoken"}), 401),
     ],
 )
-def test_auth(path, kwargs, expected_code):
+def test_auth(path, kwargs, expected_code, settings):
+    settings.DEBUG = True  # <-- making sure all if debug are covered
     response = client.get(path, **kwargs)
     assert response.status_code == expected_code
 

@@ -27,7 +27,6 @@ class Param(FieldInfo):
         # param_type: Any = None,
         **extra: Any,
     ):
-        # print('alias = ', alias)
         self.deprecated = deprecated
         # self.param_name: str = None
         # self.param_type: Any = None

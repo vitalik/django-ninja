@@ -41,6 +41,10 @@ def test_default_handler(settings):
     assert response.status_code == 500
     assert b"RuntimeError: test" in response.content
 
+    response = client.post("/error/404")
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Not Found: test"}
+
     response = client.post("/error/custom", body="invalid_json")
     assert response.status_code == 400
     assert response.json() == {
@@ -53,9 +57,7 @@ def test_default_handler(settings):
 
     response = client.post("/error/custom", body="invalid_json")
     assert response.status_code == 400
-    assert response.json() == {
-        "detail": "Cannot parse request body",
-    }
+    assert response.json() == {"detail": "Cannot parse request body"}
 
 
 def test_exceptions():
