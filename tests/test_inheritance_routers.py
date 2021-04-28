@@ -14,7 +14,7 @@ first_router = Router()
 
 
 @first_router.get("/endpoint")
-def router_op(request):
+def router_op1(request):
     return "first"
 
 
@@ -22,7 +22,7 @@ second_router_one = Router()
 
 
 @second_router_one.get("endpoint_1")
-def router_op(request):
+def router_op2(request):
     return "second 1"
 
 
@@ -30,7 +30,7 @@ second_router_two = Router()
 
 
 @second_router_two.get("endpoint_2")
-def router_op(request):
+def router_op3(request):
     return "second 2"
 
 

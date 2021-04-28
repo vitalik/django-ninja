@@ -1,3 +1,4 @@
+import warnings
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type
 
 from pydantic import BaseModel
@@ -27,6 +28,7 @@ class OpenAPISchema(dict):
         self.path_prefix = path_prefix
         self.schemas: DictStrAny = {}
         self.securitySchemes: DictStrAny = {}
+        self.all_operation_ids: Set = set()
         super().__init__(
             [
                 ("openapi", "3.0.2"),
@@ -52,7 +54,7 @@ class OpenAPISchema(dict):
                 full_path = normalize_path(full_path)
                 path_methods = self.methods(path_view.operations)
                 if path_methods:
-                    result[full_path] = self.methods(path_view.operations)
+                    result[full_path] = path_methods
         return result
 
     def methods(self, operations: list) -> DictStrAny:
@@ -66,6 +68,11 @@ class OpenAPISchema(dict):
 
     def operation_details(self, operation: Operation) -> DictStrAny:
         op_id = operation.operation_id or self.api.get_openapi_operation_id(operation)
+        if op_id in self.all_operation_ids:
+            warnings.warn(
+                f'operation_id "{op_id}" is already used (func: {operation.view_func})'
+            )
+        self.all_operation_ids.add(op_id)
         result = {
             "operationId": op_id,
             "summary": operation.summary,

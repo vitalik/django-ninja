@@ -1,8 +1,7 @@
+import pytest
 from typing import List
-from unittest.mock import patch
 from ninja import NinjaAPI, Schema
 from django.test import Client, override_settings
-from copy import copy
 
 
 api = NinjaAPI()
@@ -122,3 +121,19 @@ def test_schema():
             "type": "object",
         },
     }
+
+
+def test_unique_operation_ids():
+
+    api = NinjaAPI()
+
+    @api.get("/1")
+    def same_name(request):
+        pass
+
+    @api.get("/2")
+    def same_name(request):
+        pass
+
+    with pytest.warns(UserWarning):
+        schema = api.get_openapi_schema()
