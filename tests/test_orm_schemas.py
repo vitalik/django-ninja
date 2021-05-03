@@ -433,3 +433,39 @@ def test_manytomany():
 
     assert data == {"id": 1, "m2m": [1]}
 
+
+def test_custom_fields():
+    class SmallModel(models.Model):
+        f1 = models.CharField()
+        f2 = models.CharField()
+
+        class Meta:
+            app_label = "tests"
+
+    Schema1 = create_schema(SmallModel, custom_fields=[("custom", int, ...)])
+
+    assert Schema1.schema() == {
+        "title": "SmallModel",
+        "type": "object",
+        "properties": {
+            "id": {"title": "Id", "type": "integer"},
+            "f1": {"title": "F1", "type": "string"},
+            "f2": {"title": "F2", "type": "string"},
+            "custom": {"title": "Custom", "type": "integer"},
+        },
+        "required": ["f1", "f2", "custom"],
+    }
+
+    Schema2 = create_schema(SmallModel, custom_fields=[("f1", int, ...)])
+    print(Schema2.schema())
+
+    assert Schema2.schema() == {
+        "title": "SmallModel",
+        "type": "object",
+        "properties": {
+            "id": {"title": "Id", "type": "integer"},
+            "f1": {"title": "F1", "type": "integer"},
+            "f2": {"title": "F2", "type": "string"},
+        },
+        "required": ["f1", "f2"],
+    }

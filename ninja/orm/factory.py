@@ -1,4 +1,4 @@
-from typing import Dict, Iterator, List, Optional, Tuple, Type, Union, cast
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union, cast
 
 from django.db.models import Field, ManyToManyRel, ManyToOneRel, Model
 from pydantic import create_model as create_pydantic_model
@@ -22,7 +22,7 @@ from ninja.schema import Schema
 
 __all__ = ["SchemaFactory", "factory", "create_schema"]
 
-SchemaKey = Tuple[Type[Model], str, int, str, str]
+SchemaKey = Tuple[Type[Model], str, int, str, str, str]
 
 
 class SchemaFactory:
@@ -37,13 +37,14 @@ class SchemaFactory:
         depth: int = 0,
         fields: Optional[List[str]] = None,
         exclude: Optional[List[str]] = None,
+        custom_fields: Optional[List[Tuple[str, Any, Any]]] = None,
     ) -> Type[Schema]:
         name = name or model.__name__
 
         if fields and exclude:
             raise ConfigError("Only one of 'include' or 'exclude' should be set.")
 
-        key = self.get_key(model, name, depth, fields, exclude)
+        key = self.get_key(model, name, depth, fields, exclude, custom_fields)
         if key in self.schemas:
             return self.schemas[key]
 
@@ -51,6 +52,10 @@ class SchemaFactory:
         for fld in self._selected_model_fields(model, fields, exclude):
             python_type, field_info = get_schema_field(fld, depth=depth)
             definitions[fld.name] = (python_type, field_info)
+
+        if custom_fields:
+            for fld_name, python_type, field_info in custom_fields:
+                definitions[fld_name] = (python_type, field_info)
 
         schema = cast(
             Type[Schema],
@@ -66,10 +71,11 @@ class SchemaFactory:
         depth: int,
         fields: Union[str, List[str], None],
         exclude: Optional[List[str]],
+        custom_fields: Optional[List[Tuple[str, str, Any]]],
     ) -> SchemaKey:
         "returns a hashable value for all given parameters"
         # TODO: must be a test that compares all kwargs from init to get_key
-        return model, name, depth, str(fields), str(exclude)
+        return model, name, depth, str(fields), str(exclude), str(custom_fields)
 
     def _selected_model_fields(
         self,
