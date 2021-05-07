@@ -63,16 +63,39 @@ def test_examples():
         # Schema
 
         assert client.get("/filter").json() == {
-            "filters": {"limit": 100, "offset": None, "query": None}
+            "filters": {
+                "limit": 100,
+                "offset": None,
+                "query": None,
+                "category__in": None,
+            }
         }
         assert client.get("/filter?limit=10").json() == {
-            "filters": {"limit": 10, "offset": None, "query": None}
+            "filters": {
+                "limit": 10,
+                "offset": None,
+                "query": None,
+                "category__in": None,
+            }
         }
         assert client.get("/filter?offset=10").json() == {
-            "filters": {"limit": 100, "offset": 10, "query": None}
+            "filters": {"limit": 100, "offset": 10, "query": None, "category__in": None}
         }
         assert client.get("/filter?query=10").json() == {
-            "filters": {"limit": 100, "offset": None, "query": "10"}
+            "filters": {
+                "limit": 100,
+                "offset": None,
+                "query": "10",
+                "category__in": None,
+            }
+        }
+        assert client.get("/filter?categories=a&categories=b").json() == {
+            "filters": {
+                "limit": 100,
+                "offset": None,
+                "query": None,
+                "category__in": ["a", "b"],
+            }
         }
 
         schema = api.get_openapi_schema("")
@@ -95,5 +118,15 @@ def test_examples():
                 "name": "query",
                 "required": False,
                 "schema": {"title": "Query", "type": "string"},
+            },
+            {
+                "in": "query",
+                "name": "categories",
+                "required": False,
+                "schema": {
+                    "title": "Categories",
+                    "type": "array",
+                    "items": {"type": "string"},
+                },
             },
         ]
