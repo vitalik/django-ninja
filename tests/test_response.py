@@ -2,7 +2,7 @@ from ninja import responses
 import pytest
 from pydantic import ValidationError, BaseModel
 from ninja import Router
-from client import NinjaClient
+from ninja.testing import TestClient
 from typing import List, Union
 
 
@@ -54,7 +54,7 @@ def check_union(request, q: int):
     return "invalid"
 
 
-client = NinjaClient(router)
+client = TestClient(router)
 
 
 @pytest.mark.parametrize(

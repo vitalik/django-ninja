@@ -1,6 +1,6 @@
 import pytest
 from main import router
-from client import NinjaClient
+from ninja.testing import TestClient
 
 
 response_missing = {
@@ -24,7 +24,7 @@ response_not_valid_int = {
 }
 
 
-client = NinjaClient(router)
+client = TestClient(router)
 
 
 @pytest.mark.parametrize(

@@ -3,7 +3,7 @@ from typing import List
 from django.http import QueryDict, HttpRequest
 from ninja import NinjaAPI
 from ninja.parser import Parser
-from client import NinjaClient
+from ninja.testing import TestClient
 
 
 class MyParser(Parser):
@@ -33,7 +33,7 @@ def operation(request, body: List[str], emptyparam: str = None):
 
 
 def test_parser():
-    client = NinjaClient(api)
+    client = TestClient(api)
     response = client.post("/test?emptyparam", body="test\nbar")
     assert response.status_code == 200, response.content
     assert response.json() == {"emptyparam": None, "body": ["test", "bar"]}

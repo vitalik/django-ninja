@@ -2,7 +2,7 @@ import pytest
 from typing import List
 from ninja import Router, Query, Form, Schema
 from pydantic import BaseModel
-from client import NinjaClient
+from ninja.testing import TestClient
 
 
 from django.http import QueryDict  # noqa
@@ -63,7 +63,7 @@ def listview4(
     }
 
 
-client = NinjaClient(router)
+client = TestClient(router)
 
 
 @pytest.mark.parametrize(

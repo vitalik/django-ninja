@@ -1,9 +1,9 @@
 import pytest
 from main import router
-from client import NinjaClient
+from ninja.testing import TestClient
 
 
-client = NinjaClient(router)
+client = TestClient(router)
 
 
 def test_text_get():

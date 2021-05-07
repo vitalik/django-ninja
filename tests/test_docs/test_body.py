@@ -1,6 +1,6 @@
 from unittest.mock import patch
 from ninja import NinjaAPI
-from client import NinjaClient
+from ninja.testing import TestClient
 
 
 def test_examples():
@@ -12,7 +12,7 @@ def test_examples():
         import docs.src.tutorial.body.code02
         import docs.src.tutorial.body.code03
 
-        client = NinjaClient(api)
+        client = TestClient(api)
 
         assert client.post(
             "/items", json={"name": "Katana", "price": 299.00, "quantity": 10}

@@ -3,7 +3,7 @@ import pytest
 from ninja import NinjaAPI
 from ninja.main import ConfigError
 from django.http import HttpResponse
-from client import NinjaClient
+from ninja.testing import TestClient
 
 
 api = NinjaAPI()
@@ -57,7 +57,7 @@ def html(request):
     return HttpResponse("html")
 
 
-client = NinjaClient(api)
+client = TestClient(api)
 
 
 @pytest.mark.parametrize(

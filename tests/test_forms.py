@@ -1,5 +1,5 @@
 from ninja import NinjaAPI, Form
-from client import NinjaClient
+from ninja.testing import TestClient
 
 
 api = NinjaAPI()
@@ -10,7 +10,7 @@ def form_operation(request, s: str = Form(...), i: int = Form(...)):
     return {"s": s, "i": i}
 
 
-client = NinjaClient(api)
+client = TestClient(api)
 
 
 def test_form():

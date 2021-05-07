@@ -4,7 +4,7 @@ from django.utils.encoding import force_str
 from django.utils.xmlutils import SimplerXMLGenerator
 from ninja import NinjaAPI
 from ninja.renderers import BaseRenderer
-from client import NinjaClient
+from ninja.testing import TestClient
 
 
 class XMLRenderer(BaseRenderer):
@@ -85,7 +85,7 @@ api_csv.get("/test")(operation)
     ],
 )
 def test_response_class(api, content_type, expected_content):
-    client = NinjaClient(api)
+    client = TestClient(api)
     response = client.get("/test")
     assert response.status_code == 200
     assert response["Content-Type"] == content_type

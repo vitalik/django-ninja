@@ -11,7 +11,7 @@ from ninja.security import (
 )
 from ninja.security.base import AuthBase
 from ninja.errors import ConfigError
-from client import NinjaClient
+from ninja.testing import TestClient
 
 
 def callable_auth(request):
@@ -66,7 +66,7 @@ for path, auth in [
     api.get(f"/{path}", auth=auth, operation_id=path)(demo_operation)
 
 
-client = NinjaClient(api)
+client = TestClient(api)
 
 
 class MockUser(str):

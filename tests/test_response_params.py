@@ -1,6 +1,6 @@
 from typing import Optional
 from ninja import NinjaAPI, Schema
-from client import NinjaClient
+from ninja.testing import TestClient
 
 
 api = NinjaAPI()
@@ -34,7 +34,7 @@ def op_exclude_none(request):
     return {"field1": None, "field2": "default value"}
 
 
-client = NinjaClient(api)
+client = TestClient(api)
 
 
 def test_arguments():

@@ -1,6 +1,6 @@
 from ninja import NinjaAPI, Router
 from ninja.security import APIKeyQuery
-from client import NinjaClient
+from ninja.testing import TestClient
 
 
 class KeyQuery1(APIKeyQuery):
@@ -52,7 +52,7 @@ api.add_router("", router)
 
 # ---- end router --------------------
 
-client = NinjaClient(api)
+client = TestClient(api)
 
 
 def test_multi():

@@ -1,6 +1,6 @@
 import pytest
 from ninja import NinjaAPI, File, UploadedFile
-from client import NinjaClient
+from ninja.testing import TestClient
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 
@@ -12,7 +12,7 @@ def file_upload(request, file: UploadedFile = File(...)):
     return {"name": file.name, "data": file.read().decode()}
 
 
-client = NinjaClient(api)
+client = TestClient(api)
 
 
 def test_files():
