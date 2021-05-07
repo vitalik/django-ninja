@@ -1,9 +1,10 @@
 from json import dumps as json_dumps, loads as json_loads
-from typing import Any, Callable, Dict, Tuple, Union
+from typing import Any, Callable, Dict, List, Tuple, Union
 from unittest.mock import Mock
 
 import django
 from django.http import QueryDict
+from django.urls.resolvers import URLPattern
 
 from ninja import NinjaAPI, Router
 from ninja.responses import Response as HttpResponse
@@ -15,12 +16,7 @@ class NinjaClientBase:
     __test__ = False  # <- skip pytest
 
     def __init__(self, router_or_app: Union[NinjaAPI, Router]) -> None:
-        if isinstance(router_or_app, NinjaAPI):
-            self.urls = router_or_app.urls[0]
-        else:
-            api = NinjaAPI()
-            router_or_app.set_api_instance(api)
-            self.urls = list(router_or_app.urls_paths(""))
+        self.router_or_app = router_or_app
 
     def get(
         self, path: str, data: Dict = {}, **request_params: Dict
@@ -43,7 +39,7 @@ class NinjaClientBase:
         return self.request("PUT", path, data, json, **request_params)
 
     def delete(
-        self, path: str, data: Dict = {}, json: Any = None, **request_params: Any,
+        self, path: str, data: Dict = {}, json: Any = None, **request_params: Any
     ) -> "NinjaResponse":
         return self.request("DELETE", path, data, json, **request_params)
 
@@ -59,6 +55,18 @@ class NinjaClientBase:
             request_params["body"] = json_dumps(json)
         func, request, kwargs = self._resolve(method, path, data, request_params)
         return self._call(func, request, kwargs)  # type: ignore
+
+    @property
+    def urls(self) -> List[URLPattern]:
+        if not hasattr(self, "_urls_cache"):
+            self._urls_cache: List[URLPattern]
+            if isinstance(self.router_or_app, NinjaAPI):
+                self._urls_cache = self.router_or_app.urls[0]
+            else:
+                api = NinjaAPI()
+                self.router_or_app.set_api_instance(api)
+                self._urls_cache = list(self.router_or_app.urls_paths(""))
+        return self._urls_cache
 
     def _resolve(
         self, method: str, path: str, data: Dict, request_params: Any
