@@ -1,13 +1,7 @@
 import inspect
 from collections import defaultdict, namedtuple
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
-
-try:
-    from typing import get_origin  # type: ignore
-except ImportError:  # pragma: no coverage
-
-    def get_origin(tp: Any) -> Optional[Any]:
-        return getattr(tp, "__origin__", None)
+from ninja.compatibility.util import get_origin as get_collection_origin
 
 
 import pydantic
@@ -127,14 +121,15 @@ def is_pydantic_model(cls: Any) -> bool:
 
 
 def is_collection_type(annotation: Any) -> bool:
-    # List[int]  =>  __origin__ = list, __args__ = int
-    origin = get_origin(annotation)
+    origin = get_collection_origin(annotation)
     return origin in (List, list, set, tuple)  # TODO: I gues we should handle only list
 
 
 def detect_pydantic_model_collection_fields(model: pydantic.BaseModel) -> List[str]:
+    "Extracts collection fields aliases from collection fields"
+
     def _list_field_name(field: "ModelField") -> Optional[str]:
-        if get_origin(field.outer_type_) in (List, list, tuple, set):
+        if is_collection_type(field.outer_type_):
             return str(field.alias)
         return None
 
