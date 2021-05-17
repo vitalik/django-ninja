@@ -1,7 +1,7 @@
 import pytest
 from typing import List
 from ninja import Router, Query, Form, Schema
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from ninja.testing import TestClient
 
 
@@ -12,7 +12,9 @@ router = Router()
 
 @router.post("/list1")
 def listview1(
-    request, query: List[int] = Query(...), form: List[int] = Form(...),
+    request,
+    query: List[int] = Query(...),
+    form: List[int] = Form(...),
 ):
     return {
         "query": query,
@@ -22,7 +24,9 @@ def listview1(
 
 @router.post("/list2")
 def listview2(
-    request, body: List[int], query: List[int] = Query(...),
+    request,
+    body: List[int],
+    query: List[int] = Query(...),
 ):
     return {
         "query": query,
@@ -52,11 +56,13 @@ def listviewdefault(request, body: List[int] = [1]):
 
 class Filters(Schema):
     tags: List[str] = []
+    other_tags: List[str] = Field([], alias="other_tags_alias")
 
 
 @router.post("/list4")
 def listview4(
-    request, filters: Filters = Query(...),
+    request,
+    filters: Filters = Query(...),
 ):
     return {
         "filters": filters,
@@ -96,19 +102,19 @@ client = TestClient(router)
             {"body": [1, 2]},
         ),
         (
-            "/list4?tags=a&tags=b",
+            "/list4?tags=a&tags=b&other_tags_alias=a&other_tags_alias=b",
             {},
-            {"filters": {"tags": ["a", "b"]}},
+            {"filters": {"tags": ["a", "b"], "other_tags": ["a", "b"]}},
         ),
         (
-            "/list4?tags=abc",
+            "/list4?tags=abc&other_tags_alias=abc",
             {},
-            {"filters": {"tags": ["abc"]}},
+            {"filters": {"tags": ["abc"], "other_tags": ["abc"]}},
         ),
         (
             "/list4",
             {},
-            {"filters": {"tags": []}},
+            {"filters": {"tags": [], "other_tags": []}},
         ),
     ]
     # fmt: on
