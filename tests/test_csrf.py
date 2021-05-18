@@ -5,7 +5,7 @@ from ninja.security import APIKeyCookie
 from ninja.errors import ConfigError
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
-from client import NinjaClient
+from ninja.testing import TestClient
 
 
 csrf_OFF = NinjaAPI(urls_namespace="csrf_OFF")
@@ -33,12 +33,12 @@ COOKIES = {settings.CSRF_COOKIE_NAME: TOKEN}
 
 
 def test_csrf_off():
-    client = NinjaClient(csrf_OFF)
+    client = TestClient(csrf_OFF)
     assert client.post("/post", COOKIES=COOKIES).status_code == 200
 
 
 def test_csrf_on():
-    client = NinjaClient(csrf_ON)
+    client = TestClient(csrf_ON)
 
     assert client.post("/post", COOKIES=COOKIES).status_code == 403
 

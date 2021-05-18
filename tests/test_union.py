@@ -1,6 +1,6 @@
 from datetime import date
 from typing import Union
-from client import NinjaClient
+from ninja.testing import TestClient
 from ninja import Router
 
 router = Router()
@@ -11,7 +11,7 @@ def view(request, value: Union[date, str]):
     return [value, type(value).__name__]
 
 
-client = NinjaClient(router)
+client = TestClient(router)
 
 
 def test_union():

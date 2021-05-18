@@ -1,6 +1,6 @@
 from ninja import NinjaAPI, Router
 from ninja.security import APIKeyQuery
-from client import NinjaClient
+from ninja.testing import TestClient
 
 
 class Auth(APIKeyQuery):
@@ -40,7 +40,7 @@ api.add_router("/r1", r1, auth=Auth("one"))
 api.add_router("/r2", r2, auth=Auth("two"))
 
 
-client = NinjaClient(api)
+client = TestClient(api)
 
 
 def test_router_auth():

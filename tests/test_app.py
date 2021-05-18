@@ -3,11 +3,12 @@ import pytest
 from ninja import NinjaAPI
 from ninja.main import ConfigError
 from django.http import HttpResponse
-from client import NinjaClient
+from ninja.testing import TestClient
 
 
 api = NinjaAPI()
 
+client = TestClient(api)
 
 # TODO: check if you add  operation to the same path - it should raise a ConfigError that this path already exist
 # make sure to check how this will work with versioning
@@ -55,9 +56,6 @@ def multiple(request):
 @api.get("/html")
 def html(request):
     return HttpResponse("html")
-
-
-client = NinjaClient(api)
 
 
 @pytest.mark.parametrize(

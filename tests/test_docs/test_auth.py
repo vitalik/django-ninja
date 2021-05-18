@@ -1,13 +1,13 @@
 import pytest
 from unittest.mock import Mock, patch
 from ninja import NinjaAPI
-from client import NinjaClient
+from ninja.testing import TestClient
 
 
 def test_intro():
     from docs.src.tutorial.authentication.code001 import api
 
-    client = NinjaClient(api)
+    client = TestClient(api)
     assert client.get("/pets").status_code == 401
 
     user = Mock()
@@ -35,7 +35,7 @@ def test_examples():
         import docs.src.tutorial.authentication.schema01
         import docs.src.tutorial.authentication.multiple01
 
-        client = NinjaClient(api)
+        client = TestClient(api)
 
         response = client.get("/ipwhiltelist", META={"REMOTE_ADDR": "127.0.0.1"})
         assert response.status_code == 401
@@ -94,7 +94,7 @@ def test_global():
     def mustbeauthed(request):
         return {"auth": request.auth}
 
-    client = NinjaClient(api)
+    client = TestClient(api)
 
     assert client.get("/somemethod").status_code == 401
 

@@ -4,7 +4,7 @@ from pydantic import ValidationError
 from ninja import NinjaAPI, Schema
 from ninja.responses import codes_2xx, codes_3xx
 from ninja.errors import ConfigError
-from client import NinjaClient
+from ninja.testing import TestClient
 
 
 api = NinjaAPI()
@@ -82,7 +82,7 @@ def check_union(request, q: int):
     return "invalid"
 
 
-client = NinjaClient(api)
+client = TestClient(api)
 
 
 @pytest.mark.parametrize(

@@ -1,6 +1,6 @@
 from ninja import NinjaAPI, Router
 import pytest
-from client import NinjaClient
+from ninja.testing import TestClient
 
 api = NinjaAPI()
 
@@ -39,7 +39,7 @@ first_router.add_router("/second", second_router_two, tags=["two"])
 api.add_router("/first", first_router, tags=["global"])
 
 
-client = NinjaClient(api)
+client = TestClient(api)
 
 
 @pytest.mark.parametrize(

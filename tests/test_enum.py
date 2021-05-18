@@ -3,7 +3,7 @@ from enum import Enum
 from json import encoder
 from pydantic import BaseModel
 from ninja import NinjaAPI
-from client import NinjaClient
+from ninja.testing import TestClient
 
 
 class RoomEnum(str, Enum):
@@ -31,7 +31,7 @@ def booking_search(request, room: RoomEnum):
     return {"room": room}
 
 
-client = NinjaClient(api)
+client = TestClient(api)
 
 
 def test_enums():

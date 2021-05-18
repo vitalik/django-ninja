@@ -1,8 +1,8 @@
 from docs.src.index001 import api
-from client import NinjaClient
+from ninja.testing import TestClient
 
 
-client = NinjaClient(api)
+client = TestClient(api)
 
 
 def test_api():

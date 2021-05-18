@@ -3,7 +3,7 @@ import asyncio
 import django
 from ninja import NinjaAPI
 from ninja.security import APIKeyQuery
-from client import NinjaAsyncClient
+from ninja.testing import TestAsyncClient
 
 
 @pytest.mark.skipif(django.VERSION < (3, 1), reason="requires django 3.1 or higher")
@@ -25,7 +25,7 @@ async def test_asyncio_operations():
     def sync_post_to_async_view(request):
         return {"sync": True}
 
-    client = NinjaAsyncClient(api)
+    client = TestAsyncClient(api)
 
     # Actual tests --------------------------------------------------
 

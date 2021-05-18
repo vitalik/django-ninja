@@ -1,7 +1,7 @@
 import pytest
 from ninja import Router, Form, Body, Query
 from pydantic import BaseModel
-from client import NinjaClient
+from ninja.testing import TestClient
 
 
 class SomeModel(BaseModel):
@@ -75,7 +75,7 @@ def view6(request, obj: OtherModel = OtherModel(x=1, y=1)):
     return obj
 
 
-client = NinjaClient(router)
+client = TestClient(router)
 
 
 @pytest.mark.parametrize(

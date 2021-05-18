@@ -1,6 +1,6 @@
 import pytest
 from ninja import Router, Cookie, Header
-from client import NinjaClient
+from ninja.testing import TestClient
 
 router = Router()
 
@@ -35,7 +35,7 @@ def cookies2(request, wpn: str = Cookie(..., alias="weapon")):
     return wpn
 
 
-client = NinjaClient(router)
+client = TestClient(router)
 
 
 @pytest.mark.parametrize(

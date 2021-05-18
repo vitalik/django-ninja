@@ -1,5 +1,5 @@
 from ninja import NinjaAPI, Body
-from client import NinjaClient
+from ninja.testing import TestClient
 
 
 api = NinjaAPI()
@@ -13,5 +13,5 @@ def create_task(request, start: int = Body(...), end: int = Body(...)):
 
 
 def test_body():
-    client = NinjaClient(api)
+    client = TestClient(api)
     assert client.post("/task", json={"start": 1, "end": 2}).json() == [1, 2]

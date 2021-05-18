@@ -2,7 +2,7 @@ import pytest
 import django
 from django.http import Http404
 from ninja import NinjaAPI, Schema
-from client import NinjaClient, NinjaAsyncClient
+from ninja.testing import TestClient, TestAsyncClient
 
 
 api = NinjaAPI()
@@ -31,7 +31,7 @@ def err_thrower(request, code: str, payload: Payload = None):
         raise CustomException("test")
 
 
-client = NinjaClient(api)
+client = TestClient(api)
 
 
 def test_default_handler(settings):
@@ -79,7 +79,7 @@ async def test_asyncio_exceptions():
     async def thrower(request):
         raise Http404("test")
 
-    client = NinjaAsyncClient(api)
+    client = TestAsyncClient(api)
     response = await client.get("/error")
     assert response.status_code == 404
 
@@ -92,7 +92,7 @@ def test_no_handlers():
     def thrower(request):
         raise RuntimeError("test")
 
-    client = NinjaClient(api)
+    client = TestClient(api)
 
     with pytest.raises(RuntimeError):
         client.get("/error")

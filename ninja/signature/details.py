@@ -1,8 +1,13 @@
 import inspect
 from collections import defaultdict, namedtuple
-from typing import Any, Callable, Dict, List
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
 import pydantic
+
+from ninja.compatibility.util import get_origin as get_collection_origin
+
+if TYPE_CHECKING:
+    from pydantic.fields import ModelField  # pragma: no cover
 
 from ninja import params
 from ninja.signature.utils import get_path_param_names, get_typed_signature
@@ -116,9 +121,19 @@ def is_pydantic_model(cls: Any) -> bool:
 
 
 def is_collection_type(annotation: Any) -> bool:
-    # List[int]  =>  __origin__ = list, __args__ = int
-    origin = getattr(annotation, "__origin__", None)
+    origin = get_collection_origin(annotation)
     return origin in (List, list, set, tuple)  # TODO: I gues we should handle only list
+
+
+def detect_pydantic_model_collection_fields(model: pydantic.BaseModel) -> List[str]:
+    "Extracts collection fields aliases from collection fields"
+
+    def _list_field_name(field: "ModelField") -> Optional[str]:
+        if is_collection_type(field.outer_type_):
+            return str(field.alias)
+        return None
+
+    return list(filter(None, map(_list_field_name, model.__fields__.values())))
 
 
 def detect_collection_fields(args: List[FuncParam]) -> List[str]:
@@ -130,11 +145,6 @@ def detect_collection_fields(args: List[FuncParam]) -> List[str]:
     result = [i.name for i in args if i.is_collection]
 
     if len(args) == 1 and is_pydantic_model(args[0].annotation):
-        # There is a special case - when query param of form param is only one and it's defined as pydantic model
-        # In that case we need to detect collection
-        # see #34 for more details about the issue
-        for name, annotation in args[0].annotation.__annotations__.items():
-            if is_collection_type(annotation):
-                result.append(name)
+        result += detect_pydantic_model_collection_fields(args[0].annotation)
 
     return result
