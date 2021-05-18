@@ -201,11 +201,7 @@ def test_django_31_fields():
         "type": "object",
         "properties": {
             "id": {"title": "Id", "type": "integer"},
-            "jsonfield": {
-                "title": "Jsonfield",
-                "type": "string",
-                "format": "json-string",
-            },
+            "jsonfield": {"title": "Jsonfield", "type": "object"},
             "positivebigintegerfield": {
                 "title": "Positivebigintegerfield",
                 "type": "integer",

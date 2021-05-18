@@ -1,16 +1,41 @@
 import datetime
 from decimal import Decimal
-from typing import List, Tuple, Type, TypeVar, no_type_check
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generator,
+    List,
+    Tuple,
+    Type,
+    TypeVar,
+    no_type_check,
+)
 from uuid import UUID
 
 from django.db.models import ManyToManyField
 from django.db.models.fields import Field
-from pydantic import IPvAnyAddress, Json
+from pydantic import IPvAnyAddress
 from pydantic.fields import FieldInfo, Undefined
 
 from ninja.openapi.schema import OpenAPISchema
 
 __all__ = ["create_m2m_link_type", "get_schema_field", "get_related_field_schema"]
+
+
+class AnyObject:
+    @classmethod
+    def __modify_schema__(cls, field_schema: Dict[str, Any]) -> None:
+        field_schema.update(type="object")
+
+    @classmethod
+    def __get_validators__(cls) -> Generator[Callable, None, None]:
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, value: Any) -> Any:
+        return value
+
 
 TYPES = {
     "AutoField": int,
@@ -29,7 +54,7 @@ TYPES = {
     "GenericIPAddressField": IPvAnyAddress,
     "IPAddressField": IPvAnyAddress,
     "IntegerField": int,
-    "JSONField": Json,
+    "JSONField": AnyObject,
     "NullBooleanField": bool,
     "PositiveBigIntegerField": int,
     "PositiveIntegerField": int,
