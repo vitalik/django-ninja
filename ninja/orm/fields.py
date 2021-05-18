@@ -6,7 +6,7 @@ from uuid import UUID
 from django.db.models import ManyToManyField
 from django.db.models.fields import Field
 from pydantic import IPvAnyAddress, Json
-from pydantic.fields import FieldInfo
+from pydantic.fields import FieldInfo, Undefined
 
 from ninja.openapi.schema import OpenAPISchema
 
@@ -104,13 +104,16 @@ def get_schema_field(field: Field, *, depth: int = 0) -> Tuple:
         elif field.primary_key or blank or null:
             default = None
 
+    if default_factory:
+        default = Undefined
+
     description = field.help_text
     title = field.verbose_name.title()
 
     return (
         python_type,
         FieldInfo(
-            default,
+            default=default,
             alias=alias,
             default_factory=default_factory,
             title=title,
