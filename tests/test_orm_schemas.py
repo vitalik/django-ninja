@@ -210,6 +210,13 @@ def test_django_31_fields():
         "required": ["jsonfield", "positivebigintegerfield"],
     }
 
+    obj = Schema(id=1, jsonfield={"any": "data"}, positivebigintegerfield=1)
+    assert obj.dict() == {
+        "id": 1,
+        "jsonfield": {"any": "data"},
+        "positivebigintegerfield": 1,
+    }
+
 
 def test_relational():
     class Related(models.Model):
