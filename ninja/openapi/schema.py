@@ -107,7 +107,7 @@ class OpenAPISchema(dict):
 
             schema = model_schema(model, ref_prefix=REF_PREFIX)
 
-            required = set(schema.get("required", []))  ### ?
+            required = set(schema.get("required", []))
             properties = schema["properties"]
 
             for name, details in properties.items():
