@@ -5,7 +5,14 @@ from ninja.security import APIKeyCookie
 from ninja.errors import ConfigError
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
-from ninja.testing import TestClient
+from ninja.testing import TestClient as BaseTestClient
+
+
+class TestClient(BaseTestClient):
+    def _build_request(self, *args, **kwargs):
+        request = super()._build_request(*args, **kwargs)
+        request._dont_enforce_csrf_checks = False
+        return request
 
 
 csrf_OFF = NinjaAPI(urls_namespace="csrf_OFF")
