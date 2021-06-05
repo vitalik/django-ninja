@@ -87,7 +87,7 @@ class NinjaClientBase:
         request.path = path
         request.body = ""
         request.COOKIES = {}
-        request._dont_enforce_csrf_checks = False
+        request._dont_enforce_csrf_checks = True
         request.is_secure.return_value = False
 
         if "user" not in request_params:
