@@ -16,6 +16,7 @@ from typing import (
 import django
 import pydantic
 from django.http import HttpRequest, HttpResponse, HttpResponseNotAllowed
+from django.http.response import HttpResponseBase
 
 from ninja.constants import NOT_SET
 from ninja.errors import ConfigError, ValidationError
@@ -84,7 +85,7 @@ class Operation:
         self.exclude_defaults = exclude_defaults
         self.exclude_none = exclude_none
 
-    def run(self, request: HttpRequest, **kw: Any) -> HttpResponse:
+    def run(self, request: HttpRequest, **kw: Any) -> HttpResponseBase:
         error = self._run_checks(request)
         if error:
             return error
@@ -137,14 +138,16 @@ class Operation:
                 return None
         return self.api.create_response(request, {"detail": "Unauthorized"}, status=401)
 
-    def _result_to_response(self, request: HttpRequest, result: Any) -> HttpResponse:
+    def _result_to_response(
+        self, request: HttpRequest, result: Any
+    ) -> HttpResponseBase:
         """
         The protocol for results
          - if HttpResponse - returns as is
          - if tuple with 2 elements - means http_code + body
          - otherwise it's a body
         """
-        if isinstance(result, HttpResponse):
+        if isinstance(result, HttpResponseBase):
             return result
 
         status: int = 200
@@ -222,7 +225,7 @@ class AsyncOperation(Operation):
         super().__init__(*args, **kwargs)
         self.is_async = True
 
-    async def run(self, request: HttpRequest, **kw: Any) -> HttpResponse:  # type: ignore
+    async def run(self, request: HttpRequest, **kw: Any) -> HttpResponseBase:  # type: ignore
         error = self._run_checks(request)
         if error:
             return error
