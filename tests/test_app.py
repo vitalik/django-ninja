@@ -1,8 +1,9 @@
 import os
+from tempfile import NamedTemporaryFile
 import pytest
 from ninja import NinjaAPI
 from ninja.main import ConfigError
-from django.http import HttpResponse
+from django.http import FileResponse, HttpResponse
 from ninja.testing import TestClient
 
 
@@ -58,27 +59,40 @@ def html(request):
     return HttpResponse("html")
 
 
+@api.get("/file")
+def file_response(request):
+    tmp = NamedTemporaryFile(delete=False)
+    try:
+        with open(tmp.name, 'wb') as f:
+            f.write(b'this is a file')
+        return FileResponse(open(tmp.name, 'rb'))
+    finally:
+        os.remove(tmp.name)
+
+
 @pytest.mark.parametrize(
     # fmt: off
-    "method,path,expected_status,expected_data",
+    "method,path,expected_status,expected_data,expected_streaming",
     [
-        ("get",    "/",       200, "/"),
-        ("get",    "/get",    200, "this is GET"),
-        ("post",   "/post",   200, "this is POST"),
-        ("put",    "/put",    200, "this is PUT"),
-        ("patch",  "/patch",  200, "this is PATCH"),
-        ("delete", "/delete", 200, "this is DELETE"),
-        ("get",    "/multi",  200, "this is GET"),
-        ("post",   "/multi",  200, "this is POST"),
-        ("patch",  "/multi",  405, b"Method not allowed"),
-        ("get",    "/html",   200, b"html"),
+        ("get",    "/",       200, "/", False),
+        ("get",    "/get",    200, "this is GET", False),
+        ("post",   "/post",   200, "this is POST", False),
+        ("put",    "/put",    200, "this is PUT", False),
+        ("patch",  "/patch",  200, "this is PATCH", False),
+        ("delete", "/delete", 200, "this is DELETE", False),
+        ("get",    "/multi",  200, "this is GET", False),
+        ("post",   "/multi",  200, "this is POST", False),
+        ("patch",  "/multi",  405, b"Method not allowed", False),
+        ("get",    "/html",   200, b"html", False),
+        ("get",    "/file",   200, b"this is a file", True),
     ],
     # fmt: on
 )
-def test_method(method, path, expected_status, expected_data):
+def test_method(method, path, expected_status, expected_data, expected_streaming):
     func = getattr(client, method)
     response = func(path)
     assert response.status_code == expected_status
+    assert response.streaming == expected_streaming
     try:
         data = response.json()
     except Exception:
