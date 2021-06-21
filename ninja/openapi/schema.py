@@ -9,6 +9,8 @@ from ninja.operation import Operation
 from ninja.types import DictStrAny
 from ninja.utils import normalize_path
 
+from http.client import responses
+
 if TYPE_CHECKING:
     from ninja import NinjaAPI  # pragma: no cover
 
@@ -178,7 +180,7 @@ class OpenAPISchema(dict):
             if status == Ellipsis:
                 continue  # it's not yet clear what it means if user want's to output any other code
 
-            description = status < 300 and "OK" or "Error"
+            description = responses.get(status, 'Unknown Status Code')
             details: Dict[int, Any] = {status: {"description": description}}
             if model not in [None, NOT_SET]:
                 schema, _ = self._create_schema_from_model(model, by_alias=False)
