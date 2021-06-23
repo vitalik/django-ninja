@@ -1,6 +1,6 @@
 import warnings
 from http.client import responses
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type
+from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Set, Tuple, Type
 
 from pydantic import BaseModel
 from pydantic.schema import model_schema
@@ -108,24 +108,25 @@ class OpenAPISchema(dict):
 
             schema = model_schema(model, ref_prefix=REF_PREFIX)
 
-            num_properties = len(schema["properties"])
-            if num_properties == 1 and "definitions" in schema:
-                prop_definition = list(schema["definitions"].values())[0]
-                if prop_definition["type"] == "object":
-                    # This is a specail case when we group multiple path or query arguments into single schema
-                    # https://django-ninja.rest-framework.com/tutorial/path-params/#using-schema
-                    schema = prop_definition
-                else:
-                    # resolving $refs (seems only for enum) # TODO: better keep that ref in components/schemas/
-                    prop_name = list(schema["properties"].keys())[0]
-                    schema["properties"][prop_name] = prop_definition
-
             required = set(schema.get("required", []))
+            properties = schema["properties"]
 
-            for name, details in schema["properties"].items():
-                param = {"in": model._in, "name": name, "required": name in required}
-                param["schema"] = details
-                result.append(param)
+            for name, details in properties.items():
+                is_required = name in required
+                p_name: str
+                p_schema: DictStrAny
+                p_required: bool
+                for p_name, p_schema, p_required in flatten_properties(
+                    name, details, is_required, schema.get("definitions", {})
+                ):
+                    param = {
+                        "in": model._in,
+                        "name": p_name,
+                        "schema": p_schema,
+                        "required": p_required,
+                    }
+                    result.append(param)
+
         return result
 
     def _create_schema_from_model(
@@ -211,3 +212,41 @@ class OpenAPISchema(dict):
         # if not - workaround (maybe use pydantic.schema.schema(models)) to process list of models
         # assert set(definitions.keys()) - set(self.schemas.keys()) == set()
         self.schemas.update(definitions)
+
+
+def flatten_properties(
+    prop_name: str,
+    prop_details: DictStrAny,
+    prop_required: bool,
+    definitions: DictStrAny,
+) -> Generator[Tuple[str, DictStrAny, bool], None, None]:
+    """
+    extracts all nested model's properties into flat properties
+    (used f.e. in GET params with multiple arguments and models)
+    """
+    if "allOf" in prop_details:
+        resolve_allOf(prop_details, definitions)
+    if "$ref" in prop_details:
+        def_name = prop_details["$ref"].split("/")[-1]
+        definition = definitions[def_name]
+        if "properties" in definition:
+            required = set(definition.get("required", []))
+            for k, v in definition["properties"].items():
+                is_required = k in required
+                for p in flatten_properties(k, v, is_required, definitions):
+                    yield p
+        else:
+            yield prop_name, definition, prop_required
+    else:
+        yield prop_name, prop_details, prop_required
+
+
+def resolve_allOf(details: DictStrAny, definitions: DictStrAny) -> None:
+    """
+    resolves all $ref's in 'allOf' section
+    """
+    for item in details["allOf"]:
+        if "$ref" in item:
+            def_name = item["$ref"].split("/")[-1]
+            item.update(definitions[def_name])
+            del item["$ref"]

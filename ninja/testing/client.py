@@ -3,7 +3,7 @@ from typing import Any, Callable, Dict, List, Tuple, Union
 from unittest.mock import Mock
 
 import django
-from django.http import QueryDict
+from django.http import QueryDict, StreamingHttpResponse
 from django.urls.resolvers import URLPattern
 
 from ninja import NinjaAPI, Router
@@ -87,7 +87,7 @@ class NinjaClientBase:
         request.path = path
         request.body = ""
         request.COOKIES = {}
-        request._dont_enforce_csrf_checks = False
+        request._dont_enforce_csrf_checks = True
         request.is_secure.return_value = False
 
         if "user" not in request_params:
@@ -139,11 +139,15 @@ class TestAsyncClient(NinjaClientBase):
 
 
 class NinjaResponse:
-    def __init__(self, http_response: HttpResponse):
+    def __init__(self, http_response: Union[HttpResponse, StreamingHttpResponse]):
         # TODO: what's the type here ?
         self._response = http_response
         self.status_code = http_response.status_code
-        self.content = http_response.content
+        self.streaming = http_response.streaming  # type: ignore
+        if self.streaming:
+            self.content = b"".join(http_response.streaming_content)  # type: ignore
+        else:
+            self.content = http_response.content
 
     def json(self) -> Any:
         return json_loads(self.content)

@@ -24,7 +24,7 @@ def create_schema(
 Take this example:
 
 ```Python hl_lines="2 4"
-form django.contrib.auth.model import User
+from django.contrib.auth.models import User
 from ninja.orm import create_schema
 
 UserSchema = create_schema(User)
