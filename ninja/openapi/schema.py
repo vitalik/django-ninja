@@ -1,4 +1,5 @@
 import warnings
+from http.client import responses
 from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Set, Tuple, Type
 
 from pydantic import BaseModel
@@ -179,7 +180,7 @@ class OpenAPISchema(dict):
             if status == Ellipsis:
                 continue  # it's not yet clear what it means if user want's to output any other code
 
-            description = status < 300 and "OK" or "Error"
+            description = responses.get(status, "Unknown Status Code")
             details: Dict[int, Any] = {status: {"description": description}}
             if model not in [None, NOT_SET]:
                 schema, _ = self._create_schema_from_model(model, by_alias=False)

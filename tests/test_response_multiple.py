@@ -147,7 +147,7 @@ def test_schema():
                     "schema": {"$ref": "#/components/schemas/UserModel"}
                 }
             },
-            "description": "OK",
+            "description": "Accepted",
         },
     }
 
@@ -163,7 +163,7 @@ def test_no_content():
 
     schema = api.get_openapi_schema()
     details = schema["paths"]["/api/check_no_content"]["get"]["responses"]
-    assert details == {204: {"description": "OK"}}
+    assert details == {204: {"description": "No Content"}}
 
 
 def test_validates():
