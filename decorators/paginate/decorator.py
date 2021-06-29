@@ -6,6 +6,8 @@ from django.core.paginator import Page, Paginator
 from django.utils.encoding import force_str
 
 
+# based on https://github.com/vitalik/django-ninja/issues/104
+
 def replace_query_param(url, key, val):
     (scheme, netloc, path, query, fragment) = parse.urlsplit(force_str(url))
     query_dict = parse.parse_qs(query, keep_blank_values=True)
