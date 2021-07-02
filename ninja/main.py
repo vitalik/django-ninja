@@ -22,7 +22,8 @@ from ninja.openapi.schema import OpenAPISchema
 from ninja.openapi.urls import get_openapi_urls, get_root_url
 from ninja.parser import Parser
 from ninja.renderers import BaseRenderer, JSONRenderer
-from ninja.router import Decorator, Router
+from ninja.router import Router
+from ninja.types import Decorator
 
 if TYPE_CHECKING:
     from .operation import Operation  # pragma: no cover
