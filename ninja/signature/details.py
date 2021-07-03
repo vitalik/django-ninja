@@ -29,11 +29,23 @@ class ViewSignature:
         self.signature = get_typed_signature(self.view_func)
         self.path_params_names = get_path_param_names(path)
         self.docstring = inspect.cleandoc(view_func.__doc__ or "")
+        self.has_kwargs = False
 
         self.params = []
         for name, arg in self.signature.parameters.items():
             if name == "request":
                 # TODO: maybe better assert that 1st param is request  or check by type?
+                # maybe even  have attribute like `has_request`
+                # so that users can ignroe passing request if not needed
+                continue
+
+            if arg.kind == arg.VAR_KEYWORD:
+                # Skipping **kwargs
+                self.has_kwargs = True
+                continue
+
+            if arg.kind == arg.VAR_POSITIONAL:
+                # Skipping *args
                 continue
 
             func_param = self._get_param_type(name, arg)

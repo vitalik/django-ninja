@@ -19,3 +19,23 @@ def test_client():
     client = TestClient(api)
     with pytest.raises(Exception):
         response = client.get("/404")
+
+
+def test_kwargs():
+    api = NinjaAPI()
+
+    @api.get("/")
+    def operation(request, a: str, *args, **kwargs):
+        pass
+
+    schema = api.get_openapi_schema()
+    params = schema["paths"]["/api/"]["get"]["parameters"]
+    print(params)
+    assert params == [  # Only `a` should be here, not kwargs
+        {
+            "in": "query",
+            "name": "a",
+            "schema": {"title": "A", "type": "string"},
+            "required": True,
+        }
+    ]
