@@ -1,6 +1,7 @@
 from json import dumps as json_dumps, loads as json_loads
-from typing import Any, Callable, Dict, List, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from unittest.mock import Mock
+from urllib.parse import urljoin
 
 import django
 from django.http import QueryDict, StreamingHttpResponse
@@ -8,6 +9,15 @@ from django.urls.resolvers import URLPattern
 
 from ninja import NinjaAPI, Router
 from ninja.responses import Response as HttpResponse
+
+
+def build_absolute_uri(location: Optional[str] = None) -> str:
+    base = "http://testlocation/"
+
+    if location:
+        base = urljoin(base, location)
+
+    return base
 
 
 # TODO: this should be changed
@@ -89,6 +99,7 @@ class NinjaClientBase:
         request.COOKIES = {}
         request._dont_enforce_csrf_checks = True
         request.is_secure.return_value = False
+        request.build_absolute_uri = build_absolute_uri
 
         if "user" not in request_params:
             request.user.is_authenticated = False
