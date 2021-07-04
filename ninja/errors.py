@@ -22,6 +22,12 @@ class ConfigError(Exception):
 
 
 class ValidationError(Exception):
+    """
+    This exception raised when operation params do not validate
+    Note: this is not the same as pydantic.ValidationError
+    the errors attribute as well holds the location of the error(body, form, query, etc.)
+    """
+
     def __init__(self, errors: List[DictStrAny]) -> None:
         super().__init__()
         self.errors = errors
@@ -34,11 +40,21 @@ class HttpError(Exception):
 
 
 def set_default_exc_handlers(api: "NinjaAPI") -> None:
-    api.add_exception_handler(Exception, partial(_default_exception, api=api))
-    api.add_exception_handler(Http404, partial(_default_404, api=api))
-    api.add_exception_handler(HttpError, partial(_default_http_error, api=api))
     api.add_exception_handler(
-        ValidationError, partial(_default_validation_error, api=api)
+        Exception,
+        partial(_default_exception, api=api),
+    )
+    api.add_exception_handler(
+        Http404,
+        partial(_default_404, api=api),
+    )
+    api.add_exception_handler(
+        HttpError,
+        partial(_default_http_error, api=api),
+    )
+    api.add_exception_handler(
+        ValidationError,
+        partial(_default_validation_error, api=api),
     )
 
 
