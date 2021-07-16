@@ -132,7 +132,11 @@ class Operation:
 
     def _run_authentication(self, request: HttpRequest) -> Optional[HttpResponse]:
         for callback in self.auth_callbacks:
-            result = callback(request)
+            try:
+                result = callback(request)
+            except Exception as exc:
+                return self.api.on_exception(request, exc)
+
             if result:
                 request.auth = result  # type: ignore
                 return None
