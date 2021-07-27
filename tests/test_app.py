@@ -63,11 +63,14 @@ def html(request):
 def file_response(request):
     tmp = NamedTemporaryFile(delete=False)
     try:
-        with open(tmp.name, 'wb') as f:
-            f.write(b'this is a file')
-        return FileResponse(open(tmp.name, 'rb'))
+        with open(tmp.name, "wb") as f:
+            f.write(b"this is a file")
+        return FileResponse(open(tmp.name, "rb"))
     finally:
-        os.remove(tmp.name)
+        try:
+            os.remove(tmp.name)
+        except PermissionError:
+            pass
 
 
 @pytest.mark.parametrize(
@@ -109,4 +112,3 @@ def test_validates():
             urls = api2.urls
     finally:
         os.environ["NINJA_SKIP_REGISTRY"] = "yes"
-
