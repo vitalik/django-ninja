@@ -48,6 +48,15 @@ class ParamModel(BaseModel, ABC):
         varname = getattr(cls, "_single_attr", None)
         if varname:
             data = {varname: data}
+
+        mixed_attrs = getattr(cls, "_mixed_attrs", None)
+        if mixed_attrs:
+            for param_name, varname in mixed_attrs.items():
+                if varname not in data:
+                    data[varname] = {}
+                if param_name in data:
+                    data[varname][param_name] = data.pop(param_name)
+
         # TODO: I guess if data is not dict - raise an HttpBadRequest
         return cls(**data)
 
