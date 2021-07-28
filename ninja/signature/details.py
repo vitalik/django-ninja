@@ -34,9 +34,9 @@ class ViewSignature:
         self.params = []
         for name, arg in self.signature.parameters.items():
             if name == "request":
-                # TODO: maybe better assert that 1st param is request  or check by type?
-                # maybe even  have attribute like `has_request`
-                # so that users can ignroe passing request if not needed
+                # TODO: maybe better assert that 1st param is request or check by type?
+                # maybe even have attribute like `has_request`
+                # so that users can ignore passing request if not needed
                 continue
 
             if arg.kind == arg.VAR_KEYWORD:
@@ -68,6 +68,20 @@ class ViewSignature:
             if len(args) == 1:
                 if cls._in() == "body" or is_pydantic_model(args[0].annotation):
                     attrs["_single_attr"] = args[0].name
+
+            elif cls._in() == "query":
+                pydantic_models = [
+                    a.name for a in args if is_pydantic_model(a.annotation)
+                ]
+                if pydantic_models:
+                    assert (
+                        len(pydantic_models) == 1
+                    ), f"Only one pydantic model allowed in query: {','.join(pydantic_models)}"
+
+                    attrs["_single_attr"] = pydantic_models[0]
+                    attrs["_named_query_params"] = {
+                        a.name for a in args if a.name != pydantic_models[0]
+                    }
 
             # adding annotations:
             attrs["__annotations__"] = {i.name: i.annotation for i in args}

@@ -48,6 +48,10 @@ class ParamModel(BaseModel, ABC):
         varname = getattr(cls, "_single_attr", None)
         if varname:
             data = {varname: data}
+            for named_query_param in getattr(cls, "_named_query_params", ()):
+                if named_query_param in data[varname]:
+                    data[named_query_param] = data[varname].pop(named_query_param)
+
         # TODO: I guess if data is not dict - raise an HttpBadRequest
         return cls(**data)
 
