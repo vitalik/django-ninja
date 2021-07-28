@@ -71,17 +71,20 @@ class ViewSignature:
 
             elif cls._in() == "query":
                 pydantic_models = [
-                    a.name for a in args if is_pydantic_model(a.annotation)
+                    arg for arg in args if is_pydantic_model(arg.annotation)
                 ]
                 if pydantic_models:
-                    assert (
-                        len(pydantic_models) == 1
-                    ), f"Only one pydantic model allowed in query: {','.join(pydantic_models)}"
+                    mixed_attrs = {}
+                    for modeled_attr in pydantic_models:
+                        for (
+                            attr_name,
+                            field,
+                        ) in modeled_attr.annotation.__fields__.items():
+                            mixed_attrs[attr_name] = modeled_attr.name
+                            if hasattr(field, "alias"):
+                                mixed_attrs[field.alias] = modeled_attr.name
 
-                    attrs["_single_attr"] = pydantic_models[0]
-                    attrs["_named_query_params"] = {
-                        a.name for a in args if a.name != pydantic_models[0]
-                    }
+                    attrs["_mixed_attrs"] = mixed_attrs
 
             # adding annotations:
             attrs["__annotations__"] = {i.name: i.annotation for i in args}

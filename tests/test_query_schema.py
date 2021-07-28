@@ -21,6 +21,11 @@ class Filter(Schema):
     range: Range = Range.TWENTY
 
 
+class Data(Schema):
+    an_int: int = Field(alias="int", default=0)
+    a_float: float = Field(alias="float", default=1.5)
+
+
 api = NinjaAPI()
 
 
@@ -31,9 +36,13 @@ def query_params_schema(request, filters: Filter = Query(...)):
 
 @api.get("/test-mixed")
 def query_params_mixed_schema(
-    request, query1: int, query2: int = 5, filters: Filter = Query(...)
+    request,
+    query1: int,
+    query2: int = 5,
+    filters: Filter = Query(...),
+    data: Data = Query(...),
 ):
-    return dict(query1=query1, query2=query2, **filters.dict())
+    return dict(query1=query1, query2=query2, filters=filters.dict(), data=data.dict())
 
 
 def test_request():
@@ -52,12 +61,17 @@ def test_request():
 
 def test_request_mixed():
     client = TestClient(api)
-    response = client.get("/test-mixed?from=1&to=2&range=20&foo=1&range2=50&query1=2")
+    response = client.get(
+        "/test-mixed?from=1&to=2&range=20&foo=1&range2=50&query1=2&int=3&float=1.6"
+    )
     print(response.json())
     assert response.json() == {
-        "to_datetime": "1970-01-01T00:00:02Z",
-        "from_datetime": "1970-01-01T00:00:01Z",
-        "range": 20,
+        "data": {"a_float": 1.6, "an_int": 3},
+        "filters": {
+            "from_datetime": "1970-01-01T00:00:01Z",
+            "range": 20,
+            "to_datetime": "1970-01-01T00:00:02Z",
+        },
         "query1": 2,
         "query2": 5,
     }
@@ -67,30 +81,18 @@ def test_request_mixed():
     )
     print(response.json())
     assert response.json() == {
-        "to_datetime": "1970-01-01T00:00:02Z",
-        "from_datetime": "1970-01-01T00:00:01Z",
-        "range": 20,
+        "data": {"a_float": 1.5, "an_int": 0},
+        "filters": {
+            "from_datetime": "1970-01-01T00:00:01Z",
+            "range": 20,
+            "to_datetime": "1970-01-01T00:00:02Z",
+        },
         "query1": 2,
         "query2": 10,
     }
 
     response = client.get("/test-mixed?from=1&to=2")
     assert response.status_code == 422
-
-
-def test_request_mixed_multiple():
-    def add_with_error():
-        @api.get("/test-mixed")
-        def query_params_mixed_schema(
-            request, filters1: Filter = Query(...), filters2: Filter = Query(...)
-        ):
-            pass
-
-    with pytest.raises(
-        AssertionError,
-        match="Only one pydantic model allowed in query: filters1,filters2",
-    ):
-        add_with_error()
 
 
 def test_schema():
