@@ -286,3 +286,21 @@ Organization.update_forward_refs()  # !!! this is important
 def list_organizations(request):
     ...
 ```
+
+## Self-referencing schemes from `create_schema()`
+
+To be able to use the method `update_forward_refs()` from a schema generated via `create_schema()`,
+the "name" of the class needs to be in our namespace.  In this case it is very important to pass
+the `name` parameter to `create_schema()`
+
+```Python hl_lines="3"
+UserSchema = create_schema(
+    User,
+    name='UserSchema',  # !!! this is important for update_forward_refs()  
+    fields=['id', 'username']
+    custom_fields=[
+        ('manager', 'UserSchema', None),
+    ]
+)
+UserSchema.update_forward_refs()
+```
