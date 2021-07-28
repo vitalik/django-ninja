@@ -163,3 +163,14 @@ or using router constructor
 ```Python
 router = Router(auth=BasicAuth())
 ```
+
+
+## Custom exceptions
+
+Raising an exception that has a exception handler will return the response from that handler in the same way a operation would:
+
+```Python hl_lines="1 4"
+{!./src/tutorial/authentication/bearer02.py!}
+```
+
+See [Handling errors](https://django-ninja.rest-framework.com/tutorial/errors/) for more information.

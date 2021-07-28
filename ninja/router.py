@@ -14,7 +14,7 @@ from django.urls import URLPattern, path as django_path
 
 from ninja.constants import NOT_SET
 from ninja.operation import PathView
-from ninja.types import Decorator, TCallable
+from ninja.types import TCallable
 from ninja.utils import normalize_path
 
 if TYPE_CHECKING:
@@ -51,7 +51,7 @@ class Router:
         exclude_none: bool = False,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
-    ) -> Decorator:
+    ) -> Callable[[TCallable], TCallable]:
         return self.api_operation(
             ["GET"],
             path,
@@ -87,7 +87,7 @@ class Router:
         exclude_none: bool = False,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
-    ) -> Decorator:
+    ) -> Callable[[TCallable], TCallable]:
         return self.api_operation(
             ["POST"],
             path,
@@ -123,7 +123,7 @@ class Router:
         exclude_none: bool = False,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
-    ) -> Decorator:
+    ) -> Callable[[TCallable], TCallable]:
         return self.api_operation(
             ["DELETE"],
             path,
@@ -159,7 +159,7 @@ class Router:
         exclude_none: bool = False,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
-    ) -> Decorator:
+    ) -> Callable[[TCallable], TCallable]:
         return self.api_operation(
             ["PATCH"],
             path,
@@ -195,7 +195,7 @@ class Router:
         exclude_none: bool = False,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
-    ) -> Decorator:
+    ) -> Callable[[TCallable], TCallable]:
         return self.api_operation(
             ["PUT"],
             path,
@@ -232,7 +232,7 @@ class Router:
         exclude_none: bool = False,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
-    ) -> Decorator:
+    ) -> Callable[[TCallable], TCallable]:
         def decorator(view_func: TCallable) -> TCallable:
             self.add_api_operation(
                 path,

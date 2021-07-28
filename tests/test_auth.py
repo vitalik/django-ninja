@@ -30,6 +30,16 @@ class KeyHeader(APIKeyHeader):
             return key
 
 
+class CustomException(Exception):
+    pass
+
+class KeyHeaderCustomException(APIKeyHeader):
+    def authenticate(self, request, key):
+        if key != "keyheadersecret":
+            raise CustomException
+        return key
+
+
 class KeyCookie(APIKeyCookie):
     def authenticate(self, request, key):
         if key == "keycookiersecret":
@@ -54,6 +64,11 @@ def demo_operation(request):
 
 api = NinjaAPI(csrf=True)
 
+@api.exception_handler(CustomException)
+def on_custom_error(request, exc):
+    return api.create_response(request, {"custom": True}, status=401)
+
+
 for path, auth in [
     ("django_auth", django_auth),
     ("callable", callable_auth),
@@ -62,6 +77,7 @@ for path, auth in [
     ("apikeycookie", KeyCookie()),
     ("basic", BasicAuth()),
     ("bearer", BearerAuth()),
+    ("customexception", KeyHeaderCustomException()),
 ]:
     api.get(f"/{path}", auth=auth, operation_id=path)(demo_operation)
 
@@ -72,34 +88,38 @@ client = TestClient(api)
 class MockUser(str):
     is_authenticated = True
 
+BODY_UNAUTHORIZED_DEFAULT = dict(detail="Unauthorized")
 
 @pytest.mark.parametrize(
-    "path,kwargs,expected_code",
+    "path,kwargs,expected_code,expected_body",
     [
-        ("/django_auth", {}, 401),
-        ("/django_auth", dict(user=MockUser("admin")), 200),
-        ("/callable", {}, 401),
-        ("/callable?auth=demo", {}, 200),
-        ("/apikeyquery", {}, 401),
-        ("/apikeyquery?key=keyquerysecret", {}, 200),
-        ("/apikeyheader", {}, 401),
-        ("/apikeyheader", dict(headers={"key": "keyheadersecret"}), 200),
-        ("/apikeycookie", {}, 401),
-        ("/apikeycookie", dict(COOKIES={"key": "keycookiersecret"}), 200),
-        ("/basic", {}, 401),
-        ("/basic", dict(headers={"Authorization": "Basic YWRtaW46c2VjcmV0"}), 200),
-        ("/basic", dict(headers={"Authorization": "YWRtaW46c2VjcmV0"}), 200),
-        ("/basic", dict(headers={"Authorization": "Basic invalid"}), 401),
-        ("/basic", dict(headers={"Authorization": "some invalid value"}), 401),
-        ("/bearer", {}, 401),
-        ("/bearer", dict(headers={"Authorization": "Bearer bearertoken"}), 200),
-        ("/bearer", dict(headers={"Authorization": "Invalid bearertoken"}), 401),
+        ("/django_auth", {}, 401, BODY_UNAUTHORIZED_DEFAULT),
+        ("/django_auth", dict(user=MockUser("admin")), 200, dict(auth="admin")),
+        ("/callable", {}, 401, BODY_UNAUTHORIZED_DEFAULT),
+        ("/callable?auth=demo", {}, 200, dict(auth="demo")),
+        ("/apikeyquery", {}, 401, BODY_UNAUTHORIZED_DEFAULT),
+        ("/apikeyquery?key=keyquerysecret", {}, 200, dict(auth="keyquerysecret")),
+        ("/apikeyheader", {}, 401, BODY_UNAUTHORIZED_DEFAULT),
+        ("/apikeyheader", dict(headers={"key": "keyheadersecret"}), 200, dict(auth="keyheadersecret")),
+        ("/apikeycookie", {}, 401, BODY_UNAUTHORIZED_DEFAULT),
+        ("/apikeycookie", dict(COOKIES={"key": "keycookiersecret"}), 200, dict(auth="keycookiersecret")),
+        ("/basic", {}, 401, BODY_UNAUTHORIZED_DEFAULT),
+        ("/basic", dict(headers={"Authorization": "Basic YWRtaW46c2VjcmV0"}), 200, dict(auth="admin")),
+        ("/basic", dict(headers={"Authorization": "YWRtaW46c2VjcmV0"}), 200, dict(auth="admin")),
+        ("/basic", dict(headers={"Authorization": "Basic invalid"}), 401, BODY_UNAUTHORIZED_DEFAULT),
+        ("/basic", dict(headers={"Authorization": "some invalid value"}), 401, BODY_UNAUTHORIZED_DEFAULT),
+        ("/bearer", {}, 401, BODY_UNAUTHORIZED_DEFAULT),
+        ("/bearer", dict(headers={"Authorization": "Bearer bearertoken"}), 200, dict(auth="bearertoken")),
+        ("/bearer", dict(headers={"Authorization": "Invalid bearertoken"}), 401, BODY_UNAUTHORIZED_DEFAULT),
+        ("/customexception", {}, 401, dict(custom=True)),
+        ("/customexception", dict(headers={"key": "keyheadersecret"}), 200, dict(auth="keyheadersecret")),
     ],
 )
-def test_auth(path, kwargs, expected_code, settings):
+def test_auth(path, kwargs, expected_code, expected_body, settings):
     settings.DEBUG = True  # <-- making sure all if debug are covered
     response = client.get(path, **kwargs)
     assert response.status_code == expected_code
+    assert response.json() == expected_body
 
 
 def test_schema():
@@ -109,6 +129,7 @@ def test_schema():
         "BearerAuth": {"scheme": "bearer", "type": "http"},
         "KeyCookie": {"in": "cookie", "name": "key", "type": "apiKey"},
         "KeyHeader": {"in": "header", "name": "key", "type": "apiKey"},
+        "KeyHeaderCustomException": {"in": "header", "name": "key", "type": "apiKey"},
         "KeyQuery": {"in": "query", "name": "key", "type": "apiKey"},
         "SessionAuth": {"in": "cookie", "name": "sessionid", "type": "apiKey"},
     }
