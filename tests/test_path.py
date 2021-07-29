@@ -245,3 +245,47 @@ def test_get_path(path, expected_status, expected_response):
     response = client.get(path)
     assert response.status_code == expected_status
     assert response.json() == expected_response
+
+
+@pytest.mark.parametrize(
+    "path,expected_status,expected_response",
+    [
+        ("/path/param-django-str/42", 200, "42"),
+        ("/path/param-django-str/-1", 200, "-1"),
+        ("/path/param-django-str/foobar", 200, "foobar"),
+        ("/path/param-django-int/0", 200, 0),
+        ("/path/param-django-int/42", 200, 42),
+        ("/path/param-django-int/42.5", "Cannot resolve", Exception),
+        ("/path/param-django-int/-1", "Cannot resolve", Exception),
+        ("/path/param-django-int/True", "Cannot resolve", Exception),
+        ("/path/param-django-int/foobar", "Cannot resolve", Exception),
+        (
+            "/path/param-django-slug/django-ninja-is-the-best",
+            200,
+            "django-ninja-is-the-best",
+        ),
+        ("/path/param-django-slug/42.5", "Cannot resolve", Exception),
+        (
+            "/path/param-django-uuid/31ea378c-c052-4b4c-bf0b-679ce5cfcc2a",
+            200,
+            "31ea378c-c052-4b4c-bf0b-679ce5cfcc2a",
+        ),
+        (
+            "/path/param-django-uuid/31ea378c-c052-4b4c-bf0b-679ce5cfcc2",
+            "Cannot resolve",
+            Exception,
+        ),
+        ("/path/param-django-path/some/path/things/after", 200, "some/path/things"),
+        ("/path/param-django-path/less/path/after", 200, "less/path"),
+        ("/path/param-django-path/plugh/after", 200, "plugh"),
+        ("/path/param-django-path//after", "Cannot resolve", Exception),
+    ],
+)
+def test_get_path_django(path, expected_status, expected_response):
+    if expected_response == Exception:
+        with pytest.raises(Exception, match=expected_status):
+            client.get(path)
+    else:
+        response = client.get(path)
+        assert response.status_code == expected_status
+        assert response.json() == expected_response

@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from pydantic.fields import ModelField  # pragma: no cover
 
 from ninja import params
-from ninja.signature.utils import get_path_param_names, get_typed_signature
+from ninja.signature.utils import get_path_param_names_types, get_typed_signature
 
 __all__ = [
     "FuncParam",
@@ -27,7 +27,7 @@ class ViewSignature:
     def __init__(self, path: str, view_func: Callable) -> None:
         self.view_func = view_func
         self.signature = get_typed_signature(self.view_func)
-        self.path_params_names = get_path_param_names(path)
+        self.path_params_names = get_path_param_names_types(path)
         self.docstring = inspect.cleandoc(view_func.__doc__ or "")
         self.has_kwargs = False
 
@@ -103,13 +103,15 @@ class ViewSignature:
         annotation = arg.annotation
 
         if annotation == self.signature.empty:
-            if arg.default == self.signature.empty:
+            if self.path_params_names.get(name):
+                # ::TODO:: need to look at getting these things at runtime to resolve embedded routers
+                annotation = self.path_params_names[name]
+            elif arg.default == self.signature.empty:
                 annotation = str
+            elif isinstance(arg.default, params.Param):
+                annotation = type(arg.default.default)
             else:
-                if isinstance(arg.default, params.Param):
-                    annotation = type(arg.default.default)
-                else:
-                    annotation = type(arg.default)
+                annotation = type(arg.default)
 
         if annotation == type(None) or annotation == type(Ellipsis):  # noqa
             annotation = str

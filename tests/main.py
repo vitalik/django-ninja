@@ -131,6 +131,31 @@ def get_path_param_le_ge_int(request, item_id: int = Path(..., le=3, ge=1)):
     return item_id
 
 
+@router.get("/path/param-django-str/{str:item_id}")
+def get_path_param_django_int(request, item_id):
+    return item_id
+
+
+@router.get("/path/param-django-int/{int:item_id}")
+def get_path_param_django_int(request, item_id):
+    return item_id
+
+
+@router.get("/path/param-django-slug/{slug:item_id}")
+def get_path_param_django_int(request, item_id):
+    return item_id
+
+
+@router.get("/path/param-django-uuid/{uuid:item_id}")
+def get_path_param_django_int(request, item_id):
+    return item_id
+
+
+@router.get("/path/param-django-path/{path:item_id}/after")
+def get_path_param_django_int(request, item_id):
+    return item_id
+
+
 @router.get("/query")
 def get_query(request, query):
     return f"foo bar {query}"
