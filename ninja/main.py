@@ -24,6 +24,7 @@ from ninja.parser import Parser
 from ninja.renderers import BaseRenderer, JSONRenderer
 from ninja.router import Router
 from ninja.types import TCallable
+from ninja.utils import normalize_path
 
 if TYPE_CHECKING:
     from .operation import Operation  # pragma: no cover
@@ -291,11 +292,20 @@ class NinjaAPI:
         *,
         auth: Any = NOT_SET,
         tags: Optional[List[str]] = None,
+        parent_router: Router = None,
     ) -> None:
         if auth != NOT_SET:
             router.auth = auth
         if tags is not None:
             router.tags = tags
+
+        if parent_router:
+            parent_prefix = next(
+                (path for path, r in self._routers if r is parent_router), None
+            )
+            assert parent_prefix is not None
+            prefix = normalize_path("/".join((parent_prefix, prefix))).lstrip("/")
+
         self._routers.extend(router.build_routers(prefix))
         router.set_api_instance(self)
 
