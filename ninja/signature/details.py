@@ -104,7 +104,6 @@ class ViewSignature:
 
         if annotation == self.signature.empty:
             if self.path_params_names.get(name):
-                # ::TODO:: need to look at getting these things at runtime to resolve embedded routers
                 annotation = self.path_params_names[name]
             elif arg.default == self.signature.empty:
                 annotation = str
@@ -127,14 +126,14 @@ class ViewSignature:
             assert arg.default == self.signature.empty, f"'{name}' is a path param"
             param_source = params.Path(...)
 
-        # 3) if param have no  type annotation or annotation is not part of pydantic model:
+        # 3) if param is a collection or annotation is part of pydantic model:
         elif is_collection or is_pydantic_model(annotation):
             if arg.default == self.signature.empty:
                 param_source = params.Body(...)
             else:
                 param_source = params.Body(arg.default)
 
-        # 4) the last case is body param
+        # 4) the last case is query param
         else:
             if arg.default == self.signature.empty:
                 param_source = params.Query(...)

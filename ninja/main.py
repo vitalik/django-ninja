@@ -303,12 +303,13 @@ class NinjaAPI:
     def urls(self) -> Tuple[Any, ...]:
         self._validate()
         return (
-            self._get_urls(),
+            self._get_urls,
             "ninja",
             self.urls_namespace.split(":")[-1],
             # ^ if api included into nested urls, we only care about last bit here
         )
 
+    @property
     def _get_urls(self) -> List[URLPattern]:
         result = get_openapi_urls(self)
 

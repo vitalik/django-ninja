@@ -200,3 +200,40 @@ def get_query_param_required(request, query=Query(...)):
 @router.get("/query/param-required/int")
 def get_query_param_required_type(request, query: int = Query(...)):
     return f"foo bar {query}"
+
+
+class CustomPathConverter1:
+    regex = '[0-9]+'
+
+    def to_python(self, value) -> 'int':
+        """reverse the string and convert to int"""
+        return int(value[::-1])
+
+    def to_url(self, value):
+        return str(value)
+
+
+class CustomPathConverter2:
+    regex = "[0-9]+"
+
+    def to_python(self, value):
+        """reverse the string and convert to float like"""
+        return f"0.{value[::-1]}"
+
+    def to_url(self, value):
+        return str(value)
+
+
+from django.urls import register_converter
+register_converter(CustomPathConverter1, 'custom-int')
+register_converter(CustomPathConverter2, 'custom-float')
+
+
+@router.get("/path/param-django-custom-int/{custom-int:item_id}")
+def get_path_param_django_int(request, item_id):
+    return item_id
+
+
+@router.get("/path/param-django-custom-float/{custom-float:item_id}")
+def get_path_param_django_float(request, item_id:float):
+    return item_id

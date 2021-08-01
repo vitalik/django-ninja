@@ -279,6 +279,10 @@ def test_get_path(path, expected_status, expected_response):
         ("/path/param-django-path/less/path/after", 200, "less/path"),
         ("/path/param-django-path/plugh/after", 200, "plugh"),
         ("/path/param-django-path//after", "Cannot resolve", Exception),
+        ("/path/param-django-custom-int/42", 200, 24),
+        ("/path/param-django-custom-int/x42", "Cannot resolve", Exception),
+        ("/path/param-django-custom-float/42", 200, 0.24),
+        ("/path/param-django-custom-float/x42", "Cannot resolve", Exception),
     ],
 )
 def test_get_path_django(path, expected_status, expected_response):

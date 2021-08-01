@@ -4,6 +4,7 @@ import re
 from typing import Any, Callable, Dict, Union
 from uuid import UUID
 
+from django.urls.converters import get_converters
 from pydantic.typing import ForwardRef, evaluate_forwardref
 
 from ninja.types import DictStrAny
@@ -56,16 +57,34 @@ def make_forwardref(annotation: str, globalns: DictStrAny) -> Any:
 
 def get_path_param_names_types(path: str) -> Dict[str, Union[type, None]]:
     """turns path string like /foo/{var}/path/{int:another}/end to dict {'var': None, 'another': int}"""
-    # ::TODO:: custom path converters
-    # https://docs.djangoproject.com/en/3.2/topics/http/urls/#registering-custom-path-converters
     names_types = (
         ([None] + item.strip("{}").split(":"))[-1:-3:-1]
         for item in re.findall("{[^}]*}", path)
     )
-    return {
-        name: django_default_path_converter_types.get(type_)
-        for name, type_ in names_types
-    }
+    return {name: _path_converter_type(type_) for name, type_ in names_types}
+
+
+def _path_converter_type(converter_name: str) -> Union[type, None]:
+    if converter_name is None:
+        return None
+    if converter_name in django_default_path_converter_types:
+        return django_default_path_converter_types[converter_name]
+
+    # custom converters
+    # https://docs.djangoproject.com/en/3.2/topics/http/urls/#registering-custom-path-converters
+    converter = get_converters()[converter_name]
+    signature = inspect.signature(converter.to_python)
+    annotation = signature.return_annotation
+    if annotation == signature.empty:
+        return None
+
+    if isinstance(annotation, str):
+        globalns = getattr(converter.to_python, "__globals__", {})
+        annotation = make_forwardref(annotation, globalns)
+    assert isinstance(
+        annotation, type
+    ), f"Unknown type annotation on custom converter: {converter_name}"
+    return annotation
 
 
 def is_async(callable: Callable) -> bool:
