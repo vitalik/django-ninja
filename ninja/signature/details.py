@@ -34,9 +34,9 @@ class ViewSignature:
         self.params = []
         for name, arg in self.signature.parameters.items():
             if name == "request":
-                # TODO: maybe better assert that 1st param is request  or check by type?
-                # maybe even  have attribute like `has_request`
-                # so that users can ignroe passing request if not needed
+                # TODO: maybe better assert that 1st param is request or check by type?
+                # maybe even have attribute like `has_request`
+                # so that users can ignore passing request if not needed
                 continue
 
             if arg.kind == arg.VAR_KEYWORD:
@@ -68,6 +68,23 @@ class ViewSignature:
             if len(args) == 1:
                 if cls._in() == "body" or is_pydantic_model(args[0].annotation):
                     attrs["_single_attr"] = args[0].name
+
+            elif cls._in() == "query":
+                pydantic_models = [
+                    arg for arg in args if is_pydantic_model(arg.annotation)
+                ]
+                if pydantic_models:
+                    mixed_attrs = {}
+                    for modeled_attr in pydantic_models:
+                        for (
+                            attr_name,
+                            field,
+                        ) in modeled_attr.annotation.__fields__.items():
+                            mixed_attrs[attr_name] = modeled_attr.name
+                            if hasattr(field, "alias"):
+                                mixed_attrs[field.alias] = modeled_attr.name
+
+                    attrs["_mixed_attrs"] = mixed_attrs
 
             # adding annotations:
             attrs["__annotations__"] = {i.name: i.annotation for i in args}
