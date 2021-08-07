@@ -43,7 +43,7 @@ class LimitOffsetPagination(PaginationBase):
         limit: int
         limit, offset = params["pagination"].limit, params["pagination"].offset  # type: ignore
 
-        return items[offset : offset + limit]
+        return items[offset : offset + limit]  # noqa: E203
 
 
 class PageNumberPagination(PaginationBase):
@@ -58,7 +58,7 @@ class PageNumberPagination(PaginationBase):
     ) -> QuerySet:
         page: int = params["pagination"].page  # type: ignore
         offset = (page - 1) * self.page_size
-        return items[offset : offset + self.page_size]
+        return items[offset : offset + self.page_size]  # noqa: E203
 
 
 def paginate(
