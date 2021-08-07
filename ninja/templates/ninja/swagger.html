@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <link type="text/css" rel="stylesheet" href="{% static 'ninja/swagger-ui.3.38.0.css' %}">    
+    <link type="text/css" rel="stylesheet" href="{% static 'ninja/swagger-ui.3.51.2.css' %}">
     <link rel="shortcut icon" href="{% static 'ninja/favicon.png' %}">
     <title>{{ api.title }}</title>
 </head>
@@ -10,7 +10,7 @@
     <div id="swagger-ui">
     </div>
 
-    <script src="{% static 'ninja/swagger-ui-bundle.3.38.0.js' %}"></script>
+    <script src="{% static 'ninja/swagger-ui-bundle.3.51.2.js' %}"></script>
     <script>
         const ui = SwaggerUIBundle({
             url: '{{ openapi_json_url }}',
