@@ -13,11 +13,11 @@ class APIKeyBase(AuthBase, ABC):
     openapi_type: str = "apiKey"
     param_name: str = "key"
 
-    def __init__(self) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.openapi_name = self.param_name
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
-    def __call__(self, request: HttpRequest) -> Optional[Any]:
+    def callable(self, request: HttpRequest) -> Optional[Any]:
         key = self._get_key(request)
         return self.authenticate(request, key)
 
