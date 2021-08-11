@@ -78,13 +78,12 @@ for path, auth in [
     ("basic", BasicAuth()),
     ("bearer", BearerAuth()),
     ("multiple", [BasicAuth(), BearerAuth()]),
-    ("multiple_or", BasicAuth() | BearerAuth()),
+    ("multiple_or", KeyHeader() | BasicAuth() | BearerAuth()),
     ("multiple_and", KeyHeader() & BasicAuth()),
     ("complex_and_or", (KeyHeader() & BasicAuth()) & (KeyHeader() & BasicAuth())),
     ("customexception", KeyHeaderCustomException()),
 ]:
     api.get(f"/{path}", auth=auth, operation_id=path)(demo_operation)
-
 
 client = TestClient(api)
 

@@ -21,6 +21,6 @@ class AuthBearer(HttpBearer):
             return token
 
 
-@api.get("/multiple", auth=(QueryKey() & HeaderKey()) | AuthBearer())
+@api.get("/multiple", auth=(QueryKey() | HeaderKey() | AuthBearer()))
 def multiple(request):
     return f"Token = {request.auth}"

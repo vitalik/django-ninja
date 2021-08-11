@@ -40,14 +40,16 @@ class AuthBase(ABC):
         if self.or_neighbour:
             right_operand = self.or_neighbour(request)
             return left_operand if left_operand else right_operand
-        return self.callable(request)
+        return left_operand
 
     @abstractmethod
     def callable(self, request: HttpRequest) -> Optional[Any]:
         pass  # pragma: no cover
 
     def __and__(self, another: "AuthBase") -> Any:
+        another.and_neighbour = self.and_neighbour
         return type(self)(and_neighbour=another)
 
     def __or__(self, another: "AuthBase") -> Any:
+        another.or_neighbour = self.or_neighbour
         return type(self)(or_neighbour=another)
