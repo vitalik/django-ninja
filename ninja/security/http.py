@@ -24,7 +24,7 @@ class HttpBearer(HttpAuthBase, ABC):
     openapi_scheme: str = "bearer"
     header: str = "Authorization"
 
-    def __call__(self, request: HttpRequest) -> Optional[Any]:
+    def callable(self, request: HttpRequest) -> Optional[Any]:
         headers = get_headers(request)
         auth_value = headers.get(self.header)
         if not auth_value:
@@ -51,7 +51,7 @@ class HttpBasicAuth(HttpAuthBase, ABC):  # TODO: maybe HttpBasicAuthBase
     openapi_scheme = "basic"
     header = "Authorization"
 
-    def __call__(self, request: HttpRequest) -> Optional[Any]:
+    def callable(self, request: HttpRequest) -> Optional[Any]:
         headers = get_headers(request)
         auth_value = headers.get(self.header)
         if not auth_value:

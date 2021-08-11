@@ -77,10 +77,13 @@ for path, auth in [
     ("apikeycookie", KeyCookie()),
     ("basic", BasicAuth()),
     ("bearer", BearerAuth()),
+    ("multiple", [BasicAuth(), BearerAuth()]),
+    ("multiple_or", KeyHeader() | BasicAuth() | BearerAuth()),
+    ("multiple_and", KeyHeader() & BasicAuth()),
+    ("complex_and_or", (KeyHeader() & BasicAuth()) | KeyQuery()),
     ("customexception", KeyHeaderCustomException()),
 ]:
     api.get(f"/{path}", auth=auth, operation_id=path)(demo_operation)
-
 
 client = TestClient(api)
 
@@ -110,6 +113,16 @@ BODY_UNAUTHORIZED_DEFAULT = dict(detail="Unauthorized")
         ("/basic", dict(headers={"Authorization": "some invalid value"}), 401, BODY_UNAUTHORIZED_DEFAULT),
         ("/bearer", {}, 401, BODY_UNAUTHORIZED_DEFAULT),
         ("/bearer", dict(headers={"Authorization": "Bearer bearertoken"}), 200, dict(auth="bearertoken")),
+        ("/multiple", dict(headers={"Authorization": "Bearer bearertoken"}), 200, dict(auth="bearertoken")),
+        ("/multiple", dict(headers={"Authorization": "YWRtaW46c2VjcmV0"}), 200, dict(auth="admin")),
+        ("/multiple_or", dict(headers={"Authorization": "YWRtaW46c2VjcmV0"}), 200, dict(auth="admin")),
+        ("/multiple_or", dict(headers={"Authorization": "Bearer bearertoken"}), 200, dict(auth="bearertoken")),
+        ("/multiple_or", dict(headers={"Authorization": "some invalid value"}), 401, BODY_UNAUTHORIZED_DEFAULT),
+        ("/multiple_and", dict(headers={"Authorization": "YWRtaW46c2VjcmV0", "key": "keyheadersecret"}), 200, dict(auth="keyheadersecret")),
+        ("/multiple_and", dict(headers={"Authorization": "YWRtaW46c2VjcmV0"}), 401, BODY_UNAUTHORIZED_DEFAULT),
+        ("/complex_and_or", dict(headers={"Authorization": "YWRtaW46c2VjcmV0", "key": "keyheadersecret"}), 200, dict(auth="keyheadersecret")),
+        ("/complex_and_or?key=keyquerysecret", {}, 200, dict(auth="keyquerysecret")),
+        ("/complex_and_or", dict(headers={"Authorization": "YWRtaW46c2VjcmV0", "key": "invalid"}), 401, BODY_UNAUTHORIZED_DEFAULT),
         ("/bearer", dict(headers={"Authorization": "Invalid bearertoken"}), 401, BODY_UNAUTHORIZED_DEFAULT),
         ("/customexception", {}, 401, dict(custom=True)),
         ("/customexception", dict(headers={"key": "keyheadersecret"}), 200, dict(auth="keyheadersecret")),
@@ -144,7 +157,7 @@ def test_invalid_setup():
     request.headers = headers
 
     class MyAuth1(AuthBase):
-        def __call__(self, *args, **kwargs):
+        def callable(self, *args, **kwargs):
             pass
 
     class MyAuth2(AuthBase):
