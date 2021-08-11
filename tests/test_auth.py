@@ -80,7 +80,7 @@ for path, auth in [
     ("multiple", [BasicAuth(), BearerAuth()]),
     ("multiple_or", KeyHeader() | BasicAuth() | BearerAuth()),
     ("multiple_and", KeyHeader() & BasicAuth()),
-    ("complex_and_or", (KeyHeader() & BasicAuth()) & (KeyHeader() & BasicAuth())),
+    ("complex_and_or", (KeyHeader() & BasicAuth()) | KeyQuery()),
     ("customexception", KeyHeaderCustomException()),
 ]:
     api.get(f"/{path}", auth=auth, operation_id=path)(demo_operation)
@@ -121,6 +121,7 @@ BODY_UNAUTHORIZED_DEFAULT = dict(detail="Unauthorized")
         ("/multiple_and", dict(headers={"Authorization": "YWRtaW46c2VjcmV0", "key": "keyheadersecret"}), 200, dict(auth="keyheadersecret")),
         ("/multiple_and", dict(headers={"Authorization": "YWRtaW46c2VjcmV0"}), 401, BODY_UNAUTHORIZED_DEFAULT),
         ("/complex_and_or", dict(headers={"Authorization": "YWRtaW46c2VjcmV0", "key": "keyheadersecret"}), 200, dict(auth="keyheadersecret")),
+        ("/complex_and_or?key=keyquerysecret", {}, 200, dict(auth="keyquerysecret")),
         ("/complex_and_or", dict(headers={"Authorization": "YWRtaW46c2VjcmV0", "key": "invalid"}), 401, BODY_UNAUTHORIZED_DEFAULT),
         ("/bearer", dict(headers={"Authorization": "Invalid bearertoken"}), 401, BODY_UNAUTHORIZED_DEFAULT),
         ("/customexception", {}, 401, dict(custom=True)),
