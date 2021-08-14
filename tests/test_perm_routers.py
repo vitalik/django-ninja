@@ -5,7 +5,6 @@ from ninja.testing import TestClient
 
 class DummyPermission(BasePermission):
     def has_permission(self, request, permission):
-        print("Test")
         return permission == "dummy"
 
 

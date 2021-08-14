@@ -62,6 +62,7 @@ class Operation:
         self.auth_callbacks: Sequence[Callable] = []
         self._set_auth(auth)
 
+        self.perm_param: Optional[Union[Sequence[Callable], Callable, object]] = perm
         self.perm_callbacks: Sequence[Callable] = []
         self._set_perm(perm)
 
@@ -111,6 +112,12 @@ class Operation:
                 self._set_auth(self.api.auth)
             if router.auth != NOT_SET:
                 self._set_auth(router.auth)
+
+        if self.perm_param == NOT_SET:
+            if api.perm != NOT_SET:
+                self._set_perm(self.api.perm)
+            if router.perm != NOT_SET:
+                self._set_perm(router.perm)
 
         if self.tags is None:
             if router.tags is not None:

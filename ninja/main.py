@@ -72,7 +72,7 @@ class NinjaAPI:
 
         self.perm: Optional[Sequence[Callable]] = NOT_SET
         if perm is not None and perm is not NOT_SET:
-            self.perm = isinstance(auth, Sequence) and perm or [perm]  # type: ignore
+            self.perm = isinstance(perm, Sequence) and perm or [perm]  # type: ignore
 
         self._routers: List[Tuple[str, Router]] = []
         self.default_router = Router()
