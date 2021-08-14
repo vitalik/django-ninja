@@ -39,6 +39,7 @@ class Operation:
         view_func: Callable,
         *,
         auth: Optional[Union[Sequence[Callable], Callable, object]] = NOT_SET,
+        perm: Optional[Union[Sequence[Callable], Callable, object]] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
@@ -60,6 +61,9 @@ class Operation:
         self.auth_param: Optional[Union[Sequence[Callable], Callable, object]] = auth
         self.auth_callbacks: Sequence[Callable] = []
         self._set_auth(auth)
+
+        self.perm_callbacks: Sequence[Callable] = []
+        self._set_perm(perm)
 
         self.signature = ViewSignature(self.path, self.view_func)
         self.models = self.signature.models
@@ -118,11 +122,23 @@ class Operation:
         if auth is not None and auth is not NOT_SET:  # TODO: can it even happen ?
             self.auth_callbacks = isinstance(auth, Sequence) and auth or [auth]  # type: ignore
 
+    def _set_perm(
+        self, perm: Optional[Union[Sequence[Callable], Callable, object]]
+    ) -> None:
+        if perm is not None and perm is not NOT_SET:  # TODO: can it even happen ?
+            self.perm_callbacks = isinstance(perm, Sequence) and perm or [perm]  # type: ignore
+
     def _run_checks(self, request: HttpRequest) -> Optional[HttpResponse]:
         "Runs security checks for each operation"
         # auth:
         if self.auth_callbacks:
             error = self._run_authentication(request)
+            if error:
+                return error
+
+        # perm:
+        if self.perm_callbacks:
+            error = self._run_authorisation(request)
             if error:
                 return error
 
@@ -145,6 +161,17 @@ class Operation:
                 request.auth = result  # type: ignore
                 return None
         return self.api.create_response(request, {"detail": "Unauthorized"}, status=401)
+
+    def _run_authorisation(self, request: HttpRequest) -> Optional[HttpResponse]:
+        for callback in self.perm_callbacks:
+            try:
+                result = callback(request)
+            except Exception as exc:
+                return self.api.on_exception(request, exc)
+
+            if result:
+                return None
+        return self.api.create_response(request, {"detail": "Forbidden"}, status=403)
 
     def _result_to_response(
         self, request: HttpRequest, result: Any
