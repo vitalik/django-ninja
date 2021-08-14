@@ -30,6 +30,7 @@ nav:
   - tutorial/crud.md
   - tutorial/django-pydantic.md
   - tutorial/authentication.md
+  - tutorial/authorization.md
   - tutorial/routers.md
   - tutorial/operation_params.md
   - tutorial/versioning.md
