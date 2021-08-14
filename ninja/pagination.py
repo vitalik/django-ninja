@@ -99,10 +99,12 @@ def _inject_pagination(
         items = func(request, **kw)
         return paginator.paginate_queryset(items, request, **kw)
 
-    view_with_pagination._ninja_contribute = (  # type: ignore
-        "pagination",
-        paginator.Input,
-        paginator.InputSource,
-    )
+    view_with_pagination._ninja_contribute_args = [  # type: ignore
+        (
+            "pagination",
+            paginator.Input,
+            paginator.InputSource,
+        ),
+    ]
 
     return view_with_pagination
