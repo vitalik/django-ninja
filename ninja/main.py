@@ -49,6 +49,7 @@ class NinjaAPI:
         urls_namespace: Optional[str] = None,
         csrf: bool = False,
         auth: Union[Sequence[Callable], Callable, object] = NOT_SET,
+        perm: Union[Sequence[Callable], Callable, object] = NOT_SET,
         renderer: Optional[BaseRenderer] = None,
         parser: Optional[Parser] = None,
     ):
@@ -69,6 +70,10 @@ class NinjaAPI:
         if auth is not None and auth is not NOT_SET:
             self.auth = isinstance(auth, Sequence) and auth or [auth]  # type: ignore
 
+        self.perm: Optional[Sequence[Callable]] = NOT_SET
+        if perm is not None and perm is not NOT_SET:
+            self.perm = isinstance(auth, Sequence) and perm or [perm]  # type: ignore
+
         self._routers: List[Tuple[str, Router]] = []
         self.default_router = Router()
         self.add_router("", self.default_router)
@@ -78,6 +83,7 @@ class NinjaAPI:
         path: str,
         *,
         auth: Any = NOT_SET,
+        perm: Any = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
@@ -94,6 +100,7 @@ class NinjaAPI:
         return self.default_router.get(
             path,
             auth=auth is NOT_SET and self.auth or auth,
+            perm=perm is NOT_SET and self.perm or perm,
             response=response,
             operation_id=operation_id,
             summary=summary,
@@ -113,6 +120,7 @@ class NinjaAPI:
         path: str,
         *,
         auth: Any = NOT_SET,
+        perm: Any = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
@@ -129,6 +137,7 @@ class NinjaAPI:
         return self.default_router.post(
             path,
             auth=auth is NOT_SET and self.auth or auth,
+            perm=perm is NOT_SET and self.perm or perm,
             response=response,
             operation_id=operation_id,
             summary=summary,
@@ -148,6 +157,7 @@ class NinjaAPI:
         path: str,
         *,
         auth: Any = NOT_SET,
+        perm: Any = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
@@ -164,6 +174,7 @@ class NinjaAPI:
         return self.default_router.delete(
             path,
             auth=auth is NOT_SET and self.auth or auth,
+            perm=perm is NOT_SET and self.perm or perm,
             response=response,
             operation_id=operation_id,
             summary=summary,
@@ -183,6 +194,7 @@ class NinjaAPI:
         path: str,
         *,
         auth: Any = NOT_SET,
+        perm: Any = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
@@ -199,6 +211,7 @@ class NinjaAPI:
         return self.default_router.patch(
             path,
             auth=auth is NOT_SET and self.auth or auth,
+            perm=perm is NOT_SET and self.perm or perm,
             response=response,
             operation_id=operation_id,
             summary=summary,
@@ -218,6 +231,7 @@ class NinjaAPI:
         path: str,
         *,
         auth: Any = NOT_SET,
+        perm: Any = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
@@ -234,6 +248,7 @@ class NinjaAPI:
         return self.default_router.put(
             path,
             auth=auth is NOT_SET and self.auth or auth,
+            perm=perm is NOT_SET and self.perm or perm,
             response=response,
             operation_id=operation_id,
             summary=summary,
@@ -254,6 +269,7 @@ class NinjaAPI:
         path: str,
         *,
         auth: Any = NOT_SET,
+        perm: Any = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
@@ -271,6 +287,7 @@ class NinjaAPI:
             methods,
             path,
             auth=auth is NOT_SET and self.auth or auth,
+            perm=perm is NOT_SET and self.perm or perm,
             response=response,
             operation_id=operation_id,
             summary=summary,
@@ -291,11 +308,14 @@ class NinjaAPI:
         router: Router,
         *,
         auth: Any = NOT_SET,
+        perm: Any = NOT_SET,
         tags: Optional[List[str]] = None,
         parent_router: Router = None,
     ) -> None:
         if auth != NOT_SET:
             router.auth = auth
+        if perm != NOT_SET:
+            router.perm = perm
         if tags is not None:
             router.tags = tags
 
