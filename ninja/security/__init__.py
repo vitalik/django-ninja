@@ -1,5 +1,6 @@
 from ninja.security.apikey import APIKeyCookie, APIKeyHeader, APIKeyQuery
 from ninja.security.http import HttpBasicAuth, HttpBearer
+from ninja.security.permission import BasePermission
 from ninja.security.session import SessionAuth
 
 __all__ = [
@@ -9,6 +10,7 @@ __all__ = [
     "HttpBasicAuth",
     "HttpBearer",
     "SessionAuth",
+    "BasePermission",
     "django_auth",
 ]
 
