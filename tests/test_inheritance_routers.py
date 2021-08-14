@@ -34,7 +34,7 @@ second_router_two = Router()
 
 @second_router_two.get("endpoint_2")
 # view->router2, router2->router1, router1->api
-def router_op3(request):
+def router2_op3(request):
     return "second 2"
 
 
@@ -45,13 +45,13 @@ api.add_router("/first", first_router, tags=["global"])
 
 @first_router.get("endpoint_2")
 # router->api, view->router
-def router_op1(request):
+def router1_op1(request):
     return "first 2"
 
 
 @second_router_one.get("endpoint_3")
 # router2->router1, router1->api, view->router2
-def router_op3(request, path_param: int = None):
+def router21_op3(request, path_param: int = None):
     return "second 3" if path_param is None else f"second 3: {path_param}"
 
 
