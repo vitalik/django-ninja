@@ -1,3 +1,5 @@
+import pytest
+
 from ninja import NinjaAPI, Router
 from ninja.security import BasePermission
 from ninja.testing import TestClient
@@ -48,6 +50,12 @@ api.add_router("", router)
 
 # ---- end router --------------------
 
+
+@api.get("/type-error", perm="dummy")
+def type_error():
+    return "test"
+
+
 client = TestClient(api)
 
 
@@ -62,3 +70,8 @@ def test_multi():
 def test_router_perm():
     assert client.get("/router-operation").status_code == 200
     assert client.get("/router-operation-perm").status_code == 403
+
+
+def test_type_error():
+    with pytest.raises(TypeError):
+        client.get("/type-error").status_code == 403
