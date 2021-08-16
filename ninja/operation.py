@@ -233,8 +233,29 @@ class AsyncOperation(Operation):
         super().__init__(*args, **kwargs)
         self.is_async = True
 
-    async def run(self, request: HttpRequest, **kw: Any) -> HttpResponseBase:  # type: ignore
-        error = self._run_checks(request)
+    async def _run_checks(self, request):
+        """Runs security checks for each operation"""
+        if self.auth_callbacks:
+            error = await self._run_authentication(request)
+            if error:
+                return error
+
+        if self.api.csrf:
+            error = check_csrf(request, self.view_func)
+            if error:
+                return error
+
+    async def _run_authentication(self, request):
+        for callback in self.auth_callbacks:
+            result = await callback(request)
+            if result is not None:
+                request.auth = result
+                return
+        return Response({"detail": "Unauthorized"}, status=401)
+
+    async def run(self, request, **kw):
+        error = await self._run_checks(request)
+
         if error:
             return error
         try:
