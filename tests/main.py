@@ -141,6 +141,12 @@ def get_path_param_django_int(request, item_id):
     return item_id
 
 
+@router.get("/path/param-django-int/not-an-int")
+def get_path_param_django_not_an_int(request):
+    """Verify that url resolution for get_path_param_django_int passes non-ints forward"""
+    return f"Found not-an-int"
+
+
 @router.get("/path/param-django-slug/{slug:item_id}")
 def get_path_param_django_int(request, item_id):
     return item_id

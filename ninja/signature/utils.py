@@ -1,7 +1,7 @@
 import asyncio
 import inspect
 import re
-from typing import Any, Callable, Dict, Union
+from typing import Any, Callable, Dict, Optional
 from uuid import UUID
 
 from django.urls.converters import get_converters
@@ -56,7 +56,7 @@ def make_forwardref(annotation: str, globalns: DictStrAny) -> Any:
     return evaluate_forwardref(forward_ref, globalns, globalns)
 
 
-def get_path_param_names_types(path: str) -> Dict[str, Union[type, None]]:
+def get_path_param_names_types(path: str) -> Dict[str, Optional[type]]:
     """turns path string like /foo/{var}/path/{int:another}/end to dict {'var': None, 'another': int}"""
     names_types = (
         ([None] + item.strip("{}").split(":"))[-1:-3:-1]
@@ -65,7 +65,7 @@ def get_path_param_names_types(path: str) -> Dict[str, Union[type, None]]:
     return {name: _path_converter_type(type_) for name, type_ in names_types}
 
 
-def _path_converter_type(converter_name: str) -> Union[type, None]:
+def _path_converter_type(converter_name: str) -> Optional[type]:
     if converter_name is None:
         return None
     if converter_name in django_default_path_converter_types:

@@ -259,6 +259,7 @@ def test_get_path(path, expected_status, expected_response):
         ("/path/param-django-int/-1", "Cannot resolve", Exception),
         ("/path/param-django-int/True", "Cannot resolve", Exception),
         ("/path/param-django-int/foobar", "Cannot resolve", Exception),
+        ("/path/param-django-int/not-an-int", 200, "Found not-an-int"),
         (
             "/path/param-django-slug/django-ninja-is-the-best",
             200,
