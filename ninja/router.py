@@ -307,6 +307,7 @@ class Router:
     def set_api_instance(
         self, api: "NinjaAPI", parent_router: Optional["Router"] = None
     ) -> None:
+        # TODO: check - parent_router seems not used
         self.api = api
         for path_view in self.path_operations.values():
             path_view.set_api_instance(self.api, self)
@@ -333,13 +334,21 @@ class Router:
         auth: Any = NOT_SET,
         tags: Optional[List[str]] = None,
     ) -> None:
-        if auth != NOT_SET:
-            router.auth = auth
-        if tags is not None:
-            router.tags = tags
-        self._routers.append((prefix, router))
+        if self.api:
+            # we are already attached to an api
+            self.api.add_router(
+                prefix=prefix, router=router, auth=auth, tags=tags, parent_router=self
+            )
+        else:
+            # we are not attached to an api
+            if auth != NOT_SET:
+                router.auth = auth
+            if tags is not None:
+                router.tags = tags
+            self._routers.append((prefix, router))
 
     def build_routers(self, prefix: str) -> List[Tuple[str, "Router"]]:
+        assert self.api is None
         internal_routes = []
         for inter_prefix, inter_router in self._routers:
             _route = normalize_path("/".join((prefix, inter_prefix))).lstrip("/")

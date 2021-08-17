@@ -51,6 +51,13 @@ class ViewSignature:
             func_param = self._get_param_type(name, arg)
             self.params.append(func_param)
 
+        if hasattr(view_func, "_ninja_contribute_args"):
+            # _ninja_contribute_args is a special attribute
+            # which allows developers to create custom function params
+            # inside decorators or other functions
+            for p_name, p_type, p_source in view_func._ninja_contribute_args:  # type: ignore
+                self.params.append(FuncParam(p_name, p_source, p_type, False))
+
         self.models = self._create_models()
 
     def _create_models(self) -> List[Any]:
