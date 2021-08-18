@@ -18,8 +18,11 @@ import pydantic
 from django.http import HttpRequest, HttpResponse, HttpResponseNotAllowed
 from django.http.response import HttpResponseBase
 
+from asgiref.sync import async_to_sync
+
 from ninja.constants import NOT_SET
 from ninja.errors import ConfigError, ValidationError
+from ninja.responses import Response
 from ninja.schema import Schema
 from ninja.signature import ViewSignature, is_async
 from ninja.types import DictStrAny
@@ -137,7 +140,10 @@ class Operation:
     def _run_authentication(self, request: HttpRequest) -> Optional[HttpResponse]:
         for callback in self.auth_callbacks:
             try:
-                result = callback(request)
+                if is_async(callback):
+                    result = async_to_sync(callback)()
+                else:
+                    result = callback(request)
             except Exception as exc:
                 return self.api.on_exception(request, exc)
 
@@ -247,7 +253,12 @@ class AsyncOperation(Operation):
 
     async def _run_authentication(self, request):
         for callback in self.auth_callbacks:
-            result = await callback(request)
+
+            if is_async(callback):
+                result = await callback(request)
+            else:
+                result = callback(request)
+
             if result is not None:
                 request.auth = result
                 return
