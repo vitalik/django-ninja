@@ -140,7 +140,7 @@ class Operation:
     def _run_authentication(self, request: HttpRequest) -> Optional[HttpResponse]:
         for callback in self.auth_callbacks:
             try:
-                if is_async(callback):
+                if is_async(callback.__call__):
                     result = async_to_sync(callback)()
                 else:
                     result = callback(request)
@@ -254,7 +254,7 @@ class AsyncOperation(Operation):
     async def _run_authentication(self, request):
         for callback in self.auth_callbacks:
 
-            if is_async(callback):
+            if is_async(callback.__call__):
                 result = await callback(request)
             else:
                 result = callback(request)
