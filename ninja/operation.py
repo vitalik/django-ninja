@@ -15,10 +15,9 @@ from typing import (
 
 import django
 import pydantic
+from asgiref.sync import async_to_sync
 from django.http import HttpRequest, HttpResponse, HttpResponseNotAllowed
 from django.http.response import HttpResponseBase
-
-from asgiref.sync import async_to_sync
 
 from ninja.constants import NOT_SET
 from ninja.errors import ConfigError, ValidationError
