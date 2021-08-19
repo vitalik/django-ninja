@@ -121,11 +121,6 @@ class ViewSignature:
         if annotation == type(None) or annotation == type(Ellipsis):  # noqa
             annotation = str
 
-        path_annotation = self.path_params_names_types.get(name)
-        assert (
-            path_annotation is None or path_annotation == annotation
-        ), f"'typed path param '{name}' type mismatch: {path_annotation} != {annotation}"
-
         is_collection = is_collection_type(annotation)
 
         # 1) if type of the param is defined as one of the Param's subclasses - we just use that definition

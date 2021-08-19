@@ -261,6 +261,8 @@ def test_get_path(path, expected_status, expected_response):
         ("/path/param-django-int/True", "Cannot resolve", Exception),
         ("/path/param-django-int/foobar", "Cannot resolve", Exception),
         ("/path/param-django-int/not-an-int", 200, "Found not-an-int"),
+        ("/path/param-django-int-str/42", 200, '42'),
+        ("/path/param-django-int-str/42.5", "Cannot resolve", Exception),
         (
             "/path/param-django-slug/django-ninja-is-the-best",
             200,
@@ -276,6 +278,11 @@ def test_get_path(path, expected_status, expected_response):
             "/path/param-django-uuid/31ea378c-c052-4b4c-bf0b-679ce5cfcc2",
             "Cannot resolve",
             Exception,
+        ),
+        (
+            "/path/param-django-uuid-str/31ea378c-c052-4b4c-bf0b-679ce5cfcc2a",
+            200,
+            "31ea378c-c052-4b4c-bf0b-679ce5cfcc2a",
         ),
         ("/path/param-django-path/some/path/things/after", 200, "some/path/things"),
         ("/path/param-django-path/less/path/after", 200, "less/path"),
@@ -299,12 +306,6 @@ def test_get_path_django(path, expected_status, expected_response):
 
 def test_path_signature_asserts():
     test_router = Router()
-
-    match="typed path param 'item_id' type mismatch: <class 'int'> != <class 'str'>"
-    with pytest.raises(AssertionError, match=match):
-        @test_router.get("/path/param-django-int/{int:item_id}")
-        def get_path_param_django_int(request, item_id):
-            pass
 
     match = "'item_id' is a path param, default not allowed"
     with pytest.raises(AssertionError, match=match):

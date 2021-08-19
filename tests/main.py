@@ -133,12 +133,13 @@ def get_path_param_le_ge_int(request, item_id: int = Path(..., le=3, ge=1)):
 
 
 @router.get("/path/param-django-str/{str:item_id}")
-def get_path_param_django_int(request, item_id):
+def get_path_param_django_str(request, item_id):
     return item_id
 
 
 @router.get("/path/param-django-int/{int:item_id}")
 def get_path_param_django_int(request, item_id:int):
+    assert isinstance(item_id, int)
     return item_id
 
 
@@ -148,13 +149,26 @@ def get_path_param_django_not_an_int(request):
     return f"Found not-an-int"
 
 
+@router.get("/path/param-django-int-str/{int:item_id}")
+def get_path_param_django_int(request, item_id:str):
+    assert isinstance(item_id, str)
+    return item_id
+
+
 @router.get("/path/param-django-slug/{slug:item_id}")
-def get_path_param_django_int(request, item_id):
+def get_path_param_django_slug(request, item_id):
     return item_id
 
 
 @router.get("/path/param-django-uuid/{uuid:item_id}")
-def get_path_param_django_int(request, item_id: UUID):
+def get_path_param_django_uuid(request, item_id: UUID):
+    assert isinstance(item_id, UUID)
+    return item_id
+
+
+@router.get("/path/param-django-uuid-str/{uuid:item_id}")
+def get_path_param_django_int(request, item_id):
+    assert isinstance(item_id, str)
     return item_id
 
 
