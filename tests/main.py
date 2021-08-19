@@ -1,3 +1,4 @@
+from uuid import UUID
 from ninja import Router, Query, Path
 
 
@@ -137,7 +138,7 @@ def get_path_param_django_int(request, item_id):
 
 
 @router.get("/path/param-django-int/{int:item_id}")
-def get_path_param_django_int(request, item_id):
+def get_path_param_django_int(request, item_id:int):
     return item_id
 
 
@@ -153,7 +154,7 @@ def get_path_param_django_int(request, item_id):
 
 
 @router.get("/path/param-django-uuid/{uuid:item_id}")
-def get_path_param_django_int(request, item_id):
+def get_path_param_django_int(request, item_id: UUID):
     return item_id
 
 
@@ -236,7 +237,7 @@ register_converter(CustomPathConverter2, 'custom-float')
 
 
 @router.get("/path/param-django-custom-int/{custom-int:item_id}")
-def get_path_param_django_int(request, item_id):
+def get_path_param_django_int(request, item_id: int):
     return item_id
 
 

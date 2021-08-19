@@ -27,7 +27,7 @@ class ViewSignature:
     def __init__(self, path: str, view_func: Callable) -> None:
         self.view_func = view_func
         self.signature = get_typed_signature(self.view_func)
-        self.path_params_names = get_path_param_names_types(path)
+        self.path_params_names_types = get_path_param_names_types(path)
         self.docstring = inspect.cleandoc(view_func.__doc__ or "")
         self.has_kwargs = False
 
@@ -110,17 +110,21 @@ class ViewSignature:
         annotation = arg.annotation
 
         if annotation == self.signature.empty:
-            if self.path_params_names.get(name):
-                annotation = self.path_params_names[name]
-            elif arg.default == self.signature.empty:
+            if arg.default == self.signature.empty:
                 annotation = str
-            elif isinstance(arg.default, params.Param):
-                annotation = type(arg.default.default)
             else:
-                annotation = type(arg.default)
+                if isinstance(arg.default, params.Param):
+                    annotation = type(arg.default.default)
+                else:
+                    annotation = type(arg.default)
 
         if annotation == type(None) or annotation == type(Ellipsis):  # noqa
             annotation = str
+
+        path_annotation = self.path_params_names_types.get(name)
+        assert (
+            path_annotation is None or path_annotation == annotation
+        ), f"'typed path param '{name}' type mismatch: {path_annotation} != {annotation}"
 
         is_collection = is_collection_type(annotation)
 
@@ -129,8 +133,10 @@ class ViewSignature:
             param_source = arg.default
 
         # 2) if param name is a part of the path parameter
-        elif name in self.path_params_names:
-            assert arg.default == self.signature.empty, f"'{name}' is a path param"
+        elif name in self.path_params_names_types:
+            assert (
+                arg.default == self.signature.empty
+            ), f"'{name}' is a path param, default not allowed"
             param_source = params.Path(...)
 
         # 3) if param is a collection or annotation is part of pydantic model:
@@ -159,7 +165,12 @@ def is_pydantic_model(cls: Any) -> bool:
 
 def is_collection_type(annotation: Any) -> bool:
     origin = get_collection_origin(annotation)
-    return origin in (List, list, set, tuple)  # TODO: I gues we should handle only list
+    return origin in (
+        List,
+        list,
+        set,
+        tuple,
+    )  # TODO: I guess we should handle only list
 
 
 def detect_pydantic_model_collection_fields(model: pydantic.BaseModel) -> List[str]:

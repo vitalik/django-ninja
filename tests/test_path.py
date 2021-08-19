@@ -1,5 +1,6 @@
 import pytest
 from main import router
+from ninja import Router
 from ninja.testing import TestClient
 
 
@@ -294,3 +295,19 @@ def test_get_path_django(path, expected_status, expected_response):
         response = client.get(path)
         assert response.status_code == expected_status
         assert response.json() == expected_response
+
+
+def test_path_signature_asserts():
+    test_router = Router()
+
+    match="typed path param 'item_id' type mismatch: <class 'int'> != <class 'str'>"
+    with pytest.raises(AssertionError, match=match):
+        @test_router.get("/path/param-django-int/{int:item_id}")
+        def get_path_param_django_int(request, item_id):
+            pass
+
+    match = "'item_id' is a path param, default not allowed"
+    with pytest.raises(AssertionError, match=match):
+        @test_router.get("/path/{item_id}")
+        def get_path_item_id(request, item_id='1'):
+            pass
