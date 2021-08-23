@@ -76,7 +76,7 @@ def list_news(request):
     ...
 
 @router.get('/{news_id}')
-def news_details(request, event_id: int):
+def news_details(request, news_id: int):
     ...
 ```
 and then also `blogs/api.py`.
