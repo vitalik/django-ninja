@@ -4,7 +4,8 @@ import re
 from typing import Any, Callable, Dict, Optional
 from uuid import UUID
 
-from django.urls.converters import get_converters
+from django.urls import register_converter
+from django.urls.converters import UUIDConverter, get_converters
 from pydantic.typing import ForwardRef, evaluate_forwardref
 
 from ninja.types import DictStrAny
@@ -99,3 +100,18 @@ def has_kwargs(call: Callable) -> bool:
         if param.kind == param.VAR_KEYWORD:
             return True
     return False
+
+
+class NinjaUUIDConverter:
+    """Return a path converted UUID as a str instead of the standard UUID"""
+
+    regex = UUIDConverter.regex
+
+    def to_python(self, value: str) -> str:
+        return value
+
+    def to_url(self, value: Any) -> str:
+        return str(value)
+
+
+register_converter(NinjaUUIDConverter, "uuid")

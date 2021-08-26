@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Optional, Type, TypeVar
-from uuid import UUID
 
 from django.conf import settings
 from django.http import HttpRequest
@@ -76,7 +75,7 @@ class PathModel(ParamModel):
     def get_request_data(
         cls, request: HttpRequest, api: "NinjaAPI", path_params: DictStrAny
     ) -> Optional[DictStrAny]:
-        return {k: str(v) if isinstance(v, UUID) else v for k, v in path_params.items()}
+        return path_params
 
 
 class HeaderModel(ParamModel):
