@@ -4,7 +4,7 @@ import re
 from typing import Any, Callable, Set
 
 from django.urls import register_converter
-from django.urls.converters import UUIDConverter, get_converters
+from django.urls.converters import UUIDConverter
 from pydantic.typing import ForwardRef, evaluate_forwardref
 
 from ninja.types import DictStrAny
