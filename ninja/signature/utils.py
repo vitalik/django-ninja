@@ -1,8 +1,7 @@
 import asyncio
 import inspect
 import re
-from typing import Any, Callable, Dict, Optional
-from uuid import UUID
+from typing import Any, Callable, Set
 
 from django.urls import register_converter
 from django.urls.converters import UUIDConverter, get_converters
@@ -14,18 +13,10 @@ __all__ = [
     "get_typed_signature",
     "get_typed_annotation",
     "make_forwardref",
-    "get_path_param_names_types",
+    "get_path_param_names",
     "is_async",
     "has_kwargs",
 ]
-
-django_default_path_converter_types = {
-    "str": str,
-    "int": int,
-    "slug": str,
-    "uuid": UUID,
-    "path": str,
-}
 
 
 def get_typed_signature(call: Callable) -> inspect.Signature:
@@ -57,36 +48,9 @@ def make_forwardref(annotation: str, globalns: DictStrAny) -> Any:
     return evaluate_forwardref(forward_ref, globalns, globalns)
 
 
-def get_path_param_names_types(path: str) -> Dict[str, Optional[type]]:
-    """turns path string like /foo/{var}/path/{int:another}/end to dict {'var': None, 'another': int}"""
-    names_types = (
-        ([None] + item.strip("{}").split(":"))[-1:-3:-1]
-        for item in re.findall("{[^}]*}", path)
-    )
-    return {name: _path_converter_type(type_) for name, type_ in names_types}
-
-
-def _path_converter_type(converter_name: str) -> Optional[type]:
-    if converter_name is None:
-        return None
-    if converter_name in django_default_path_converter_types:
-        return django_default_path_converter_types[converter_name]
-
-    # custom converters
-    # https://docs.djangoproject.com/en/3.2/topics/http/urls/#registering-custom-path-converters
-    converter = get_converters()[converter_name]
-    signature = inspect.signature(converter.to_python)
-    annotation = signature.return_annotation
-    if annotation == signature.empty:
-        return None
-
-    if isinstance(annotation, str):
-        globalns = getattr(converter.to_python, "__globals__", {})
-        annotation = make_forwardref(annotation, globalns)
-    assert isinstance(
-        annotation, type
-    ), f"Unknown type annotation on custom converter: {converter_name}"
-    return annotation
+def get_path_param_names(path: str) -> Set[str]:
+    """turns path string like /foo/{var}/path/{int:another}/end to set {'var', 'another'}"""
+    return {item.strip("{}").split(":")[-1] for item in re.findall("{[^}]*}", path)}
 
 
 def is_async(callable: Callable) -> bool:

@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from pydantic.fields import ModelField  # pragma: no cover
 
 from ninja import params
-from ninja.signature.utils import get_path_param_names_types, get_typed_signature
+from ninja.signature.utils import get_path_param_names, get_typed_signature
 
 __all__ = [
     "FuncParam",
@@ -27,7 +27,7 @@ class ViewSignature:
     def __init__(self, path: str, view_func: Callable) -> None:
         self.view_func = view_func
         self.signature = get_typed_signature(self.view_func)
-        self.path_params_names_types = get_path_param_names_types(path)
+        self.path_params_names = get_path_param_names(path)
         self.docstring = inspect.cleandoc(view_func.__doc__ or "")
         self.has_kwargs = False
 
@@ -128,7 +128,7 @@ class ViewSignature:
             param_source = arg.default
 
         # 2) if param name is a part of the path parameter
-        elif name in self.path_params_names_types:
+        elif name in self.path_params_names:
             assert (
                 arg.default == self.signature.empty
             ), f"'{name}' is a path param, default not allowed"
