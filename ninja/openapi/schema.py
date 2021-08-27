@@ -135,11 +135,15 @@ class OpenAPISchema(dict):
         schema = model_schema(model, ref_prefix=REF_PREFIX, by_alias=by_alias)
         if schema.get("definitions"):
             self.add_schema_definitions(schema["definitions"])
-        name, details = list(schema["properties"].items())[0]
 
-        # ref = details["$ref"]
-        required = name in schema.get("required", {})
-        return details, required
+        if len(schema["properties"]) == 1:
+            name, details = list(schema["properties"].items())[0]
+
+            # ref = details["$ref"]
+            required = name in schema.get("required", {})
+            return details, required
+        else:
+            return schema, True
 
     def request_body(self, operation: Operation) -> DictStrAny:
         # TODO: refactor
