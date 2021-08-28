@@ -129,3 +129,27 @@ def test_schema():
             "required": False,
         },
     ]
+
+
+def test_schema_all_of_no_ref():
+    details = {
+        'default': 1,
+        'allOf': [
+            {'$ref': '#/components/schemas/Type'},
+            {'no-ref-here': 'xyzzy'},
+        ]
+    }
+    definitions = {
+        'Type': {'title': 'Best Type Ever!'}
+    }
+
+    from ninja.openapi.schema import resolve_allOf
+    resolve_allOf(details, definitions)
+
+    assert details == {
+        'default': 1,
+        'allOf': [
+            {'title': 'Best Type Ever!'},
+            {'no-ref-here': 'xyzzy'}
+        ],
+    }

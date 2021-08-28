@@ -1,6 +1,7 @@
 import pytest
 from typing import List
 from ninja import Body, NinjaAPI, Schema
+from ninja.openapi.urls import get_openapi_urls
 from django.test import Client, override_settings
 
 
@@ -160,6 +161,21 @@ def test_schema():
             "description": "OK",
         }
     }
+
+
+def test_get_openapi_urls():
+
+    api = NinjaAPI(openapi_url=None)
+    paths = get_openapi_urls(api)
+    assert len(paths) == 0
+
+    api = NinjaAPI(docs_url=None)
+    paths = get_openapi_urls(api)
+    assert len(paths) == 1
+
+    api = NinjaAPI(openapi_url='/path', docs_url='/path')
+    with pytest.raises(AssertionError, match='Please use different urls for openapi_url and docs_url'):
+        get_openapi_urls(api)
 
 
 def test_unique_operation_ids():

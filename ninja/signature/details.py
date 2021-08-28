@@ -88,8 +88,7 @@ class ViewSignature:
                             field,
                         ) in modeled_attr.annotation.__fields__.items():
                             mixed_attrs[attr_name] = modeled_attr.name
-                            if hasattr(field, "alias"):
-                                mixed_attrs[field.alias] = modeled_attr.name
+                            mixed_attrs[field.alias] = modeled_attr.name
 
                     attrs["_mixed_attrs"] = mixed_attrs
 
