@@ -33,6 +33,7 @@ class KeyHeader(APIKeyHeader):
 class CustomException(Exception):
     pass
 
+
 class KeyHeaderCustomException(APIKeyHeader):
     def authenticate(self, request, key):
         if key != "keyheadersecret":
@@ -64,6 +65,7 @@ def demo_operation(request):
 
 api = NinjaAPI(csrf=True)
 
+
 @api.exception_handler(CustomException)
 def on_custom_error(request, exc):
     return api.create_response(request, {"custom": True}, status=401)
@@ -88,7 +90,9 @@ client = TestClient(api)
 class MockUser(str):
     is_authenticated = True
 
+
 BODY_UNAUTHORIZED_DEFAULT = dict(detail="Unauthorized")
+
 
 @pytest.mark.parametrize(
     "path,kwargs,expected_code,expected_body",
@@ -100,19 +104,64 @@ BODY_UNAUTHORIZED_DEFAULT = dict(detail="Unauthorized")
         ("/apikeyquery", {}, 401, BODY_UNAUTHORIZED_DEFAULT),
         ("/apikeyquery?key=keyquerysecret", {}, 200, dict(auth="keyquerysecret")),
         ("/apikeyheader", {}, 401, BODY_UNAUTHORIZED_DEFAULT),
-        ("/apikeyheader", dict(headers={"key": "keyheadersecret"}), 200, dict(auth="keyheadersecret")),
+        (
+            "/apikeyheader",
+            dict(headers={"key": "keyheadersecret"}),
+            200,
+            dict(auth="keyheadersecret"),
+        ),
         ("/apikeycookie", {}, 401, BODY_UNAUTHORIZED_DEFAULT),
-        ("/apikeycookie", dict(COOKIES={"key": "keycookiersecret"}), 200, dict(auth="keycookiersecret")),
+        (
+            "/apikeycookie",
+            dict(COOKIES={"key": "keycookiersecret"}),
+            200,
+            dict(auth="keycookiersecret"),
+        ),
         ("/basic", {}, 401, BODY_UNAUTHORIZED_DEFAULT),
-        ("/basic", dict(headers={"Authorization": "Basic YWRtaW46c2VjcmV0"}), 200, dict(auth="admin")),
-        ("/basic", dict(headers={"Authorization": "YWRtaW46c2VjcmV0"}), 200, dict(auth="admin")),
-        ("/basic", dict(headers={"Authorization": "Basic invalid"}), 401, BODY_UNAUTHORIZED_DEFAULT),
-        ("/basic", dict(headers={"Authorization": "some invalid value"}), 401, BODY_UNAUTHORIZED_DEFAULT),
+        (
+            "/basic",
+            dict(headers={"Authorization": "Basic YWRtaW46c2VjcmV0"}),
+            200,
+            dict(auth="admin"),
+        ),
+        (
+            "/basic",
+            dict(headers={"Authorization": "YWRtaW46c2VjcmV0"}),
+            200,
+            dict(auth="admin"),
+        ),
+        (
+            "/basic",
+            dict(headers={"Authorization": "Basic invalid"}),
+            401,
+            BODY_UNAUTHORIZED_DEFAULT,
+        ),
+        (
+            "/basic",
+            dict(headers={"Authorization": "some invalid value"}),
+            401,
+            BODY_UNAUTHORIZED_DEFAULT,
+        ),
         ("/bearer", {}, 401, BODY_UNAUTHORIZED_DEFAULT),
-        ("/bearer", dict(headers={"Authorization": "Bearer bearertoken"}), 200, dict(auth="bearertoken")),
-        ("/bearer", dict(headers={"Authorization": "Invalid bearertoken"}), 401, BODY_UNAUTHORIZED_DEFAULT),
+        (
+            "/bearer",
+            dict(headers={"Authorization": "Bearer bearertoken"}),
+            200,
+            dict(auth="bearertoken"),
+        ),
+        (
+            "/bearer",
+            dict(headers={"Authorization": "Invalid bearertoken"}),
+            401,
+            BODY_UNAUTHORIZED_DEFAULT,
+        ),
         ("/customexception", {}, 401, dict(custom=True)),
-        ("/customexception", dict(headers={"key": "keyheadersecret"}), 200, dict(auth="keyheadersecret")),
+        (
+            "/customexception",
+            dict(headers={"key": "keyheadersecret"}),
+            200,
+            dict(auth="keyheadersecret"),
+        ),
     ],
 )
 def test_auth(path, kwargs, expected_code, expected_body, settings):

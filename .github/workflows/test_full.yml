@@ -40,7 +40,7 @@ jobs:
       - name: Install Dependencies
         run: flit install --symlink
       - name: Black
-        run: black --check ninja
+        run: black --check ninja tests
       - name: isort
         run: isort --check ninja
       - name: Flake8

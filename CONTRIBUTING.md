@@ -53,7 +53,7 @@ Django Ninja uses `black`, `isort` and `flake8` for style check
 Before your commit please check your code with:
 
 ```
-black --check ninja
+black --check ninja tests
 isort --check ninja
 flake8 ninja
 ```
@@ -67,7 +67,7 @@ make lint
 Or reformat your code with:
 
 ```
-black ninja
+black ninja tests
 isort ninja
 ```
 

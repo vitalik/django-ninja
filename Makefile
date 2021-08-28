@@ -8,13 +8,13 @@ install: ## Install dependencies
 	flit install --deps develop --symlink
 
 lint: ## Run code linters
-	black --check ninja
+	black --check ninja tests
 	isort --check ninja
 	flake8 ninja
 	mypy ninja
 
 fmt format: ## Run code formatters
-	black ninja
+	black ninja tests
 	isort ninja
 
 test: ## Run tests
