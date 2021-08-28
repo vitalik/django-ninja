@@ -1,6 +1,6 @@
 import pytest
 from typing import List
-from ninja import NinjaAPI, Schema
+from ninja import Body, NinjaAPI, Schema
 from django.test import Client, override_settings
 
 
@@ -23,8 +23,13 @@ def method(request, data: Payload):
 
 
 @api.post("/test_list", response=List[Response])
-def method_list(request, data: List[Payload]):
+def method_list_response(request, data: List[Payload]):
     return []
+
+
+@api.post("/test-body", response=List[Response])
+def method_body(request, i: int = Body(...), f: float = Body(...)):
+    return [i, f]
 
 
 def test_schema_views(client: Client):
@@ -120,6 +125,40 @@ def test_schema():
             "title": "Response",
             "type": "object",
         },
+    }
+
+    # --------------------------------------------------------------
+    method_list = schema["paths"]["/api/test-body"]["post"]
+
+    assert method_list["requestBody"] == {
+        'content': {
+            'application/json': {
+                'schema': {
+                    "properties": {
+                        "f": {"title": "F", "type": "number"},
+                        "i": {"title": "I", "type": "integer"},
+                    },
+                    "required": ["i", "f"],
+                    "title": "BodyParams",
+                    "type": "object",
+                }
+            }
+        },
+        'required': True
+    }
+    assert method_list["responses"] == {
+        200: {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "items": {"$ref": "#/components/schemas/Response"},
+                        "title": "Response",
+                        "type": "array",
+                    }
+                }
+            },
+            "description": "OK",
+        }
     }
 
 
