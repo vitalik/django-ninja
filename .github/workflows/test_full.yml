@@ -44,6 +44,6 @@ jobs:
       - name: isort
         run: isort --check ninja
       - name: Flake8
-        run: flake8 ninja
+        run: flake8 ninja tests
       - name: mypy
         run: mypy ninja

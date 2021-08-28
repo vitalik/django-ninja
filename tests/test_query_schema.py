@@ -1,12 +1,10 @@
 from datetime import datetime
 from enum import IntEnum
 
-import pytest
 from pydantic import Field
 
-from ninja import NinjaAPI, Query, Schema, files
+from ninja import NinjaAPI, Query, Schema
 from ninja.testing import TestClient
-from pydantic.schema import model_schema
 
 
 class Range(IntEnum):

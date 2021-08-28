@@ -1,7 +1,6 @@
 from someapp.models import Event
 from django.test import Client
 from django.urls import reverse
-from ninja import NinjaAPI
 import pytest
 
 

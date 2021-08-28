@@ -20,7 +20,7 @@ def test_client():
     api = NinjaAPI()
     client = TestClient(api)
     with pytest.raises(Exception):
-        response = client.get("/404")
+        client.get("/404")
 
 
 def test_kwargs():

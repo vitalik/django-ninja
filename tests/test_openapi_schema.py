@@ -207,8 +207,9 @@ def test_unique_operation_ids():
         pass
 
     @api.get("/2")
-    def same_name(request):
+    def same_name(request):  # noqa: F811
         pass
 
-    with pytest.warns(UserWarning):
+    match = 'operation_id "test_openapi_schema_same_name" is already used'
+    with pytest.warns(UserWarning, match=match):
         api.get_openapi_schema()

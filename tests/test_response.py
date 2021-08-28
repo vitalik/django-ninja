@@ -1,4 +1,3 @@
-from ninja import responses
 import pytest
 from pydantic import ValidationError, BaseModel
 from ninja import Router

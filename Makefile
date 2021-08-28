@@ -10,12 +10,12 @@ install: ## Install dependencies
 lint: ## Run code linters
 	black --check ninja tests
 	isort --check ninja
-	flake8 ninja
+	flake8 ninja tests
 	mypy ninja
 
 fmt format: ## Run code formatters
 	black ninja tests
-	isort ninja
+	isort ninja tests
 
 test: ## Run tests
 	pytest .

@@ -1,4 +1,3 @@
-import pytest
 from typing import List
 from django.http import QueryDict, HttpRequest
 from ninja import NinjaAPI

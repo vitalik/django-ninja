@@ -55,7 +55,7 @@ Before your commit please check your code with:
 ```
 black --check ninja tests
 isort --check ninja
-flake8 ninja
+flake8 ninja tests
 ```
 
 or using Makefile:

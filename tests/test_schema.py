@@ -3,7 +3,7 @@ from unittest.mock import Mock
 from ninja import Schema
 from ninja.schema import Field
 from django.db.models import QuerySet, Manager
-from django.db.models.fields.files import FieldFile, ImageFieldFile
+from django.db.models.fields.files import ImageFieldFile
 
 
 class FakeManager(Manager):

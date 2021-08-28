@@ -1,4 +1,3 @@
-from django.views.decorators import csrf
 import pytest
 from ninja import NinjaAPI
 from ninja.security import APIKeyCookie

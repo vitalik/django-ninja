@@ -1,4 +1,5 @@
 from uuid import UUID
+from django.urls import register_converter
 from ninja import Router, Query, Path
 
 
@@ -146,11 +147,11 @@ def get_path_param_django_int(request, item_id: int):
 @router.get("/path/param-django-int/not-an-int")
 def get_path_param_django_not_an_int(request):
     """Verify that url resolution for get_path_param_django_int passes non-ints forward"""
-    return f"Found not-an-int"
+    return "Found not-an-int"
 
 
 @router.get("/path/param-django-int-str/{int:item_id}")
-def get_path_param_django_int(request, item_id: str):
+def get_path_param_django_int_str(request, item_id: str):
     assert isinstance(item_id, str)
     return item_id
 
@@ -167,13 +168,13 @@ def get_path_param_django_uuid(request, item_id: UUID):
 
 
 @router.get("/path/param-django-uuid-str/{uuid:item_id}")
-def get_path_param_django_int(request, item_id):
+def get_path_param_django_uuid_str(request, item_id):
     assert isinstance(item_id, str)
     return item_id
 
 
 @router.get("/path/param-django-path/{path:item_id}/after")
-def get_path_param_django_int(request, item_id):
+def get_path_param_django_path(request, item_id):
     return item_id
 
 
@@ -245,17 +246,15 @@ class CustomPathConverter2:
         return str(value)
 
 
-from django.urls import register_converter
-
 register_converter(CustomPathConverter1, "custom-int")
 register_converter(CustomPathConverter2, "custom-float")
 
 
 @router.get("/path/param-django-custom-int/{custom-int:item_id}")
-def get_path_param_django_int(request, item_id: int):
+def get_path_param_django_custom_int(request, item_id: int):
     return item_id
 
 
 @router.get("/path/param-django-custom-float/{custom-float:item_id}")
-def get_path_param_django_float(request, item_id: float):
+def get_path_param_django_custom_float(request, item_id: float):
     return item_id
