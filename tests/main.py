@@ -6,7 +6,7 @@ router = Router()
 
 
 @router.get("/text")
-def get_text(request,):
+def get_text(request):
     return "Hello World"
 
 
@@ -138,7 +138,7 @@ def get_path_param_django_str(request, item_id):
 
 
 @router.get("/path/param-django-int/{int:item_id}")
-def get_path_param_django_int(request, item_id:int):
+def get_path_param_django_int(request, item_id: int):
     assert isinstance(item_id, int)
     return item_id
 
@@ -150,7 +150,7 @@ def get_path_param_django_not_an_int(request):
 
 
 @router.get("/path/param-django-int-str/{int:item_id}")
-def get_path_param_django_int(request, item_id:str):
+def get_path_param_django_int(request, item_id: str):
     assert isinstance(item_id, str)
     return item_id
 
@@ -224,9 +224,9 @@ def get_query_param_required_type(request, query: int = Query(...)):
 
 
 class CustomPathConverter1:
-    regex = '[0-9]+'
+    regex = "[0-9]+"
 
-    def to_python(self, value) -> 'int':
+    def to_python(self, value) -> "int":
         """reverse the string and convert to int"""
         return int(value[::-1])
 
@@ -246,8 +246,9 @@ class CustomPathConverter2:
 
 
 from django.urls import register_converter
-register_converter(CustomPathConverter1, 'custom-int')
-register_converter(CustomPathConverter2, 'custom-float')
+
+register_converter(CustomPathConverter1, "custom-int")
+register_converter(CustomPathConverter2, "custom-float")
 
 
 @router.get("/path/param-django-custom-int/{custom-int:item_id}")
@@ -256,5 +257,5 @@ def get_path_param_django_int(request, item_id: int):
 
 
 @router.get("/path/param-django-custom-float/{custom-float:item_id}")
-def get_path_param_django_float(request, item_id:float):
+def get_path_param_django_float(request, item_id: float):
     return item_id

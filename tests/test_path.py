@@ -1,3 +1,4 @@
+from ninja.main import NinjaAPI
 import pytest
 from main import router
 from ninja import Router
@@ -261,7 +262,7 @@ def test_get_path(path, expected_status, expected_response):
         ("/path/param-django-int/True", "Cannot resolve", Exception),
         ("/path/param-django-int/foobar", "Cannot resolve", Exception),
         ("/path/param-django-int/not-an-int", 200, "Found not-an-int"),
-        ("/path/param-django-int-str/42", 200, '42'),
+        ("/path/param-django-int-str/42", 200, "42"),
         ("/path/param-django-int-str/42.5", "Cannot resolve", Exception),
         (
             "/path/param-django-slug/django-ninja-is-the-best",
@@ -309,6 +310,7 @@ def test_path_signature_asserts():
 
     match = "'item_id' is a path param, default not allowed"
     with pytest.raises(AssertionError, match=match):
+
         @test_router.get("/path/{item_id}")
-        def get_path_item_id(request, item_id='1'):
+        def get_path_item_id(request, item_id="1"):
             pass
