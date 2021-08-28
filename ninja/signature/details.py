@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
 import pydantic
 
+from ninja import UploadedFile
+from ninja.params import File
 from ninja.compatibility.util import get_origin as get_collection_origin
 
 if TYPE_CHECKING:
@@ -122,6 +124,14 @@ class ViewSignature:
             annotation = str
 
         is_collection = is_collection_type(annotation)
+
+        if annotation == UploadedFile or (
+            is_collection and annotation.__args__[0] == UploadedFile
+        ):
+            # People often forgot to mark UploadedFile as a File, so we better assign it automatically
+            if arg.default == self.signature.empty or arg.default is None:
+                default = arg.default == self.signature.empty and ... or arg.default
+                return FuncParam(name, File(default), annotation, is_collection)
 
         # 1) if type of the param is defined as one of the Param's subclasses - we just use that definition
         if isinstance(arg.default, params.Param):
