@@ -129,17 +129,19 @@ class ViewSignature:
 
         # 2) if param name is a part of the path parameter
         elif name in self.path_params_names:
-            assert arg.default == self.signature.empty, f"'{name}' is a path param"
+            assert (
+                arg.default == self.signature.empty
+            ), f"'{name}' is a path param, default not allowed"
             param_source = params.Path(...)
 
-        # 3) if param have no  type annotation or annotation is not part of pydantic model:
+        # 3) if param is a collection or annotation is part of pydantic model:
         elif is_collection or is_pydantic_model(annotation):
             if arg.default == self.signature.empty:
                 param_source = params.Body(...)
             else:
                 param_source = params.Body(arg.default)
 
-        # 4) the last case is body param
+        # 4) the last case is query param
         else:
             if arg.default == self.signature.empty:
                 param_source = params.Query(...)
@@ -158,7 +160,12 @@ def is_pydantic_model(cls: Any) -> bool:
 
 def is_collection_type(annotation: Any) -> bool:
     origin = get_collection_origin(annotation)
-    return origin in (List, list, set, tuple)  # TODO: I gues we should handle only list
+    return origin in (
+        List,
+        list,
+        set,
+        tuple,
+    )  # TODO: I guess we should handle only list
 
 
 def detect_pydantic_model_collection_fields(model: pydantic.BaseModel) -> List[str]:

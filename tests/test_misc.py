@@ -1,8 +1,10 @@
 import pytest
+import uuid
 from pydantic import BaseModel
 from ninja import NinjaAPI
 from ninja.testing import TestClient
 from ninja.signature.details import is_pydantic_model
+from ninja.signature.utils import NinjaUUIDConverter
 
 
 def test_is_pydantic_model():
@@ -39,3 +41,8 @@ def test_kwargs():
             "required": True,
         }
     ]
+
+
+def test_uuid_converter():
+    conv = NinjaUUIDConverter()
+    assert isinstance(conv.to_url(uuid.uuid4()), str)

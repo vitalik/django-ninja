@@ -1,3 +1,4 @@
+from uuid import UUID
 from ninja import Router, Query, Path
 
 
@@ -5,7 +6,7 @@ router = Router()
 
 
 @router.get("/text")
-def get_text(request,):
+def get_text(request):
     return "Hello World"
 
 
@@ -131,6 +132,51 @@ def get_path_param_le_ge_int(request, item_id: int = Path(..., le=3, ge=1)):
     return item_id
 
 
+@router.get("/path/param-django-str/{str:item_id}")
+def get_path_param_django_str(request, item_id):
+    return item_id
+
+
+@router.get("/path/param-django-int/{int:item_id}")
+def get_path_param_django_int(request, item_id: int):
+    assert isinstance(item_id, int)
+    return item_id
+
+
+@router.get("/path/param-django-int/not-an-int")
+def get_path_param_django_not_an_int(request):
+    """Verify that url resolution for get_path_param_django_int passes non-ints forward"""
+    return f"Found not-an-int"
+
+
+@router.get("/path/param-django-int-str/{int:item_id}")
+def get_path_param_django_int(request, item_id: str):
+    assert isinstance(item_id, str)
+    return item_id
+
+
+@router.get("/path/param-django-slug/{slug:item_id}")
+def get_path_param_django_slug(request, item_id):
+    return item_id
+
+
+@router.get("/path/param-django-uuid/{uuid:item_id}")
+def get_path_param_django_uuid(request, item_id: UUID):
+    assert isinstance(item_id, UUID)
+    return item_id
+
+
+@router.get("/path/param-django-uuid-str/{uuid:item_id}")
+def get_path_param_django_int(request, item_id):
+    assert isinstance(item_id, str)
+    return item_id
+
+
+@router.get("/path/param-django-path/{path:item_id}/after")
+def get_path_param_django_int(request, item_id):
+    return item_id
+
+
 @router.get("/query")
 def get_query(request, query):
     return f"foo bar {query}"
@@ -175,3 +221,41 @@ def get_query_param_required(request, query=Query(...)):
 @router.get("/query/param-required/int")
 def get_query_param_required_type(request, query: int = Query(...)):
     return f"foo bar {query}"
+
+
+class CustomPathConverter1:
+    regex = "[0-9]+"
+
+    def to_python(self, value) -> "int":
+        """reverse the string and convert to int"""
+        return int(value[::-1])
+
+    def to_url(self, value):
+        return str(value)
+
+
+class CustomPathConverter2:
+    regex = "[0-9]+"
+
+    def to_python(self, value):
+        """reverse the string and convert to float like"""
+        return f"0.{value[::-1]}"
+
+    def to_url(self, value):
+        return str(value)
+
+
+from django.urls import register_converter
+
+register_converter(CustomPathConverter1, "custom-int")
+register_converter(CustomPathConverter2, "custom-float")
+
+
+@router.get("/path/param-django-custom-int/{custom-int:item_id}")
+def get_path_param_django_int(request, item_id: int):
+    return item_id
+
+
+@router.get("/path/param-django-custom-float/{custom-float:item_id}")
+def get_path_param_django_float(request, item_id: float):
+    return item_id

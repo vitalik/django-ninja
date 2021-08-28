@@ -1,3 +1,4 @@
+import re
 import warnings
 from http.client import responses
 from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Set, Tuple, Type
@@ -53,6 +54,9 @@ class OpenAPISchema(dict):
                 full_path = "/".join([i for i in (prefix, path) if i])
                 full_path = "/" + self.path_prefix + full_path
                 full_path = normalize_path(full_path)
+                full_path = re.sub(
+                    r"{[^}:]+:", "{", full_path
+                )  # remove path converters
                 path_methods = self.methods(path_view.operations)
                 if path_methods:
                     result[full_path] = path_methods
