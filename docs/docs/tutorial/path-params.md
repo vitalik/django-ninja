@@ -34,7 +34,6 @@ If you run this in your browser with <a href="http://localhost:8000/api/items/3"
 
 
 
-
 ### Data validation
 On the other hand, if you go to the browser at <a href="http://localhost:8000/api/items/foo" target="_blank">http://localhost:8000/api/items/foo</a> <small>*(`"foo"` is not int)*</small>, you will see an HTTP error like this:
 
@@ -52,6 +51,32 @@ On the other hand, if you go to the browser at <a href="http://localhost:8000/ap
     ]
 }
 ```
+
+
+### Django Path Converters
+
+You can use [Django Path Converters](https://docs.djangoproject.com/en/3.2/topics/http/urls/#path-converters)
+to help parse the path:
+
+```Python hl_lines="1"
+@api.get("/items/{int:item_id}")
+def read_item(request, item_id):
+    return {"item_id": item_id}
+```
+
+In this case,`item_id` will be parsed as an **`int`**. If `item_id` is not a valid `int`, the url will not
+match.  (e.g. if no other path matches, a *404 Not Found* will be returned)
+
+!!! tip
+    Notice that, since Django Ninja uses a default type of `str` for unannotated parameters, the value the
+    function above received (and returned) is `"3"`, as a Python `str` - not an integer **3**, . To receive
+    an `int`, simply declare `item_id` as an `int` type annotation in the function definition as normal:
+
+    ```Python hl_lines="2"
+    @api.get("/items/{int:item_id}")
+    def read_item(request, item_id:int):
+        return {"item_id": item_id}
+    ```
 
 
 ### Multiple parameters

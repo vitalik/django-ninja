@@ -28,7 +28,9 @@ nav:
   - tutorial/file-params.md
   - tutorial/response-schema.md
   - tutorial/crud.md
-  - tutorial/django-pydantic.md
+  - Advanced Schema:
+    - tutorial/django-pydantic.md
+    - tutorial/config-pydantic.md
   - tutorial/authentication.md
   - tutorial/routers.md
   - tutorial/operation_params.md
@@ -48,5 +50,9 @@ markdown_extensions:
 - markdown_include.include
 - markdown.extensions.codehilite:
     guess_lang: false
+# Uncomment these 2 lines during development to more easily add highlights
+#- pymdownx.highlight:
+#    linenums: true
 - codehilite
 - admonition
+- pymdownx.superfences
