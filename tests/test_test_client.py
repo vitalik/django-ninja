@@ -1,7 +1,6 @@
 from unittest import mock
 import pytest
 
-from django.http.request import HttpHeaders
 from http import HTTPStatus
 from ninja.testing import TestClient
 from ninja import Router
@@ -48,4 +47,5 @@ def test_django_2_2_plus_headers(version, has_headers):
         with mock.patch.object(client, '_call') as call:
             client.get('/test')
             request = call.call_args[0][1]
-            assert isinstance(request.headers, HttpHeaders) == has_headers
+            # for Django >= 2.2 we apply a HttpHeaders instance to .headers
+            assert isinstance(request.headers, mock.Mock) != has_headers
