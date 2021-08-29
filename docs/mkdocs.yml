@@ -48,5 +48,9 @@ markdown_extensions:
 - markdown_include.include
 - markdown.extensions.codehilite:
     guess_lang: false
+# Uncomment these 2 lines during development to more easily add highlights
+#- pymdownx.highlight:
+#    linenums: true
 - codehilite
 - admonition
+- pymdownx.superfences

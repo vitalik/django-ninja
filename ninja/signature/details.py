@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 import pydantic
 
 from ninja import UploadedFile
-from ninja.params import File
 from ninja.compatibility.util import get_origin as get_collection_origin
+from ninja.params import File
 
 if TYPE_CHECKING:
     from pydantic.fields import ModelField  # pragma: no cover
