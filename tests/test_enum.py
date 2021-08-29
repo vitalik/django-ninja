@@ -1,6 +1,8 @@
 from datetime import date
 from enum import Enum
+
 from pydantic import BaseModel
+
 from ninja import NinjaAPI
 from ninja.testing import TestClient
 

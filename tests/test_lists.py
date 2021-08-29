@@ -1,11 +1,11 @@
-import pytest
 from typing import List
-from ninja import Router, Query, Form, Schema
-from pydantic import BaseModel, Field
-from ninja.testing import TestClient
 
-
+import pytest
 from django.http import QueryDict  # noqa
+from pydantic import BaseModel, Field
+
+from ninja import Form, Query, Router, Schema
+from ninja.testing import TestClient
 
 router = Router()
 

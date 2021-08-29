@@ -1,10 +1,12 @@
-import pytest
 import uuid
+
+import pytest
 from pydantic import BaseModel
+
 from ninja import NinjaAPI
-from ninja.testing import TestClient
 from ninja.signature.details import is_pydantic_model
 from ninja.signature.utils import NinjaUUIDConverter
+from ninja.testing import TestClient
 
 
 def test_is_pydantic_model():

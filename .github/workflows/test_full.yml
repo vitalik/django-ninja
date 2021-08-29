@@ -42,7 +42,7 @@ jobs:
       - name: Black
         run: black --check ninja tests
       - name: isort
-        run: isort --check ninja
+        run: isort --check ninja tests
       - name: Flake8
         run: flake8 ninja tests
       - name: mypy

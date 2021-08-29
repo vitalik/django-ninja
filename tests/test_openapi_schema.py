@@ -1,8 +1,9 @@
-import pytest
 from typing import List
-from ninja import Body, NinjaAPI, Schema
+
+import pytest
 from django.test import Client, override_settings
 
+from ninja import Body, NinjaAPI, Schema
 
 api = NinjaAPI()
 

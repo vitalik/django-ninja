@@ -1,7 +1,8 @@
 from uuid import UUID
-from django.urls import register_converter
-from ninja import Router, Query, Path
 
+from django.urls import register_converter
+
+from ninja import Path, Query, Router
 
 router = Router()
 

@@ -9,7 +9,7 @@ install: ## Install dependencies
 
 lint: ## Run code linters
 	black --check ninja tests
-	isort --check ninja
+	isort --check ninja tests
 	flake8 ninja tests
 	mypy ninja
 

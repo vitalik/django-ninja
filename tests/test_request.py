@@ -1,5 +1,6 @@
 import pytest
-from ninja import Router, Cookie, Header
+
+from ninja import Cookie, Header, Router
 from ninja.testing import TestClient
 
 router = Router()

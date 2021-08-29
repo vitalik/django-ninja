@@ -1,8 +1,9 @@
+from http import HTTPStatus
+
 import pytest
 
-from http import HTTPStatus
-from ninja.testing import TestClient
 from ninja import Router
+from ninja.testing import TestClient
 
 router = Router()
 

@@ -1,5 +1,7 @@
 from typing import List
-from django.http import QueryDict, HttpRequest
+
+from django.http import HttpRequest, QueryDict
+
 from ninja import NinjaAPI
 from ninja.parser import Parser
 from ninja.testing import TestClient

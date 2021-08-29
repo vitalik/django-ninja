@@ -1,9 +1,10 @@
-import pytest
-from pydantic import ValidationError, BaseModel
-from ninja import Router
-from ninja.testing import TestClient
 from typing import List, Union
 
+import pytest
+from pydantic import BaseModel, ValidationError
+
+from ninja import Router
+from ninja.testing import TestClient
 
 router = Router()
 

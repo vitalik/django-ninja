@@ -1,6 +1,5 @@
-from ninja import NinjaAPI, Body
+from ninja import Body, NinjaAPI
 from ninja.testing import TestClient
-
 
 api = NinjaAPI()
 

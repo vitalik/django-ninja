@@ -54,7 +54,7 @@ Before your commit please check your code with:
 
 ```
 black --check ninja tests
-isort --check ninja
+isort --check ninja tests
 flake8 ninja tests
 ```
 
@@ -68,7 +68,7 @@ Or reformat your code with:
 
 ```
 black ninja tests
-isort ninja
+isort ninja tests
 ```
 
 or using Makefile:

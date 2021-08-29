@@ -1,5 +1,7 @@
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
+
 from ninja import NinjaAPI
 from ninja.testing import TestClient
 
@@ -25,15 +27,15 @@ def test_examples():
     Client.objects.create(key="12345")
 
     with patch("builtins.api", api, create=True):
-        import docs.src.tutorial.authentication.code002  # noqa: F401
         import docs.src.tutorial.authentication.apikey01  # noqa: F401
         import docs.src.tutorial.authentication.apikey02  # noqa: F401
         import docs.src.tutorial.authentication.apikey03  # noqa: F401
         import docs.src.tutorial.authentication.basic01  # noqa: F401
         import docs.src.tutorial.authentication.bearer01  # noqa: F401
         import docs.src.tutorial.authentication.code001  # noqa: F401
-        import docs.src.tutorial.authentication.schema01  # noqa: F401
+        import docs.src.tutorial.authentication.code002  # noqa: F401
         import docs.src.tutorial.authentication.multiple01  # noqa: F401
+        import docs.src.tutorial.authentication.schema01  # noqa: F401
 
         client = TestClient(api)
 

@@ -1,4 +1,5 @@
 from unittest.mock import patch
+
 from ninja import NinjaAPI
 from ninja.testing import TestClient
 

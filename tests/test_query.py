@@ -1,7 +1,7 @@
 import pytest
 from main import router
-from ninja.testing import TestClient
 
+from ninja.testing import TestClient
 
 response_missing = {
     "detail": [

@@ -1,11 +1,12 @@
-import pytest
 from typing import List, Union
-from pydantic import ValidationError
-from ninja import NinjaAPI, Schema
-from ninja.responses import codes_2xx, codes_3xx
-from ninja.errors import ConfigError
-from ninja.testing import TestClient
 
+import pytest
+from pydantic import ValidationError
+
+from ninja import NinjaAPI, Schema
+from ninja.errors import ConfigError
+from ninja.responses import codes_2xx, codes_3xx
+from ninja.testing import TestClient
 
 api = NinjaAPI()
 

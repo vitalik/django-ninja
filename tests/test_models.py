@@ -1,6 +1,7 @@
 import pytest
-from ninja import Router, Form, Query
 from pydantic import BaseModel
+
+from ninja import Form, Query, Router
 from ninja.testing import TestClient
 
 

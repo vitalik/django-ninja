@@ -1,8 +1,9 @@
 from functools import wraps
+
 import pytest
+
 from ninja import Router
 from ninja.testing import TestClient
-
 
 router = Router()
 client = TestClient(router)

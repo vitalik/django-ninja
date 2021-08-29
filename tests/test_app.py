@@ -1,11 +1,12 @@
 import os
 from tempfile import NamedTemporaryFile
+
 import pytest
+from django.http import FileResponse, HttpResponse
+
 from ninja import NinjaAPI
 from ninja.main import ConfigError
-from django.http import FileResponse, HttpResponse
 from ninja.testing import TestClient
-
 
 api = NinjaAPI()
 

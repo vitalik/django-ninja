@@ -1,9 +1,9 @@
 import pytest
-from ninja import NinjaAPI, Schema
-from ninja.pagination import paginate, PaginationBase, PageNumberPagination
-from ninja.errors import ConfigError
-from ninja.testing import TestClient
 
+from ninja import NinjaAPI, Schema
+from ninja.errors import ConfigError
+from ninja.pagination import PageNumberPagination, PaginationBase, paginate
+from ninja.testing import TestClient
 
 api = NinjaAPI()
 

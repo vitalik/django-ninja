@@ -1,4 +1,4 @@
-from ninja import NinjaAPI, Schema, Field
+from ninja import Field, NinjaAPI, Schema
 
 
 class SchemaWithAlias(Schema):

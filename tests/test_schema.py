@@ -1,9 +1,11 @@
 from typing import List
 from unittest.mock import Mock
+
+from django.db.models import Manager, QuerySet
+from django.db.models.fields.files import ImageFieldFile
+
 from ninja import Schema
 from ninja.schema import Field
-from django.db.models import QuerySet, Manager
-from django.db.models.fields.files import ImageFieldFile
 
 
 class FakeManager(Manager):

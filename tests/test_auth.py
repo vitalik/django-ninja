@@ -1,16 +1,18 @@
-import pytest
 from unittest.mock import Mock
+
+import pytest
+
 from ninja import NinjaAPI
+from ninja.errors import ConfigError
 from ninja.security import (
-    django_auth,
     APIKeyCookie,
     APIKeyHeader,
     APIKeyQuery,
-    HttpBearer,
     HttpBasicAuth,
+    HttpBearer,
+    django_auth,
 )
 from ninja.security.base import AuthBase
-from ninja.errors import ConfigError
 from ninja.testing import TestClient
 
 
