@@ -4,15 +4,14 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
 import pydantic
 
-from ninja import UploadedFile
-from ninja.params import File
+from ninja import UploadedFile, params
 from ninja.compatibility.util import get_origin as get_collection_origin
+from ninja.params import File
+from ninja.signature.utils import get_path_param_names, get_typed_signature
 
 if TYPE_CHECKING:
     from pydantic.fields import ModelField  # pragma: no cover
 
-from ninja import params
-from ninja.signature.utils import get_path_param_names, get_typed_signature
 
 __all__ = [
     "FuncParam",
