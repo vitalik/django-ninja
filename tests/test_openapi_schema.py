@@ -28,9 +28,14 @@ def method_list_response(request, data: List[Payload]):
     return []
 
 
-@api.post("/test-body", response=List[Response])
+@api.post("/test-body", response=Response)
 def method_body(request, i: int = Body(...), f: float = Body(...)):
-    return [i, f]
+    return dict(i=i, f=f)
+
+
+@api.get("/test-path/{int:i}/{f}", response=Response)
+def method_path(request, i: int, f: float):
+    return dict(i=i, f=f)
 
 
 def test_schema_views(client: Client):
@@ -53,11 +58,12 @@ def test_schema_views_no_INSTALLED_APPS(client: Client):
     call_docs()
 
 
-def test_schema():
-    schema = api.get_openapi_schema()
-    from pprint import pprint
+@pytest.fixture(scope="session")
+def schema():
+    return api.get_openapi_schema()
 
-    # --------------------------------------------------------------
+
+def test_schema(schema):
     method = schema["paths"]["/api/test"]["post"]
 
     assert method["requestBody"] == {
@@ -77,7 +83,8 @@ def test_schema():
         }
     }
 
-    # --------------------------------------------------------------
+
+def test_schema_list(schema):
     method_list = schema["paths"]["/api/test_list"]["post"]
 
     assert method_list["requestBody"] == {
@@ -128,13 +135,14 @@ def test_schema():
         },
     }
 
-    # --------------------------------------------------------------
+
+def test_schema_body(schema):
     method_list = schema["paths"]["/api/test-body"]["post"]
 
     assert method_list["requestBody"] == {
-        'content': {
-            'application/json': {
-                'schema': {
+        "content": {
+            "application/json": {
+                "schema": {
                     "properties": {
                         "f": {"title": "F", "type": "number"},
                         "i": {"title": "I", "type": "integer"},
@@ -145,18 +153,46 @@ def test_schema():
                 }
             }
         },
-        'required': True
+        "required": True,
     }
     assert method_list["responses"] == {
         200: {
             "content": {
                 "application/json": {
-                    "schema": {
-                        "items": {"$ref": "#/components/schemas/Response"},
-                        "title": "Response",
-                        "type": "array",
-                    }
+                    "schema": {"$ref": "#/components/schemas/Response"}
                 }
+            },
+            "description": "OK",
+        }
+    }
+
+
+def test_schema_path(schema):
+    method_list = schema["paths"]["/api/test-path/{i}/{f}"]["get"]
+
+    assert "requestBody" not in method_list
+
+    assert method_list["parameters"] == [
+        {
+            "in": "path",
+            "name": "i",
+            "schema": {"title": "I", "type": "integer"},
+            "required": True,
+        },
+        {
+            "in": "path",
+            "name": "f",
+            "schema": {"title": "F", "type": "number"},
+            "required": True,
+        },
+    ]
+
+    assert method_list["responses"] == {
+        200: {
+            "content": {
+                "application/json": {
+                    "schema": {"$ref": "#/components/schemas/Response"},
+                },
             },
             "description": "OK",
         }
@@ -191,4 +227,4 @@ def test_unique_operation_ids():
         pass
 
     with pytest.warns(UserWarning):
-        schema = api.get_openapi_schema()
+        api.get_openapi_schema()
