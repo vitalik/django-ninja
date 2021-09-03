@@ -1,3 +1,5 @@
+import pytest
+
 from ninja import NinjaAPI, Router
 from ninja.security import APIKeyQuery
 from ninja.testing import TestClient
@@ -43,15 +45,18 @@ api.add_router("/r2", r2, auth=Auth("two"))
 client = TestClient(api)
 
 
-def test_router_auth():
-    assert client.get("/r1/test").status_code == 401
-    assert client.get("/r2/test").status_code == 401
-
-    assert client.get("/r1/test?key=one").status_code == 200
-    assert client.get("/r2/test?key=two").status_code == 200
-
-    assert client.get("/r1/test?key=two").status_code == 401
-    assert client.get("/r2/test?key=one").status_code == 401
-
-    assert client.get("/r2/child/test").status_code == 401
-    assert client.get("/r2/child/test?key=two-child").status_code == 200
+@pytest.mark.parametrize(
+    "route, status_code",
+    [
+        ("/r1/test", 401),
+        ("/r2/test", 401),
+        ("/r1/test?key=one", 200),
+        ("/r2/test?key=two", 200),
+        ("/r1/test?key=two", 401),
+        ("/r2/test?key=one", 401),
+        ("/r2/child/test", 401),
+        ("/r2/child/test?key=two-child", 200),
+    ],
+)
+def test_router_auth(route, status_code):
+    assert client.get(route).status_code == status_code
