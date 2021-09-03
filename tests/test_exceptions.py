@@ -1,9 +1,9 @@
-import pytest
 import django
+import pytest
 from django.http import Http404
-from ninja import NinjaAPI, Schema
-from ninja.testing import TestClient, TestAsyncClient
 
+from ninja import NinjaAPI, Schema
+from ninja.testing import TestAsyncClient, TestClient
 
 api = NinjaAPI()
 
@@ -60,14 +60,17 @@ def test_default_handler(settings):
     assert response.json() == {"detail": "Cannot parse request body"}
 
 
-def test_exceptions():
-    response = client.post("/error/404")
-    assert response.status_code == 404
-    assert response.json() == {"detail": "Not Found"}
-
-    response = client.post("/error/custom")
-    assert response.status_code == 422
-    assert response.json() == {"custom": True}
+@pytest.mark.parametrize(
+    "route,status_code,json",
+    [
+        ("/error/404", 404, {"detail": "Not Found"}),
+        ("/error/custom", 422, {"custom": True}),
+    ],
+)
+def test_exceptions(route, status_code, json):
+    response = client.post(route)
+    assert response.status_code == status_code
+    assert response.json() == json
 
 
 @pytest.mark.skipif(django.VERSION < (3, 1), reason="requires django 3.1 or higher")
