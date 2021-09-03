@@ -1,6 +1,6 @@
 import pytest
 from typing import List
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 import django
 from django.db.models import Manager
 from django.db import models
@@ -472,3 +472,79 @@ def test_custom_fields():
         },
         "required": ["f1", "f2"],
     }
+
+
+def test_duplicate_schema_names():
+    from django.db import models
+
+    from ninja import NinjaAPI, Schema
+    from ninja.orm import create_schema
+
+    class TestModelDuplicate(models.Model):
+        charfield = models.CharField()
+
+        class Meta:
+            app_label = "tests"
+
+    class TestSchema(Schema):
+        data: List[
+            create_schema(
+                TestModelDuplicate,
+                fields=["charfield"],
+                custom_fields=[
+                    ("test", create_schema(TestModelDuplicate, fields=["charfield"]), ...)
+                ],
+            )
+        ]
+
+    api = NinjaAPI()
+
+    @api.get("/test", response=TestSchema)
+    def a_test_method(request):
+        return []
+
+    match = r"Looks like you may have created multiple orm schemas with the same name:"
+    with pytest.raises(ConfigError, match=match):
+        assert api.get_openapi_schema()
+
+
+def test_not_duplicate_schema_names():
+    from ninja.openapi.schema import model_schema
+    from ninja.schema import Schema
+
+    class TestModelNotDuplicate(models.Model):
+        charfield = models.CharField()
+
+        class Meta:
+            app_label = "tests"
+
+    TestSchema = create_schema(TestModelNotDuplicate, name="TestModelNotDuplicate", fields=["charfield"])
+
+    with patch('ninja.openapi.schema.pydantic_model_schema', side_effect=ValueError):
+        with pytest.raises(ValueError):
+            assert model_schema() is None
+
+    with patch('ninja.openapi.schema.pydantic_model_schema', side_effect=KeyError):
+        with pytest.raises(KeyError):
+            assert model_schema() is None
+
+    with patch('ninja.openapi.schema.pydantic_model_schema', side_effect=KeyError(Schema)):
+        with pytest.raises(KeyError):
+            assert model_schema() is None
+
+    with patch('ninja.openapi.schema.pydantic_model_schema', side_effect=KeyError(TestSchema)):
+        with pytest.raises(KeyError):
+            assert model_schema() is None
+
+    # define a duplicate schema name
+    TestSchema2 = create_schema(
+        TestModelNotDuplicate,
+        name="TestModelNotDuplicate",
+        fields=["charfield"],
+        custom_fields=[("test", TestSchema, ...)],  # interlinking models with the same name
+    )
+
+    # duplicate orm schema names returns ConfigError
+    with patch('ninja.openapi.schema.pydantic_model_schema', side_effect=KeyError(TestSchema)):
+        with pytest.raises(ConfigError):
+            assert model_schema() is None

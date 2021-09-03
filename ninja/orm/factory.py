@@ -110,6 +110,22 @@ class SchemaFactory:
                 continue
             yield cast(Field, fld)
 
+    def check_for_duplicates_on_exception(self, exc: Exception) -> None:
+        """check for duplicate named schemas: https://github.com/vitalik/django-ninja/issues/214"""
+        exc_args = getattr(exc, "args", None)
+        if exc_args and isinstance(exc_args[0], type(Schema)):
+            schema = exc_args[0]
+            schema_found = tuple(k for k, v in self.schemas.items() if v == schema)
+            if schema_found:
+                model_name = schema_found[0][1]
+                same_name_keys = tuple(
+                    key for key in factory.schemas if key[1] == model_name
+                )
+                if len(same_name_keys) > 1:
+                    errors = "\n".join(f"  {key}" for key in same_name_keys)
+                    msg = f"Looks like you may have created multiple orm schemas with the same name:\n{errors}"
+                    raise ConfigError(msg) from exc
+
 
 factory = SchemaFactory()
 
