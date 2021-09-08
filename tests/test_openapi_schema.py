@@ -1,8 +1,9 @@
 import pytest
 from typing import List
-from ninja import Body, NinjaAPI, Schema
 from django.test import Client, override_settings
 
+from ninja import Body, Form, NinjaAPI, Schema, UploadedFile
+from ninja.errors import ConfigError
 
 api = NinjaAPI()
 
@@ -12,13 +13,26 @@ class Payload(Schema):
     f: float
 
 
+def to_camel(string: str) -> str:
+    return "".join(word.capitalize() for word in string.split("_"))
+
+
 class Response(Schema):
     i: int
     f: float
 
+    class Config(Schema.Config):
+        alias_generator = to_camel
+        allow_population_by_field_name = True
+
 
 @api.post("/test", response=Response)
 def method(request, data: Payload):
+    return data.dict()
+
+
+@api.post("/test-alias", response=Response, by_alias=True)
+def method_alias(request, data: Payload):
     return data.dict()
 
 
@@ -32,9 +46,24 @@ def method_body(request, i: int = Body(...), f: float = Body(...)):
     return dict(i=i, f=f)
 
 
+@api.post("/test-body-schema", response=Response)
+def method_body_schema(request, data: Payload):
+    return dict(i=data.i, f=data.f)
+
+
 @api.get("/test-path/{int:i}/{f}", response=Response)
 def method_path(request, i: int, f: float):
     return dict(i=i, f=f)
+
+
+@api.post("/test-form", response=Response)
+def method_form(request, data: Payload = Form(...)):
+    return dict(i=data.i, f=data.f)
+
+
+@api.post("/test-form-file", response=Response)
+def method_form_file(request, files: List[UploadedFile], data: Payload = Form(...)):
+    return dict(i=data.i, f=data.f)
 
 
 def test_schema_views(client: Client):
@@ -81,6 +110,70 @@ def test_schema(schema):
             "description": "OK",
         }
     }
+    assert schema.schemas == {
+        "Response": {
+            "title": "Response",
+            "type": "object",
+            "properties": {
+                "i": {"title": "I", "type": "integer"},
+                "f": {"title": "F", "type": "number"},
+            },
+            "required": ["i", "f"],
+        },
+        "Payload": {
+            "title": "Payload",
+            "type": "object",
+            "properties": {
+                "i": {"title": "I", "type": "integer"},
+                "f": {"title": "F", "type": "number"},
+            },
+            "required": ["i", "f"],
+        },
+    }
+
+
+def test_schema_alias(schema):
+    method = schema["paths"]["/api/test-alias"]["post"]
+
+    assert method["requestBody"] == {
+        "content": {
+            "application/json": {"schema": {"$ref": "#/components/schemas/Payload"}}
+        },
+        "required": True,
+    }
+    assert method["responses"] == {
+        200: {
+            "content": {
+                "application/json": {
+                    "schema": {"$ref": "#/components/schemas/Response"}
+                }
+            },
+            "description": "OK",
+        }
+    }
+    # ::TODO:: this is currently broken if not all responses for same schema use the same by_alias
+    '''
+    assert schema.schemas == {
+        "Response": {
+            "title": "Response",
+            "type": "object",
+            "properties": {
+                "I": {"title": "I", "type": "integer"},
+                "F": {"title": "F", "type": "number"},
+            },
+            "required": ["i", "f"],
+        },
+        "Payload": {
+            "title": "Payload",
+            "type": "object",
+            "properties": {
+                "i": {"title": "I", "type": "integer"},
+                "f": {"title": "F", "type": "number"},
+            },
+            "required": ["i", "f"],
+        },
+    }
+    '''
 
 
 def test_schema_list(schema):
@@ -166,6 +259,27 @@ def test_schema_body(schema):
     }
 
 
+def test_schema_body_schema(schema):
+    method_list = schema["paths"]["/api/test-body-schema"]["post"]
+
+    assert method_list["requestBody"] == {
+        "content": {
+            "application/json": {"schema": {"$ref": "#/components/schemas/Payload"}},
+        },
+        "required": True,
+    }
+    assert method_list["responses"] == {
+        200: {
+            "content": {
+                "application/json": {
+                    "schema": {"$ref": "#/components/schemas/Response"}
+                }
+            },
+            "description": "OK",
+        }
+    }
+
+
 def test_schema_path(schema):
     method_list = schema["paths"]["/api/test-path/{i}/{f}"]["get"]
 
@@ -198,6 +312,64 @@ def test_schema_path(schema):
     }
 
 
+def test_schema_form(schema):
+    method_list = schema["paths"]["/api/test-form"]["post"]
+
+    assert method_list["requestBody"] == {
+        "content": {
+            "application/x-www-form-urlencoded": {
+                "schema": {"$ref": "#/components/schemas/Payload"}
+            }
+        },
+        "required": True,
+    }
+    assert method_list["responses"] == {
+        200: {
+            "description": "OK",
+            "content": {
+                "application/json": {
+                    "schema": {"$ref": "#/components/schemas/Response"}
+                }
+            },
+        }
+    }
+
+
+def test_schema_form_file(schema):
+    method_list = schema["paths"]["/api/test-form-file"]["post"]
+
+    assert method_list["requestBody"] == {
+        "content": {
+            "multipart/form-data": {
+                "schema": {
+                    "properties": {
+                        "data": {"$ref": "#/components/schemas/Payload"},
+                        "files": {
+                            "items": {"format": "binary", "type": "string"},
+                            "title": "Files",
+                            "type": "array",
+                        },
+                    },
+                    "required": ["files", "data"],
+                    "title": "FormFileParams",
+                    "type": "object",
+                }
+            }
+        },
+        "required": True,
+    }
+    assert method_list["responses"] == {
+        200: {
+            "description": "OK",
+            "content": {
+                "application/json": {
+                    "schema": {"$ref": "#/components/schemas/Response"}
+                }
+            },
+        }
+    }
+
+
 def test_unique_operation_ids():
 
     api = NinjaAPI()
@@ -211,4 +383,16 @@ def test_unique_operation_ids():
         pass
 
     with pytest.warns(UserWarning):
+        api.get_openapi_schema()
+
+
+def test_body_file():
+    api = NinjaAPI()
+
+    @api.post("/test")
+    def method(request, data: Payload, files: UploadedFile):
+        pass
+
+    match = "'Body' params currently incompatible with 'File' params"
+    with pytest.raises(ConfigError, match=match):
         api.get_openapi_schema()

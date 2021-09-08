@@ -7,7 +7,9 @@ from pydantic import BaseModel
 from pydantic.schema import model_schema
 
 from ninja.constants import NOT_SET
+from ninja.errors import ConfigError
 from ninja.operation import Operation
+from ninja.params_models import TModels
 from ninja.types import DictStrAny
 from ninja.utils import normalize_path
 
@@ -16,7 +18,11 @@ if TYPE_CHECKING:
 
 REF_PREFIX: str = "#/components/schemas/"
 
-BODY_PARAMS: Set[str] = {"body", "form", "file"}
+BODY_CONTENT_TYPES: Dict[str, str] = {
+    "body": "application/json",
+    "form": "application/x-www-form-urlencoded",
+    "file": "multipart/form-data",
+}
 
 
 def get_schema(api: "NinjaAPI", path_prefix: str = "") -> "OpenAPISchema":
@@ -65,10 +71,10 @@ class OpenAPISchema(dict):
     def methods(self, operations: list) -> DictStrAny:
         result = {}
         for op in operations:
-            if not op.include_in_schema:
-                continue
-            for method in op.methods:
-                result[method.lower()] = self.operation_details(op)
+            if op.include_in_schema:
+                operation_details = self.operation_details(op)
+                for method in op.methods:
+                    result[method.lower()] = operation_details
         return result
 
     def operation_details(self, operation: Operation) -> DictStrAny:
@@ -107,7 +113,7 @@ class OpenAPISchema(dict):
     def operation_parameters(self, operation: Operation) -> List[DictStrAny]:
         result = []
         for model in operation.models:
-            if model._in in BODY_PARAMS:
+            if model._param_source in BODY_CONTENT_TYPES:
                 continue
 
             schema = model_schema(model, ref_prefix=REF_PREFIX)
@@ -124,7 +130,7 @@ class OpenAPISchema(dict):
                     name, details, is_required, schema.get("definitions", {})
                 ):
                     param = {
-                        "in": model._in,
+                        "in": model._param_source,
                         "name": p_name,
                         "schema": p_schema,
                         "required": p_required,
@@ -134,13 +140,18 @@ class OpenAPISchema(dict):
         return result
 
     def _create_schema_from_model(
-        self, model: Type[BaseModel], by_alias: bool = True
+        self,
+        model: Type[BaseModel],
+        by_alias: bool = False,
+        remove_level: bool = True,
     ) -> Tuple[Any, bool]:
         schema = model_schema(model, ref_prefix=REF_PREFIX, by_alias=by_alias)
-        if schema.get("definitions"):
-            self.add_schema_definitions(schema["definitions"])
 
-        if len(schema["properties"]) == 1:
+        # move Schemas from definitions
+        if schema.get("definitions"):
+            self.add_schema_definitions(schema.pop("definitions"))
+
+        if remove_level and len(schema["properties"]) == 1:
             name, details = list(schema["properties"].items())[0]
 
             # ref = details["$ref"]
@@ -149,35 +160,58 @@ class OpenAPISchema(dict):
         else:
             return schema, True
 
+    def _create_multipart_schema_from_models(
+        self, models: TModels
+    ) -> Tuple[DictStrAny, str]:
+        param_sources = {model._param_source for model in models}
+        if "body" in param_sources:
+            # ::TODO:: for now reject this.  This however, should be workable with multipart
+            other = " & ".join(f"'{src.title()}'" for src in param_sources - {"body"})
+            raise ConfigError(
+                f"'Body' params currently incompatible with {other} params"
+            )
+
+        # for now, this should be the only possibility here.
+        assert param_sources == {"form", "file"}
+
+        # We have File and Form, so we need to use multipart (File)
+        content_type = BODY_CONTENT_TYPES["file"]
+
+        # merge the form and files schema
+        schema, schema2 = tuple(
+            self._create_schema_from_model(model, remove_level=False)[0]
+            for model in models
+        )
+
+        schema["title"] = "FormFileParams"
+        schema["properties"].update(schema2["properties"])
+        required_list = schema.get("required", []) + schema2.get("required", [])
+        if required_list:
+            schema["required"] = required_list
+        return schema, content_type
+
     def request_body(self, operation: Operation) -> DictStrAny:
-        # TODO: refactor
-        models = [m for m in operation.models if m._in in BODY_PARAMS]
+        models = [m for m in operation.models if m._param_source in BODY_CONTENT_TYPES]
         if not models:
             return {}
-        assert len(models) == 1
 
-        model = models[0]
-        content_type = self.get_body_content_type(model)
-
-        if model._in == "body":
-            schema, required = self._create_schema_from_model(model)
+        if len(models) == 1:
+            model = models[0]
+            content_type = BODY_CONTENT_TYPES[model._param_source]
+            if model._param_source == "file":
+                schema, required = self._create_schema_from_model(
+                    model, remove_level=False
+                )
+            else:
+                schema, required = self._create_schema_from_model(model)
         else:
-            assert model._in in ("form", "file")
-            schema = model_schema(model, ref_prefix=REF_PREFIX)
+            schema, content_type = self._create_multipart_schema_from_models(models)
             required = True
 
         return {
             "content": {content_type: {"schema": schema}},
             "required": required,
         }
-
-    def get_body_content_type(self, model: Any) -> str:
-        types = {
-            "body": "application/json",
-            "form": "application/x-www-form-urlencoded",
-            "file": "multipart/form-data",
-        }
-        return types[model._in]
 
     def responses(self, operation: Operation) -> Dict[int, DictStrAny]:
         assert bool(operation.response_models), f"{operation.response_models} empty"
@@ -186,12 +220,15 @@ class OpenAPISchema(dict):
         for status, model in operation.response_models.items():
 
             if status == Ellipsis:
-                continue  # it's not yet clear what it means if user want's to output any other code
+                continue  # it's not yet clear what it means if user wants to output any other code
 
             description = responses.get(status, "Unknown Status Code")
             details: Dict[int, Any] = {status: {"description": description}}
             if model not in [None, NOT_SET]:
-                schema, _ = self._create_schema_from_model(model, by_alias=False)
+                # ::TODO:: test this: by_alias == True
+                schema = self._create_schema_from_model(
+                    model, by_alias=operation.by_alias
+                )[0]
                 details[status]["content"] = {"application/json": {"schema": schema}}
             result.update(details)
 
@@ -219,6 +256,8 @@ class OpenAPISchema(dict):
         # TODO: check if schema["definitions"] are unique
         # if not - workaround (maybe use pydantic.schema.schema(models)) to process list of models
         # assert set(definitions.keys()) - set(self.schemas.keys()) == set()
+        # ::TODO:: this is broken in interesting ways for by_alias,
+        #     because same schema (name) can have different values
         self.schemas.update(definitions)
 
 

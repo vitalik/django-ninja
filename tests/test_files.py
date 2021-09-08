@@ -1,10 +1,11 @@
 import pytest
 from typing import List
-from ninja import NinjaAPI, File, UploadedFile
-from ninja.testing import TestClient
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils.datastructures import MultiValueDict
 
+from ninja import File, NinjaAPI, UploadedFile
+from ninja.errors import ConfigError
+from ninja.testing import TestClient
 
 api = NinjaAPI()
 
@@ -107,3 +108,17 @@ def test_schema():
 def test_invalid_file():
     with pytest.raises(ValueError):
         UploadedFile._validate("not_a_file")
+
+
+def test_multiple_file_params():
+    api = NinjaAPI()
+
+    match = (
+        r"Only 1 'File\(\)' param allowed for path:/test-path function:create_task "
+        r"found: start, end. Try type: 'List\[UploadedFile\]'"
+    )
+    with pytest.raises(ConfigError, match=match):
+
+        @api.post("/test-path")
+        def create_task(request, start: UploadedFile, end: UploadedFile):
+            pass

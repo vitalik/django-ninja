@@ -6,7 +6,7 @@ api = NinjaAPI()
 
 
 @api.post("/form")
-def form_operation(request, s: str = Form(...), i: int = Form(...)):
+def form_operation(request, s: str = Form(...), i: int = Form(None)):
     return {"s": s, "i": i}
 
 
@@ -16,6 +16,14 @@ client = TestClient(api)
 def test_form():
     response = client.post("/form")  # invalid
     assert response.status_code == 422
+
+    response = client.post("/form", POST={"s": "text"})
+    assert response.status_code == 200
+    assert response.json() == {"i": None, "s": "text"}
+
+    response = client.post("/form", POST={"s": "text", "i": None})
+    assert response.status_code == 200
+    assert response.json() == {"i": None, "s": "text"}
 
     response = client.post("/form", POST={"s": "text", "i": 2})
     assert response.status_code == 200
@@ -33,7 +41,7 @@ def test_schema():
                         "i": {"title": "I", "type": "integer"},
                         "s": {"title": "S", "type": "string"},
                     },
-                    "required": ["s", "i"],
+                    "required": ["s"],
                     "title": "FormParams",
                     "type": "object",
                 }

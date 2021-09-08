@@ -47,8 +47,8 @@ class Param(FieldInfo):
         )
 
     @classmethod
-    def _in(cls) -> str:
-        "Openapi param.in value"
+    def _param_source(cls) -> str:
+        "Openapi param.in value or body type"
         return cls.__name__.lower()
 
 

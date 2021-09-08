@@ -6,7 +6,9 @@ import pydantic
 
 from ninja import UploadedFile, params
 from ninja.compatibility.util import get_origin as get_collection_origin
+from ninja.errors import ConfigError
 from ninja.params import File
+from ninja.params_models import TModels
 from ninja.signature.utils import get_path_param_names, get_typed_signature
 
 if TYPE_CHECKING:
@@ -14,7 +16,6 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "FuncParam",
     "ViewSignature",
     "is_pydantic_model",
     "is_collection_type",
@@ -28,6 +29,7 @@ class ViewSignature:
     def __init__(self, path: str, view_func: Callable) -> None:
         self.view_func = view_func
         self.signature = get_typed_signature(self.view_func)
+        self.path = path
         self.path_params_names = get_path_param_names(path)
         self.docstring = inspect.cleandoc(view_func.__doc__ or "")
         self.has_kwargs = False
@@ -59,25 +61,36 @@ class ViewSignature:
             for p_name, p_type, p_source in view_func._ninja_contribute_args:  # type: ignore
                 self.params.append(FuncParam(p_name, p_source, p_type, False))
 
-        self.models = self._create_models()
+        self.models: TModels = self._create_models()
 
-    def _create_models(self) -> List[Any]:
-        grouping: Dict[Any, List[FuncParam]] = defaultdict(list)
+    def _create_models(self) -> TModels:
+        params_by_source_cls: Dict[Any, List[FuncParam]] = defaultdict(list)
         for param in self.params:
-            d_type = type(param.source)
-            grouping[d_type].append(param)
+            param_source_cls = type(param.source)
+            params_by_source_cls[param_source_cls].append(param)
 
         result = []
-        for cls, args in grouping.items():
-            cls_name: str = cls.__name__ + "Params"
+        for param_cls, args in params_by_source_cls.items():
+            cls_name: str = param_cls.__name__ + "Params"
             attrs = {i.name: i.source for i in args}
-            attrs["_in"] = cls._in()
+            attrs["_param_source"] = param_cls._param_source()
 
             if len(args) == 1:
-                if cls._in() == "body" or is_pydantic_model(args[0].annotation):
+                if attrs["_param_source"] == "body" or is_pydantic_model(
+                    args[0].annotation
+                ):
                     attrs["_single_attr"] = args[0].name
 
-            elif cls._in() == "query":
+            elif attrs["_param_source"] == "file":
+                # More than one File() is not allowed
+                func_name = getattr(self.view_func, "__name__", "<UNKNOWN>")
+                names = ", ".join(arg.name for arg in args)
+                raise ConfigError(
+                    f"Only 1 '{param_cls.__name__}()' param allowed for path:{self.path} function:"
+                    f"{func_name} found: {names}. Try type: 'List[UploadedFile]'"
+                )
+            else:
+                # combine multiple models (mixed attrs)
                 pydantic_models = [
                     arg for arg in args if is_pydantic_model(arg.annotation)
                 ]
@@ -100,7 +113,7 @@ class ViewSignature:
             # collection fields:
             attrs["_collection_fields"] = detect_collection_fields(args)
 
-            base_cls = cls._model
+            base_cls = param_cls._model
             model_cls = type(cls_name, (base_cls,), attrs)
             # TODO: https://pydantic-docs.helpmanual.io/usage/models/#dynamic-model-creation - check if anything special in create_model method that I did not use
             result.append(model_cls)
@@ -143,7 +156,7 @@ class ViewSignature:
             ), f"'{name}' is a path param, default not allowed"
             param_source = params.Path(...)
 
-        # 3) if param is a collection or annotation is part of pydantic model:
+        # 3) if param is a collection, or annotation is part of pydantic model:
         elif is_collection or is_pydantic_model(annotation):
             if arg.default == self.signature.empty:
                 param_source = params.Body(...)

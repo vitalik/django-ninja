@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Optional, Type, TypeVar
+from typing import TYPE_CHECKING, List, Optional, Type, TypeVar
 
 from django.conf import settings
 from django.http import HttpRequest
@@ -24,6 +24,7 @@ __all__ = [
 ]
 
 TModel = TypeVar("TModel", bound="ParamModel")
+TModels = List[TModel]
 
 
 class ParamModel(BaseModel, ABC):
