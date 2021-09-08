@@ -1,11 +1,12 @@
-import pytest
 from typing import List, Union
-from pydantic import ValidationError
-from ninja import NinjaAPI, Schema
-from ninja.responses import codes_2xx, codes_3xx
-from ninja.errors import ConfigError
-from ninja.testing import TestClient
 
+import pytest
+from pydantic import ValidationError
+
+from ninja import NinjaAPI, Schema
+from ninja.errors import ConfigError
+from ninja.responses import codes_2xx, codes_3xx
+from ninja.testing import TestClient
 
 api = NinjaAPI()
 
@@ -38,7 +39,8 @@ def check_no_content(request, return_code: bool):
 
 
 @api.get(
-    "/check_multiple_codes", response={codes_2xx: int, codes_3xx: str, ...: float},
+    "/check_multiple_codes",
+    response={codes_2xx: int, codes_3xx: str, ...: float},
 )
 def check_multiple_codes(request, code: int):
     return code, 1

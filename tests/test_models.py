@@ -1,6 +1,7 @@
 import pytest
-from ninja import Router, Form, Body, Query
 from pydantic import BaseModel
+
+from ninja import Form, Query, Router
 from ninja.testing import TestClient
 
 
@@ -70,7 +71,7 @@ def view6(request, obj: OtherModel = None):
 
 
 @router.post("/model-default2")
-def view6(request, obj: OtherModel = OtherModel(x=1, y=1)):
+def view7(request, obj: OtherModel = OtherModel(x=1, y=1)):
     assert isinstance(obj, OtherModel)
     return obj
 
@@ -127,7 +128,6 @@ client = TestClient(router)
             dict(json=None),
             {"x": 1, "y": 1},
         ),
-        
     ],
     # fmt: on
 )

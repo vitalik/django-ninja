@@ -1,7 +1,7 @@
 from typing import Optional
+
 from ninja import NinjaAPI, Schema
 from ninja.testing import TestClient
-
 
 api = NinjaAPI()
 

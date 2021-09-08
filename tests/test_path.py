@@ -1,9 +1,8 @@
-from ninja.main import NinjaAPI
 import pytest
 from main import router
+
 from ninja import Router
 from ninja.testing import TestClient
-
 
 client = TestClient(router)
 
