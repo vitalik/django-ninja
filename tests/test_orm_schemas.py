@@ -1,12 +1,14 @@
-import pytest
 from typing import List
 from unittest.mock import Mock
+
 import django
-from django.db.models import Manager
+import pytest
 from django.db import models
+from django.db.models import Manager
+
 from ninja.errors import ConfigError
 from ninja.orm import create_schema
-from ninja.orm.shortcuts import S, L
+from ninja.orm.shortcuts import L, S
 
 
 def test_inheritance():

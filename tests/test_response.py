@@ -1,9 +1,10 @@
-import pytest
-from pydantic import ValidationError, BaseModel
-from ninja import Router
-from ninja.testing import TestClient
 from typing import List, Union
 
+import pytest
+from pydantic import BaseModel, ValidationError
+
+from ninja import Router
+from ninja.testing import TestClient
 
 router = Router()
 
@@ -26,7 +27,7 @@ class User:
 
 
 def to_camel(string: str) -> str:
-    return ''.join(word.capitalize() for word in string.split('_'))
+    return "".join(word.capitalize() for word in string.split("_"))
 
 
 class UserModel(BaseModel):
@@ -72,7 +73,10 @@ client = TestClient(router)
     [
         ("/check_int", 1),
         ("/check_model", {"id": 1, "user_name": "John"}),  # the password is skipped
-        ("/check_list_model", [{"id": 1, "user_name": "John"}]),  # the password is skipped
+        (
+            "/check_list_model",
+            [{"id": 1, "user_name": "John"}],
+        ),  # the password is skipped
         ("/check_model", {"id": 1, "user_name": "John"}),  # the password is skipped
         ("/check_model_alias", {"Id": 1, "UserName": "John"}),  # result is Camal Case
         ("/check_union?q=0", 1),

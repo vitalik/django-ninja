@@ -1,5 +1,6 @@
-from ninja import NinjaAPI, Router
 import pytest
+
+from ninja import NinjaAPI, Router
 from ninja.testing import TestClient
 
 api = NinjaAPI()

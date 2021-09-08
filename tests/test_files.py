@@ -1,5 +1,6 @@
-import pytest
 from typing import List
+
+import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils.datastructures import MultiValueDict
 

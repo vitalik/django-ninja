@@ -1,4 +1,5 @@
 from unittest.mock import patch
+
 from ninja import NinjaAPI
 from ninja.testing import TestClient
 
@@ -8,9 +9,9 @@ def test_examples():
     api = NinjaAPI()
 
     with patch("builtins.api", api, create=True):
-        import docs.src.tutorial.body.code01
-        import docs.src.tutorial.body.code02
-        import docs.src.tutorial.body.code03
+        import docs.src.tutorial.body.code01  # noqa: F401
+        import docs.src.tutorial.body.code02  # noqa: F401
+        import docs.src.tutorial.body.code03  # noqa: F401
 
         client = TestClient(api)
 

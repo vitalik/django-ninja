@@ -1,5 +1,6 @@
-import pytest
 from typing import List
+
+import pytest
 from django.test import Client, override_settings
 
 from ninja import Body, Form, NinjaAPI, Schema, UploadedFile
@@ -152,7 +153,7 @@ def test_schema_alias(schema):
         }
     }
     # ::TODO:: this is currently broken if not all responses for same schema use the same by_alias
-    '''
+    """
     assert schema.schemas == {
         "Response": {
             "title": "Response",
@@ -173,7 +174,7 @@ def test_schema_alias(schema):
             "required": ["i", "f"],
         },
     }
-    '''
+    """
 
 
 def test_schema_list(schema):
@@ -379,10 +380,11 @@ def test_unique_operation_ids():
         pass
 
     @api.get("/2")
-    def same_name(request):
+    def same_name(request):  # noqa: F811
         pass
 
-    with pytest.warns(UserWarning):
+    match = 'operation_id "test_openapi_schema_same_name" is already used'
+    with pytest.warns(UserWarning, match=match):
         api.get_openapi_schema()
 
 

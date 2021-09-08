@@ -1,7 +1,9 @@
-import pytest
 from io import StringIO
+
+import pytest
 from django.utils.encoding import force_str
 from django.utils.xmlutils import SimplerXMLGenerator
+
 from ninja import NinjaAPI
 from ninja.renderers import BaseRenderer
 from ninja.testing import TestClient
