@@ -1,10 +1,10 @@
-from django.views.decorators import csrf
 import pytest
-from ninja import NinjaAPI
-from ninja.security import APIKeyCookie
-from ninja.errors import ConfigError
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
+
+from ninja import NinjaAPI
+from ninja.errors import ConfigError
+from ninja.security import APIKeyCookie
 from ninja.testing import TestClient as BaseTestClient
 
 

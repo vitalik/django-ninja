@@ -1,5 +1,6 @@
 import pytest
-from ninja import Router, Cookie, Header
+
+from ninja import Cookie, Header, Router
 from ninja.testing import TestClient
 
 router = Router()
@@ -50,8 +51,19 @@ client = TestClient(router)
         ("/headers2", 200, "Ninja"),
         ("/headers3", 200, 10),
         ("/headers4", 200, 10),
-        ("/headers5", 422, {'detail': [{'loc': ['header', 'missing'],
-                                        'msg': 'field required', 'type': 'value_error.missing'}]}),
+        (
+            "/headers5",
+            422,
+            {
+                "detail": [
+                    {
+                        "loc": ["header", "missing"],
+                        "msg": "field required",
+                        "type": "value_error.missing",
+                    }
+                ]
+            },
+        ),
         ("/cookies1", 200, "shuriken"),
         ("/cookies2", 200, "shuriken"),
     ],

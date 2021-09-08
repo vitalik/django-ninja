@@ -1,10 +1,11 @@
-import pytest
 from typing import List
-from ninja import NinjaAPI, File, UploadedFile
-from ninja.testing import TestClient
+
+import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils.datastructures import MultiValueDict
 
+from ninja import File, NinjaAPI, UploadedFile
+from ninja.testing import TestClient
 
 api = NinjaAPI()
 

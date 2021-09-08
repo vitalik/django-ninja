@@ -1,6 +1,8 @@
-import pytest
 import asyncio
+
 import django
+import pytest
+
 from ninja import NinjaAPI
 from ninja.security import APIKeyQuery
 from ninja.testing import TestAsyncClient

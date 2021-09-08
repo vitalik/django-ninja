@@ -1,6 +1,4 @@
-import json
-from ninja import NinjaAPI, Schema, Field, schema
-from ninja.testing import TestClient
+from ninja import Field, NinjaAPI, Schema
 
 
 class SchemaWithAlias(Schema):

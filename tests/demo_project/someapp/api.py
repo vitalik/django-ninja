@@ -1,8 +1,11 @@
 from datetime import date
-from ninja import Router
 from typing import List
-from pydantic import BaseModel
+
 from django.shortcuts import get_object_or_404
+from pydantic import BaseModel
+
+from ninja import Router
+
 from .models import Event
 
 router = Router()

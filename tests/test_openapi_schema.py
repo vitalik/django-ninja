@@ -1,9 +1,10 @@
-import pytest
 from typing import List
-from ninja import Body, NinjaAPI, Schema
-from ninja.openapi.urls import get_openapi_urls
+
+import pytest
 from django.test import Client, override_settings
 
+from ninja import Body, NinjaAPI, Schema
+from ninja.openapi.urls import get_openapi_urls
 
 api = NinjaAPI()
 
@@ -209,8 +210,10 @@ def test_get_openapi_urls():
     paths = get_openapi_urls(api)
     assert len(paths) == 1
 
-    api = NinjaAPI(openapi_url='/path', docs_url='/path')
-    with pytest.raises(AssertionError, match='Please use different urls for openapi_url and docs_url'):
+    api = NinjaAPI(openapi_url="/path", docs_url="/path")
+    with pytest.raises(
+        AssertionError, match="Please use different urls for openapi_url and docs_url"
+    ):
         get_openapi_urls(api)
 
 
@@ -223,8 +226,9 @@ def test_unique_operation_ids():
         pass
 
     @api.get("/2")
-    def same_name(request):
+    def same_name(request):  # noqa: F811
         pass
 
-    with pytest.warns(UserWarning):
+    match = 'operation_id "test_openapi_schema_same_name" is already used'
+    with pytest.warns(UserWarning, match=match):
         api.get_openapi_schema()

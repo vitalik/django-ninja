@@ -154,7 +154,7 @@ class NinjaResponse:
         # TODO: what's the type here ?
         self._response = http_response
         self.status_code = http_response.status_code
-        self.streaming = http_response.streaming  # type: ignore
+        self.streaming = http_response.streaming
         if self.streaming:
             self.content = b"".join(http_response.streaming_content)  # type: ignore
         else:
