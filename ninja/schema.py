@@ -24,7 +24,7 @@ class DjangoGetter(GetterDict):
         if isinstance(result, Manager):
             return list(result.all())
 
-        elif isinstance(result, QuerySet):
+        elif isinstance(result, getattr(QuerySet, "__origin__", QuerySet)):
             return list(result)
 
         elif isinstance(result, FieldFile):

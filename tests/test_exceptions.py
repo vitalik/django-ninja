@@ -1,9 +1,9 @@
-import pytest
 import django
+import pytest
 from django.http import Http404
-from ninja import NinjaAPI, Schema
-from ninja.testing import TestClient, TestAsyncClient
 
+from ninja import NinjaAPI, Schema
+from ninja.testing import TestAsyncClient, TestClient
 
 api = NinjaAPI()
 
