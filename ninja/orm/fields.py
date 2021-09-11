@@ -102,8 +102,7 @@ def get_schema_field(field: Field, *, depth: int = 0) -> Tuple:
         if not field.concrete and field.auto_created or field.null:
             default = None
 
-        if hasattr(field, "get_attname"):
-            alias = field.get_attname()
+        alias = getattr(field, "get_attname", None) and field.get_attname()
 
         pk_type = TYPES.get(internal_type, int)
         if field.one_to_many or field.many_to_many:

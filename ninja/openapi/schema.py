@@ -255,6 +255,6 @@ def resolve_allOf(details: DictStrAny, definitions: DictStrAny) -> None:
     """
     for item in details["allOf"]:
         if "$ref" in item:
-            def_name = item["$ref"].split("/")[-1]
+            def_name = item["$ref"].rsplit("/", 1)[-1]
             item.update(definitions[def_name])
             del item["$ref"]

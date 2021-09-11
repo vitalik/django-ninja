@@ -300,7 +300,7 @@ class NinjaAPI:
             router.tags = tags
 
         if parent_router:
-            parent_prefix = next(
+            parent_prefix = next(  # pragma: no cover
                 (path for path, r in self._routers if r is parent_router), None
             )
             assert parent_prefix is not None
