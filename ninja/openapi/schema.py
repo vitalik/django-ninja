@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from pydantic.schema import model_schema as pydantic_model_schema
 
 from ninja.constants import NOT_SET
+from ninja.errors import ConfigError
 from ninja.operation import Operation
 from ninja.types import DictStrAny
 from ninja.utils import normalize_path
@@ -161,34 +162,45 @@ class OpenAPISchema(dict):
             return schema, True
 
     def request_body(self, operation: Operation) -> DictStrAny:
-        # TODO: refactor
         models = [m for m in operation.models if m._in in BODY_PARAMS]
         if not models:
             return {}
+
+        sources = {m._in for m in models}
+        if "body" in sources and ("form" in sources or "file" in sources):
+            raise ConfigError("Cannot mix form params and json params")
+
+        if "body" in sources:
+            return self.request_body_data(models)
+
+        assert "file" in sources or "form" in sources
+        return self.request_body_form(models, is_multipart=("file" in sources))
+
+    def request_body_data(self, models: List[Type]) -> DictStrAny:
         assert len(models) == 1
-
         model = models[0]
-        content_type = self.get_body_content_type(model)
-
-        if model._in == "body":
-            schema, required = self._create_schema_from_model(model)
-        else:
-            assert model._in in ("form", "file")
-            schema = model_schema(model, ref_prefix=REF_PREFIX)
-            required = True
-
+        schema, required = self._create_schema_from_model(model)
+        content_type = "application/json"
         return {
             "content": {content_type: {"schema": schema}},
             "required": required,
         }
 
-    def get_body_content_type(self, model: Any) -> str:
-        types = {
-            "body": "application/json",
-            "form": "application/x-www-form-urlencoded",
-            "file": "multipart/form-data",
+    def request_body_form(self, models: List[Type], is_multipart: bool) -> DictStrAny:
+        content_type = "application/x-www-form-urlencoded"
+        if is_multipart:
+            content_type = "multipart/form-data"
+
+        all_schemas = []
+        for model in models:
+            assert model._in in ("form", "file")
+            schema = model_schema(model, ref_prefix=REF_PREFIX)
+            all_schemas.append(schema)
+        final_schema = merge_schemas(all_schemas)
+        return {
+            "content": {content_type: {"schema": final_schema}},
+            "required": True,
         }
-        return types[model._in]
 
     def responses(self, operation: Operation) -> Dict[int, DictStrAny]:
         assert bool(operation.response_models), f"{operation.response_models} empty"
@@ -269,3 +281,11 @@ def resolve_allOf(details: DictStrAny, definitions: DictStrAny) -> None:
             def_name = item["$ref"].rsplit("/", 1)[-1]
             item.update(definitions[def_name])
             del item["$ref"]
+
+
+def merge_schemas(schemas: List[DictStrAny]) -> DictStrAny:
+    result = schemas[0]
+    for scm in schemas[1:]:
+        result["properties"].update(scm["properties"])
+        result["required"].extend(scm["required"])
+    return result
