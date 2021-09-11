@@ -4,7 +4,7 @@ from http.client import responses
 from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Set, Tuple, Type
 
 from pydantic import BaseModel
-from pydantic.schema import model_schema
+from pydantic.schema import model_schema as pydantic_model_schema
 
 from ninja.constants import NOT_SET
 from ninja.operation import Operation
@@ -17,6 +17,17 @@ if TYPE_CHECKING:
 REF_PREFIX: str = "#/components/schemas/"
 
 BODY_PARAMS: Set[str] = {"body", "form", "file"}
+
+
+def model_schema(*args: Any, **kwargs: Any) -> Dict[str, Any]:
+    """trap and report some errors in pydantic schema generation"""
+    try:
+        return pydantic_model_schema(*args, **kwargs)
+    except KeyError as exc:
+        from ninja.orm.factory import factory
+
+        factory.check_for_duplicates_on_exception(exc)
+        raise
 
 
 def get_schema(api: "NinjaAPI", path_prefix: str = "") -> "OpenAPISchema":
