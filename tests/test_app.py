@@ -1,11 +1,12 @@
 import os
 from tempfile import NamedTemporaryFile
+
 import pytest
+from django.http import FileResponse, HttpResponse
+
 from ninja import NinjaAPI
 from ninja.main import ConfigError
-from django.http import FileResponse, HttpResponse
 from ninja.testing import TestClient
-
 
 api = NinjaAPI()
 
@@ -104,11 +105,9 @@ def test_method(method, path, expected_status, expected_data, expected_streaming
 
 
 def test_validates():
-    api1 = NinjaAPI()
     try:
         os.environ["NINJA_SKIP_REGISTRY"] = ""
         with pytest.raises(ConfigError):
-            api2 = NinjaAPI()
-            urls = api2.urls
+            NinjaAPI().urls
     finally:
         os.environ["NINJA_SKIP_REGISTRY"] = "yes"

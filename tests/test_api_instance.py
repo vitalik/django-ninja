@@ -1,6 +1,5 @@
 from ninja import NinjaAPI, Router
 
-
 api = NinjaAPI()
 router = Router()
 

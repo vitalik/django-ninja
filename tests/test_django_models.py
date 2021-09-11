@@ -1,8 +1,7 @@
-from someapp.models import Event
+import pytest
 from django.test import Client
 from django.urls import reverse
-from ninja import NinjaAPI
-import pytest
+from someapp.models import Event
 
 
 @pytest.mark.django_db
