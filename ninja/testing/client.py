@@ -5,7 +5,6 @@ from urllib.parse import urljoin
 
 import django
 from django.http import QueryDict, StreamingHttpResponse
-from django.urls.resolvers import URLPattern
 
 from ninja import NinjaAPI, Router
 from ninja.responses import Response as HttpResponse
