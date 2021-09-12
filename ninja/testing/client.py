@@ -67,9 +67,9 @@ class NinjaClientBase:
         return self._call(func, request, kwargs)  # type: ignore
 
     @property
-    def urls(self) -> List[URLPattern]:
+    def urls(self) -> List:
         if not hasattr(self, "_urls_cache"):
-            self._urls_cache: List[URLPattern]
+            self._urls_cache: List
             if isinstance(self.router_or_app, NinjaAPI):
                 self._urls_cache = self.router_or_app.urls[0]
             else:
