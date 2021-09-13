@@ -5,7 +5,6 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils.datastructures import MultiValueDict
 
 from ninja import File, NinjaAPI, UploadedFile
-from ninja.errors import ConfigError
 from ninja.testing import TestClient
 
 api = NinjaAPI()
@@ -32,8 +31,13 @@ def file_no_marker4(request, files: List[UploadedFile]):
 
 
 @api.post("/file5")
-def file_no_marker5(request, file: UploadedFile, i: int = 1):
-    return {"name": file.name, "data": file.read().decode(), "i": i}
+def file_no_marker5(request, file1: UploadedFile, file2: UploadedFile):
+    return {"result": [f.read().decode() for f in (file1, file2)]}
+
+
+@api.post("/file6")
+def file_no_marker6(request, file: UploadedFile, files: List[UploadedFile]):
+    return {"result": [f.read().decode() for f in [file] + files]}
 
 
 client = TestClient(api)
@@ -63,10 +67,20 @@ def test_files():
     assert response.status_code == 200, response.content
     assert response.json() == {"result": ["data789"]}
 
-    file = SimpleUploadedFile("test.txt", b"dataABC")
-    response = client.post("/file5", FILES={"file": file})
-    assert response.status_code == 200
-    assert response.json() == {"name": "test.txt", "data": "dataABC", "i": 1}
+    file1 = SimpleUploadedFile("test1.txt", b"dataABC")
+    file2 = SimpleUploadedFile("test2.txt", b"dataDEF")
+    response = client.post("/file5", FILES={"file1": file1, "file2": file2})
+    assert response.status_code == 200, response.content
+    assert response.json() == {"result": ["dataABC", "dataDEF"]}
+
+    file1 = SimpleUploadedFile("test1.txt", b"dataABC")
+    file2 = SimpleUploadedFile("test2.txt", b"dataDEF")
+    file3 = SimpleUploadedFile("test2.txt", b"dataGHI")
+    response = client.post(
+        "/file6", FILES=MultiValueDict({"file": [file1], "files": [file2, file3]})
+    )
+    assert response.status_code == 200, response.content
+    assert response.json() == {"result": ["dataABC", "dataDEF", "dataGHI"]}
 
 
 def test_schema():
@@ -119,17 +133,3 @@ def test_schema():
 def test_invalid_file():
     with pytest.raises(ValueError):
         UploadedFile._validate("not_a_file")
-
-
-def test_multiple_file_params():
-    api = NinjaAPI()
-
-    match = (
-        r"Only 1 'File\(\)' param allowed for path:/test-path function:create_task "
-        r"found: start, end. Try type: 'List\[UploadedFile\]'"
-    )
-    with pytest.raises(ConfigError, match=match):
-
-        @api.post("/test-path")
-        def create_task(request, start: UploadedFile, end: UploadedFile):
-            pass

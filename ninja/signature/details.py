@@ -87,14 +87,7 @@ class ViewSignature:
             attrs["_flatten_map_reverse"] = {}
 
             if attrs["_param_source"] == "file":
-                if len(args) > 1:
-                    # More than one File() is not allowed
-                    func_name = getattr(self.view_func, "__name__", "<UNKNOWN>")
-                    names = ", ".join(arg.name for arg in args)
-                    raise ConfigError(
-                        f"Only 1 '{param_cls.__name__}()' param allowed for path:{self.path} function:"
-                        f"{func_name} found: {names}. Try type: 'List[UploadedFile]'"
-                    )
+                pass
 
             elif attrs["_param_source"] in {
                 "form",
