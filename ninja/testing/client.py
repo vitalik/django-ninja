@@ -5,7 +5,6 @@ from urllib.parse import urljoin
 
 import django
 from django.http import QueryDict, StreamingHttpResponse
-from django.urls.resolvers import URLPattern
 
 from ninja import NinjaAPI, Router
 from ninja.responses import Response as HttpResponse
@@ -67,9 +66,9 @@ class NinjaClientBase:
         return self._call(func, request, kwargs)  # type: ignore
 
     @property
-    def urls(self) -> List[URLPattern]:
+    def urls(self) -> List:
         if not hasattr(self, "_urls_cache"):
-            self._urls_cache: List[URLPattern]
+            self._urls_cache: List
             if isinstance(self.router_or_app, NinjaAPI):
                 self._urls_cache = self.router_or_app.urls[0]
             else:

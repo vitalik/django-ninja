@@ -13,7 +13,7 @@ from typing import (
 )
 
 from django.http import HttpRequest, HttpResponse
-from django.urls import URLPattern, reverse
+from django.urls import URLPattern, URLResolver, reverse
 
 from ninja.constants import NOT_SET
 from ninja.errors import ConfigError, set_default_exc_handlers
@@ -310,7 +310,7 @@ class NinjaAPI:
         router.set_api_instance(self)
 
     @property
-    def urls(self) -> Tuple[Any, ...]:
+    def urls(self) -> Tuple[List[Union[URLResolver, URLPattern]], str, str]:
         self._validate()
         return (
             self._get_urls(),
@@ -319,7 +319,7 @@ class NinjaAPI:
             # ^ if api included into nested urls, we only care about last bit here
         )
 
-    def _get_urls(self) -> List[URLPattern]:
+    def _get_urls(self) -> List[Union[URLResolver, URLPattern]]:
         result = get_openapi_urls(self)
 
         for prefix, router in self._routers:

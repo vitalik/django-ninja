@@ -212,23 +212,13 @@ class OpenAPISchema(dict):
         content_type = BODY_CONTENT_TYPES["file"]
 
         # get the various schemas
-        result, *schemas = tuple(
-            self._create_schema_from_model(model, remove_level=False)[0]
-            for model in models
+        result = merge_schemas(
+            [
+                self._create_schema_from_model(model, remove_level=False)[0]
+                for model in models
+            ]
         )
-
-        # merge the schemas
         result["title"] = "MultiPartBodyParams"
-        for schema in schemas:
-            result["properties"].update(schema["properties"])
-        required_list = result.get("required", [])
-        required_list.extend(
-            itertools.chain.from_iterable(
-                schema.get("required", ()) for schema in schemas
-            )
-        )
-        if required_list:
-            result["required"] = required_list
 
         return result, content_type
 
@@ -339,3 +329,19 @@ def resolve_allOf(details: DictStrAny, definitions: DictStrAny) -> None:
             def_name = item["$ref"].rsplit("/", 1)[-1]
             item.update(definitions[def_name])
             del item["$ref"]
+
+
+def merge_schemas(schemas: List[DictStrAny]) -> DictStrAny:
+    result = schemas[0]
+    for scm in schemas[1:]:
+        result["properties"].update(scm["properties"])
+
+    required_list = result.get("required", [])
+    required_list.extend(
+        itertools.chain.from_iterable(
+            schema.get("required", ()) for schema in schemas[1:]
+        )
+    )
+    if required_list:
+        result["required"] = required_list
+    return result
