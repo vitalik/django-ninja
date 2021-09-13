@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, List, Optional, Type, TypeVar
+from collections import defaultdict
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Type, TypeVar
 
 from django.conf import settings
 from django.http import HttpRequest
@@ -27,7 +28,13 @@ TModel = TypeVar("TModel", bound="ParamModel")
 TModels = List[TModel]
 
 
+def NestedDict() -> DictStrAny:
+    return defaultdict(NestedDict)
+
+
 class ParamModel(BaseModel, ABC):
+    _param_source = None
+
     @classmethod
     @abstractmethod
     def get_request_data(
@@ -46,20 +53,31 @@ class ParamModel(BaseModel, ABC):
         if data is None:
             return cls()
 
-        varname = getattr(cls, "_single_attr", None)
-        if varname:
-            data = {varname: data}
-
-        mixed_attrs = getattr(cls, "_mixed_attrs", None)
-        if mixed_attrs:
-            for param_name, varname in mixed_attrs.items():
-                if varname not in data:
-                    data[varname] = {}
-                if param_name in data:
-                    data[varname][param_name] = data.pop(param_name)
-
-        # TODO: I guess if data is not dict - raise an HttpBadRequest
+        data = cls._map_data_paths(data)
         return cls(**data)
+
+    @classmethod
+    def _map_data_paths(cls, data: DictStrAny) -> DictStrAny:
+        flatten_map = getattr(cls, "_flatten_map", None)
+        if not flatten_map:
+            return data
+
+        mapped_data: DictStrAny = NestedDict()
+        for k in flatten_map:
+            if k in data:
+                cls._map_data_path(mapped_data, data[k], flatten_map[k])
+            else:
+                cls._map_data_path(mapped_data, None, flatten_map[k])
+
+        return mapped_data
+
+    @classmethod
+    def _map_data_path(cls, data: DictStrAny, value: Any, path: Tuple) -> None:
+        if len(path) == 1:
+            if value is not None:
+                data[path[0]] = value
+        else:
+            cls._map_data_path(data[path[0]], value, path[1:])
 
 
 class QueryModel(ParamModel):
@@ -80,17 +98,17 @@ class PathModel(ParamModel):
 
 
 class HeaderModel(ParamModel):
+    _flatten_map: DictStrAny
+
     @classmethod
     def get_request_data(
         cls, request: HttpRequest, api: "NinjaAPI", path_params: DictStrAny
     ) -> Optional[DictStrAny]:
         data = {}
         headers = get_headers(request)
-        for name, field in cls.__fields__.items():
+        for name in cls._flatten_map:
             if name in headers:
                 data[name] = headers[name]
-            elif field.alias in headers:
-                data[field.alias] = headers[field.alias]
         return data
 
 
@@ -103,18 +121,25 @@ class CookieModel(ParamModel):
 
 
 class BodyModel(ParamModel):
+    _single_attr: str
+
     @classmethod
     def get_request_data(
         cls, request: HttpRequest, api: "NinjaAPI", path_params: DictStrAny
     ) -> Optional[DictStrAny]:
         if request.body:
             try:
-                return api.parser.parse_body(request)
+                data = api.parser.parse_body(request)
             except Exception as e:
                 msg = "Cannot parse request body"
                 if settings.DEBUG:
                     msg += f" ({e})"
                 raise HttpError(400, msg)
+
+            varname = getattr(cls, "_single_attr", None)
+            if varname:
+                data = {varname: data}
+            return data
 
         return None
 
@@ -135,3 +160,28 @@ class FileModel(ParamModel):
     ) -> Optional[DictStrAny]:
         list_fields = getattr(cls, "_collection_fields", [])
         return api.parser.parse_querydict(request.FILES, list_fields, request)
+
+
+class _HttpRequest(HttpRequest):
+
+    body: bytes = b""
+
+
+class _MultiPartBodyModel(BodyModel):
+    _body_params: DictStrAny
+
+    @classmethod
+    def get_request_data(
+        cls, request: HttpRequest, api: "NinjaAPI", path_params: DictStrAny
+    ) -> Optional[DictStrAny]:
+        req = _HttpRequest()
+        get_request_data = super(_MultiPartBodyModel, cls).get_request_data
+        results: DictStrAny = {}
+        for name, annotation in cls._body_params.items():
+            if name in request.POST:
+                data = request.POST[name]
+                if annotation == str and data[0] != '"' and data[-1] != '"':
+                    data = f'"{data}"'
+                req.body = data.encode()
+                results[name] = get_request_data(req, api, path_params)
+        return results

@@ -1,15 +1,26 @@
+import itertools
 import re
 import warnings
 from http.client import responses
-from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Set, Tuple, Type
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Generator,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    cast,
+)
 
 from pydantic import BaseModel
 from pydantic.schema import model_schema as pydantic_model_schema
 
 from ninja.constants import NOT_SET
-from ninja.errors import ConfigError
 from ninja.operation import Operation
-from ninja.params_models import TModels
+from ninja.params_models import TModel, TModels
 from ninja.types import DictStrAny
 from ninja.utils import normalize_path
 
@@ -124,39 +135,62 @@ class OpenAPISchema(dict):
     def operation_parameters(self, operation: Operation) -> List[DictStrAny]:
         result = []
         for model in operation.models:
-            if model._param_source in BODY_CONTENT_TYPES:
-                continue
+            if model._param_source not in BODY_CONTENT_TYPES:
+                result.extend(self._extract_parameters(model))
+        return result
 
-            schema = model_schema(model, ref_prefix=REF_PREFIX)
+    @classmethod
+    def _extract_parameters(cls, model: TModel) -> List[DictStrAny]:
+        result = []
 
-            required = set(schema.get("required", []))
-            properties = schema["properties"]
+        schema = model_schema(cast(Type[BaseModel], model), ref_prefix=REF_PREFIX)
 
-            for name, details in properties.items():
-                is_required = name in required
-                p_name: str
-                p_schema: DictStrAny
-                p_required: bool
-                for p_name, p_schema, p_required in flatten_properties(
-                    name, details, is_required, schema.get("definitions", {})
-                ):
-                    param = {
-                        "in": model._param_source,
-                        "name": p_name,
-                        "schema": p_schema,
-                        "required": p_required,
-                    }
-                    result.append(param)
+        required = set(schema.get("required", []))
+        properties = schema["properties"]
+
+        for name, details in properties.items():
+            is_required = name in required
+            p_name: str
+            p_schema: DictStrAny
+            p_required: bool
+            for p_name, p_schema, p_required in flatten_properties(
+                name, details, is_required, schema.get("definitions", {})
+            ):
+                param = {
+                    "in": model._param_source,
+                    "name": p_name,
+                    "schema": p_schema,
+                    "required": p_required,
+                }
+                result.append(param)
 
         return result
 
+    def _flatten_schema(self, model: TModel) -> DictStrAny:
+        params = self._extract_parameters(model)
+        flattened = {
+            "title": model.__name__,  # type: ignore
+            "type": "object",
+            "properties": {p["name"]: p["schema"] for p in params},
+        }
+        required = [p["name"] for p in params if p["required"]]
+        if required:
+            flattened["required"] = required
+        return flattened
+
     def _create_schema_from_model(
         self,
-        model: Type[BaseModel],
-        by_alias: bool = False,
+        model: TModel,
+        by_alias: bool = True,
         remove_level: bool = True,
-    ) -> Tuple[Any, bool]:
-        schema = model_schema(model, ref_prefix=REF_PREFIX, by_alias=by_alias)
+    ) -> Tuple[DictStrAny, bool]:
+
+        if hasattr(model, "_flatten_map"):
+            schema = self._flatten_schema(model)
+        else:
+            schema = model_schema(
+                cast(Type[BaseModel], model), ref_prefix=REF_PREFIX, by_alias=by_alias
+            )
 
         # move Schemas from definitions
         if schema.get("definitions"):
@@ -174,32 +208,29 @@ class OpenAPISchema(dict):
     def _create_multipart_schema_from_models(
         self, models: TModels
     ) -> Tuple[DictStrAny, str]:
-        param_sources = {model._param_source for model in models}
-        if "body" in param_sources:
-            # ::TODO:: for now reject this.  This however, should be workable with multipart
-            other = " & ".join(f"'{src.title()}'" for src in param_sources - {"body"})
-            raise ConfigError(
-                f"'Body' params currently incompatible with {other} params"
-            )
-
-        # for now, this should be the only possibility here.
-        assert param_sources == {"form", "file"}
-
-        # We have File and Form, so we need to use multipart (File)
+        # We have File and Form or Body, so we need to use multipart (File)
         content_type = BODY_CONTENT_TYPES["file"]
 
-        # merge the form and files schema
-        schema, schema2 = tuple(
+        # get the various schemas
+        result, *schemas = tuple(
             self._create_schema_from_model(model, remove_level=False)[0]
             for model in models
         )
 
-        schema["title"] = "FormFileParams"
-        schema["properties"].update(schema2["properties"])
-        required_list = schema.get("required", []) + schema2.get("required", [])
+        # merge the schemas
+        result["title"] = "MultiPartBodyParams"
+        for schema in schemas:
+            result["properties"].update(schema["properties"])
+        required_list = result.get("required", [])
+        required_list.extend(
+            itertools.chain.from_iterable(
+                schema.get("required", ()) for schema in schemas
+            )
+        )
         if required_list:
-            schema["required"] = required_list
-        return schema, content_type
+            result["required"] = required_list
+
+        return result, content_type
 
     def request_body(self, operation: Operation) -> DictStrAny:
         models = [m for m in operation.models if m._param_source in BODY_CONTENT_TYPES]

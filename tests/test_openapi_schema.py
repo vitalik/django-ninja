@@ -4,7 +4,6 @@ import pytest
 from django.test import Client, override_settings
 
 from ninja import Body, Form, NinjaAPI, Schema, UploadedFile
-from ninja.errors import ConfigError
 from ninja.openapi.urls import get_openapi_urls
 
 api = NinjaAPI()
@@ -63,9 +62,23 @@ def method_form(request, data: Payload = Form(...)):
     return dict(i=data.i, f=data.f)
 
 
+@api.post("/test-form-body", response=Response)
+def method_form_body(request, i: int = Form(10), s: str = Body("10")):
+    return dict(i=i, s=s)
+
+
 @api.post("/test-form-file", response=Response)
 def method_form_file(request, files: List[UploadedFile], data: Payload = Form(...)):
     return dict(i=data.i, f=data.f)
+
+
+@api.post("/test-body-file", response=Response)
+def method_body_file(
+    request,
+    files: List[UploadedFile],
+    body: Payload = Body(...),
+):
+    return dict(i=body.i, f=body.f)
 
 
 def test_schema_views(client: Client):
@@ -320,7 +333,45 @@ def test_schema_form(schema):
     assert method_list["requestBody"] == {
         "content": {
             "application/x-www-form-urlencoded": {
-                "schema": {"$ref": "#/components/schemas/Payload"}
+                "schema": {
+                    "properties": {
+                        "f": {"title": "F", "type": "number"},
+                        "i": {"title": "I", "type": "integer"},
+                    },
+                    "required": ["i", "f"],
+                    "title": "FormParams",
+                    "type": "object",
+                }
+            }
+        },
+        "required": True,
+    }
+    assert method_list["responses"] == {
+        200: {
+            "description": "OK",
+            "content": {
+                "application/json": {
+                    "schema": {"$ref": "#/components/schemas/Response"}
+                }
+            },
+        }
+    }
+
+
+def test_schema_form_body(schema):
+    method_list = schema["paths"]["/api/test-form-body"]["post"]
+
+    assert method_list["requestBody"] == {
+        "content": {
+            "multipart/form-data": {
+                "schema": {
+                    "properties": {
+                        "i": {"default": 10, "title": "I", "type": "integer"},
+                        "s": {"default": "10", "title": "S", "type": "string"},
+                    },
+                    "title": "MultiPartBodyParams",
+                    "type": "object",
+                }
             }
         },
         "required": True,
@@ -345,15 +396,51 @@ def test_schema_form_file(schema):
             "multipart/form-data": {
                 "schema": {
                     "properties": {
-                        "data": {"$ref": "#/components/schemas/Payload"},
+                        "f": {"title": "F", "type": "number"},
+                        "files": {
+                            "items": {"format": "binary", "type": "string"},
+                            "title": "Files",
+                            "type": "array",
+                        },
+                        "i": {"title": "I", "type": "integer"},
+                    },
+                    "required": ["files", "i", "f"],
+                    "title": "MultiPartBodyParams",
+                    "type": "object",
+                }
+            }
+        },
+        "required": True,
+    }
+    assert method_list["responses"] == {
+        200: {
+            "description": "OK",
+            "content": {
+                "application/json": {
+                    "schema": {"$ref": "#/components/schemas/Response"}
+                }
+            },
+        }
+    }
+
+
+def test_schema_body_file(schema):
+    method_list = schema["paths"]["/api/test-body-file"]["post"]
+
+    assert method_list["requestBody"] == {
+        "content": {
+            "multipart/form-data": {
+                "schema": {
+                    "properties": {
+                        "body": {"$ref": "#/components/schemas/Payload"},
                         "files": {
                             "items": {"format": "binary", "type": "string"},
                             "title": "Files",
                             "type": "array",
                         },
                     },
-                    "required": ["files", "data"],
-                    "title": "FormFileParams",
+                    "required": ["files", "body"],
+                    "title": "MultiPartBodyParams",
                     "type": "object",
                 }
             }
@@ -397,22 +484,10 @@ def test_unique_operation_ids():
     def same_name(request):
         pass
 
-    @api.get("/2")
+    @api.get("/2")  # noqa: F811
     def same_name(request):  # noqa: F811
         pass
 
     match = 'operation_id "test_openapi_schema_same_name" is already used'
     with pytest.warns(UserWarning, match=match):
-        api.get_openapi_schema()
-
-
-def test_body_file():
-    api = NinjaAPI()
-
-    @api.post("/test")
-    def method(request, data: Payload, files: UploadedFile):
-        pass
-
-    match = "'Body' params currently incompatible with 'File' params"
-    with pytest.raises(ConfigError, match=match):
         api.get_openapi_schema()

@@ -1,0 +1,58 @@
+{
+  "post": {
+    "operationId": "multi_param_api_test_multi_body_file",
+    "summary": "Test Multi Body File",
+    "parameters": [],
+    "responses": {
+      "200": {
+        "description": "OK",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ResponseData"
+            }
+          }
+        }
+      }
+    },
+    "requestBody": {
+      "content": {
+        "multipart/form-data": {
+          "schema": {
+            "title": "MultiPartBodyParams",
+            "type": "object",
+            "properties": {
+              "file": {
+                "title": "File",
+                "type": "string",
+                "format": "binary"
+              },
+              "i": {
+                "title": "I",
+                "type": "integer"
+              },
+              "s": {
+                "title": "S",
+                "default": "a-str",
+                "type": "string"
+              },
+              "data": {
+                "$ref": "#/components/schemas/TestData4"
+              },
+              "nested-data": {
+                "$ref": "#/components/schemas/TestData"
+              }
+            },
+            "required": [
+              "file",
+              "i",
+              "data",
+              "nested-data"
+            ]
+          }
+        }
+      },
+      "required": true
+    }
+  }
+}

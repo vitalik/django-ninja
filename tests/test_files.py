@@ -31,6 +31,11 @@ def file_no_marker4(request, files: List[UploadedFile]):
     return {"result": [f.read().decode() for f in files]}
 
 
+@api.post("/file5")
+def file_no_marker5(request, file: UploadedFile, i: int = 1):
+    return {"name": file.name, "data": file.read().decode(), "i": i}
+
+
 client = TestClient(api)
 
 
@@ -57,6 +62,11 @@ def test_files():
     response = client.post("/file4", FILES=MultiValueDict({"files": [file]}))
     assert response.status_code == 200, response.content
     assert response.json() == {"result": ["data789"]}
+
+    file = SimpleUploadedFile("test.txt", b"dataABC")
+    response = client.post("/file5", FILES={"file": file})
+    assert response.status_code == 200
+    assert response.json() == {"name": "test.txt", "data": "dataABC", "i": 1}
 
 
 def test_schema():

@@ -1,4 +1,7 @@
-from ninja import Form, NinjaAPI
+import pytest
+
+from ninja import Form, NinjaAPI, Schema
+from ninja.errors import ConfigError
 from ninja.testing import TestClient
 
 api = NinjaAPI()
@@ -48,6 +51,25 @@ def test_schema():
         },
         "required": True,
     }
+
+
+def test_duplicate_names():
+    class TestData(Schema):
+        p1: str
+
+    match = "Duplicated name: 'p1' in params: 'p1' & 'data'"
+    with pytest.raises(ConfigError, match=match):
+
+        @api.post("/broken1")
+        def broken1(request, p1: int = Form(...), data: TestData = Form(...)):
+            pass
+
+    match = "Duplicated name: 'p1' also in 'data'"
+    with pytest.raises(ConfigError, match=match):
+
+        @api.post("/broken2")
+        def broken2(request, data: TestData = Form(...), p1: int = Form(...)):
+            pass
 
 
 # TODO: Fix schema for this case:

@@ -1,0 +1,116 @@
+{
+  "post": {
+    "operationId": "multi_param_api_test_multi_header",
+    "summary": "Test Multi Header",
+    "parameters": [
+      {
+        "in": "header",
+        "name": "i",
+        "schema": {
+          "title": "I",
+          "type": "integer"
+        },
+        "required": true
+      },
+      {
+        "in": "header",
+        "name": "s",
+        "schema": {
+          "title": "S",
+          "default": "a-str",
+          "type": "string"
+        },
+        "required": false
+      },
+      {
+        "in": "header",
+        "name": "foo4",
+        "schema": {
+          "title": "Foo4",
+          "default": 44,
+          "type": "integer"
+        },
+        "required": false
+      },
+      {
+        "in": "header",
+        "name": "bar4",
+        "schema": {
+          "title": "Bar4",
+          "default": "44bar",
+          "type": "string"
+        },
+        "required": false
+      },
+      {
+        "in": "header",
+        "name": "foo",
+        "schema": {
+          "title": "Foo",
+          "type": "integer"
+        },
+        "required": true
+      },
+      {
+        "in": "header",
+        "name": "bar",
+        "schema": {
+          "title": "Bar",
+          "default": "11bar",
+          "type": "string"
+        },
+        "required": false
+      },
+      {
+        "in": "header",
+        "name": "foo2",
+        "schema": {
+          "title": "Foo2",
+          "default": 22,
+          "type": "integer"
+        },
+        "required": false
+      },
+      {
+        "in": "header",
+        "name": "bar2",
+        "schema": {
+          "title": "Bar2",
+          "type": "string"
+        },
+        "required": true
+      },
+      {
+        "in": "header",
+        "name": "foo3",
+        "schema": {
+          "title": "Foo3",
+          "type": "integer"
+        },
+        "required": true
+      },
+      {
+        "in": "header",
+        "name": "bar3",
+        "schema": {
+          "title": "Bar3",
+          "default": "33bar",
+          "type": "string"
+        },
+        "required": false
+      }
+    ],
+    "responses": {
+      "200": {
+        "description": "OK",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ResponseData"
+            }
+          }
+        }
+      }
+    }
+  }
+}

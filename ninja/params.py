@@ -78,3 +78,8 @@ class Form(Param):
 
 class File(Param):
     _model = params_models.FileModel
+
+
+class _MultiPartBody(Param):
+    _model = params_models._MultiPartBodyModel
+    _param_source = Body._param_source
