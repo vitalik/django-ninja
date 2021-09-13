@@ -116,9 +116,9 @@ class NinjaClientBase:
             )
         )
         if django.VERSION[:2] > (2, 1):
-            from django.http.request import HttpHeaders
+            from ninja.compatibility.request import HttpHeaders
 
-            request.headers = HttpHeaders(request.META)
+            request.headers = HttpHeaders(request.META)  # type: ignore
 
         if isinstance(data, QueryDict):
             request.POST = data

@@ -167,10 +167,11 @@ BODY_UNAUTHORIZED_DEFAULT = dict(detail="Unauthorized")
     ],
 )
 def test_auth(path, kwargs, expected_code, expected_body, settings):
-    settings.DEBUG = True  # <-- making sure all if debug are covered
-    response = client.get(path, **kwargs)
-    assert response.status_code == expected_code
-    assert response.json() == expected_body
+    for debug in (False, True):
+        settings.DEBUG = debug  # <-- making sure all if debug are covered
+        response = client.get(path, **kwargs)
+        assert response.status_code == expected_code
+        assert response.json() == expected_body
 
 
 def test_schema():

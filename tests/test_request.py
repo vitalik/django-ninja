@@ -26,6 +26,11 @@ def headers4(request, c_len: int = Header(..., alias="Content-length")):
     return c_len
 
 
+@router.get("/headers5")
+def headers5(request, missing: int = Header(...)):
+    return missing
+
+
 @router.get("/cookies1")
 def cookies1(request, weapon: str = Cookie(...)):
     return weapon
@@ -46,6 +51,19 @@ client = TestClient(router)
         ("/headers2", 200, "Ninja"),
         ("/headers3", 200, 10),
         ("/headers4", 200, 10),
+        (
+            "/headers5",
+            422,
+            {
+                "detail": [
+                    {
+                        "loc": ["header", "missing"],
+                        "msg": "field required",
+                        "type": "value_error.missing",
+                    }
+                ]
+            },
+        ),
         ("/cookies1", 200, "shuriken"),
         ("/cookies2", 200, "shuriken"),
     ],

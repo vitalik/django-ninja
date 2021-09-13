@@ -4,7 +4,7 @@ from http.client import responses
 from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Set, Tuple, Type
 
 from pydantic import BaseModel
-from pydantic.schema import model_schema
+from pydantic.schema import model_schema as pydantic_model_schema
 
 from ninja.constants import NOT_SET
 from ninja.errors import ConfigError
@@ -23,6 +23,17 @@ BODY_CONTENT_TYPES: Dict[str, str] = {
     "form": "application/x-www-form-urlencoded",
     "file": "multipart/form-data",
 }
+
+
+def model_schema(*args: Any, **kwargs: Any) -> Dict[str, Any]:
+    """trap and report some errors in pydantic schema generation"""
+    try:
+        return pydantic_model_schema(*args, **kwargs)
+    except KeyError as exc:
+        from ninja.orm.factory import factory
+
+        factory.check_for_duplicates_on_exception(exc)
+        raise
 
 
 def get_schema(api: "NinjaAPI", path_prefix: str = "") -> "OpenAPISchema":
@@ -294,6 +305,6 @@ def resolve_allOf(details: DictStrAny, definitions: DictStrAny) -> None:
     """
     for item in details["allOf"]:
         if "$ref" in item:
-            def_name = item["$ref"].split("/")[-1]
+            def_name = item["$ref"].rsplit("/", 1)[-1]
             item.update(definitions[def_name])
             del item["$ref"]
