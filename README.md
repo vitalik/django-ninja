@@ -90,6 +90,7 @@ You will see the automatic interactive API documentation (provided by <a href="h
 
 ## What next?
 
- - Read the full documentation here - **Documentation**: https://django-ninja.rest-framework.com
+ - Read the full documentation here - https://django-ninja.rest-framework.com
  - To support this project, please give star it on Github. ![github star](docs/docs/img/github-star.png)
+ - Share it [via Twitter](https://twitter.com/intent/tweet?text=Check%20out%20Django%20Ninja%20-%20Fast%20Django%20REST%20Framework%20-%20https%3A%2F%2Fdjango-ninja.rest-framework.com)
  - If you already using django-ninja, please share your feedback to ppr.vitaly@gmail.com
