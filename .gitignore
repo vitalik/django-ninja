@@ -1,5 +1,5 @@
 *.pyc
-.venv
+.venv*
 .vscode
 .mypy_cache
 .coverage

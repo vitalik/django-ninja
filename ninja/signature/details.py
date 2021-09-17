@@ -1,12 +1,14 @@
 import inspect
 from collections import defaultdict, namedtuple
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, Generator, List, Optional, Tuple
 
 import pydantic
 
 from ninja import UploadedFile, params
 from ninja.compatibility.util import get_origin as get_collection_origin
-from ninja.params import File
+from ninja.errors import ConfigError
+from ninja.params import Body, File, Form, _MultiPartBody
+from ninja.params_models import TModel, TModels
 from ninja.signature.utils import get_path_param_names, get_typed_signature
 
 if TYPE_CHECKING:
@@ -14,20 +16,22 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "FuncParam",
     "ViewSignature",
     "is_pydantic_model",
     "is_collection_type",
     "detect_collection_fields",
 ]
 
-FuncParam = namedtuple("FuncParam", ["name", "source", "annotation", "is_collection"])
+FuncParam = namedtuple(
+    "FuncParam", ["name", "alias", "source", "annotation", "is_collection"]
+)
 
 
 class ViewSignature:
     def __init__(self, path: str, view_func: Callable) -> None:
         self.view_func = view_func
         self.signature = get_typed_signature(self.view_func)
+        self.path = path
         self.path_params_names = get_path_param_names(path)
         self.docstring = inspect.cleandoc(view_func.__doc__ or "")
         self.has_kwargs = False
@@ -57,53 +61,98 @@ class ViewSignature:
             # which allows developers to create custom function params
             # inside decorators or other functions
             for p_name, p_type, p_source in view_func._ninja_contribute_args:  # type: ignore
-                self.params.append(FuncParam(p_name, p_source, p_type, False))
+                self.params.append(
+                    FuncParam(p_name, p_source.alias or p_name, p_source, p_type, False)
+                )
 
-        self.models = self._create_models()
+        self.models: TModels = self._create_models()
 
-    def _create_models(self) -> List[Any]:
-        grouping: Dict[Any, List[FuncParam]] = defaultdict(list)
+    def _create_models(self) -> TModels:
+        params_by_source_cls: Dict[Any, List[FuncParam]] = defaultdict(list)
         for param in self.params:
-            d_type = type(param.source)
-            grouping[d_type].append(param)
+            param_source_cls = type(param.source)
+            params_by_source_cls[param_source_cls].append(param)
+
+        is_multipart_response_with_body = Body in params_by_source_cls and (
+            File in params_by_source_cls or Form in params_by_source_cls
+        )
+        if is_multipart_response_with_body:
+            params_by_source_cls[_MultiPartBody] = params_by_source_cls.pop(Body)
 
         result = []
-        for cls, args in grouping.items():
-            cls_name: str = cls.__name__ + "Params"
+        for param_cls, args in params_by_source_cls.items():
+            cls_name: str = param_cls.__name__ + "Params"
             attrs = {i.name: i.source for i in args}
-            attrs["_in"] = cls._in()
+            attrs["_param_source"] = param_cls._param_source()
+            attrs["_flatten_map_reverse"] = {}
 
-            if len(args) == 1:
-                if cls._in() == "body" or is_pydantic_model(args[0].annotation):
-                    attrs["_single_attr"] = args[0].name
+            if attrs["_param_source"] == "file":
+                pass
 
-            elif cls._in() == "query":
-                pydantic_models = [
-                    arg for arg in args if is_pydantic_model(arg.annotation)
-                ]
-                if pydantic_models:
-                    mixed_attrs = {}
-                    for modeled_attr in pydantic_models:
-                        for (
-                            attr_name,
-                            field,
-                        ) in modeled_attr.annotation.__fields__.items():
-                            mixed_attrs[attr_name] = modeled_attr.name
-                            mixed_attrs[field.alias] = modeled_attr.name
+            elif attrs["_param_source"] in {
+                "form",
+                "query",
+                "header",
+                "cookie",
+                "path",
+            }:
+                flatten_map = self._args_flatten_map(args)
+                attrs["_flatten_map"] = flatten_map
+                attrs["_flatten_map_reverse"] = {
+                    v: (k,) for k, v in flatten_map.items()
+                }
 
-                    attrs["_mixed_attrs"] = mixed_attrs
+            else:
+                assert attrs["_param_source"] == "body"
+                if is_multipart_response_with_body:
+                    attrs["_body_params"] = {i.alias: i.annotation for i in args}
+                else:
+                    # ::TODO:: this is still sus.  build some test cases
+                    attrs["_single_attr"] = args[0].name if len(args) == 1 else None
 
-            # adding annotations:
+            # adding annotations
             attrs["__annotations__"] = {i.name: i.annotation for i in args}
 
             # collection fields:
             attrs["_collection_fields"] = detect_collection_fields(args)
 
-            base_cls = cls._model
+            base_cls = param_cls._model
             model_cls = type(cls_name, (base_cls,), attrs)
             # TODO: https://pydantic-docs.helpmanual.io/usage/models/#dynamic-model-creation - check if anything special in create_model method that I did not use
             result.append(model_cls)
         return result
+
+    def _args_flatten_map(self, args: List[FuncParam]) -> Dict[str, Tuple[str, ...]]:
+        flatten_map = {}
+        arg_names: Any = {}
+        for arg in args:
+            if is_pydantic_model(arg.annotation):
+                for name, path in self._model_flatten_map(arg.annotation, arg.alias):
+                    if name in flatten_map:
+                        raise ConfigError(
+                            f"Duplicated name: '{name}' in params: '{arg_names[name]}' & '{arg.name}'"
+                        )
+                    flatten_map[name] = tuple(path.split("."))
+                    arg_names[name] = arg.name
+            else:
+                name = arg.alias
+                if name in flatten_map:
+                    raise ConfigError(
+                        f"Duplicated name: '{name}' also in '{arg_names[name]}'"
+                    )
+                flatten_map[name] = (name,)
+                arg_names[name] = name
+
+        return flatten_map
+
+    def _model_flatten_map(self, model: TModel, prefix: str) -> Generator:
+        for field in model.__fields__.values():
+            field_name = field.alias
+            name = f"{prefix}.{field_name}"
+            if is_pydantic_model(field.type_):
+                yield from self._model_flatten_map(field.type_, name)
+            else:
+                yield field_name, name
 
     def _get_param_type(self, name: str, arg: inspect.Parameter) -> FuncParam:
         # _EMPTY = self.signature.empty
@@ -129,7 +178,7 @@ class ViewSignature:
             # People often forgot to mark UploadedFile as a File, so we better assign it automatically
             if arg.default == self.signature.empty or arg.default is None:
                 default = arg.default == self.signature.empty and ... or arg.default
-                return FuncParam(name, File(default), annotation, is_collection)
+                return FuncParam(name, name, File(default), annotation, is_collection)
 
         # 1) if type of the param is defined as one of the Param's subclasses - we just use that definition
         if isinstance(arg.default, params.Param):
@@ -142,7 +191,7 @@ class ViewSignature:
             ), f"'{name}' is a path param, default not allowed"
             param_source = params.Path(...)
 
-        # 3) if param is a collection or annotation is part of pydantic model:
+        # 3) if param is a collection, or annotation is part of pydantic model:
         elif is_collection or is_pydantic_model(annotation):
             if arg.default == self.signature.empty:
                 param_source = params.Body(...)
@@ -156,7 +205,9 @@ class ViewSignature:
             else:
                 param_source = params.Query(arg.default)
 
-        return FuncParam(name, param_source, annotation, is_collection)
+        return FuncParam(
+            name, param_source.alias or name, param_source, annotation, is_collection
+        )
 
 
 def is_pydantic_model(cls: Any) -> bool:

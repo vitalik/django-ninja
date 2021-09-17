@@ -1,14 +1,26 @@
+import itertools
 import re
 import warnings
 from http.client import responses
-from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Set, Tuple, Type
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Generator,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    cast,
+)
 
 from pydantic import BaseModel
 from pydantic.schema import model_schema as pydantic_model_schema
 
 from ninja.constants import NOT_SET
-from ninja.errors import ConfigError
 from ninja.operation import Operation
+from ninja.params_models import TModel, TModels
 from ninja.types import DictStrAny
 from ninja.utils import normalize_path
 
@@ -17,7 +29,11 @@ if TYPE_CHECKING:
 
 REF_PREFIX: str = "#/components/schemas/"
 
-BODY_PARAMS: Set[str] = {"body", "form", "file"}
+BODY_CONTENT_TYPES: Dict[str, str] = {
+    "body": "application/json",
+    "form": "application/x-www-form-urlencoded",
+    "file": "multipart/form-data",
+}
 
 
 def model_schema(*args: Any, **kwargs: Any) -> Dict[str, Any]:
@@ -77,10 +93,10 @@ class OpenAPISchema(dict):
     def methods(self, operations: list) -> DictStrAny:
         result = {}
         for op in operations:
-            if not op.include_in_schema:
-                continue
-            for method in op.methods:
-                result[method.lower()] = self.operation_details(op)
+            if op.include_in_schema:
+                operation_details = self.operation_details(op)
+                for method in op.methods:
+                    result[method.lower()] = operation_details
         return result
 
     def operation_details(self, operation: Operation) -> DictStrAny:
@@ -119,40 +135,68 @@ class OpenAPISchema(dict):
     def operation_parameters(self, operation: Operation) -> List[DictStrAny]:
         result = []
         for model in operation.models:
-            if model._in in BODY_PARAMS:
-                continue
+            if model._param_source not in BODY_CONTENT_TYPES:
+                result.extend(self._extract_parameters(model))
+        return result
 
-            schema = model_schema(model, ref_prefix=REF_PREFIX)
+    @classmethod
+    def _extract_parameters(cls, model: TModel) -> List[DictStrAny]:
+        result = []
 
-            required = set(schema.get("required", []))
-            properties = schema["properties"]
+        schema = model_schema(cast(Type[BaseModel], model), ref_prefix=REF_PREFIX)
 
-            for name, details in properties.items():
-                is_required = name in required
-                p_name: str
-                p_schema: DictStrAny
-                p_required: bool
-                for p_name, p_schema, p_required in flatten_properties(
-                    name, details, is_required, schema.get("definitions", {})
-                ):
-                    param = {
-                        "in": model._in,
-                        "name": p_name,
-                        "schema": p_schema,
-                        "required": p_required,
-                    }
-                    result.append(param)
+        required = set(schema.get("required", []))
+        properties = schema["properties"]
+
+        for name, details in properties.items():
+            is_required = name in required
+            p_name: str
+            p_schema: DictStrAny
+            p_required: bool
+            for p_name, p_schema, p_required in flatten_properties(
+                name, details, is_required, schema.get("definitions", {})
+            ):
+                param = {
+                    "in": model._param_source,
+                    "name": p_name,
+                    "schema": p_schema,
+                    "required": p_required,
+                }
+                result.append(param)
 
         return result
 
-    def _create_schema_from_model(
-        self, model: Type[BaseModel], by_alias: bool = True
-    ) -> Tuple[Any, bool]:
-        schema = model_schema(model, ref_prefix=REF_PREFIX, by_alias=by_alias)
-        if schema.get("definitions"):
-            self.add_schema_definitions(schema["definitions"])
+    def _flatten_schema(self, model: TModel) -> DictStrAny:
+        params = self._extract_parameters(model)
+        flattened = {
+            "title": model.__name__,  # type: ignore
+            "type": "object",
+            "properties": {p["name"]: p["schema"] for p in params},
+        }
+        required = [p["name"] for p in params if p["required"]]
+        if required:
+            flattened["required"] = required
+        return flattened
 
-        if len(schema["properties"]) == 1:
+    def _create_schema_from_model(
+        self,
+        model: TModel,
+        by_alias: bool = True,
+        remove_level: bool = True,
+    ) -> Tuple[DictStrAny, bool]:
+
+        if hasattr(model, "_flatten_map"):
+            schema = self._flatten_schema(model)
+        else:
+            schema = model_schema(
+                cast(Type[BaseModel], model), ref_prefix=REF_PREFIX, by_alias=by_alias
+            )
+
+        # move Schemas from definitions
+        if schema.get("definitions"):
+            self.add_schema_definitions(schema.pop("definitions"))
+
+        if remove_level and len(schema["properties"]) == 1:
             name, details = list(schema["properties"].items())[0]
 
             # ref = details["$ref"]
@@ -161,45 +205,44 @@ class OpenAPISchema(dict):
         else:
             return schema, True
 
+    def _create_multipart_schema_from_models(
+        self, models: TModels
+    ) -> Tuple[DictStrAny, str]:
+        # We have File and Form or Body, so we need to use multipart (File)
+        content_type = BODY_CONTENT_TYPES["file"]
+
+        # get the various schemas
+        result = merge_schemas(
+            [
+                self._create_schema_from_model(model, remove_level=False)[0]
+                for model in models
+            ]
+        )
+        result["title"] = "MultiPartBodyParams"
+
+        return result, content_type
+
     def request_body(self, operation: Operation) -> DictStrAny:
-        models = [m for m in operation.models if m._in in BODY_PARAMS]
+        models = [m for m in operation.models if m._param_source in BODY_CONTENT_TYPES]
         if not models:
             return {}
 
-        sources = {m._in for m in models}
-        if "body" in sources and ("form" in sources or "file" in sources):
-            raise ConfigError("Cannot mix form params and json params")
+        if len(models) == 1:
+            model = models[0]
+            content_type = BODY_CONTENT_TYPES[model._param_source]
+            if model._param_source == "file":
+                schema, required = self._create_schema_from_model(
+                    model, remove_level=False
+                )
+            else:
+                schema, required = self._create_schema_from_model(model)
+        else:
+            schema, content_type = self._create_multipart_schema_from_models(models)
+            required = True
 
-        if "body" in sources:
-            return self.request_body_data(models)
-
-        assert "file" in sources or "form" in sources
-        return self.request_body_form(models, is_multipart=("file" in sources))
-
-    def request_body_data(self, models: List[Type]) -> DictStrAny:
-        assert len(models) == 1
-        model = models[0]
-        schema, required = self._create_schema_from_model(model)
-        content_type = "application/json"
         return {
             "content": {content_type: {"schema": schema}},
             "required": required,
-        }
-
-    def request_body_form(self, models: List[Type], is_multipart: bool) -> DictStrAny:
-        content_type = "application/x-www-form-urlencoded"
-        if is_multipart:
-            content_type = "multipart/form-data"
-
-        all_schemas = []
-        for model in models:
-            assert model._in in ("form", "file")
-            schema = model_schema(model, ref_prefix=REF_PREFIX)
-            all_schemas.append(schema)
-        final_schema = merge_schemas(all_schemas)
-        return {
-            "content": {content_type: {"schema": final_schema}},
-            "required": True,
         }
 
     def responses(self, operation: Operation) -> Dict[int, DictStrAny]:
@@ -209,12 +252,15 @@ class OpenAPISchema(dict):
         for status, model in operation.response_models.items():
 
             if status == Ellipsis:
-                continue  # it's not yet clear what it means if user want's to output any other code
+                continue  # it's not yet clear what it means if user wants to output any other code
 
             description = responses.get(status, "Unknown Status Code")
             details: Dict[int, Any] = {status: {"description": description}}
             if model not in [None, NOT_SET]:
-                schema, _ = self._create_schema_from_model(model, by_alias=False)
+                # ::TODO:: test this: by_alias == True
+                schema = self._create_schema_from_model(
+                    model, by_alias=operation.by_alias
+                )[0]
                 details[status]["content"] = {"application/json": {"schema": schema}}
             result.update(details)
 
@@ -242,6 +288,8 @@ class OpenAPISchema(dict):
         # TODO: check if schema["definitions"] are unique
         # if not - workaround (maybe use pydantic.schema.schema(models)) to process list of models
         # assert set(definitions.keys()) - set(self.schemas.keys()) == set()
+        # ::TODO:: this is broken in interesting ways for by_alias,
+        #     because same schema (name) can have different values
         self.schemas.update(definitions)
 
 
@@ -287,5 +335,13 @@ def merge_schemas(schemas: List[DictStrAny]) -> DictStrAny:
     result = schemas[0]
     for scm in schemas[1:]:
         result["properties"].update(scm["properties"])
-        result["required"].extend(scm["required"])
+
+    required_list = result.get("required", [])
+    required_list.extend(
+        itertools.chain.from_iterable(
+            schema.get("required", ()) for schema in schemas[1:]
+        )
+    )
+    if required_list:
+        result["required"] = required_list
     return result

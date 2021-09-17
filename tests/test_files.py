@@ -30,6 +30,16 @@ def file_no_marker4(request, files: List[UploadedFile]):
     return {"result": [f.read().decode() for f in files]}
 
 
+@api.post("/file5")
+def file_no_marker5(request, file1: UploadedFile, file2: UploadedFile):
+    return {"result": [f.read().decode() for f in (file1, file2)]}
+
+
+@api.post("/file6")
+def file_no_marker6(request, file: UploadedFile, files: List[UploadedFile]):
+    return {"result": [f.read().decode() for f in [file] + files]}
+
+
 client = TestClient(api)
 
 
@@ -56,6 +66,21 @@ def test_files():
     response = client.post("/file4", FILES=MultiValueDict({"files": [file]}))
     assert response.status_code == 200, response.content
     assert response.json() == {"result": ["data789"]}
+
+    file1 = SimpleUploadedFile("test1.txt", b"dataABC")
+    file2 = SimpleUploadedFile("test2.txt", b"dataDEF")
+    response = client.post("/file5", FILES={"file1": file1, "file2": file2})
+    assert response.status_code == 200, response.content
+    assert response.json() == {"result": ["dataABC", "dataDEF"]}
+
+    file1 = SimpleUploadedFile("test1.txt", b"dataABC")
+    file2 = SimpleUploadedFile("test2.txt", b"dataDEF")
+    file3 = SimpleUploadedFile("test2.txt", b"dataGHI")
+    response = client.post(
+        "/file6", FILES=MultiValueDict({"file": [file1], "files": [file2, file3]})
+    )
+    assert response.status_code == 200, response.content
+    assert response.json() == {"result": ["dataABC", "dataDEF", "dataGHI"]}
 
 
 def test_schema():

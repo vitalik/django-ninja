@@ -1,0 +1,84 @@
+{
+  "post": {
+    "operationId": "multi_param_api_test_multi_form",
+    "summary": "Test Multi Form",
+    "parameters": [],
+    "responses": {
+      "200": {
+        "description": "OK",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ResponseData"
+            }
+          }
+        }
+      }
+    },
+    "requestBody": {
+      "content": {
+        "application/x-www-form-urlencoded": {
+          "schema": {
+            "title": "FormParams",
+            "type": "object",
+            "properties": {
+              "i": {
+                "title": "I",
+                "type": "integer"
+              },
+              "s": {
+                "title": "S",
+                "default": "a-str",
+                "type": "string"
+              },
+              "foo4": {
+                "title": "Foo4",
+                "default": 44,
+                "type": "integer"
+              },
+              "bar4": {
+                "title": "Bar4",
+                "default": "44bar",
+                "type": "string"
+              },
+              "foo": {
+                "title": "Foo",
+                "type": "integer"
+              },
+              "bar": {
+                "title": "Bar",
+                "default": "11bar",
+                "type": "string"
+              },
+              "foo2": {
+                "title": "Foo2",
+                "default": 22,
+                "type": "integer"
+              },
+              "bar2": {
+                "title": "Bar2",
+                "type": "string"
+              },
+              "foo3": {
+                "title": "Foo3",
+                "type": "integer"
+              },
+              "bar3": {
+                "title": "Bar3",
+                "default": "33bar",
+                "type": "string"
+              }
+            },
+            "required": [
+              "i",
+              "foo",
+              "bar2",
+              "foo3"
+            ]
+          }
+        }
+      },
+      "required": true
+    }
+  }
+}

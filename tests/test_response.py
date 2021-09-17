@@ -20,19 +20,25 @@ def check_int2(request):
 
 
 class User:
-    def __init__(self, id, name, password):
+    def __init__(self, id, user_name, password):
         self.id = id
-        self.name = name
+        self.user_name = user_name
         self.password = password
+
+
+def to_camel(string: str) -> str:
+    return "".join(word.capitalize() for word in string.split("_"))
 
 
 class UserModel(BaseModel):
     id: int
-    name: str
+    user_name: str
     # skipping password output to responses
 
     class Config:
         orm_mode = True
+        alias_generator = to_camel
+        allow_population_by_field_name = True
 
 
 @router.get("/check_model", response=UserModel)
@@ -43,6 +49,11 @@ def check_model(request):
 @router.get("/check_list_model", response=List[UserModel])
 def check_list_model(request):
     return [User(1, "John", "Password")]
+
+
+@router.get("/check_model_alias", response=UserModel, by_alias=True)
+def check_model_alias(request):
+    return User(1, "John", "Password")
 
 
 @router.get("/check_union", response=Union[int, UserModel])
@@ -61,10 +72,15 @@ client = TestClient(router)
     "path,expected_response",
     [
         ("/check_int", 1),
-        ("/check_model", {"id": 1, "name": "John"}),  # the password is skipped
-        ("/check_list_model", [{"id": 1, "name": "John"}]),  # the password is skipped
+        ("/check_model", {"id": 1, "user_name": "John"}),  # the password is skipped
+        (
+            "/check_list_model",
+            [{"id": 1, "user_name": "John"}],
+        ),  # the password is skipped
+        ("/check_model", {"id": 1, "user_name": "John"}),  # the password is skipped
+        ("/check_model_alias", {"Id": 1, "UserName": "John"}),  # result is Camal Case
         ("/check_union?q=0", 1),
-        ("/check_union?q=1", {"id": 1, "name": "John"}),
+        ("/check_union?q=1", {"id": 1, "user_name": "John"}),
     ],
 )
 def test_responses(path, expected_response):

@@ -1,8 +1,6 @@
-import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 
-from ninja import Body, File, Form, NinjaAPI, UploadedFile
-from ninja.main import ConfigError
+from ninja import File, Form, NinjaAPI, UploadedFile
 from ninja.testing import TestClient
 
 api = NinjaAPI()
@@ -38,7 +36,7 @@ def test_files():
         "content": {
             "multipart/form-data": {
                 "schema": {
-                    "title": "FormParams",
+                    "title": "MultiPartBodyParams",
                     "type": "object",
                     "properties": {
                         "title": {"title": "Title", "type": "string"},
@@ -59,14 +57,3 @@ def test_files():
         },
         "required": True,
     }
-
-
-def test_mix():
-    api2 = NinjaAPI()
-
-    @api2.post("/test")
-    def mix(request, data: str = Body(...), form: str = Form(...)):
-        pass
-
-    with pytest.raises(ConfigError):
-        api2.get_openapi_schema()

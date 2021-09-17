@@ -47,8 +47,8 @@ class Param(FieldInfo):
         )
 
     @classmethod
-    def _in(cls) -> str:
-        "Openapi param.in value"
+    def _param_source(cls) -> str:
+        "Openapi param.in value or body type"
         return cls.__name__.lower()
 
 
@@ -78,3 +78,8 @@ class Form(Param):
 
 class File(Param):
     _model = params_models.FileModel
+
+
+class _MultiPartBody(Param):
+    _model = params_models._MultiPartBodyModel
+    _param_source = Body._param_source

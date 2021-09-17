@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.urls import path
+from multi_param.api import router as multi_param
 from someapp.api import router
 
 from ninja import NinjaAPI
@@ -30,9 +31,13 @@ def foobar(request):
     return "foobar"
 
 
+api_multi_param = NinjaAPI(version="1.0.1")
+api_multi_param.add_router("", multi_param)
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", api_v1.urls),
     path("api/v2/", api_v2.urls),
     path("api/v3/", api_v3.urls),
+    path("api/mp/", api_multi_param.urls),
 ]
