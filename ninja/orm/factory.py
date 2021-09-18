@@ -38,6 +38,7 @@ class SchemaFactory:
         fields: Optional[List[str]] = None,
         exclude: Optional[List[str]] = None,
         custom_fields: Optional[List[Tuple[str, Any, Any]]] = None,
+        base_class: Type[Schema] = Schema,
     ) -> Type[Schema]:
         name = name or model.__name__
 
@@ -59,7 +60,12 @@ class SchemaFactory:
 
         schema = cast(
             Type[Schema],
-            create_pydantic_model(name, __base__=Schema, **definitions),  # type: ignore
+            create_pydantic_model(
+                name,
+                __base__=base_class,
+                __module__=base_class.__module__,
+                **definitions,  # type: ignore
+            ),
         )
         self.schemas[key] = schema
         return schema
