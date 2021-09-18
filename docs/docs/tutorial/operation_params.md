@@ -91,7 +91,7 @@ def create_order(request, order: Order):
 
 The OpenAPI `operationId` is an optional unique string used to identify an operation. If provided, these IDs must be unique among all operations described in your API.
 
-By default, Django Ninja sets it to `module name` + `function name`.
+By default, **Django Ninja** sets it to `module name` + `function name`.
 
 If you want to set it individually for each operation, use the `operation_id` argument:
 

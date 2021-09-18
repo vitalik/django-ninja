@@ -68,8 +68,10 @@ With just that Python type declaration, **Django Ninja** will:
 * Validate the data.
     * If the data is invalid, it will return a nice and meaningful error, indicating exactly where and what the incorrect data was.
 * Give you the received data in the parameter `item`.
-    * Because you declared it in the function to be of type `Item`, you will also have all the editor support (completion, etc.) for all the attributes and their types.
-* Generate <a href="http://json-schema.org" class="external-link" target="_blank">JSON Schema</a> definitions for your models, and you can also use them anywhere else you like if it makes sense for your project.
+    * Because you declared it in the function to be of type `Item`, you will also have all the editor support
+      (completion, etc.) for all the attributes and their types.
+* Generate <a href="https://json-schema.org" class="external-link" target="_blank">JSON Schema</a> definitions for
+  your models, and you can also use them anywhere else you like if it makes sense for your project.
 * Those schemas will be part of the generated OpenAPI schema, and used by the automatic documentation <abbr title="User Interfaces">UI's</abbr>.
 
 ## Automatic docs

@@ -1,6 +1,6 @@
 # Overriding Pydantic Config
 
-There are many cutomizations available for a **Django Ninja `Schema`**, via the schema's
+There are many customizations available for a **Django Ninja `Schema`**, via the schema's
 [Pydantic `Config` class](https://pydantic-docs.helpmanual.io/usage/model_config/). 
 
 !!! info
@@ -35,8 +35,8 @@ class CamelModelSchema(Schema):
 
 ## Custom Config from Django Model
 
-When using [`create_schema`](/tutorial/django-pydantic), the resulting schema can be used to
-build another class with a custom config like:
+When using [`create_schema`](../django-pydantic-create-schema/#create_schema), the resulting
+schema can be used to build another class with a custom config like:
 
 ```Python hl_lines="10"
 from django.contrib.auth.models import User

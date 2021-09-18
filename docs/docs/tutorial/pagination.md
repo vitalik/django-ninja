@@ -1,6 +1,6 @@
 # Pagination (beta)
 
-Django Ninja comes with a pagination. This allows you to split large result sets into individual pages.
+**Django Ninja** comes with a pagination. This allows you to split large result sets into individual pages.
 
 
 To apply pagination to a function - just apply `paginate` decorator:
@@ -92,7 +92,7 @@ To create a custom pagination class you should subclass `ninja.pagination.Pagina
  - The `paginate_queryset` method is passed the initial queryset and should return an iterable object that contains only the data in the requested page. This method accepts the following arguments:
     - `items`: a queryset (or iterable) returned by the api function
     - `request`: django http request object
-    - `**params`: kwargs that will contain all the arguments that decorated function recieved (to access pagination input get `params["pagination"]` - it will be a validated instance of your `Input` class) 
+    - `**params`: kwargs that will contain all the arguments that decorated function received (to access pagination input get `params["pagination"]` - it will be a validated instance of your `Input` class) 
 
 
 Example:

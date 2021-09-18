@@ -1,8 +1,9 @@
 # Form data
 
-**Django Ninja** also allows you to parse and validate `request.POST` data (aka `application x-www-form-urlencoded` or `multipart/form-data`).
+**Django Ninja** also allows you to parse and validate `request.POST` data
+(aka `application x-www-form-urlencoded` or `multipart/form-data`).
 
-Here's a quick example:
+## Form Data as params 
 
 ```Python hl_lines="1 4"
 from ninja import NinjaAPI, Form
@@ -24,3 +25,37 @@ from ninja import Form
 username: str = Form(...)
 ```
 
+## Using a Schema
+
+In a similar manner to [Body](../body/#declare-it-as-a-parameter), you can use
+a Schema to organize your parameters.
+
+```Python hl_lines="12"
+{!./src/tutorial/form/code01.py!}
+```
+
+## Request form + path + query parameters
+
+In a similar manner to [Body](../body/#request-body-path-query-parameters), you can use
+Form data in combination with other parameter sources.
+
+You can declare query **and** path **and** form field, **and** etc... parameters at the same time.
+
+**Django Ninja** will recognize that the function parameters that match path
+parameters should be **taken from the path**, and that function parameters that
+are declared with `Form(...)` should be **taken from the request form fields**, etc.
+
+```Python hl_lines="12"
+{!./src/tutorial/form/code02.py!}
+```
+## Mapping Empty Form Field to Default
+
+Form fields that are optional, are often sent with an empty value. This value is
+interpreted as an empty string, and thus may fail validation for fields such as `int` or `bool`.
+
+This can be fixed, as described in the Pydantic docs, by using
+[Generic Classes as Types](https://pydantic-docs.helpmanual.io/usage/types/#generic-classes-as-types).
+
+```Python hl_lines="15 16 23-25"
+{!./src/tutorial/form/code03.py!}
+```

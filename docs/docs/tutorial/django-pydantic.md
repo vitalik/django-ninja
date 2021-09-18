@@ -30,7 +30,7 @@ class UserSchema(ModelSchema):
 
 ### Excluding model fields
 
-To use all fields **except** few  you can use `model_exclude` configuration:
+To use all fields **except** a few, you can use `model_exclude` configuration:
 
 ```Python hl_lines="4"
 class UserSchema(ModelSchema):
@@ -53,7 +53,7 @@ class UserSchema(ModelSchema):
 
 ### Overriding fields
 
-To change default annotation for some field or add new one just use annotated attributes as usual. 
+To change default annotation for some field, or to add a new field, just use annotated attributes as usual. 
 
 ```Python hl_lines="1 2 3 4 8"
 class GroupSchema(ModelSchema):

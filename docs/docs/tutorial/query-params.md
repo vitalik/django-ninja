@@ -69,7 +69,7 @@ You can declare required or optional GET parameters in the same way as declaring
 {!./src/tutorial/query/code02.py!}
 ```
 
-In this case, Django Ninja will always validate that you pass the `q` param in the GET, and the `offset` param is an optional integer.
+In this case, **Django Ninja** will always validate that you pass the `q` param in the GET, and the `offset` param is an optional integer.
 
 ### GET parameters type conversion
 
@@ -87,7 +87,8 @@ http://localhost:8000/api/example?b=true
 http://localhost:8000/api/example?b=on
 http://localhost:8000/api/example?b=yes
 ```
-or any other case variation (uppercase, first letter in uppercase, etc), your function will see the parameter `b` with a `bool` value of `True`, otherwise as `False`.
+or any other case variation (uppercase, first letter in uppercase, etc.), your function will see
+the parameter `b` with a `bool` value of `True`, otherwise as `False`.
 
 Date can be both date string and integer (unix timestamp):
 
