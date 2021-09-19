@@ -46,7 +46,7 @@ def create_user(request, data: UserIn):
     return user
 ```
 
-Django Ninja will use this `response` schema to:
+**Django Ninja** will use this `response` schema to:
 
  - convert the output data to declared schema
  - validate the data
@@ -186,7 +186,7 @@ You can pass to a `response` argument a dictionary where:
  - key is a response code
  - value is a schema for that code
 
-Also, when you return the result - you have to also pass a status code to tell Django Ninja which schema should be used for validation and serialization.
+Also, when you return the result - you have to also pass a status code to tell **Django Ninja** which schema should be used for validation and serialization.
 
 
 An example:
@@ -233,7 +233,7 @@ def login(request, payload: Auth):
     return 200, {'token': xxx, ...}
 ```
 
-Django Ninja comes with the following HTTP codes:
+**Django Ninja** comes with the following HTTP codes:
 
 ```Python
 from ninja.responses import codes_1xx
@@ -270,7 +270,7 @@ Sometimes you need to create a schema that has reference to itself, or tree-stru
 
 To do that you need:
 
- - set a type of you schema in quotes
+ - set a type of your schema in quotes
  - use `update_forward_refs` method to apply self referencing types
 
 ```Python hl_lines="3 6"

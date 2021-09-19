@@ -98,7 +98,7 @@ GET /something HTTP/1.1
 Cookie: X-API-KEY=abcdef12345
 ```
 
-Django Ninja comes with built in classes to help you handle these cases.
+**Django Ninja** comes with built-in classes to help you handle these cases.
 
 
 #### in Query
@@ -167,7 +167,8 @@ router = Router(auth=BasicAuth())
 
 ## Custom exceptions
 
-Raising an exception that has a exception handler will return the response from that handler in the same way a operation would:
+Raising an exception that has an exception handler will return the response from that handler in
+the same way an operation would:
 
 ```Python hl_lines="1 4"
 {!./src/tutorial/authentication/bearer02.py!}

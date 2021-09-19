@@ -1,6 +1,6 @@
 # CSRF
 
-By default, Django Ninja has CSRF turned **OFF** for all operations.
+By default, **Django Ninja** has CSRF turned **OFF** for all operations.
 To turn it on you need to use the `csrf` argument of the NinjaAPI class:
 
 
@@ -15,7 +15,7 @@ api = NinjaAPI(csrf=True)
 <span style="color: red;">Warning</span>: It is not secure to use API's with cookie-based authentication! (like `CookieKey`, or `django_auth`)
 
 
-Django Ninja will prevent you from doing this. So, if you do this:
+**Django Ninja** will prevent you from doing this. So, if you do this:
 
 
 ```Python hl_lines="4"

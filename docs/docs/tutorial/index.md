@@ -74,7 +74,7 @@ urlpatterns = [
  - ... and more
 
 
-Django Ninja comes with a decorator for each method:
+**Django Ninja** comes with a decorator for each method:
 
 
 ```Python hl_lines="1 5 9 13 17"

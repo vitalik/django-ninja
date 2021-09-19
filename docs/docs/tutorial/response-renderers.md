@@ -1,7 +1,7 @@
 # Response renderers
 
 The most common response type for a REST API is usually JSON.
-Django Ninja also has support for defining your own custom renderers, which gives you the flexibility to design your own media types.
+**Django Ninja** also has support for defining your own custom renderers, which gives you the flexibility to design your own media types.
 
 ## Create a renderer
 

@@ -1,6 +1,7 @@
 # Request parsers
 
-In most cases, the default content type for REST API's is JSON, but in case you need to work with other content types (like YAML, XML, CSV) or use faster JSON parsers, Django Ninja provides a `parser` configuration.
+In most cases, the default content type for REST API's is JSON, but in case you need to work with
+other content types (like YAML, XML, CSV) or use faster JSON parsers, **Django Ninja** provides a `parser` configuration.
 
 ```Python
 api = NinjaAPI(parser=MyYamlParser())

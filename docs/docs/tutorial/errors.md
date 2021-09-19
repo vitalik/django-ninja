@@ -1,6 +1,6 @@
 # Handling errors
 
-Django Ninja allows you to install custom exception handlers to deal with how you return responses when errors or handled exceptions occur.
+**Django Ninja** allows you to install custom exception handlers to deal with how you return responses when errors or handled exceptions occur.
 
 ## Custom exception handlers
 
@@ -52,7 +52,7 @@ function must return http response
 
 ## Override the default exception handlers
 
-By default Django Ninja initialized the following exception handlers:
+By default, **Django Ninja** initialized the following exception handlers:
 
 
 #### `ninja.errors.ValidationError`

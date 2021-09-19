@@ -1,7 +1,11 @@
-# create_schema
+# Using create_schema
 
-Under the hood ModelSchema uses `create_schema` function. This is more advanced (and less safe) method - please use it carefully
+Under the hood, [`ModelSchema`](../django-pydantic/#modelschema) uses the `create_schema` function.
+This is a more advanced (and less safe) method - please use it carefully.
 
+## `create_schema`
+
+**Django Ninja** comes with a helper function `create_schema`:
 
 ```Python
 def create_schema(
@@ -44,7 +48,7 @@ UserSchema = create_schema(User)
     <br>
     **Always** use `fields` or `exclude` arguments to explicitly define list of attributes.
 
-### using `fields`
+### Using `fields`
 
 ```Python hl_lines="1"
 UserSchema = create_schema(User, fields=['id', 'username'])
@@ -57,7 +61,7 @@ UserSchema = create_schema(User, fields=['id', 'username'])
 
 ```
 
-### using `exclude`
+### Using `exclude`
 
 ```Python hl_lines="1 2"
 UserSchema = create_schema(User, exclude=[
@@ -76,7 +80,7 @@ UserSchema = create_schema(User, exclude=[
 #    date_joined: datetime
 ```
 
-### using `depth`
+### Using `depth`
 
 The `depth` argument allows you to introspect the Django model into the Related fields(ForeignKey, OneToOne, ManyToMany).
 

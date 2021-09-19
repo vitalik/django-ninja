@@ -2,7 +2,7 @@
 
 ## Different API version numbers
 
-With Django Ninja it's easy to run multiple API versions from a single Django project.
+With **Django Ninja** it's easy to run multiple API versions from a single Django project.
 
 All you have to do is create two or more NinjaAPI instances with different `version` arguments:
 

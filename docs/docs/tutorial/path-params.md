@@ -30,7 +30,7 @@ If you run this in your browser with <a href="http://localhost:8000/api/items/3"
 
 !!! tip
     Notice that the value your function received (and returned) is **3**, as a Python `int` - not a string `"3"`.
-    So, with just that type declaration, Django Ninja gives you automatic request "parsing" and validation.
+    So, with just that type declaration, **Django Ninja** gives you automatic request "parsing" and validation.
 
 
 
@@ -68,7 +68,7 @@ In this case,`item_id` will be parsed as an **`int`**. If `item_id` is not a val
 match.  (e.g. if no other path matches, a *404 Not Found* will be returned)
 
 !!! tip
-    Notice that, since Django Ninja uses a default type of `str` for unannotated parameters, the value the
+    Notice that, since **Django Ninja** uses a default type of `str` for unannotated parameters, the value the
     function above received (and returned) is `"3"`, as a Python `str` - not an integer **3**, . To receive
     an `int`, simply declare `item_id` as an `int` type annotation in the function definition as normal:
 
@@ -100,9 +100,8 @@ You can also use Schema to encapsulate path parameters that depend on each other
 ```
 
 !!! note
-    Notice that here we used a `Path` source hint to let Django Ninja know that this schema will be applied to path parameters.
+    Notice that here we used a `Path` source hint to let **Django Ninja** know that this schema will be applied to path parameters.
 
 ### Documentation
 Now, when you open your browser at <a href="http://localhost:8000/api/docs" target="_blank">http://localhost:8000/api/docs</a>, you will see the automatic, interactive, API documentation.
 ![Django Ninja Swagger](../img/tutorial-path-swagger.png)
-
