@@ -369,7 +369,9 @@ def test_exceptions():
         class Meta:
             app_label = "tests"
 
-    with pytest.raises(ConfigError):
+    with pytest.raises(
+        ConfigError, match="Only one of 'fields' or 'exclude' should be set."
+    ):
         create_schema(MyModel2, fields=["f1"], exclude=["f2"])
 
     with pytest.raises(ConfigError):
