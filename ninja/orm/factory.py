@@ -43,7 +43,7 @@ class SchemaFactory:
         name = name or model.__name__
 
         if fields and exclude:
-            raise ConfigError("Only one of 'include' or 'exclude' should be set.")
+            raise ConfigError("Only one of 'fields' or 'exclude' should be set.")
 
         key = self.get_key(model, name, depth, fields, exclude, custom_fields)
         if key in self.schemas:
