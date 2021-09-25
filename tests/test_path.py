@@ -304,7 +304,7 @@ def test_get_path_django(path, expected_status, expected_response):
         assert response.json() == expected_response
 
 
-def test_path_signature_asserts():
+def test_path_signature_asserts_default():
     test_router = Router()
 
     match = "'item_id' is a path param, default not allowed"
@@ -312,4 +312,18 @@ def test_path_signature_asserts():
 
         @test_router.get("/path/{item_id}")
         def get_path_item_id(request, item_id="1"):
+            pass
+
+
+def test_path_signature_warns_missing():
+    test_router = Router()
+
+    match = (
+        r"Field\(s\) \('a_path_param', 'another_path_param'\) are in "
+        r"the view path, but were not found in the view signature."
+    )
+    with pytest.warns(UserWarning, match=match):
+
+        @test_router.get("/path/{a_path_param}/{another_path_param}")
+        def get_path_item_id(request):
             pass

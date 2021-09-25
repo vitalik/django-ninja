@@ -1,4 +1,5 @@
 import inspect
+import warnings
 from collections import defaultdict, namedtuple
 from typing import TYPE_CHECKING, Any, Callable, Dict, Generator, List, Optional, Tuple
 
@@ -66,6 +67,32 @@ class ViewSignature:
                 )
 
         self.models: TModels = self._create_models()
+
+        self._validate_view_path_params()
+
+    def _validate_view_path_params(self) -> None:
+        """verify all path params are present in the path model fields"""
+        if self.path_params_names:
+            path_model = next(
+                (m for m in self.models if m._param_source == "path"), None
+            )
+            missing = tuple(
+                sorted(
+                    name
+                    for name in self.path_params_names
+                    if not (path_model and name in path_model._flatten_map)
+                )
+            )
+            if missing:
+                warnings.warn_explicit(
+                    UserWarning(
+                        f"Field(s) {missing} are in the view path, but were not found in the view signature."
+                    ),
+                    category=None,
+                    filename=inspect.getfile(self.view_func),
+                    lineno=inspect.getsourcelines(self.view_func)[1],
+                    source=None,
+                )
 
     def _create_models(self) -> TModels:
         params_by_source_cls: Dict[Any, List[FuncParam]] = defaultdict(list)
