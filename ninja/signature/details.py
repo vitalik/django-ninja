@@ -1,7 +1,7 @@
 import inspect
 import warnings
 from collections import defaultdict, namedtuple
-from typing import TYPE_CHECKING, Any, Callable, Dict, Generator, List, Optional, Tuple
+from typing import Any, Callable, Dict, Generator, List, Tuple
 
 import pydantic
 
@@ -11,10 +11,6 @@ from ninja.errors import ConfigError
 from ninja.params import Body, File, Form, _MultiPartBody
 from ninja.params_models import TModel, TModels
 from ninja.signature.utils import get_path_param_names, get_typed_signature
-
-if TYPE_CHECKING:
-    from pydantic.fields import ModelField  # pragma: no cover
-
 
 __all__ = [
     "ViewSignature",
@@ -141,7 +137,9 @@ class ViewSignature:
             attrs["__annotations__"] = {i.name: i.annotation for i in args}
 
             # collection fields:
-            attrs["_collection_fields"] = detect_collection_fields(args)
+            attrs["_collection_fields"] = detect_collection_fields(
+                args, attrs.get("_flatten_map", {})
+            )
 
             base_cls = param_cls._model
             model_cls = type(cls_name, (base_cls,), attrs)
@@ -246,26 +244,16 @@ def is_pydantic_model(cls: Any) -> bool:
 
 def is_collection_type(annotation: Any) -> bool:
     origin = get_collection_origin(annotation)
-    return origin in (
-        List,
-        list,
-        set,
-        tuple,
-    )  # TODO: I guess we should handle only list
+    types = (List, list, set, tuple)
+    if origin is None:
+        return issubclass(annotation, types)
+    else:
+        return origin in types  # TODO: I guess we should handle only list
 
 
-def detect_pydantic_model_collection_fields(model: pydantic.BaseModel) -> List[str]:
-    "Extracts collection fields aliases from collection fields"
-
-    def _list_field_name(field: "ModelField") -> Optional[str]:
-        if is_collection_type(field.outer_type_):
-            return str(field.alias)
-        return None
-
-    return list(filter(None, map(_list_field_name, model.__fields__.values())))
-
-
-def detect_collection_fields(args: List[FuncParam]) -> List[str]:
+def detect_collection_fields(
+    args: List[FuncParam], flatten_map: Dict[str, Tuple[str, ...]]
+) -> List[str]:
     """
     QueryDict has values that are always lists, so we need to help django ninja to understand
     better the input parameters if it's a list or a single value
@@ -273,7 +261,25 @@ def detect_collection_fields(args: List[FuncParam]) -> List[str]:
     """
     result = [i.name for i in args if i.is_collection]
 
-    if len(args) == 1 and is_pydantic_model(args[0].annotation):
-        result += detect_pydantic_model_collection_fields(args[0].annotation)
+    if flatten_map:
+        args_d = {arg.alias: arg for arg in args}
+        for path in (p for p in flatten_map.values() if len(p) > 1):
+            annotation_or_field = args_d[path[0]].annotation
+            for attr in path[1:]:
+                annotation_or_field = next(
+                    (
+                        a
+                        for a in annotation_or_field.__fields__.values()
+                        if a.alias == attr
+                    ),
+                    annotation_or_field.__fields__.get(attr),
+                )  # pragma: no cover
+
+                annotation_or_field = getattr(
+                    annotation_or_field, "outer_type_", annotation_or_field
+                )
+
+            if is_collection_type(annotation_or_field):
+                result.append(path[-1])
 
     return result

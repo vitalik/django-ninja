@@ -2,7 +2,7 @@ from typing import List
 
 import pytest
 from django.http import QueryDict  # noqa
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, conlist
 
 from ninja import Form, Query, Router, Schema
 from ninja.testing import TestClient
@@ -69,6 +69,26 @@ def listview4(
     }
 
 
+class ConListSchema(Schema):
+    query: conlist(int, min_items=1)
+
+
+class Data(Schema):
+    data: ConListSchema
+
+
+@router.post("/list5")
+def listview5(
+    request,
+    body: conlist(int, min_items=1),
+    a_query: Data = Query(...),
+):
+    return {
+        "query": a_query.data.query,
+        "body": body,
+    }
+
+
 client = TestClient(router)
 
 
@@ -115,6 +135,11 @@ client = TestClient(router)
             "/list4",
             {},
             {"filters": {"tags": [], "other_tags": []}},
+        ),
+        (
+            "/list5?query=1&query=2",
+            dict(json=[5, 6]),
+            {"query": [1, 2], "body": [5, 6]},
         ),
     ]
     # fmt: on
