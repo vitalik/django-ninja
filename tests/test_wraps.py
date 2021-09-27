@@ -56,9 +56,7 @@ def get_query_id(request, item_id, query: int):
 
 @router.get("/text-bad")
 @a_bad_test_wrapper
-def get_text_bad(
-    request,
-):
+def get_text_bad(request):
     return "Hello World"
 
 
