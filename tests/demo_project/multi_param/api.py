@@ -3,6 +3,7 @@
 from ninja import (
     Body,
     Cookie,
+    Field,
     File,
     Form,
     Header,
@@ -21,17 +22,17 @@ def to_kebab(string: str) -> str:
 
 
 class TestData4(Schema):
-    foo4: int = 44
+    foo4: int = Field(44, title="Foo4 Title", description="Foo4 Desc")
     bar4: str = "44bar"
 
 
 class TestData3(Schema):
-    foo3: int
+    foo3: int = Field(..., title="Foo3 Title", description="Foo3 Desc")
     bar3: str = "33bar"
 
 
 class TestData2(Schema):
-    foo2: int = 22
+    foo2: int = Field(22, title="Foo2 Title", description="Foo2 Desc")
     bar2: str
     d3: TestData3
 
@@ -53,12 +54,15 @@ class ResponseData(Schema):
         allow_population_by_field_name = True
 
 
+test_data4_extra = dict(title="Data4 Title", description="Data4 Desc")
+
+
 @router.post("/test-multi-query", response=ResponseData, by_alias=True)
 def test_multi_query(
     request,
     i: int = Query(...),
     s: str = Query("a-str"),
-    data: TestData4 = Query(...),
+    data: TestData4 = Query(..., **test_data4_extra),
     nested_data: TestData = Query(..., alias="nested-data"),
 ):
     return dict(s=s, i=i, data=data, nested_data=nested_data)
@@ -73,7 +77,7 @@ def test_multi_path(
     request,
     i: int = Path(...),
     s: str = Path("a-str"),
-    data: TestData4 = Path(...),
+    data: TestData4 = Path(..., **test_data4_extra),
     nested_data: TestData = Path(..., alias="nested-data"),
 ):
     return dict(s=s, i=i, data=data, nested_data=nested_data)
@@ -84,7 +88,7 @@ def test_multi_header(
     request,
     i: int = Header(...),
     s: str = Header("a-str"),
-    data: TestData4 = Header(...),
+    data: TestData4 = Header(..., **test_data4_extra),
     nested_data: TestData = Header(..., alias="nested-data"),
 ):
     return dict(s=s, i=i, data=data, nested_data=nested_data)
@@ -95,7 +99,7 @@ def test_multi_cookie(
     request,
     i: int = Cookie(...),
     s: str = Cookie("a-str"),
-    data: TestData4 = Cookie(...),
+    data: TestData4 = Cookie(..., **test_data4_extra),
     nested_data: TestData = Cookie(..., alias="nested-data"),
 ):
     """Testing w/ Cookies requires setting the cookies by hand in the browser inspector"""
@@ -107,7 +111,7 @@ def test_multi_form(
     request,
     i: int = Form(...),
     s: str = Form("a-str"),
-    data: TestData4 = Form(...),
+    data: TestData4 = Form(..., **test_data4_extra),
     nested_data: TestData = Form(..., alias="nested-data"),
 ):
     return dict(s=s, i=i, data=data, nested_data=nested_data)
@@ -118,7 +122,7 @@ def test_multi_body(
     request,
     i: int = Body(...),
     s: str = Body("a-str"),
-    data: TestData4 = Body(...),
+    data: TestData4 = Body(..., **test_data4_extra),
     nested_data: TestData = Body(..., alias="nested-data"),
 ):
     return dict(s=s, i=i, data=data, nested_data=nested_data)
@@ -130,7 +134,7 @@ def test_multi_body_file(
     file: UploadedFile,
     i: int = Body(...),
     s: str = Body("a-str"),
-    data: TestData4 = Body(...),
+    data: TestData4 = Body(..., **test_data4_extra),
     nested_data: TestData = Body(..., alias="nested-data"),
 ):
     return dict(s=s, i=i, data=data, nested_data=nested_data)
@@ -142,7 +146,7 @@ def test_multi_form_file(
     file: UploadedFile,
     i: int = Form(...),
     s: str = Form("a-str"),
-    data: TestData4 = Form(...),
+    data: TestData4 = Form(..., **test_data4_extra),
     nested_data: TestData = Form(..., alias="nested-data"),
 ):
     return dict(s=s, i=i, data=data, nested_data=nested_data)
@@ -153,7 +157,7 @@ def test_multi_body_form(
     request,
     i: int = Body(...),
     s: str = Form("a-str"),
-    data: TestData4 = Body(...),
+    data: TestData4 = Body(..., **test_data4_extra),
     nested_data: TestData = Form(..., alias="nested-data"),
 ):
     return dict(s=s, i=i, data=data, nested_data=nested_data)
@@ -164,7 +168,7 @@ def test_multi_form_body(
     request,
     i: int = Form(...),
     s: str = Body("a-str"),
-    data: TestData4 = Form(...),
+    data: TestData4 = Form(..., **test_data4_extra),
     nested_data: TestData = Body(..., alias="nested-data"),
 ):
     return dict(s=s, i=i, data=data, nested_data=nested_data)
@@ -176,7 +180,7 @@ def test_multi_body_form_file(
     file: UploadedFile = File(...),
     i: int = Body(...),
     s: str = Form("a-str"),
-    data: TestData4 = Body(...),
+    data: TestData4 = Body(..., **test_data4_extra),
     nested_data: TestData = Form(..., alias="nested-data"),
 ):
     return dict(s=s, i=i, data=data, nested_data=nested_data)
@@ -188,7 +192,7 @@ def test_multi_form_body_file(
     file: UploadedFile = File(...),
     i: int = Form(...),
     s: str = Body("a-str"),
-    data: TestData4 = Form(...),
+    data: TestData4 = Form(..., **test_data4_extra),
     nested_data: TestData = Body(..., alias="nested-data"),
 ):
     return dict(s=s, i=i, data=data, nested_data=nested_data)

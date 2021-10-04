@@ -3,7 +3,7 @@ from typing import List
 import pytest
 from django.test import Client, override_settings
 
-from ninja import Body, Form, NinjaAPI, Schema, UploadedFile
+from ninja import Body, Field, File, Form, NinjaAPI, Query, Schema, UploadedFile
 from ninja.openapi.urls import get_openapi_urls
 
 api = NinjaAPI()
@@ -20,7 +20,7 @@ def to_camel(string: str) -> str:
 
 class Response(Schema):
     i: int
-    f: float
+    f: float = Field(..., title="f title", description="f desc")
 
     class Config(Schema.Config):
         alias_generator = to_camel
@@ -86,6 +86,21 @@ def method_body_file(
     return dict(i=body.i, f=body.f)
 
 
+@api.post(
+    "/test-title-description/",
+    tags=["a-tag"],
+    summary="Best API Ever",
+    response=Response,
+)
+def method_test_title_description(
+    request,
+    param1: int = Query(..., title="param 1 title"),
+    param2: str = Query("A Default", description="param 2 desc"),
+    file: UploadedFile = File(..., description="file param desc"),
+):
+    return dict(i=param1, f=param2)
+
+
 def test_schema_views(client: Client):
     assert client.get("/api/").status_code == 404
     assert client.get("/api/docs").status_code == 200
@@ -136,7 +151,7 @@ def test_schema(schema):
             "type": "object",
             "properties": {
                 "i": {"title": "I", "type": "integer"},
-                "f": {"title": "F", "type": "number"},
+                "f": {"description": "f desc", "title": "f title", "type": "number"},
             },
             "required": ["i", "f"],
         },
@@ -238,7 +253,7 @@ def test_schema_list(schema):
         },
         "Response": {
             "properties": {
-                "f": {"title": "F", "type": "number"},
+                "f": {"description": "f desc", "title": "f title", "type": "number"},
                 "i": {"title": "I", "type": "integer"},
             },
             "required": ["i", "f"],
@@ -488,6 +503,65 @@ def test_schema_body_file(schema):
                     "schema": {"$ref": "#/components/schemas/Response"}
                 }
             },
+        }
+    }
+
+
+def test_schema_title_description(schema):
+    method_list = schema["paths"]["/api/test-title-description/"]["post"]
+
+    assert method_list["summary"] == "Best API Ever"
+    assert method_list["tags"] == ["a-tag"]
+
+    assert method_list["requestBody"] == {
+        "content": {
+            "multipart/form-data": {
+                "schema": {
+                    "properties": {
+                        "file": {
+                            "description": "file " "param " "desc",
+                            "format": "binary",
+                            "title": "File",
+                            "type": "string",
+                        }
+                    },
+                    "required": ["file"],
+                    "title": "FileParams",
+                    "type": "object",
+                }
+            }
+        },
+        "required": True,
+    }
+
+    assert method_list["parameters"] == [
+        {
+            "in": "query",
+            "name": "param1",
+            "required": True,
+            "schema": {"title": "param 1 title", "type": "integer"},
+        },
+        {
+            "in": "query",
+            "name": "param2",
+            "required": False,
+            "schema": {
+                "default": "A Default",
+                "description": "param 2 desc",
+                "title": "Param2",
+                "type": "string",
+            },
+        },
+    ]
+
+    assert method_list["responses"] == {
+        200: {
+            "content": {
+                "application/json": {
+                    "schema": {"$ref": "#/components/schemas/Response"}
+                }
+            },
+            "description": "OK",
         }
     }
 

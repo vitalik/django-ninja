@@ -27,7 +27,8 @@
                 "type": "integer"
               },
               "foo4": {
-                "title": "Foo4",
+                "title": "Foo4 Title",
+                "description": "Foo4 Desc",
                 "default": 44,
                 "type": "integer"
               },

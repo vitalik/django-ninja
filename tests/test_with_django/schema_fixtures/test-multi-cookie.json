@@ -26,7 +26,8 @@
         "in": "cookie",
         "name": "foo4",
         "schema": {
-          "title": "Foo4",
+          "title": "Foo4 Title",
+          "description": "Foo4 Desc",
           "default": 44,
           "type": "integer"
         },
@@ -65,7 +66,8 @@
         "in": "cookie",
         "name": "foo2",
         "schema": {
-          "title": "Foo2",
+          "title": "Foo2 Title",
+          "description": "Foo2 Desc",
           "default": 22,
           "type": "integer"
         },
@@ -84,7 +86,8 @@
         "in": "cookie",
         "name": "foo3",
         "schema": {
-          "title": "Foo3",
+          "title": "Foo3 Title",
+          "description": "Foo3 Desc",
           "type": "integer"
         },
         "required": true

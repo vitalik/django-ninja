@@ -302,17 +302,23 @@ def flatten_properties(
     """
     if "allOf" in prop_details:
         resolve_allOf(prop_details, definitions)
-    if "$ref" in prop_details:
+        if len(prop_details["allOf"]) == 1 and "enum" in prop_details["allOf"][0]:
+            is_required = "default" not in prop_details
+            yield prop_name, prop_details, is_required
+        else:
+            for item in prop_details["allOf"]:
+                yield from flatten_properties("", item, True, definitions)
+
+    elif "$ref" in prop_details:
         def_name = prop_details["$ref"].split("/")[-1]
         definition = definitions[def_name]
-        if "properties" in definition:
-            required = set(definition.get("required", []))
-            for k, v in definition["properties"].items():
-                is_required = k in required
-                for p in flatten_properties(k, v, is_required, definitions):
-                    yield p
-        else:
-            yield prop_name, definition, prop_required
+        yield from flatten_properties(prop_name, definition, prop_required, definitions)
+
+    elif "properties" in prop_details:
+        required = set(prop_details.get("required", []))
+        for k, v in prop_details["properties"].items():
+            is_required = k in required
+            yield from flatten_properties(k, v, is_required, definitions)
     else:
         yield prop_name, prop_details, prop_required
 
