@@ -62,6 +62,11 @@ def method_form(request, data: Payload = Form(...)):
     return dict(i=data.i, f=data.f)
 
 
+@api.post("/test-form-single", response=Response)
+def method_form_single(request, data: float = Form(...)):
+    return dict(i=int(data), f=data)
+
+
 @api.post("/test-form-body", response=Response)
 def method_form_body(request, i: int = Form(10), s: str = Body("10")):
     return dict(i=i, s=s)
@@ -339,6 +344,34 @@ def test_schema_form(schema):
                         "i": {"title": "I", "type": "integer"},
                     },
                     "required": ["i", "f"],
+                    "title": "FormParams",
+                    "type": "object",
+                }
+            }
+        },
+        "required": True,
+    }
+    assert method_list["responses"] == {
+        200: {
+            "description": "OK",
+            "content": {
+                "application/json": {
+                    "schema": {"$ref": "#/components/schemas/Response"}
+                }
+            },
+        }
+    }
+
+
+def test_schema_single(schema):
+    method_list = schema["paths"]["/api/test-form-single"]["post"]
+
+    assert method_list["requestBody"] == {
+        "content": {
+            "application/x-www-form-urlencoded": {
+                "schema": {
+                    "properties": {"data": {"title": "Data", "type": "number"}},
+                    "required": ["data"],
                     "title": "FormParams",
                     "type": "object",
                 }

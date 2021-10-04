@@ -1,4 +1,5 @@
 from functools import wraps
+from unittest import mock
 
 import pytest
 
@@ -60,10 +61,12 @@ def get_text_bad(request):
     return "Hello World"
 
 
-@router.get("/path-bad/{item_id}")
-@a_bad_test_wrapper
-def get_id_bad(request, item_id):
-    return item_id
+with mock.patch("ninja.signature.details.warnings.warn_explicit"):
+
+    @router.get("/path-bad/{item_id}")
+    @a_bad_test_wrapper
+    def get_id_bad(request, item_id):
+        return item_id
 
 
 @router.get("/query-bad")
@@ -72,10 +75,12 @@ def get_query_type_bad(request, query: int):
     return f"foo bar {query}"
 
 
-@router.get("/path-query-bad/{item_id}")
-@a_bad_test_wrapper
-def get_query_id_bad(request, item_id, query: int):
-    return f"foo bar {item_id} {query}"
+with mock.patch("ninja.signature.details.warnings.warn_explicit"):
+
+    @router.get("/path-query-bad/{item_id}")
+    @a_bad_test_wrapper
+    def get_query_id_bad(request, item_id, query: int):
+        return f"foo bar {item_id} {query}"
 
 
 @pytest.mark.parametrize(

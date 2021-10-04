@@ -230,12 +230,9 @@ class OpenAPISchema(dict):
         if len(models) == 1:
             model = models[0]
             content_type = BODY_CONTENT_TYPES[model._param_source]
-            if model._param_source == "file":
-                schema, required = self._create_schema_from_model(
-                    model, remove_level=False
-                )
-            else:
-                schema, required = self._create_schema_from_model(model)
+            schema, required = self._create_schema_from_model(
+                model, remove_level=model._param_source == "body"
+            )
         else:
             schema, content_type = self._create_multipart_schema_from_models(models)
             required = True
