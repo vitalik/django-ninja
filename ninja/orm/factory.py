@@ -1,4 +1,5 @@
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union, cast
+import itertools
+from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Type, Union, cast
 
 from django.db.models import Field, ManyToManyRel, ManyToOneRel, Model
 from pydantic import create_model as create_pydantic_model
@@ -28,6 +29,7 @@ SchemaKey = Tuple[Type[Model], str, int, str, str, str]
 class SchemaFactory:
     def __init__(self) -> None:
         self.schemas: Dict[SchemaKey, Type[Schema]] = {}
+        self.schema_names: Set[str] = set()
 
     def create_schema(
         self,
@@ -58,6 +60,9 @@ class SchemaFactory:
             for fld_name, python_type, field_info in custom_fields:
                 definitions[fld_name] = (python_type, field_info)
 
+        if name in self.schema_names:
+            name = self._get_unique_name(name)
+
         schema = cast(
             Type[Schema],
             create_pydantic_model(
@@ -68,6 +73,7 @@ class SchemaFactory:
             ),
         )
         self.schemas[key] = schema
+        self.schema_names.add(name)
         return schema
 
     def get_key(
@@ -82,6 +88,14 @@ class SchemaFactory:
         "returns a hashable value for all given parameters"
         # TODO: must be a test that compares all kwargs from init to get_key
         return model, name, depth, str(fields), str(exclude), str(custom_fields)
+
+    def _get_unique_name(self, name: str) -> str:
+        "Returns a unique name by adding counter suffix"
+        for num in itertools.count(start=2):  # pragma: no branch
+            result = f"{name}{num}"
+            if result not in self.schema_names:
+                break
+        return result
 
     def _selected_model_fields(
         self,
@@ -115,22 +129,6 @@ class SchemaFactory:
                 # skipping relations
                 continue
             yield cast(Field, fld)
-
-    def check_for_duplicates_on_exception(self, exc: Exception) -> None:
-        """check for duplicate named schemas: https://github.com/vitalik/django-ninja/issues/214"""
-        exc_args = getattr(exc, "args", None)
-        if exc_args and isinstance(exc_args[0], type(Schema)):
-            schema = exc_args[0]
-            schema_found = tuple(k for k, v in self.schemas.items() if v == schema)
-            if schema_found:
-                model_name = schema_found[0][1]
-                same_name_keys = tuple(
-                    key for key in factory.schemas if key[1] == model_name
-                )
-                if len(same_name_keys) > 1:
-                    errors = "\n".join(f"  {key}" for key in same_name_keys)
-                    msg = f"Looks like you may have created multiple orm schemas with the same name:\n{errors}"
-                    raise ConfigError(msg) from exc
 
 
 factory = SchemaFactory()

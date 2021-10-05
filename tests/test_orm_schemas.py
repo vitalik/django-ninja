@@ -1,5 +1,5 @@
 from typing import List
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import django
 import pytest
@@ -338,7 +338,7 @@ def test_fields_exclude():
     Schema2 = create_schema(SampleModel, fields=["f3", "f2"])
     print(Schema2.schema())
     assert Schema2.schema() == {
-        "title": "SampleModel",
+        "title": "SampleModel2",
         "type": "object",
         "properties": {
             "f3": {"title": "F3", "type": "string"},
@@ -350,7 +350,7 @@ def test_fields_exclude():
     Schema3 = create_schema(SampleModel, exclude=["f3"])
     print(Schema3.schema())
     assert Schema3.schema() == {
-        "title": "SampleModel",
+        "title": "SampleModel3",
         "type": "object",
         "properties": {
             "id": {"title": "Id", "type": "integer"},
@@ -467,7 +467,7 @@ def test_custom_fields():
     print(Schema2.schema())
 
     assert Schema2.schema() == {
-        "title": "SmallModel",
+        "title": "SmallModel2",
         "type": "object",
         "properties": {
             "id": {"title": "Id", "type": "integer"},
@@ -481,7 +481,7 @@ def test_custom_fields():
 def test_duplicate_schema_names():
     from django.db import models
 
-    from ninja import NinjaAPI, Schema
+    from ninja import Schema
     from ninja.orm import create_schema
 
     class TestModelDuplicate(models.Model):
@@ -495,64 +495,28 @@ def test_duplicate_schema_names():
         data1: create_schema(TestModelDuplicate, fields=["field1"])  # noqa: F821
         data2: create_schema(TestModelDuplicate, fields=["field2"])  # noqa: F821
 
-    api = NinjaAPI()
+    print(TestSchema.schema())
 
-    @api.get("/test", response=TestSchema)
-    def a_test_method(request):
-        return []
-
-    match = r"Looks like you may have created multiple orm schemas with the same name:"
-    with pytest.raises(ConfigError, match=match):
-        assert api.get_openapi_schema()
-
-
-def test_not_duplicate_schema_names():
-    from ninja.openapi.schema import model_schema
-    from ninja.schema import Schema
-
-    class TestModelNotDuplicate(models.Model):
-        charfield = models.CharField()
-
-        class Meta:
-            app_label = "tests"
-
-    TestSchema = create_schema(
-        TestModelNotDuplicate, name="TestModelNotDuplicate", fields=["charfield"]
-    )
-
-    with patch("ninja.openapi.schema.pydantic_model_schema", side_effect=ValueError):
-        with pytest.raises(ValueError):
-            assert model_schema() is None
-
-    with patch("ninja.openapi.schema.pydantic_model_schema", side_effect=KeyError):
-        with pytest.raises(KeyError):
-            assert model_schema() is None
-
-    with patch(
-        "ninja.openapi.schema.pydantic_model_schema", side_effect=KeyError(Schema)
-    ):
-        with pytest.raises(KeyError):
-            assert model_schema() is None
-
-    with patch(
-        "ninja.openapi.schema.pydantic_model_schema", side_effect=KeyError(TestSchema)
-    ):
-        with pytest.raises(KeyError):
-            assert model_schema() is None
-
-    # define a duplicate schema name
-    create_schema(
-        TestModelNotDuplicate,
-        name="TestModelNotDuplicate",
-        fields=["charfield"],
-        custom_fields=[
-            ("test", TestSchema, ...)
-        ],  # interlinking models with the same name
-    )
-
-    # duplicate orm schema names returns ConfigError
-    with patch(
-        "ninja.openapi.schema.pydantic_model_schema", side_effect=KeyError(TestSchema)
-    ):
-        with pytest.raises(ConfigError):
-            assert model_schema() is None
+    assert TestSchema.schema() == {
+        "title": "TestSchema",
+        "type": "object",
+        "properties": {
+            "data1": {"$ref": "#/definitions/TestModelDuplicate"},
+            "data2": {"$ref": "#/definitions/TestModelDuplicate2"},
+        },
+        "required": ["data1", "data2"],
+        "definitions": {
+            "TestModelDuplicate": {
+                "title": "TestModelDuplicate",
+                "type": "object",
+                "properties": {"field1": {"title": "Field1", "type": "string"}},
+                "required": ["field1"],
+            },
+            "TestModelDuplicate2": {
+                "title": "TestModelDuplicate2",
+                "type": "object",
+                "properties": {"field2": {"title": "Field2", "type": "string"}},
+                "required": ["field2"],
+            },
+        },
+    }
