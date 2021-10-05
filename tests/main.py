@@ -2,7 +2,7 @@ from uuid import UUID
 
 from django.urls import register_converter
 
-from ninja import Path, Query, Router
+from ninja import Field, Path, Query, Router, Schema
 
 router = Router()
 
@@ -223,6 +223,15 @@ def get_query_param_required(request, query=Query(...)):
 @router.get("/query/param-required/int")
 def get_query_param_required_type(request, query: int = Query(...)):
     return f"foo bar {query}"
+
+
+class AliasedSchema(Schema):
+    query: str = Field(..., alias="aliased.-_~name")
+
+
+@router.get("/query/aliased-name")
+def get_query_aliased_name(request, query: AliasedSchema = Query(...)):
+    return f"foo bar {query.query}"
 
 
 class CustomPathConverter1:

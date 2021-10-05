@@ -25,6 +25,10 @@ FuncParam = namedtuple(
 
 
 class ViewSignature:
+    FLATTEN_PATH_SEP = (
+        "\x1e"  # ASCII Record Separator.  IE: not generally used in query names
+    )
+
     def __init__(self, path: str, view_func: Callable) -> None:
         self.view_func = view_func
         self.signature = get_typed_signature(self.view_func)
@@ -157,7 +161,7 @@ class ViewSignature:
                         raise ConfigError(
                             f"Duplicated name: '{name}' in params: '{arg_names[name]}' & '{arg.name}'"
                         )
-                    flatten_map[name] = tuple(path.split("."))
+                    flatten_map[name] = tuple(path.split(self.FLATTEN_PATH_SEP))
                     arg_names[name] = arg.name
             else:
                 name = arg.alias
@@ -173,7 +177,7 @@ class ViewSignature:
     def _model_flatten_map(self, model: TModel, prefix: str) -> Generator:
         for field in model.__fields__.values():
             field_name = field.alias
-            name = f"{prefix}.{field_name}"
+            name = f"{prefix}{self.FLATTEN_PATH_SEP}{field_name}"
             if is_pydantic_model(field.type_):
                 yield from self._model_flatten_map(field.type_, name)
             else:
