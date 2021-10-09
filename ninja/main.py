@@ -65,7 +65,7 @@ class NinjaAPI:
         self._exception_handlers: Dict[Exc, ExcHandler] = {}
         self.set_default_exception_handlers()
 
-        self.auth: Optional[Sequence[Callable]] = NOT_SET
+        self.auth: Union[Sequence[Callable], Type[NOT_SET]] = NOT_SET
         if auth is not None and auth is not NOT_SET:
             self.auth = isinstance(auth, Sequence) and auth or [auth]  # type: ignore
 
@@ -294,7 +294,7 @@ class NinjaAPI:
         tags: Optional[List[str]] = None,
         parent_router: Router = None,
     ) -> None:
-        if auth != NOT_SET:
+        if auth is not NOT_SET:
             router.auth = auth
         if tags is not None:
             router.tags = tags

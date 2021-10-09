@@ -66,7 +66,7 @@ class Operation:
         self.models: TModels = self.signature.models
 
         self.response_models: Dict[Any, Any]
-        if response == NOT_SET:
+        if response is NOT_SET:
             self.response_models = {200: NOT_SET}
         elif isinstance(response, dict):
             self.response_models = self._create_response_model_multiple(response)
@@ -176,7 +176,7 @@ class Operation:
                 f"Schema for status {status} is not set in response {self.response_models.keys()}"
             )
 
-        if response_model == NOT_SET:
+        if response_model is NOT_SET:
             return self.api.create_response(request, result, status=status)
 
         if response_model is None:
