@@ -41,6 +41,7 @@ nav:
   - tutorial/errors.md
   - tutorial/csrf.md
 - async-support.md
+- video.md
 - Enhancement Proposals:
   - Intro: proposals/index.md
   - proposals/cbv.md
