@@ -24,7 +24,7 @@ from ninja.parser import Parser
 from ninja.renderers import BaseRenderer, JSONRenderer
 from ninja.router import Router
 from ninja.types import TCallable
-from ninja.utils import normalize_path
+from ninja.utils import is_debug_server, normalize_path
 
 if TYPE_CHECKING:
     from .operation import Operation  # pragma: no cover
@@ -387,7 +387,11 @@ class NinjaAPI:
 
         # 1) urls namespacing validation
         skip_registry = os.environ.get("NINJA_SKIP_REGISTRY", False)
-        if not skip_registry and self.urls_namespace in NinjaAPI._registry:
+        if (
+            not skip_registry
+            and self.urls_namespace in NinjaAPI._registry
+            and not debug_server_url_reimport()
+        ):
             msg = [
                 "Looks like you created multiple NinjaAPIs",
                 "To let ninja distinguish them you need to set either unique version or url_namespace",
@@ -408,3 +412,43 @@ class NinjaAPI:
                                 raise ConfigError(
                                     "Cookie Authentication must be used with CSRF. Please use NinjaAPI(csrf=True)"
                                 )
+
+
+_imported_while_running_in_debug_server = is_debug_server()
+
+
+def debug_server_url_reimport() -> bool:
+    """Detect reimport of URL module to allow error to propagate to developer
+
+    When Django loads urls it uses: django.urls.resolvers.urlconf_module()
+
+        @cached_property
+        def urlconf_module(self):
+            if isinstance(self.urlconf_name, str):
+                return import_module(self.urlconf_name)
+            else:
+                return self.urlconf_name
+
+    This uses the @cached_property to generally only import once.  But if the import
+    throws an error when using the development server, the following code in
+    django.utils.autoreload.BaseReloader.run() is used:
+
+        # Prevent a race condition where URL modules aren't loaded when the
+        # reloader starts by accessing the urlconf_module property.
+        try:
+            get_resolver().urlconf_module
+        except Exception:
+            # Loading the urlconf can result in errors during development.
+            # If this occurs then swallow the error and continue.
+            pass
+
+    This means the (likely) developer error that caused the Exception is initially ignored. This is
+    not generally a problem since the error will usually be exercised again, and reported at that
+    time.  But Ninja has various code which guards against errors where items that cannot be reused,
+    are attempted to be reused.  This results in Ninja throwing a false error, and hiding the
+    true error from the developer when running under the development server.
+
+    :return: True if this module was originally imported during Django dev-server
+        init but the caller is not being running during Django dev-server init.
+    """
+    return _imported_while_running_in_debug_server and not is_debug_server()

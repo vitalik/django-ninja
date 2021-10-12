@@ -13,6 +13,7 @@ from typing import (
 from django.urls import URLPattern, path as django_path
 
 from ninja.constants import NOT_SET
+from ninja.errors import ConfigError
 from ninja.operation import PathView
 from ninja.types import TCallable
 from ninja.utils import normalize_path
@@ -348,7 +349,13 @@ class Router:
             self._routers.append((prefix, router))
 
     def build_routers(self, prefix: str) -> List[Tuple[str, "Router"]]:
-        assert self.api is None
+        if self.api is not None:
+            from ninja.main import debug_server_url_reimport
+
+            if not debug_server_url_reimport():
+                raise ConfigError(
+                    f"Router@'{prefix}' has already been attached to API {self.api.title}:{self.api.version} "
+                )
         internal_routes = []
         for inter_prefix, inter_router in self._routers:
             _route = normalize_path("/".join((prefix, inter_prefix))).lstrip("/")
