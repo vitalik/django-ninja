@@ -45,7 +45,7 @@ nav:
 - Enhancement Proposals:
   - Intro: proposals/index.md
   - proposals/cbv.md
-  - proposals/models.md
+  - proposals/v1.md
 - help.md
 - releases.md
 markdown_extensions:
