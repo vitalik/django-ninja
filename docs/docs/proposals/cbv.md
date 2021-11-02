@@ -74,7 +74,7 @@ def complete(request, task_id: int):
 
 As you can see, these lines are getting repeated pretty often to check permission:
 
-```Python hl_lines="1 2 "
+```Python hl_lines="1 2"
 user_projects = request.user.project_set
 project = get_object_or_404(user_projects, id=project_id))
 ```
@@ -96,13 +96,11 @@ router = Router()
 
 @router.path('/project/{project_id}/tasks')
 class Tasks:
-
     def __init__(self, request, project_id=int):
         user_projects = request.user.project_set
         self.project = get_object_or_404(user_projects, id=project_id))
         self.tasks = self.project.task_set.all()
     
-
     @router.get('/', response=List[TaskOut])
     def task_list(self, request):
         return self.tasks
@@ -111,27 +109,25 @@ class Tasks:
     def details(self, request, task_id: int):
         return get_object_or_404(self.tasks, id=task_id)
 
-
     @router.post('/{task_id}/complete', response=TaskOut)
     def complete(self, request, task_id: int):
         task = get_object_or_404(self.tasks, id=task_id)
         task.completed = True
         task.save()
         return task
-
 ```
 
 All common initiation and permission checks are placed in the constructor:
-```Python hl_lines="5 6 7"
+
+```Python hl_lines="4 5 6"
 @router.path('/project/{project_id}/tasks')
 class Tasks:
-
     def __init__(self, request, project_id=int):
         user_projects = request.user.project_set
         self.project = get_object_or_404(user_projects, id=project_id))
         self.tasks = self.project.task_set.all()
-    
 ```
+
 This makes the main business operation focus only on tasks (exposed as the `self.tasks` attribute)
 
 You can use both `api` and `router` instances to support class paths.
@@ -148,6 +144,3 @@ Python doesn't support the `async` keyword for `__init__`, so to support async o
 ## Your thoughts/proposals
 
 Please give you thoughts/likes/dislikes about this proposal in the [github issue](https://github.com/vitalik/django-ninja/issues/15)
-
-
-
