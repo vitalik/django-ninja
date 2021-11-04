@@ -5,19 +5,18 @@ on:
   pull_request:
     types: [assigned, opened, synchronize, reopened]
 
-
 jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.6', '3.7', '3.8', '3.9']
-        django-version: ['<2.1', '<2.2', '<3.0', '<3.1', '<3.2', '<3.3']
-    
+        python-version: ['3.6', '3.7', '3.8', '3.9', '3.10']
+        django-version: ['<2.2', '<3.0', '<3.1', '<3.2', '<3.3']
+
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install core
@@ -26,13 +25,13 @@ jobs:
         run: pip install pytest pytest-asyncio pytest-django
       - name: Test
         run: pytest
+
   codestyle:
     runs-on: ubuntu-latest
-    
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v2
         with:
           python-version: 3.9
       - name: Install Flit
