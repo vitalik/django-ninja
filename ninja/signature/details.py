@@ -4,6 +4,7 @@ from collections import defaultdict, namedtuple
 from typing import Any, Callable, Dict, Generator, List, Tuple
 
 import pydantic
+from django.http import HttpRequest
 
 from ninja import UploadedFile, params
 from ninja.compatibility.util import get_origin as get_collection_origin
@@ -35,27 +36,24 @@ class ViewSignature:
         self.path = path
         self.path_params_names = get_path_param_names(path)
         self.docstring = inspect.cleandoc(view_func.__doc__ or "")
+        self.has_request = False
         self.has_kwargs = False
 
         self.params = []
-        for name, arg in self.signature.parameters.items():
-            if name == "request":
-                # TODO: maybe better assert that 1st param is request or check by type?
-                # maybe even have attribute like `has_request`
-                # so that users can ignore passing request if not needed
-                continue
-
+        for i, (name, arg) in enumerate(self.signature.parameters.items()):
             if arg.kind == arg.VAR_KEYWORD:
                 # Skipping **kwargs
                 self.has_kwargs = True
-                continue
 
-            if arg.kind == arg.VAR_POSITIONAL:
+            elif arg.kind == arg.VAR_POSITIONAL:
                 # Skipping *args
-                continue
+                if i == 0:
+                    self.has_request = True
 
-            func_param = self._get_param_type(name, arg)
-            self.params.append(func_param)
+            else:
+                func_param = self._get_param_type(name, arg)
+                if i != 0 or not self._check_if_request_param_present(arg):
+                    self.params.append(func_param)
 
         if hasattr(view_func, "_ninja_contribute_args"):
             # _ninja_contribute_args is a special attribute
@@ -69,6 +67,31 @@ class ViewSignature:
         self.models: TModels = self._create_models()
 
         self._validate_view_path_params()
+
+    def _check_if_request_param_present(self, arg: inspect.Parameter) -> bool:
+        """Check if first parameter has no default and (is named request or is typed HttpRequest)"""
+        annotation_present = arg.annotation != self.signature.empty
+        is_http_request = not hasattr(arg.annotation, "__origin__") and issubclass(
+            HttpRequest, arg.annotation
+        )
+
+        if annotation_present and is_http_request or arg.name == "request":
+            self.has_request = True
+            if arg.default != self.signature.empty:
+                raise ConfigError("'request' param cannot have a default")
+            if annotation_present and not is_http_request:
+                warnings.warn_explicit(
+                    UserWarning(
+                        f"'request' param type '{arg.annotation.__name__}' "
+                        "is not a subclass of django.http.HttpRequest"
+                    ),
+                    category=None,
+                    filename=inspect.getfile(self.view_func),
+                    lineno=inspect.getsourcelines(self.view_func)[1],
+                    source=None,
+                )
+
+        return self.has_request
 
     def _validate_view_path_params(self) -> None:
         """verify all path params are present in the path model fields"""

@@ -43,7 +43,7 @@ api = NinjaAPI()
 
 
 @api.get("/hello")
-def hello(request):
+def hello():
     return "Hello world"
 
 ```
@@ -107,3 +107,38 @@ If you need to handle multiple methods with a single function, you can use the `
 def mixed(request):
     ...
 ```
+
+## Passing the request object to the view
+
+Passing the request object to a view is optional.
+
+```python hl_lines="2"
+@api.get("/hello")
+def hello():
+    return "Hello world"
+```
+
+If passing in the request object is required it must be the first parameter.
+
+```python hl_lines="2"
+@api.get("/hello")
+def hello(request, user_name="World"):
+    return f"Hello {user_name}"
+```
+
+If the request object needs to be named something other than `request`, it must be typed
+as `django.http.HttpRequest` or one of its subclasses.
+
+
+```python hl_lines="4"
+from django.http import HttpRequest
+
+@api.get("/hello")
+def hello(a_param_not_named_request: HttpRequest, user_name="World"):
+    return f"Hello {user_name}"
+```
+
+!!! warning
+    Decorators may expect the request object to be passed into the view function.  If the
+    request is not present in decorated view's signature, the request will not be passed
+    to the view function, and may cause some hard to debug errors.
