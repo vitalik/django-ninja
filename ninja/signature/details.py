@@ -186,7 +186,6 @@ class ViewSignature:
         # _EMPTY = self.signature.empty
         annotation = arg.annotation
 
-        print(" !!!! ", self.signature, name, pos, annotation)
         if self._is_http_request_arg(pos, name, arg):
             annotation = HttpRequest
 
