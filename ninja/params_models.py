@@ -185,3 +185,12 @@ class _MultiPartBodyModel(BodyModel):
                 req.body = data.encode()
                 results[name] = get_request_data(req, api, path_params)
         return results
+
+
+class _RequestModel(ParamModel):
+    @classmethod
+    def get_request_data(
+        cls, request: HttpRequest, api: "NinjaAPI", path_params: DictStrAny
+    ) -> Optional[DictStrAny]:
+        varname = getattr(cls, "_single_attr", None)
+        return {varname: request}

@@ -36,24 +36,22 @@ class ViewSignature:
         self.path = path
         self.path_params_names = get_path_param_names(path)
         self.docstring = inspect.cleandoc(view_func.__doc__ or "")
-        self.has_request = False
         self.has_kwargs = False
 
         self.params = []
-        for i, (name, arg) in enumerate(self.signature.parameters.items()):
+        for pos, (name, arg) in enumerate(self.signature.parameters.items()):
+
             if arg.kind == arg.VAR_KEYWORD:
                 # Skipping **kwargs
                 self.has_kwargs = True
+                continue
 
-            elif arg.kind == arg.VAR_POSITIONAL:
+            if arg.kind == arg.VAR_POSITIONAL:
                 # Skipping *args
-                if i == 0:
-                    self.has_request = True
+                continue
 
-            else:
-                func_param = self._get_param_type(name, arg)
-                if i != 0 or not self._check_if_request_param_present(arg):
-                    self.params.append(func_param)
+            func_param = self._get_param_type(pos, name, arg)
+            self.params.append(func_param)
 
         if hasattr(view_func, "_ninja_contribute_args"):
             # _ninja_contribute_args is a special attribute
@@ -67,31 +65,6 @@ class ViewSignature:
         self.models: TModels = self._create_models()
 
         self._validate_view_path_params()
-
-    def _check_if_request_param_present(self, arg: inspect.Parameter) -> bool:
-        """Check if first parameter has no default and (is named request or is typed HttpRequest)"""
-        annotation_present = arg.annotation != self.signature.empty
-        is_http_request = not hasattr(arg.annotation, "__origin__") and issubclass(
-            HttpRequest, arg.annotation
-        )
-
-        if annotation_present and is_http_request or arg.name == "request":
-            self.has_request = True
-            if arg.default != self.signature.empty:
-                raise ConfigError("'request' param cannot have a default")
-            if annotation_present and not is_http_request:
-                warnings.warn_explicit(
-                    UserWarning(
-                        f"'request' param type '{arg.annotation.__name__}' "
-                        "is not a subclass of django.http.HttpRequest"
-                    ),
-                    category=None,
-                    filename=inspect.getfile(self.view_func),
-                    lineno=inspect.getsourcelines(self.view_func)[1],
-                    source=None,
-                )
-
-        return self.has_request
 
     def _validate_view_path_params(self) -> None:
         """verify all path params are present in the path model fields"""
@@ -132,11 +105,15 @@ class ViewSignature:
         result = []
         for param_cls, args in params_by_source_cls.items():
             cls_name: str = param_cls.__name__ + "Params"
+            base_cls = param_cls._model
             attrs = {i.name: i.source for i in args}
             attrs["_param_source"] = param_cls._param_source()
             attrs["_flatten_map_reverse"] = {}
 
-            if attrs["_param_source"] == "file":
+            if attrs["_param_source"] == "_request":
+                attrs["_single_attr"] = args[0].name
+
+            elif attrs["_param_source"] == "file":
                 pass
 
             elif attrs["_param_source"] in {
@@ -168,7 +145,6 @@ class ViewSignature:
                 args, attrs.get("_flatten_map", {})
             )
 
-            base_cls = param_cls._model
             model_cls = type(cls_name, (base_cls,), attrs)
             # TODO: https://pydantic-docs.helpmanual.io/usage/models/#dynamic-model-creation - check if anything special in create_model method that I did not use
             result.append(model_cls)
@@ -206,9 +182,13 @@ class ViewSignature:
             else:
                 yield field_name, name
 
-    def _get_param_type(self, name: str, arg: inspect.Parameter) -> FuncParam:
+    def _get_param_type(self, pos: int, name: str, arg: inspect.Parameter) -> FuncParam:
         # _EMPTY = self.signature.empty
         annotation = arg.annotation
+
+        print(" !!!! ", self.signature, name, pos, annotation)
+        if self._is_http_request_arg(pos, name, arg):
+            annotation = HttpRequest
 
         if annotation == self.signature.empty:
             if arg.default == self.signature.empty:
@@ -232,8 +212,15 @@ class ViewSignature:
                 default = arg.default == self.signature.empty and ... or arg.default
                 return FuncParam(name, name, File(default), annotation, is_collection)
 
+        param_source: params.Param
+
+        # 0) if request
+        if annotation == HttpRequest:
+            param_source = params._Request(...)
+            annotation = Any  # dropping http annotation as it will be just handeld by param model
+
         # 1) if type of the param is defined as one of the Param's subclasses - we just use that definition
-        if isinstance(arg.default, params.Param):
+        elif isinstance(arg.default, params.Param):
             param_source = arg.default
 
         # 2) if param name is a part of the path parameter
@@ -260,6 +247,20 @@ class ViewSignature:
         return FuncParam(
             name, param_source.alias or name, param_source, annotation, is_collection
         )
+
+    def _is_http_request_arg(self, pos: int, name: str, arg: inspect.Parameter) -> bool:
+        # argument is request if it's annotated with HttpRequest
+        # or it just blank "request" name without defaults and annotations
+        if arg.annotation == HttpRequest:
+            return True
+        if (
+            arg.annotation == self.signature.empty
+            and name == "request"
+            and pos == 0
+            and arg.default == self.signature.empty
+        ):
+            return True
+        return False
 
 
 def is_pydantic_model(cls: Any) -> bool:

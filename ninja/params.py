@@ -83,3 +83,7 @@ class File(Param):
 class _MultiPartBody(Param):
     _model = params_models._MultiPartBodyModel
     _param_source = Body._param_source
+
+
+class _Request(Param):
+    _model = params_models._RequestModel

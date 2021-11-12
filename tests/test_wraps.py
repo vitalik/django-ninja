@@ -31,9 +31,13 @@ def a_bad_test_wrapper(f):
 
 @router.get("/text")
 @a_good_test_wrapper
-def get_text(
-    request,
-):
+def get_text(request):
+    return "Hello World"
+
+
+@router.get("/text-no-request")
+@a_good_test_wrapper
+def get_text_no_request():
     return "Hello World"
 
 
@@ -58,6 +62,12 @@ def get_query_id(request, item_id, query: int):
 @router.get("/text-bad")
 @a_bad_test_wrapper
 def get_text_bad(request):
+    return "Hello World"
+
+
+@router.get("/text-bad-no-request")
+@a_bad_test_wrapper
+def get_text_bad_no_request():
     return "Hello World"
 
 
@@ -87,10 +97,12 @@ with mock.patch("ninja.signature.details.warnings.warn_explicit"):
     "path,expected_status,expected_response",
     [
         ("/text", 200, "Hello World"),
+        ("/text-no-request", 200, "Hello World"),
         ("/path/id", 200, "id"),
         ("/query?query=1", 200, "foo bar 1"),
         ("/path-query/id?query=2", 200, "foo bar id 2"),
-        ("/text-bad", 200, "Hello World"),  # no params so passes
+        ("/text-bad-no-request", 200, "Hello World"),  # no params so passes
+        ("/text-bad", 200, TypeError),
         ("/path-bad/id", None, TypeError),
         ("/query-bad?query=1", None, TypeError),
         ("/path-query-bad/id?query=2", None, TypeError),

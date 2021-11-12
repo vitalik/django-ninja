@@ -1,11 +1,9 @@
 from typing import List
-from unittest.mock import Mock
 
 import pytest
 from django.http import HttpRequest
 
-from ninja import NinjaAPI, Query, Router
-from ninja.errors import ConfigError
+from ninja import NinjaAPI, Query
 from ninja.testing import TestClient
 
 api = NinjaAPI()
@@ -18,8 +16,6 @@ def no_request():
 
 @api.post("/no-request-args")
 def no_request_args(*args):
-    assert isinstance(args[0], Mock)
-    assert args[0].COOKIES == {}
     return {"result": len(args)}
 
 
@@ -49,6 +45,12 @@ def not_named_request_typed_arg(not_named_request: HttpRequest, request):
     return {"result": request}
 
 
+@api.post("/not-named-request-typed-arg-2")
+def not_named_request_typed_arg2(arg, r: HttpRequest):
+    assert r.COOKIES == {}
+    return {"result": arg}
+
+
 @api.post("/no-request-arg-default")
 def no_request_arg_default(arg: int = 3):
     return {"result": arg}
@@ -69,37 +71,47 @@ def no_request_arg_collection(arg: List[int] = Query(...)):
     return {"result": arg}
 
 
+@api.post("/request-req-collection")
+def request_req_collection(request: List[int] = Query(...)):
+    return {"result": request}
+
+
+@api.post("/request-int")
+def request_int(request: int):
+    return {"result": request}
+
+
+@api.post("/request-body")
+def request_body(request: List[int] = []):
+    return {"result": request}
+
+
+@api.post("/request-default")
+def request_default(request=2):
+    return {"result": request}
+
+
 @pytest.mark.parametrize(
     "url, expected",
     (
         ("/no-request", {"result": None}),
-        ("/no-request-args", {"result": 1}),
+        ("/no-request-args", {"result": 0}),
         ("/request", {"result": None}),
         ("/request-args", {"result": None}),
         ("/request-arg-args?arg=1", {"result": "1"}),
         ("/not-named-request-typed-arg?request=2", {"result": "2"}),
+        ("/not-named-request-typed-arg-2?arg=3", {"result": "3"}),
         ("/no-request-arg-default", {"result": 3}),
         ("/no-request-arg-path/4/", {"result": "4"}),
         ("/no-request-arg-typed?arg=5", {"result": 5}),
         ("/no-request-arg-collection?arg=6&arg=7", {"result": [6, 7]}),
+        ("/request-req-collection?request=8&request=9", {"result": [8, 9]}),
+        ("/request-int?request=10", {"result": 10}),
+        ("/request-body", {"result": []}),
+        ("/request-default", {"result": 2}),
+        ("/request-default?request=1", {"result": 1}),
     ),
 )
 def test_request_param(url, expected):
     client = TestClient(api)
     assert client.post(url).json() == expected
-
-
-def test_request_param_problems():
-    test_router = Router()
-    with pytest.raises(ConfigError, match="'request' param cannot have a default"):
-
-        @test_router.get("/path")
-        def request_default(request=2):
-            pass
-
-    match = "'request' param type 'int' is not a subclass of django.http.HttpRequest"
-    with pytest.warns(UserWarning, match=match):
-
-        @test_router.get("/path")
-        def request_wrong_type(request: int):
-            pass

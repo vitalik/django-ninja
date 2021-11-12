@@ -91,8 +91,8 @@ class Operation:
         if error:
             return error
         try:
-            passed_request, values = self._get_values(request, kw)
-            result = self.view_func(*passed_request, **values)
+            values = self._get_values(request, kw)
+            result = self.view_func(**values)
             return self._result_to_response(request, result)
         except Exception as e:
             if isinstance(e, TypeError) and "required positional argument" in str(e):
@@ -194,9 +194,7 @@ class Operation:
         )["response"]
         return self.api.create_response(request, result, status=status)
 
-    def _get_values(
-        self, request: HttpRequest, path_params: Any
-    ) -> Tuple[Tuple, DictStrAny]:
+    def _get_values(self, request: HttpRequest, path_params: Any) -> DictStrAny:
         values, errors = {}, []
         for model in self.models:
             try:
@@ -212,10 +210,7 @@ class Operation:
                 errors.extend(items)
         if errors:
             raise ValidationError(errors)
-        if self.signature.has_request:
-            return (request,), values
-        else:
-            return (), values
+        return values
 
     def _create_response_model_multiple(
         self, response_param: DictStrAny
@@ -246,8 +241,8 @@ class AsyncOperation(Operation):
         if error:
             return error
         try:
-            passed_request, values = self._get_values(request, kw)
-            result = await self.view_func(*passed_request, **values)
+            values = self._get_values(request, kw)
+            result = await self.view_func(**values)
             return self._result_to_response(request, result)
         except Exception as e:
             return self.api.on_exception(request, e)

@@ -124,6 +124,9 @@ class OpenAPISchema(dict):
     def operation_parameters(self, operation: Operation) -> List[DictStrAny]:
         result = []
         for model in operation.models:
+            if model._param_source == "_request":
+                # Do not pass request params to OpenAPI schema
+                continue
             if model._param_source not in BODY_CONTENT_TYPES:
                 result.extend(self._extract_parameters(model))
         return result
