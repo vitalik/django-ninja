@@ -1,33 +1,31 @@
 import inspect
 from abc import ABC, abstractmethod
 from functools import wraps
-from typing import Any, Callable, Type
+from typing import Any, Callable, Optional, Tuple, Type
 
 from django.db.models import QuerySet
-from django.http import HttpRequest
 from django.utils.module_loading import import_string
 
 from ninja import Field, Query, Schema
 from ninja.conf import settings
 from ninja.constants import NOT_SET
-from ninja.errors import ConfigError
-from ninja.signature import has_kwargs
 from ninja.types import DictStrAny
 
 
 class PaginationBase(ABC):
+    name_param: str = "pagination"
+    pass_parameter: Optional[str] = None
+
     class Input(Schema):
         pass
 
     InputSource = Query(...)
 
-    def __init__(self, **kwargs: DictStrAny) -> None:
-        pass
+    def __init__(self, pass_parameter: Optional[str] = None, **kwargs: Any) -> None:
+        self.pass_parameter = pass_parameter or self.pass_parameter
 
     @abstractmethod
-    def paginate_queryset(
-        self, items: QuerySet, request: HttpRequest, **params: DictStrAny
-    ) -> QuerySet:
+    def paginate_queryset(self, items: QuerySet, **params: DictStrAny) -> QuerySet:
         pass  # pragma: no cover
 
 
@@ -36,12 +34,10 @@ class LimitOffsetPagination(PaginationBase):
         limit: int = Field(settings.PAGINATION_PER_PAGE, gt=0)
         offset: int = Field(0, gt=-1)
 
-    def paginate_queryset(
-        self, items: QuerySet, request: HttpRequest, **params: DictStrAny
-    ) -> QuerySet:
+    def paginate_queryset(self, items: QuerySet, **params: DictStrAny) -> QuerySet:
         offset: int
         limit: int
-        limit, offset = params["pagination"].limit, params["pagination"].offset  # type: ignore
+        limit, offset = params[self.name_param].limit, params[self.name_param].offset  # type: ignore
 
         return items[offset : offset + limit]  # noqa: E203
 
@@ -50,13 +46,14 @@ class PageNumberPagination(PaginationBase):
     class Input(Schema):
         page: int = Field(1, gt=0)
 
-    def __init__(self, page_size: int = settings.PAGINATION_PER_PAGE) -> None:
+    def __init__(
+        self, page_size: int = settings.PAGINATION_PER_PAGE, **kwargs: Any
+    ) -> None:
         self.page_size = page_size
+        super().__init__(**kwargs)
 
-    def paginate_queryset(
-        self, items: QuerySet, request: HttpRequest, **params: DictStrAny
-    ) -> QuerySet:
-        page: int = params["pagination"].page  # type: ignore
+    def paginate_queryset(self, items: QuerySet, **params: DictStrAny) -> QuerySet:
+        page: int = params[self.name_param].page  # type: ignore
         offset = (page - 1) * self.page_size
         return items[offset : offset + self.page_size]  # noqa: E203
 
@@ -85,23 +82,24 @@ def paginate(
 def _inject_pagination(
     func: Callable,
     paginator_class: Type[PaginationBase],
-    **paginator_params: DictStrAny,
+    **paginator_params: Any,
 ) -> Callable:
-    if not has_kwargs(func):
-        raise ConfigError(
-            f"function {func.__name__} must have **kwargs argument to be used with pagination"
-        )
-
     paginator: PaginationBase = paginator_class(**paginator_params)
 
     @wraps(func)
-    def view_with_pagination(request: HttpRequest, **kw: DictStrAny) -> Any:
-        items = func(request, **kw)
-        return paginator.paginate_queryset(items, request, **kw)
+    def view_with_pagination(*args: Tuple[Any], **kwargs: DictStrAny) -> Any:
+        paginate_param = kwargs.pop(paginator.name_param)
+        if paginator.pass_parameter:
+            kwargs[paginator.pass_parameter] = paginate_param
+        items = func(*args, **kwargs)
+        return paginator.paginate_queryset(
+            items,
+            **{paginator.name_param: paginate_param, **kwargs},
+        )
 
     view_with_pagination._ninja_contribute_args = [  # type: ignore
         (
-            "pagination",
+            paginator.name_param,
             paginator.Input,
             paginator.InputSource,
         ),

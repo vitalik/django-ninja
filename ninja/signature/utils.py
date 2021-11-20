@@ -15,7 +15,6 @@ __all__ = [
     "make_forwardref",
     "get_path_param_names",
     "is_async",
-    "has_kwargs",
 ]
 
 
@@ -55,15 +54,6 @@ def get_path_param_names(path: str) -> Set[str]:
 
 def is_async(callable: Callable) -> bool:
     return asyncio.iscoroutinefunction(callable)
-
-
-def has_kwargs(call: Callable) -> bool:
-    "Returns True if callable has **kwargs"
-    signature = inspect.signature(call)
-    for param in signature.parameters.values():
-        if param.kind == param.VAR_KEYWORD:
-            return True
-    return False
 
 
 class NinjaUUIDConverter:
