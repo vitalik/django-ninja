@@ -1,13 +1,14 @@
-from io import StringIO
-import pytest
 import json
+from io import StringIO
 
-from django.core.management.base import CommandError
+import pytest
+from demo_project.demo.urls import api_v1
 from django.core.management import call_command
-from ninja.management.commands import export_openapi_schema
-from ninja import Field, NinjaAPI, Schema
-from ninja.responses import NinjaJSONEncoder
+from django.core.management.base import CommandError
 
+from ninja import NinjaAPI, Schema
+from ninja.management.commands import export_openapi_schema
+from ninja.responses import NinjaJSONEncoder
 
 api = NinjaAPI()
 
@@ -68,19 +69,6 @@ def test_export_openapi_schema_file(tmp_path):
     assert output_file.read_text() == schema
 
 
-def test_path_depth_less_than_two():
-    with pytest.raises(CommandError) as e:
-        call_command(
-            export_openapi_schema.Command(),
-            api="one_depth_api",
-        )
-
-    assert (
-        str(e.value)
-        == "Module should contains at least package and api instance name attribute!"
-    )
-
-
 def test_no_module():
     with pytest.raises(CommandError) as e:
         call_command(
@@ -88,7 +76,7 @@ def test_no_module():
             api="fake_module_123.api",
         )
 
-    assert str(e.value) == "Module fake_module_123 not found!"
+    assert str(e.value) == "Module or attribute for fake_module_123.api not found!"
 
 
 def test_no_app_in_module():
@@ -100,7 +88,7 @@ def test_no_app_in_module():
 
     assert (
         str(e.value)
-        == "Module 'tests.test_export_openapi_schema' has no attribute 'api_123'"
+        == "Module or attribute for tests.test_export_openapi_schema.api_123 not found!"
     )
 
 
@@ -114,6 +102,16 @@ def test_non_ninja_api_app():
         )
 
     assert str(e.value) == f"{module_path} is not instance of NinjaAPI!"
+
+
+def test_export_with_default_options():
+    out = StringIO()
+
+    call_command(export_openapi_schema.Command(), stdout=out)
+
+    schema = json.dumps(api_v1.get_openapi_schema(), cls=NinjaJSONEncoder) + "\n"
+
+    assert out.getvalue() == schema
 
 
 # TODO: YML parser and schema export?
