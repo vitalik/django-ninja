@@ -134,7 +134,7 @@ Here we used the `payload.dict` method to set all object attributes:
 
 `for attr, value in payload.dict().items()`
 
-You can also do this more implicit:
+You can also do this more explicit:
 
 ```Python
 employee.first_name = payload.first_name
