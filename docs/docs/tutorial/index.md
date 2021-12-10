@@ -99,11 +99,21 @@ def patch_operation(request):
     ...
 ```
 
-If you need to handle multiple methods with a single function, you can use the `api_operation` method:
+If you need to handle multiple methods with a single function for a given path,
+you can use the `api_operation` method:
 
 
 ```Python hl_lines="1"
-@api.api_operation(["POST", "PATCH"])
+@api.api_operation(["POST", "PATCH"], "/path")
+def mixed(request):
+    ...
+```
+
+This feature can also be used to implement other HTTP methods that don't have 
+corresponding django-ninja methods, such as `HEAD` or `OPTIONS`.
+
+```Python hl_lines="1"
+@api.api_operation(["HEAD", "OPTIONS"], "/path")
 def mixed(request):
     ...
 ```
