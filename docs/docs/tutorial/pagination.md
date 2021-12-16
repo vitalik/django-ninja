@@ -73,11 +73,11 @@ this class has one parameter `page` and outputs 100 items per page by default  (
 
 Page numbering start with 1
 
-you can also set custom per_page value individually per view:
+you can also set custom page_size value individually per view:
 
 ```Python hl_lines="2"
 @api.get("/users")
-@paginate(PageNumberPagination, per_page=50)
+@paginate(PageNumberPagination, page_size=50)
 def list_users(...
 ```
 
