@@ -6,7 +6,7 @@ from django.db.models.fields.files import FieldFile
 from pydantic import BaseModel, Field, validator
 from pydantic.utils import GetterDict
 
-pydantic_version = list(map(int, pydantic.VERSION.split(".")))[:2]
+pydantic_version = list(map(int, pydantic.VERSION.split(".")[:2]))
 assert pydantic_version >= [1, 6], "Pydantic 1.6+ required"
 
 __all__ = ["BaseModel", "Field", "validator", "DjangoGetter", "Schema"]
