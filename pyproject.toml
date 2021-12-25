@@ -59,7 +59,7 @@ test = [
     "black",
     "isort",
     "flake8",
-    "mypy",
+    "mypy==0.930",
     "django-stubs",
 ]
 doc = [
