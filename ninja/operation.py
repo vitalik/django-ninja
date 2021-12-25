@@ -209,7 +209,7 @@ class Operation:
                     items.append(i)
                 errors.extend(items)
         if errors:
-            raise ValidationError(errors)  # type: ignore
+            raise ValidationError(errors)
         return values
 
     def _create_response_model_multiple(
