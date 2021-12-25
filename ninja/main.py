@@ -67,7 +67,7 @@ class NinjaAPI:
 
         self.auth: Union[Sequence[Callable], Type[NOT_SET]] = NOT_SET
         if auth is not None and auth is not NOT_SET:
-            self.auth = isinstance(auth, Sequence) and auth or [auth]  # type: ignore
+            self.auth = isinstance(auth, Sequence) and auth or [auth]
 
         self._routers: List[Tuple[str, Router]] = []
         self.default_router = Router()
@@ -300,9 +300,9 @@ class NinjaAPI:
             router.tags = tags
 
         if parent_router:
-            parent_prefix = next(  # pragma: no cover
+            parent_prefix = next(
                 (path for path, r in self._routers if r is parent_router), None
-            )
+            )  # pragma: no cover
             assert parent_prefix is not None
             prefix = normalize_path("/".join((parent_prefix, prefix))).lstrip("/")
 

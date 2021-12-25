@@ -117,7 +117,7 @@ class Operation:
         self, auth: Optional[Union[Sequence[Callable], Callable, object]]
     ) -> None:
         if auth is not None and auth is not NOT_SET:  # TODO: can it even happen ?
-            self.auth_callbacks = isinstance(auth, Sequence) and auth or [auth]  # type: ignore
+            self.auth_callbacks = isinstance(auth, Sequence) and auth or [auth]
 
     def _run_checks(self, request: HttpRequest) -> Optional[HttpResponse]:
         "Runs security checks for each operation"
@@ -209,7 +209,7 @@ class Operation:
                     items.append(i)
                 errors.extend(items)
         if errors:
-            raise ValidationError(errors)
+            raise ValidationError(errors)  # type: ignore
         return values
 
     def _create_response_model_multiple(

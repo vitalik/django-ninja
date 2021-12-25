@@ -109,7 +109,7 @@ class OpenAPISchema(dict):
             result["tags"] = operation.tags
 
         if operation.deprecated:
-            result["deprecated"] = operation.deprecated
+            result["deprecated"] = operation.deprecated  # type: ignore
 
         body = self.request_body(operation)
         if body:
