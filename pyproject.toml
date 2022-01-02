@@ -41,7 +41,7 @@ classifiers = [
 
 requires = [
     "Django >=2.2",
-    "pydantic >=1.6,<1.9"
+    "pydantic >=1.6,<2.0.0"
 ]
 description-file = "README.md"
 requires-python = ">=3.6"
