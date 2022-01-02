@@ -95,3 +95,29 @@ def test_config():
         class CategorySchema(ModelSchema):
             class Config:
                 model = Category
+
+
+def test_model_fields_all():
+    class SomeModel(models.Model):
+        field1 = models.CharField()
+        field2 = models.CharField(blank=True, null=True)
+
+        class Meta:
+            app_label = "tests"
+
+    class SomeSchema(ModelSchema):
+        class Config:
+            model = SomeModel
+            model_fields = "__all__"
+
+    print(SomeSchema.schema())
+    assert SomeSchema.schema() == {
+        "title": "SomeSchema",
+        "type": "object",
+        "properties": {
+            "id": {"title": "Id", "type": "integer"},
+            "field1": {"title": "Field1", "type": "string"},
+            "field2": {"title": "Field2", "type": "string"},
+        },
+        "required": ["field1"],
+    }

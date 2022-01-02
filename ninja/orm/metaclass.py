@@ -38,6 +38,10 @@ class ModelSchemaMetaclass(ModelMetaclass):
                         " or the 'model_exclude' attribute is prohibited"
                     )
 
+                if fields == "__all__":
+                    fields = None
+                    # ^ when None is passed to create_schema - all fields are selected
+
                 custom_fields = []
                 annotations = namespace.get("__annotations__", {})
                 for attr_name, type in annotations.items():
