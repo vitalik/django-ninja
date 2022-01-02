@@ -28,6 +28,23 @@ class UserSchema(ModelSchema):
 #     last_name: str
 ```
 
+### Using ALL model fields
+
+To use all fields from a model - you can pass `__all__` to `model_fields`:
+
+```Python hl_lines="4"
+class UserSchema(ModelSchema):
+    class Config:
+        model = User
+        model_fields = "__all__"
+```
+!!! Warning
+    Using __all__ is not recommended.
+    <br>
+    This can lead to accidental unwanted data exposure (like hashed password, in the above example).
+    <br>
+    General advice - use `model_fields` to explicitly define list of fields that you want to be visible in API.
+
 ### Excluding model fields
 
 To use all fields **except** a few, you can use `model_exclude` configuration:
