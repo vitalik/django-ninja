@@ -34,6 +34,7 @@ classifiers = [
     "Framework :: Django :: 3.0",
     "Framework :: Django :: 3.1",
     "Framework :: Django :: 3.2",
+    "Framework :: Django :: 4.0",
     "Framework :: AsyncIO",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Internet :: WWW/HTTP",
@@ -41,7 +42,7 @@ classifiers = [
 
 requires = [
     "Django >=2.2",
-    "pydantic >=1.6,<1.9"
+    "pydantic >=1.6,<2.0.0"
 ]
 description-file = "README.md"
 requires-python = ">=3.6"
