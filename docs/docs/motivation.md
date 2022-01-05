@@ -44,9 +44,13 @@ def read_user(
 
 3) Since the word `model` in Django is "reserved" for use by the ORM, it becomes very confusing when you mix the Django ORM with Pydantic/FastAPI model naming conventions. 
 
-### Presenting: Django Ninja
+### Django Ninja
 
 Django Ninja addresses all those issues, and integrates very well with Django (ORM, urls, views, auth and more)
+
+Working at [Code-on a Django webdesign webedevelopment studio](https://code-on.be/) I get all sorts of challenges and to solve these I started Django-Ninja in 2020.
+
+Note: **Django Ninja is a production ready project** - my estimation is at this time already 100+ companies using it in production and 500 new developers joining every month.
 
 #### Main Features
 
@@ -82,6 +86,6 @@ def tasks_details(request):
     task = Task.objects.first()
     return task
 ```
-3) Soon you should be able to [create Schema's from Django Models](/proposals/models/).
+3) [Create Schema's from Django Models](/tutorial/django-pydantic/).
 
 4) Instead of dependency arguments, **Django Ninja** uses `request` instance attributes (in the same way as regular Django views) - more detail at [Authentication](/tutorial/authentication/).

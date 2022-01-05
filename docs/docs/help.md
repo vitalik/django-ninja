@@ -26,3 +26,4 @@ Do not hesitate.  Go to <a href="https://github.com/vitalik/django-ninja/issues"
 
 Join the chat at our <a href="https://discord.gg/dgE4SNUDTB" target="_blank">Discord</a> server.
 
+[Code-on the webdesign and web development company](https://code-on.be/) gives commercial consulting for Django-Ninja. If you are looking for support please contact Code-on and we will be in touch with you soon.
