@@ -123,8 +123,12 @@ class NinjaClientBase:
             request.POST = data
         else:
             request.POST = QueryDict(mutable=True)
-            for k, v in data.items():
-                request.POST[k] = v
+
+            if isinstance(data, (str, bytes)):
+                request_params['body'] = data
+            elif data:
+                for k, v in data.items():
+                    request.POST[k] = v
 
         if "?" in path:
             request.GET = QueryDict(path.split("?")[1])

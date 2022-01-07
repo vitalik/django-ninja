@@ -78,3 +78,12 @@ def test_schema_as_data():
         client.post("/test", json=schema_instance)
         request = call.call_args[0][1]
         assert ClientTestSchema.parse_raw(request.body).json() == schema_instance.json()
+
+
+def test_json_as_body():
+    schema_instance = ClientTestSchema(time=timezone.now().replace(microsecond=0))
+
+    with mock.patch.object(client, "_call") as call:
+        client.post("/test", data=schema_instance.json(), content_type='application/json')
+        request = call.call_args[0][1]
+        assert ClientTestSchema.parse_raw(request.body).json() == schema_instance.json()
