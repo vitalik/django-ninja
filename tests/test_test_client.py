@@ -1,9 +1,12 @@
+from datetime import datetime
 from http import HTTPStatus
 from unittest import mock
 
 import pytest
+from django.utils import timezone
 
 from ninja import Router
+from ninja.schema import Schema
 from ninja.testing import TestClient
 
 router = Router()
@@ -61,3 +64,26 @@ def test_django_2_2_plus_headers(version, has_headers):
             request = call.call_args[0][1]
             # for Django >= 2.2 we apply a HttpHeaders instance to .headers
             assert isinstance(request.headers, mock.Mock) != has_headers
+
+
+class ClientTestSchema(Schema):
+
+    time: datetime
+
+
+def test_schema_as_data():
+    schema_instance = ClientTestSchema(time=timezone.now().replace(microsecond=0))
+
+    with mock.patch.object(client, "_call") as call:
+        client.post("/test", json=schema_instance)
+        request = call.call_args[0][1]
+        assert ClientTestSchema.parse_raw(request.body).json() == schema_instance.json()
+
+
+def test_json_as_body():
+    schema_instance = ClientTestSchema(time=timezone.now().replace(microsecond=0))
+
+    with mock.patch.object(client, "_call") as call:
+        client.post("/test", data=schema_instance.json(), content_type='application/json')
+        request = call.call_args[0][1]
+        assert ClientTestSchema.parse_raw(request.body).json() == schema_instance.json()

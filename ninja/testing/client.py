@@ -7,7 +7,7 @@ import django
 from django.http import QueryDict, StreamingHttpResponse
 
 from ninja import NinjaAPI, Router
-from ninja.responses import Response as HttpResponse
+from ninja.responses import Response as HttpResponse, NinjaJSONEncoder
 
 
 def build_absolute_uri(location: Optional[str] = None) -> str:
@@ -61,7 +61,7 @@ class NinjaClientBase:
         **request_params: Any,
     ) -> "NinjaResponse":
         if json is not None:
-            request_params["body"] = json_dumps(json)
+            request_params["body"] = json_dumps(json, cls=NinjaJSONEncoder)
         func, request, kwargs = self._resolve(method, path, data, request_params)
         return self._call(func, request, kwargs)  # type: ignore
 
@@ -123,8 +123,12 @@ class NinjaClientBase:
             request.POST = data
         else:
             request.POST = QueryDict(mutable=True)
-            for k, v in data.items():
-                request.POST[k] = v
+
+            if isinstance(data, (str, bytes)):
+                request_params['body'] = data
+            elif data:
+                for k, v in data.items():
+                    request.POST[k] = v
 
         if "?" in path:
             request.GET = QueryDict(path.split("?")[1])
