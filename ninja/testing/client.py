@@ -7,7 +7,7 @@ import django
 from django.http import QueryDict, StreamingHttpResponse
 
 from ninja import NinjaAPI, Router
-from ninja.responses import Response as HttpResponse, NinjaJSONEncoder
+from ninja.responses import NinjaJSONEncoder, Response as HttpResponse
 
 
 def build_absolute_uri(location: Optional[str] = None) -> str:
