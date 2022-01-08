@@ -125,7 +125,7 @@ class NinjaClientBase:
             request.POST = QueryDict(mutable=True)
 
             if isinstance(data, (str, bytes)):
-                request_params['body'] = data
+                request_params["body"] = data
             elif data:
                 for k, v in data.items():
                     request.POST[k] = v
