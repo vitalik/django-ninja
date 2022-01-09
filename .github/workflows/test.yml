@@ -23,3 +23,5 @@ jobs:
         run: pytest --cov=ninja --cov-report=xml tests
       - name: Coverage
         uses: codecov/codecov-action@v2.1.0
+      - name: Docs update
+        run: git push origin master:docs
