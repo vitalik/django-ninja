@@ -3,10 +3,10 @@ site_description: Django Ninja - Django REST framework with high performance, ea
 site_url: https://django-ninja.rest-framework.com
 repo_name: vitalik/django-ninja
 repo_url: https://github.com/vitalik/django-ninja
-edit_uri: ''
+edit_uri: ""
 google_analytics:
-- UA-170474207-1
-- auto
+  - UA-170474207-1
+  - auto
 theme:
   name: material
   palette:
@@ -17,44 +17,45 @@ theme:
   icon:
     repo: fontawesome/brands/github-alt
 nav:
-- Intro: index.md
-- motivation.md
-- Tutorial / Reference:
-  - tutorial/index.md
-  - tutorial/path-params.md
-  - tutorial/query-params.md
-  - tutorial/body.md
-  - tutorial/form-params.md
-  - tutorial/file-params.md
-  - tutorial/response-schema.md
-  - tutorial/crud.md
-  - tutorial/django-pydantic.md
-  - Advanced Schema:
-    - tutorial/django-pydantic-create-schema.md
-    - tutorial/config-pydantic.md
-  - tutorial/authentication.md
-  - tutorial/routers.md
-  - tutorial/operation_params.md
-  - tutorial/versioning.md
-  - tutorial/request-parsers.md
-  - tutorial/response-renderers.md
-  - tutorial/errors.md
-  - tutorial/csrf.md
-- async-support.md
-- video.md
-- Enhancement Proposals:
-  - Intro: proposals/index.md
-  - proposals/cbv.md
-  - proposals/v1.md
-- help.md
-- releases.md
+  - Intro: index.md
+  - motivation.md
+  - Tutorial / Reference:
+      - tutorial/index.md
+      - tutorial/path-params.md
+      - tutorial/query-params.md
+      - tutorial/body.md
+      - tutorial/form-params.md
+      - tutorial/file-params.md
+      - tutorial/response-schema.md
+      - tutorial/crud.md
+      - tutorial/django-pydantic.md
+      - Advanced Schema:
+          - tutorial/django-pydantic-create-schema.md
+          - tutorial/config-pydantic.md
+      - tutorial/authentication.md
+      - tutorial/routers.md
+      - tutorial/urls.md
+      - tutorial/operation_params.md
+      - tutorial/versioning.md
+      - tutorial/request-parsers.md
+      - tutorial/response-renderers.md
+      - tutorial/errors.md
+      - tutorial/csrf.md
+  - async-support.md
+  - video.md
+  - Enhancement Proposals:
+      - Intro: proposals/index.md
+      - proposals/cbv.md
+      - proposals/v1.md
+  - help.md
+  - releases.md
 markdown_extensions:
-- markdown_include.include
-- markdown.extensions.codehilite:
-    guess_lang: false
-# Uncomment these 2 lines during development to more easily add highlights
-#- pymdownx.highlight:
-#    linenums: true
-- codehilite
-- admonition
-- pymdownx.superfences
+  - markdown_include.include
+  - markdown.extensions.codehilite:
+      guess_lang: false
+  # Uncomment these 2 lines during development to more easily add highlights
+  #- pymdownx.highlight:
+  #    linenums: true
+  - codehilite
+  - admonition
+  - pymdownx.superfences
