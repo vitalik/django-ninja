@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from unittest.mock import Mock
 
 from django.db.models import Manager, QuerySet
@@ -34,11 +34,16 @@ class Tag:
         self.title = title
 
 
-# mocking some user:
+# mocking some users:
+class Boss:
+    name = "Jane Jackson"
+
+
 class User:
-    name = "John"
+    name = "John Smith"
     group_set = FakeManager([1, 2, 3])
     avatar = ImageFieldFile(None, Mock(), name=None)
+    boss = Boss()
 
     @property
     def tags(self):
@@ -57,11 +62,23 @@ class UserSchema(Schema):
     avatar: str = None
 
 
+class UserWithBossSchema(UserSchema):
+    boss: Optional[str] = Field(None, alias="boss.name")
+
+
+class UserWithInitialsSchema(UserSchema):
+    initials: str
+
+    @staticmethod
+    def resolve_initials(obj):
+        return "".join(n[:1] for n in obj.name.split())
+
+
 def test_schema():
     user = User()
     schema = UserSchema.from_orm(user)
     assert schema.dict() == {
-        "name": "John",
+        "name": "John Smith",
         "groups": [1, 2, 3],
         "tags": [{"id": "1", "title": "foo"}, {"id": "2", "title": "bar"}],
         "avatar": None,
@@ -75,8 +92,43 @@ def test_schema_with_image():
     user.avatar = ImageFieldFile(None, field, name="smile.jpg")
     schema = UserSchema.from_orm(user)
     assert schema.dict() == {
-        "name": "John",
+        "name": "John Smith",
         "groups": [1, 2, 3],
         "tags": [{"id": "1", "title": "foo"}, {"id": "2", "title": "bar"}],
         "avatar": "/smile.jpg",
+    }
+
+
+def test_with_boss_schema():
+    user = User()
+    schema = UserWithBossSchema.from_orm(user)
+    assert schema.dict() == {
+        "name": "John Smith",
+        "boss": "Jane Jackson",
+        "groups": [1, 2, 3],
+        "tags": [{"id": "1", "title": "foo"}, {"id": "2", "title": "bar"}],
+        "avatar": None,
+    }
+
+    user_without_boss = User()
+    user_without_boss.boss = None
+    schema = UserWithBossSchema.from_orm(user_without_boss)
+    assert schema.dict() == {
+        "name": "John Smith",
+        "boss": None,
+        "groups": [1, 2, 3],
+        "tags": [{"id": "1", "title": "foo"}, {"id": "2", "title": "bar"}],
+        "avatar": None,
+    }
+
+
+def test_with_initials_schema():
+    user = User()
+    schema = UserWithInitialsSchema.from_orm(user)
+    assert schema.dict() == {
+        "name": "John Smith",
+        "initials": "JS",
+        "groups": [1, 2, 3],
+        "tags": [{"id": "1", "title": "foo"}, {"id": "2", "title": "bar"}],
+        "avatar": None,
     }

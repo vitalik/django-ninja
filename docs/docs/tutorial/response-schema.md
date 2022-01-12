@@ -90,7 +90,7 @@ class TaskSchema(Schema):
 
 @api.get("/tasks", response=List[TaskSchema])
 def tasks(request):
-    queryset = Task.objects.all()
+    queryset = Task.objects.select_related("owner")
     return list(queryset)
 ```
 
@@ -116,6 +116,49 @@ If you execute this operation, you should get a response like this:
     },
 ]
 ```
+
+
+## Aliases
+
+Instead of a nested response, you may want to just flatten the response output.
+The Ninja `Schema` object extends Pydantic's `Field(..., alias="")` format to
+work with dotted responses.
+
+Using the models from above, let's make a schema that just includes the task
+owner's first name inline, and also uses `completed` rather than `is_completed`:
+
+```Python hl_lines="1 7-9"
+from ninja import Field, Schema
+
+
+class TaskSchema(Schema):
+    id: int
+    title: str
+    # The first Field param is the default, use ... for required fields.
+    completed: bool = Field(..., alias="is_completed)
+    owner_first_name: str = Field(None, alias="owner.first_name")
+```
+
+
+## Resolvers
+
+You can also create calculated fields via resolve methods based on the field
+name.
+
+```Python hl_lines="5 7-11" 
+class TaskSchema(Schema):
+    id: int
+    title: str
+    is_completed: bool
+    owner: Optional[str]
+
+    @staticmethod
+    def resolve_owner(obj):
+        if not obj.owner:
+            return
+        return f"{obj.owner.first_name} {obj.owner.last_name}"
+```
+
 
 ## Returning querysets
 
