@@ -19,7 +19,7 @@
  **Key features:**
 
   - **Easy**: Designed to be easy to use and intuitive.
-  - **FAST execution**: Very high performance thanks to **<a href="https://pydantic-docs.helpmanual.io" target="_blank">Pydantic</a>** and **<a href="/async-support/">async support</a>**.
+  - **FAST execution**: Very high performance thanks to **<a href="https://pydantic-docs.helpmanual.io" target="_blank">Pydantic</a>** and **<a href="/docs/docs/async-support.md">async support</a>**.
   - **Fast to code**: Type hints and automatic docs lets you focus only on business logic.
   - **Standards-based**: Based on the open standards for APIs: **OpenAPI** (previously known as Swagger) and **JSON Schema**.
   - **Django friendly**: (obviously) has good integration with the Django core and ORM.
