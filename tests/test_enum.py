@@ -88,6 +88,7 @@ def test_schema():
     assert room_param == {
         "in": "query",
         "name": "room",
+        "description": "An enumeration.",
         "required": True,
         "schema": {
             "title": "RoomEnum",
