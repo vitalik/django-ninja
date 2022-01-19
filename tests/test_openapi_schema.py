@@ -544,6 +544,7 @@ def test_schema_title_description(schema):
         {
             "in": "query",
             "name": "param2",
+            "description": "param 2 desc",
             "required": False,
             "schema": {
                 "default": "A Default",

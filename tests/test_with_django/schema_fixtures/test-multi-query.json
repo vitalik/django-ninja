@@ -25,6 +25,7 @@
       {
         "in": "query",
         "name": "foo4",
+        "description": "Foo4 Desc",
         "schema": {
           "title": "Foo4 Title",
           "description": "Foo4 Desc",
@@ -65,6 +66,7 @@
       {
         "in": "query",
         "name": "foo2",
+        "description": "Foo2 Desc",
         "schema": {
           "title": "Foo2 Title",
           "description": "Foo2 Desc",
@@ -85,6 +87,7 @@
       {
         "in": "query",
         "name": "foo3",
+        "description": "Foo3 Desc",
         "schema": {
           "title": "Foo3 Title",
           "description": "Foo3 Desc",

@@ -151,6 +151,11 @@ class OpenAPISchema(dict):
                     "schema": p_schema,
                     "required": p_required,
                 }
+
+                # copy description from schema description to param description
+                if "description" in p_schema:
+                    param["description"] = p_schema["description"]
+
                 result.append(param)
 
         return result
