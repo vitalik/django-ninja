@@ -45,9 +45,12 @@ class DjangoGetter(GetterDict):
             item = resolve_func(self._obj)
         else:
             try:
-                item = attrgetter(key)(self._obj)
-            except AttributeError as e:
-                raise KeyError(key) from e
+                item = getattr(self._obj, key)
+            except AttributeError:
+                try:
+                    item = attrgetter(key)(self._obj)
+                except AttributeError as e:
+                    raise KeyError(key) from e
         return self.format_result(item)
 
     def get(self, key: Any, default: Any = None) -> Any:
