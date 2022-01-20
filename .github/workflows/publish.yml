@@ -32,4 +32,5 @@ jobs:
         with:
           fetch-depth: 0
       - name: Docs update
-        run: git push origin master:docs
+        # run: git push origin master:docs
+        run: git branch -a
