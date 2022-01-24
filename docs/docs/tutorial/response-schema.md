@@ -145,18 +145,28 @@ class TaskSchema(Schema):
 You can also create calculated fields via resolve methods based on the field
 name.
 
-```Python hl_lines="5 7-11" 
+The method must accept a single argument, which will be the object the schema
+is resolving against.
+
+When creating a resolver as a standard method, `self` gives you access to other
+validated and formatted attributes in the schema.
+
+```Python hl_lines="5 7-11"
 class TaskSchema(Schema):
     id: int
     title: str
     is_completed: bool
     owner: Optional[str]
+    lower_title: str
 
     @staticmethod
     def resolve_owner(obj):
         if not obj.owner:
             return
         return f"{obj.owner.first_name} {obj.owner.last_name}"
+
+    def resolve_lower_title(self, obj):
+        return self.title.lower()
 ```
 
 

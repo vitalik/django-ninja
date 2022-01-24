@@ -10,15 +10,19 @@ dotted attributes and resolver methods. For example::
     class UserSchema(User):
         name: str
         initials: str
-        boss: str = Field(None, alias="boss.name")
+        boss: str = Field(None, alias="boss.first_name")
 
         @staticmethod
-        def resolve_initials(obj):
-            return "".join(n[:1] for n in obj.name.split())
+        def resolve_name(obj):
+            return f"{obj.first_name} {obj.last_name}"
+
+        def resolve_initials(self, obj):
+            return "".join(n[:1] for n in self.name.split())
 
 """
+from inspect import getattr_static
 from operator import attrgetter
-from typing import Any, Type
+from typing import Any, Type, TypeVar
 
 import pydantic
 from django.db.models import Manager, QuerySet
@@ -31,18 +35,46 @@ assert pydantic_version >= [1, 6], "Pydantic 1.6+ required"
 
 __all__ = ["BaseModel", "Field", "validator", "DjangoGetter", "Schema"]
 
+S = TypeVar("S", bound="Schema")
+
 
 class DjangoGetter(GetterDict):
-    __slots__ = ("_obj", "_cls")
+    __slots__ = ("_obj", "_schema_cls")
 
-    def __init__(self, obj: Any, cls: "Type[Schema]" = None):
+    def __init__(self, obj: Any, schema_cls: "Type[Schema]" = None):
         self._obj = obj
-        self._cls = cls
+        self._schema_cls = schema_cls
+
+    def _fake_instance(self) -> "Schema":
+        """
+        Generate a partial schema instance that can be used as the ``self``
+        attribute of resolver functions.
+        """
+        getter_self = self
+
+        class PartialSchema(Schema):
+            def __getattr__(self, key: str) -> Any:
+                value = getter_self[key]
+                if getter_self._schema_cls:
+                    field = getter_self._schema_cls.__fields__[key]
+                    value = field.validate(value, values={}, loc=key, cls=None)[0]
+                return value
+
+        return PartialSchema()
 
     def __getitem__(self, key: str) -> Any:
-        resolve_func = getattr(self._cls, f"resolve_{key}", None) if self._cls else None
-        if resolve_func and callable(resolve_func):
+        resolve_func = (
+            getattr_static(self._schema_cls, f"resolve_{key}", None)
+            if self._schema_cls
+            else None
+        )
+        if resolve_func and isinstance(resolve_func, staticmethod):
+            if not callable(resolve_func):
+                # Before Python 3.10, the staticmethod is not callable directly.
+                resolve_func = getattr(self._schema_cls, f"resolve_{key}")
             item = resolve_func(self._obj)
+        elif resolve_func and callable(resolve_func):
+            item = resolve_func(self._fake_instance(), self._obj)
         else:
             try:
                 item = getattr(self._obj, key)
@@ -80,7 +112,7 @@ class Schema(BaseModel):
         getter_dict = DjangoGetter
 
     @classmethod
-    def from_orm(cls: Type["Schema"], obj: Any) -> "Schema":
+    def from_orm(cls: Type[S], obj: Any) -> S:
         # DjangoGetter also needs the class so it can find resolver methods.
         if not isinstance(obj, GetterDict):
             getter_dict = cls.__config__.getter_dict

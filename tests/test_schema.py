@@ -43,7 +43,7 @@ class User:
     name = "John Smith"
     group_set = FakeManager([1, 2, 3])
     avatar = ImageFieldFile(None, Mock(), name=None)
-    boss = Boss()
+    boss: Optional[Boss] = Boss()
 
     @property
     def tags(self):
@@ -68,10 +68,14 @@ class UserWithBossSchema(UserSchema):
 
 class UserWithInitialsSchema(UserSchema):
     initials: str
+    has_boss: bool
+
+    def resolve_initials(self, obj):
+        return "".join(n[:1] for n in self.name.split())
 
     @staticmethod
-    def resolve_initials(obj):
-        return "".join(n[:1] for n in obj.name.split())
+    def resolve_has_boss(obj):
+        return bool(obj.boss)
 
 
 def test_schema():
@@ -128,6 +132,7 @@ def test_with_initials_schema():
     assert schema.dict() == {
         "name": "John Smith",
         "initials": "JS",
+        "has_boss": True,
         "groups": [1, 2, 3],
         "tags": [{"id": "1", "title": "foo"}, {"id": "2", "title": "bar"}],
         "avatar": None,
