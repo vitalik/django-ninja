@@ -1,16 +1,15 @@
 from typing import no_type_check
 
 from django.db.models import Model as DjangoModel
-from pydantic.main import ModelMetaclass
 
 from ninja.errors import ConfigError
 from ninja.orm.factory import create_schema
-from ninja.schema import Schema
+from ninja.schema import ResolverMetaclass, Schema
 
 _is_modelschema_class_defined = False
 
 
-class ModelSchemaMetaclass(ModelMetaclass):
+class ModelSchemaMetaclass(ResolverMetaclass):
     @no_type_check
     def __new__(
         mcs,

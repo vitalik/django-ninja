@@ -20,14 +20,14 @@ dotted attributes and resolver methods. For example::
             return "".join(n[:1] for n in self.name.split())
 
 """
-from inspect import getattr_static
 from operator import attrgetter
-from typing import Any, Type, TypeVar
+from typing import Any, Callable, Dict, Type, TypeVar
 
 import pydantic
 from django.db.models import Manager, QuerySet
 from django.db.models.fields.files import FieldFile
 from pydantic import BaseModel, Field, validator
+from pydantic.main import ModelMetaclass
 from pydantic.utils import GetterDict
 
 pydantic_version = list(map(int, pydantic.VERSION.split(".")[:2]))
@@ -41,40 +41,14 @@ S = TypeVar("S", bound="Schema")
 class DjangoGetter(GetterDict):
     __slots__ = ("_obj", "_schema_cls")
 
-    def __init__(self, obj: Any, schema_cls: "Type[Schema]" = None):
+    def __init__(self, obj: Any, schema_cls: "Type[Schema]"):
         self._obj = obj
         self._schema_cls = schema_cls
 
-    def _fake_instance(self) -> "Schema":
-        """
-        Generate a partial schema instance that can be used as the ``self``
-        attribute of resolver functions.
-        """
-        getter_self = self
-
-        class PartialSchema(Schema):
-            def __getattr__(self, key: str) -> Any:
-                value = getter_self[key]
-                if getter_self._schema_cls:
-                    field = getter_self._schema_cls.__fields__[key]
-                    value = field.validate(value, values={}, loc=key, cls=None)[0]
-                return value
-
-        return PartialSchema()
-
     def __getitem__(self, key: str) -> Any:
-        resolve_func = (
-            getattr_static(self._schema_cls, f"resolve_{key}", None)
-            if self._schema_cls
-            else None
-        )
-        if resolve_func and isinstance(resolve_func, staticmethod):
-            if not callable(resolve_func):
-                # Before Python 3.10, the staticmethod is not callable directly.
-                resolve_func = getattr(self._schema_cls, f"resolve_{key}")
-            item = resolve_func(self._obj)
-        elif resolve_func and callable(resolve_func):
-            item = resolve_func(self._fake_instance(), self._obj)
+        resolver = self._schema_cls._ninja_resolvers.get(key)
+        if resolver:
+            item = resolver(getter=self)
         else:
             try:
                 item = getattr(self._obj, key)
@@ -106,21 +80,69 @@ class DjangoGetter(GetterDict):
         return result
 
 
-class Schema(BaseModel):
+class Resolver:
+    __slots__ = ("_func", "_static")
+
+    def __init__(self, func: Callable):
+        static = isinstance(func, staticmethod)
+        self._static = static
+        self._func = func.__func__ if static else func
+
+    def __call__(self, getter: DjangoGetter):
+        if self._static:
+            return self._func(getter._obj)
+        return self._func(self._fake_instance(getter), getter._obj)
+
+    def _fake_instance(self, getter: DjangoGetter) -> "Schema":
+        """
+        Generate a partial schema instance that can be used as the ``self``
+        attribute of resolver functions.
+        """
+
+        class PartialSchema(Schema):
+            def __getattr__(self, key: str) -> Any:
+                value = getter[key]
+                field = getter._schema_cls.__fields__[key]
+                value = field.validate(value, values={}, loc=key, cls=None)[0]
+                return value
+
+        return PartialSchema()
+
+
+class ResolverMetaclass(ModelMetaclass):
+    _ninja_resolvers: Dict[str, Resolver]
+
+    def __new__(cls, name, bases, namespace, **kwargs):
+        resolvers = {}
+
+        for base in reversed(bases):
+            base_resolvers = getattr(base, "_ninja_resolvers", None)
+            if base_resolvers:
+                resolvers.update(base_resolvers)
+        for attr, resolve_func in namespace.items():
+            if not attr.startswith("resolve_"):
+                continue
+            resolvers[attr[8:]] = Resolver(resolve_func)
+
+        result = super().__new__(cls, name, bases, namespace, **kwargs)
+        result._ninja_resolvers = resolvers
+        return result
+
+
+class Schema(BaseModel, metaclass=ResolverMetaclass):
     class Config:
         orm_mode = True
         getter_dict = DjangoGetter
 
     @classmethod
     def from_orm(cls: Type[S], obj: Any) -> S:
-        # DjangoGetter also needs the class so it can find resolver methods.
-        if not isinstance(obj, GetterDict):
-            getter_dict = cls.__config__.getter_dict
-            obj = (
-                getter_dict(obj, cls)
-                if issubclass(getter_dict, DjangoGetter)
-                else getter_dict(obj)
-            )
+        getter_dict = cls.__config__.getter_dict
+        obj = (
+            # DjangoGetter also needs the class so it can find resolver methods.
+            getter_dict(obj, cls)
+            if issubclass(getter_dict, DjangoGetter)
+            else getter_dict(obj)
+        )
         return super().from_orm(obj)
 
     @classmethod
@@ -129,4 +151,4 @@ class Schema(BaseModel):
         # needed once that is the minimum version.
         if isinstance(obj, GetterDict):
             return obj
-        return super()._decompose_class(obj)
+        return super()._decompose_class(obj)  # pragma: no cover

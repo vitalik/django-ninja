@@ -64,18 +64,18 @@ class UserSchema(Schema):
 
 class UserWithBossSchema(UserSchema):
     boss: Optional[str] = Field(None, alias="boss.name")
-
-
-class UserWithInitialsSchema(UserSchema):
-    initials: str
     has_boss: bool
-
-    def resolve_initials(self, obj):
-        return "".join(n[:1] for n in self.name.split())
 
     @staticmethod
     def resolve_has_boss(obj):
         return bool(obj.boss)
+
+
+class UserWithInitialsSchema(UserWithBossSchema):
+    initials: str
+
+    def resolve_initials(self, obj):
+        return "".join(n[:1] for n in self.name.split())
 
 
 def test_schema():
@@ -109,6 +109,7 @@ def test_with_boss_schema():
     assert schema.dict() == {
         "name": "John Smith",
         "boss": "Jane Jackson",
+        "has_boss": True,
         "groups": [1, 2, 3],
         "tags": [{"id": "1", "title": "foo"}, {"id": "2", "title": "bar"}],
         "avatar": None,
@@ -120,6 +121,7 @@ def test_with_boss_schema():
     assert schema.dict() == {
         "name": "John Smith",
         "boss": None,
+        "has_boss": False,
         "groups": [1, 2, 3],
         "tags": [{"id": "1", "title": "foo"}, {"id": "2", "title": "bar"}],
         "avatar": None,
@@ -132,6 +134,7 @@ def test_with_initials_schema():
     assert schema.dict() == {
         "name": "John Smith",
         "initials": "JS",
+        "boss": "Jane Jackson",
         "has_boss": True,
         "groups": [1, 2, 3],
         "tags": [{"id": "1", "title": "foo"}, {"id": "2", "title": "bar"}],
