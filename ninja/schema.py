@@ -20,9 +20,10 @@ dotted attributes and resolver methods. For example::
             return "".join(n[:1] for n in self.name.split())
 
 """
+from collections import namedtuple
 from inspect import getattr_static
 from operator import attrgetter
-from typing import Any, Type, TypeVar
+from typing import Any, Dict, Type, TypeVar
 
 import pydantic
 from django.db.models import Manager, QuerySet
@@ -63,18 +64,12 @@ class DjangoGetter(GetterDict):
         return PartialSchema()
 
     def __getitem__(self, key: str) -> Any:
-        resolve_func = (
-            getattr_static(self._schema_cls, f"resolve_{key}", None)
-            if self._schema_cls
-            else None
-        )
-        if resolve_func and isinstance(resolve_func, staticmethod):
-            if not callable(resolve_func):
-                # Before Python 3.10, the staticmethod is not callable directly.
-                resolve_func = getattr(self._schema_cls, f"resolve_{key}")
-            item = resolve_func(self._obj)
-        elif resolve_func and callable(resolve_func):
-            item = resolve_func(self._fake_instance(), self._obj)
+        resolver = self._schema_cls._ninja_resolvers[self._schema_cls].get(key)  # type: ignore
+        if resolver:
+            if resolver.is_static:
+                item = resolver.callable(self._obj)
+            else:
+                item = resolver.callable(self._fake_instance(), self._obj)
         else:
             try:
                 item = getattr(self._obj, key)
@@ -107,6 +102,8 @@ class DjangoGetter(GetterDict):
 
 
 class Schema(BaseModel):
+    _ninja_resolvers = {}  # type: ignore
+
     class Config:
         orm_mode = True
         getter_dict = DjangoGetter
@@ -114,6 +111,9 @@ class Schema(BaseModel):
     @classmethod
     def from_orm(cls: Type[S], obj: Any) -> S:
         # DjangoGetter also needs the class so it can find resolver methods.
+        if cls not in cls._ninja_resolvers:
+            cls._ninja_resolvers[cls] = get_schema_resolvers(cls)
+
         if not isinstance(obj, GetterDict):
             getter_dict = cls.__config__.getter_dict
             obj = (
@@ -130,3 +130,27 @@ class Schema(BaseModel):
         if isinstance(obj, GetterDict):
             return obj
         return super()._decompose_class(obj)
+
+
+Resolver = namedtuple("Resolver", ["callable", "is_static"])
+
+
+def get_schema_resolvers(cls: Type[S]) -> Dict[str, Resolver]:
+    """
+    Returns a dictionary of resolver methods for the given schema class.
+    Resolver is a method that starts with `resolve_` prefix
+    """
+    result = {}
+    for attr in dir(cls):
+        if not attr.startswith("resolve_"):
+            continue
+        field_name = attr.split("resolve_", 1)[1]
+        resolve_func = getattr_static(cls, attr)
+        if isinstance(resolve_func, staticmethod):
+            if not callable(resolve_func):
+                # Before Python 3.10, the staticmethod is not callable directly.
+                resolve_func = getattr(cls, attr)
+            result[field_name] = Resolver(resolve_func, True)
+        else:
+            result[field_name] = Resolver(resolve_func, False)
+    return result
