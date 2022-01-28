@@ -128,6 +128,12 @@ class ResolverMetaclass(ModelMetaclass):
         for attr, resolve_func in namespace.items():
             if not attr.startswith("resolve_"):
                 continue
+            if (
+                not callable(resolve_func)
+                # A staticmethod isn't directly callable in Python <=3.9.
+                and not isinstance(resolve_func, staticmethod)
+            ):
+                continue
             resolvers[attr[8:]] = Resolver(resolve_func)
 
         result = super().__new__(cls, name, bases, namespace, **kwargs)
