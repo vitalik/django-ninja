@@ -21,7 +21,7 @@ dotted attributes and resolver methods. For example::
 
 """
 from operator import attrgetter
-from typing import Any, Callable, Dict, Type, TypeVar
+from typing import Any, Callable, Dict, Type, TypeVar, Union, no_type_check
 
 import pydantic
 from django.db.models import Manager, QuerySet
@@ -82,13 +82,18 @@ class DjangoGetter(GetterDict):
 
 class Resolver:
     __slots__ = ("_func", "_static")
+    _static: bool
+    _func: Any
 
-    def __init__(self, func: Callable):
-        static = isinstance(func, staticmethod)
-        self._static = static
-        self._func = func.__func__ if static else func
+    def __init__(self, func: Union[Callable, staticmethod]):
+        if isinstance(func, staticmethod):
+            self._static = True
+            self._func = func.__func__
+        else:
+            self._static = False
+            self._func = func
 
-    def __call__(self, getter: DjangoGetter):
+    def __call__(self, getter: DjangoGetter) -> Any:
         if self._static:
             return self._func(getter._obj)
         return self._func(self._fake_instance(getter), getter._obj)
@@ -112,6 +117,7 @@ class Resolver:
 class ResolverMetaclass(ModelMetaclass):
     _ninja_resolvers: Dict[str, Resolver]
 
+    @no_type_check
     def __new__(cls, name, bases, namespace, **kwargs):
         resolvers = {}
 
