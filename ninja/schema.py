@@ -133,7 +133,7 @@ class ResolverMetaclass(ModelMetaclass):
                 # A staticmethod isn't directly callable in Python <=3.9.
                 and not isinstance(resolve_func, staticmethod)
             ):
-                continue
+                continue  # pragma: no cover
             resolvers[attr[8:]] = Resolver(resolve_func)
 
         result = super().__new__(cls, name, bases, namespace, **kwargs)

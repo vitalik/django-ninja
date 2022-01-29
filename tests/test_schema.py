@@ -78,6 +78,12 @@ class UserWithInitialsSchema(UserWithBossSchema):
         return "".join(n[:1] for n in self.name.split())
 
 
+class ResolveAttrSchema(Schema):
+    "The goal is to test that the resolve_xxx is not callable it should be a regular attribute"
+    id: str
+    resolve_attr: str
+
+
 def test_schema():
     user = User()
     schema = UserSchema.from_orm(user)
@@ -140,3 +146,11 @@ def test_with_initials_schema():
         "tags": [{"id": "1", "title": "foo"}, {"id": "2", "title": "bar"}],
         "avatar": None,
     }
+
+
+def test_with_attr_that_has_resolve():
+    class Obj:
+        id = 1
+        resolve_attr = 2
+
+    assert ResolveAttrSchema.from_orm(Obj()).dict() == {"id": "1", "resolve_attr": "2"}
