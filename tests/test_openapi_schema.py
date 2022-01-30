@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 
 import pytest
 from django.test import Client, override_settings
@@ -12,6 +12,14 @@ api = NinjaAPI()
 class Payload(Schema):
     i: int
     f: float
+
+
+class TypeA(Schema):
+    a: str
+
+
+class TypeB(Schema):
+    b: str
 
 
 def to_camel(string: str) -> str:
@@ -84,6 +92,16 @@ def method_body_file(
     body: Payload = Body(...),
 ):
     return dict(i=body.i, f=body.f)
+
+
+@api.post("/test-union-type", response=Response)
+def method_union_payload(request, data: Union[TypeA, TypeB]):
+    return dict(i=data.i, f=data.f)
+
+
+@api.post("/test-union-type-with-simple", response=Response)
+def method_union_payload_and_simple(request, data: Union[int, TypeB]):
+    return data.dict()
 
 
 @api.post(
@@ -163,6 +181,22 @@ def test_schema(schema):
                 "f": {"title": "F", "type": "number"},
             },
             "required": ["i", "f"],
+        },
+        "TypeA": {
+            "properties": {
+                "a": {"title": "A", "type": "string"},
+            },
+            "required": ["a"],
+            "title": "TypeA",
+            "type": "object",
+        },
+        "TypeB": {
+            "properties": {
+                "b": {"title": "B", "type": "string"},
+            },
+            "required": ["b"],
+            "title": "TypeB",
+            "type": "object",
         },
     }
 
@@ -249,6 +283,22 @@ def test_schema_list(schema):
             },
             "required": ["i", "f"],
             "title": "Payload",
+            "type": "object",
+        },
+        "TypeA": {
+            "properties": {
+                "a": {"title": "A", "type": "string"},
+            },
+            "required": ["a"],
+            "title": "TypeA",
+            "type": "object",
+        },
+        "TypeB": {
+            "properties": {
+                "b": {"title": "B", "type": "string"},
+            },
+            "required": ["b"],
+            "title": "TypeB",
             "type": "object",
         },
         "Response": {
@@ -564,6 +614,45 @@ def test_schema_title_description(schema):
             },
             "description": "OK",
         }
+    }
+
+
+def test_union_payload_type(schema):
+    method = schema["paths"]["/api/test-union-type"]["post"]
+
+    assert method["requestBody"] == {
+        "content": {
+            "application/json": {
+                "schema": {
+                    "anyOf": [
+                        {"$ref": "#/components/schemas/TypeA"},
+                        {"$ref": "#/components/schemas/TypeB"},
+                    ],
+                    "title": "Data",
+                }
+            }
+        },
+        "required": True,
+    }
+
+
+def test_union_payload_simple(schema):
+    method = schema["paths"]["/api/test-union-type-with-simple"]["post"]
+
+    print(method["requestBody"])
+    assert method["requestBody"] == {
+        "content": {
+            "application/json": {
+                "schema": {
+                    "title": "Data",
+                    "anyOf": [
+                        {"type": "integer"},
+                        {"$ref": "#/components/schemas/TypeB"},
+                    ],
+                }
+            }
+        },
+        "required": True,
     }
 
 

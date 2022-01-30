@@ -1,12 +1,12 @@
 import inspect
 import warnings
 from collections import defaultdict, namedtuple
-from typing import Any, Callable, Dict, Generator, List, Tuple
+from typing import Any, Callable, Dict, Generator, List, Tuple, Union
 
 import pydantic
 
 from ninja import UploadedFile, params
-from ninja.compatibility.util import get_origin as get_collection_origin
+from ninja.compatibility.util import get_args, get_origin as get_collection_origin
 from ninja.errors import ConfigError
 from ninja.params import Body, File, Form, _MultiPartBody
 from ninja.params_models import TModel, TModels
@@ -241,6 +241,8 @@ class ViewSignature:
 
 def is_pydantic_model(cls: Any) -> bool:
     try:
+        if get_collection_origin(cls) == Union:
+            return any(issubclass(arg, pydantic.BaseModel) for arg in get_args(cls))
         return issubclass(cls, pydantic.BaseModel)
     except TypeError:
         return False
