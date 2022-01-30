@@ -99,6 +99,11 @@ def method_union_payload(request, data: Union[TypeA, TypeB]):
     return dict(i=data.i, f=data.f)
 
 
+@api.post("/test-union-type-with-simple", response=Response)
+def method_union_payload_and_simple(request, data: Union[int, TypeB]):
+    return data.dict()
+
+
 @api.post(
     "/test-title-description/",
     tags=["a-tag"],
@@ -624,6 +629,26 @@ def test_union_payload_type(schema):
                         {"$ref": "#/components/schemas/TypeB"},
                     ],
                     "title": "Data",
+                }
+            }
+        },
+        "required": True,
+    }
+
+
+def test_union_payload_simple(schema):
+    method = schema["paths"]["/api/test-union-type-with-simple"]["post"]
+
+    print(method["requestBody"])
+    assert method["requestBody"] == {
+        "content": {
+            "application/json": {
+                "schema": {
+                    "title": "Data",
+                    "anyOf": [
+                        {"type": "integer"},
+                        {"$ref": "#/components/schemas/TypeB"},
+                    ],
                 }
             }
         },

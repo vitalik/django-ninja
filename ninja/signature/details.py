@@ -242,7 +242,7 @@ class ViewSignature:
 def is_pydantic_model(cls: Any) -> bool:
     try:
         if get_collection_origin(cls) == Union:
-            return all(issubclass(arg, pydantic.BaseModel) for arg in get_args(cls))
+            return any(issubclass(arg, pydantic.BaseModel) for arg in get_args(cls))
         return issubclass(cls, pydantic.BaseModel)
     except TypeError:
         return False
