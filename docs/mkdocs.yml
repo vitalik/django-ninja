@@ -41,6 +41,7 @@ nav:
       - tutorial/response-renderers.md
       - tutorial/errors.md
       - tutorial/csrf.md
+      - tutorial/management-commands.md
   - async-support.md
   - video.md
   - Enhancement Proposals:
