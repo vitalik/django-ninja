@@ -1,0 +1,53 @@
+import json
+from typing import Any, Optional
+
+from django.core.management.base import BaseCommand, CommandError, CommandParser
+from django.urls.base import resolve
+from django.utils.module_loading import import_string
+
+from ninja.main import NinjaAPI
+from ninja.responses import NinjaJSONEncoder
+
+
+class Command(BaseCommand):
+    help = "Exports Open API schema"
+
+    def _get_api_instance(self, api_path: Optional[str] = None) -> NinjaAPI:
+        if not api_path:
+            return resolve("/api/").func.keywords["api"]  # type: ignore
+
+        try:
+            api = import_string(api_path)
+        except ImportError:
+            raise CommandError(f"Module or attribute for {api_path} not found!")
+
+        if not isinstance(api, NinjaAPI):
+            raise CommandError(f"{api_path} is not instance of NinjaAPI!")
+
+        return api
+
+    def add_arguments(self, parser: CommandParser) -> None:
+        parser.add_argument(
+            "--api",
+            dest="api",
+            default=None,
+            type=str,
+            help="Specify api instance module",
+        )
+        parser.add_argument(
+            "--output", dest="output", default=None, type=str, help="Output schema path"
+        )
+        parser.add_argument(
+            "--indent", dest="indent", default=None, type=int, help="json indent"
+        )
+
+    def handle(self, *args: Any, **options: Any) -> None:
+        api = self._get_api_instance(options["api"])
+        schema = api.get_openapi_schema()
+        result = json.dumps(schema, cls=NinjaJSONEncoder, indent=options["indent"])
+
+        if options["output"]:
+            with open(options["output"], "wb") as f:
+                f.write(result.encode())
+        else:
+            self.stdout.write(result)
