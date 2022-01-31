@@ -45,7 +45,7 @@ def test_sync_build_absolute_uri(path, expected_status, expected_response):
     response = client.get(path)
 
     assert response.status_code == expected_status
-    assert response.json() == expected_response
+    assert response.json() == f"{expected_response}{path}"
 
 
 @pytest.mark.parametrize(

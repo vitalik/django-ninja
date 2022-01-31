@@ -96,9 +96,12 @@ class NinjaClientBase:
         request.path = path
         request.body = ""
         request.COOKIES = {}
+        request.LANGUAGE_CODE = None
         request._dont_enforce_csrf_checks = True
         request.is_secure.return_value = False
-        request.build_absolute_uri = build_absolute_uri
+        request.build_absolute_uri = (
+            lambda location=None: f"{build_absolute_uri(location)}{path}"
+        )
 
         if "user" not in request_params:
             request.user.is_authenticated = False
