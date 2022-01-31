@@ -161,7 +161,7 @@ class Operation:
 
         status: int = 200
         if len(self.response_models) == 1:
-            status = list(self.response_models.keys())[0]
+            status = next(iter(self.response_models))
 
         if isinstance(result, tuple) and len(result) == 2:
             status = result[0]
