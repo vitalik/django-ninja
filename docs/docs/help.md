@@ -10,6 +10,7 @@ or share this URL on social media:
 ```
 https://django-ninja.rest-framework.com
 ```
+Follow updates on twitter <a href="https://twitter.com/django_ninja">@django_ninja</a>
 
 ## Do you want to help us?
 
