@@ -1,7 +1,4 @@
-import pytest
-
 from ninja import NinjaAPI, Schema
-from ninja.errors import ConfigError
 from ninja.pagination import PageNumberPagination, PaginationBase, paginate
 from ninja.testing import TestClient
 
@@ -16,8 +13,8 @@ class CustomPagination(PaginationBase):
     class Input(Schema):
         skip: int
 
-    def paginate_queryset(self, items, request, **params):
-        skip = params["pagination"].skip
+    def paginate_queryset(self, items, pagination: Input, **params):
+        skip = pagination.skip
         return items[skip : skip + 5]
 
 
@@ -44,6 +41,18 @@ def items_3(request, **kwargs):
 @paginate(PageNumberPagination, page_size=10)
 def items_4(request, **kwargs):
     return ITEMS
+
+
+@api.get("/items_5")
+@paginate(PageNumberPagination, page_size=10)
+def items_5(request):
+    return ITEMS
+
+
+@api.get("/items_6")
+@paginate(PageNumberPagination, page_size=10, pass_parameter="page_info")
+def items_6(request, **kwargs):
+    return ITEMS + [kwargs["page_info"]]
 
 
 client = TestClient(api)
@@ -156,9 +165,44 @@ def test_case4():
     ]
 
 
-def test_no_kwargs():
-    with pytest.raises(ConfigError):
+def test_case5_no_kwargs():
+    response = client.get("/items_5?page=2").json()
+    assert response == ITEMS[10:20]
 
-        @paginate
-        def some_view(request):
-            pass
+    schema = api.get_openapi_schema()["paths"]["/api/items_5"]["get"]
+
+    assert schema["parameters"] == [
+        {
+            "in": "query",
+            "name": "page",
+            "schema": {
+                "title": "Page",
+                "default": 1,
+                "exclusiveMinimum": 0,
+                "type": "integer",
+            },
+            "required": False,
+        }
+    ]
+
+
+def test_case6_pass_param_kwargs():
+    page = 11
+    response = client.get(f"/items_6?page={page}").json()
+    assert response == [{"page": 11}]
+
+    schema = api.get_openapi_schema()["paths"]["/api/items_6"]["get"]
+
+    assert schema["parameters"] == [
+        {
+            "in": "query",
+            "name": "page",
+            "schema": {
+                "title": "Page",
+                "default": 1,
+                "exclusiveMinimum": 0,
+                "type": "integer",
+            },
+            "required": False,
+        }
+    ]
