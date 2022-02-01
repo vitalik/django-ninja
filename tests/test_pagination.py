@@ -13,8 +13,8 @@ class CustomPagination(PaginationBase):
     class Input(Schema):
         skip: int
 
-    def paginate_queryset(self, items, **params):
-        skip = params[self.name_param].skip
+    def paginate_queryset(self, items, pagination: Input, **params):
+        skip = pagination.skip
         return items[skip : skip + 5]
 
 
@@ -52,7 +52,7 @@ def items_5(request):
 @api.get("/items_6")
 @paginate(PageNumberPagination, page_size=10, pass_parameter="page_info")
 def items_6(request, **kwargs):
-    return ITEMS + [kwargs["page_info"].page]
+    return ITEMS + [kwargs["page_info"]]
 
 
 client = TestClient(api)
@@ -189,7 +189,7 @@ def test_case5_no_kwargs():
 def test_case6_pass_param_kwargs():
     page = 11
     response = client.get(f"/items_6?page={page}").json()
-    assert response == [page], response
+    assert response == [{"page": 11}]
 
     schema = api.get_openapi_schema()["paths"]["/api/items_6"]["get"]
 

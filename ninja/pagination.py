@@ -13,19 +13,18 @@ from ninja.types import DictStrAny
 
 
 class PaginationBase(ABC):
-    name_param: str = "pagination"
-    pass_parameter: Optional[str] = None
-
     class Input(Schema):
         pass
 
     InputSource = Query(...)
 
-    def __init__(self, pass_parameter: Optional[str] = None, **kwargs: Any) -> None:
-        self.pass_parameter = pass_parameter or self.pass_parameter
+    def __init__(self, *, pass_parameter: Optional[str] = None, **kwargs: Any) -> None:
+        self.pass_parameter = pass_parameter
 
     @abstractmethod
-    def paginate_queryset(self, items: QuerySet, **params: DictStrAny) -> QuerySet:
+    def paginate_queryset(
+        self, queryset: QuerySet, pagination: Any, **params: DictStrAny
+    ) -> QuerySet:
         pass  # pragma: no cover
 
 
@@ -34,12 +33,12 @@ class LimitOffsetPagination(PaginationBase):
         limit: int = Field(settings.PAGINATION_PER_PAGE, gt=0)
         offset: int = Field(0, gt=-1)
 
-    def paginate_queryset(self, items: QuerySet, **params: DictStrAny) -> QuerySet:
-        offset: int
-        limit: int
-        limit, offset = params[self.name_param].limit, params[self.name_param].offset  # type: ignore
-
-        return items[offset : offset + limit]  # noqa: E203
+    def paginate_queryset(
+        self, queryset: QuerySet, pagination: Input, **params: DictStrAny
+    ) -> QuerySet:
+        offset = pagination.offset
+        limit: int = pagination.limit
+        return queryset[offset : offset + limit]  # noqa: E203
 
 
 class PageNumberPagination(PaginationBase):
@@ -52,10 +51,11 @@ class PageNumberPagination(PaginationBase):
         self.page_size = page_size
         super().__init__(**kwargs)
 
-    def paginate_queryset(self, items: QuerySet, **params: DictStrAny) -> QuerySet:
-        page: int = params[self.name_param].page  # type: ignore
-        offset = (page - 1) * self.page_size
-        return items[offset : offset + self.page_size]  # noqa: E203
+    def paginate_queryset(
+        self, queryset: QuerySet, pagination: Input, **params: DictStrAny
+    ) -> QuerySet:
+        offset = (pagination.page - 1) * self.page_size
+        return queryset[offset : offset + self.page_size]  # noqa: E203
 
 
 def paginate(
@@ -88,18 +88,19 @@ def _inject_pagination(
 
     @wraps(func)
     def view_with_pagination(*args: Tuple[Any], **kwargs: DictStrAny) -> Any:
-        paginate_param = kwargs.pop(paginator.name_param)
+        pagination_params = kwargs.pop("ninja_pagination")
         if paginator.pass_parameter:
-            kwargs[paginator.pass_parameter] = paginate_param
+            kwargs[paginator.pass_parameter] = pagination_params
+
         items = func(*args, **kwargs)
+
         return paginator.paginate_queryset(
-            items,
-            **{paginator.name_param: paginate_param, **kwargs},
+            items, pagination=pagination_params, **kwargs
         )
 
     view_with_pagination._ninja_contribute_args = [  # type: ignore
         (
-            paginator.name_param,
+            "ninja_pagination",
             paginator.Input,
             paginator.InputSource,
         ),
