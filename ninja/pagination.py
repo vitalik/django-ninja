@@ -1,15 +1,16 @@
 import inspect
 from abc import ABC, abstractmethod
 from functools import wraps
-from typing import Any, Callable, Optional, Tuple, Type
+from typing import Any, Callable, List, Optional, Tuple, Type
 
 from django.db.models import QuerySet
 from django.utils.module_loading import import_string
 
-from ninja import Field, Query, Schema
+from ninja import Field, Query, Schema, Router
 from ninja.conf import settings
 from ninja.constants import NOT_SET
 from ninja.types import DictStrAny
+from ninja.signature.details import is_collection_type
 
 
 class PaginationBase(ABC):
@@ -107,3 +108,17 @@ def _inject_pagination(
     ]
 
     return view_with_pagination
+
+
+class RouterPaginated(Router):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.pagination_class = import_string(settings.PAGINATION_CLASS)
+
+    def add_api_operation(
+        self, path: str, methods: List[str], view_func: Callable, **kwargs: DictStrAny
+    ):
+        response = kwargs["response"]
+        if is_collection_type(response):
+            view_func = _inject_pagination(view_func, self.pagination_class)
+        return super().add_api_operation(path, methods, view_func, **kwargs)

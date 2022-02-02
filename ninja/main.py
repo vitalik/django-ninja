@@ -51,6 +51,7 @@ class NinjaAPI:
         auth: Union[Sequence[Callable], Callable, object] = NOT_SET,
         renderer: Optional[BaseRenderer] = None,
         parser: Optional[Parser] = None,
+        default_router: Optional[Router] = None,
     ):
         self.title = title
         self.version = version
@@ -70,7 +71,7 @@ class NinjaAPI:
             self.auth = isinstance(auth, Sequence) and auth or [auth]
 
         self._routers: List[Tuple[str, Router]] = []
-        self.default_router = Router()
+        self.default_router = default_router or Router()
         self.add_router("", self.default_router)
 
     def get(

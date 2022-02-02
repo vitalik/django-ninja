@@ -1,6 +1,6 @@
 # Pagination (beta)
 
-**Django Ninja** comes with a pagination. This allows you to split large result sets into individual pages.
+**Django Ninja** comes with a pagination support. This allows you to split large result sets into individual pages.
 
 
 To apply pagination to a function - just apply `paginate` decorator:
@@ -119,8 +119,8 @@ class CustomPagination(PaginationBase):
     class Input(Schema):
         skip: int
 
-    def paginate_queryset(self, queryset, request, **params):
-        skip = params["pagination"].skip
+    def paginate_queryset(self, queryset, pagination: Input, **params):
+        skip = pagination.skip
         return queryset[skip : skip + 5]
 
 
@@ -128,4 +128,38 @@ class CustomPagination(PaginationBase):
 @paginate(CustomPagination)
 def list_users(request):
     return User.objects.all()
+```
+
+
+## Apply pagination to multiple operations at once
+
+There is often a case when you need to add pagination to all views that returns querysets or list
+
+You can use a builtin router class (`RouterPaginated`) that automatically injects pagination to all operation that definded `response=List[SomeSchema]`:
+
+```Python hl_lines="1 3 6 10"
+from ninja.pagination import RouterPaginated
+
+router = RouterPaginated()
+
+
+@router.get("/items", response=List[MySchema])
+def items(request):
+    return MyModel.objects.all()
+
+@router.get("/other-items", response=List[OtherSchema])
+def ohter_items(request):
+    return OtherModel.objects.all()
+
+```
+
+In this example both operations will have pagination enabled
+
+to apply pagination to main `api` instance use `default_router` argument:
+
+
+```Python
+api = NinjaAPI(default_router=RouterPaginated())
+
+@api.get(...
 ```
