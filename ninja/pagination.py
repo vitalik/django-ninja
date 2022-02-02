@@ -6,11 +6,11 @@ from typing import Any, Callable, List, Optional, Tuple, Type
 from django.db.models import QuerySet
 from django.utils.module_loading import import_string
 
-from ninja import Field, Query, Schema, Router
+from ninja import Field, Query, Router, Schema
 from ninja.conf import settings
 from ninja.constants import NOT_SET
-from ninja.types import DictStrAny
 from ninja.signature.details import is_collection_type
+from ninja.types import DictStrAny
 
 
 class PaginationBase(ABC):
@@ -116,8 +116,8 @@ class RouterPaginated(Router):
         self.pagination_class = import_string(settings.PAGINATION_CLASS)
 
     def add_api_operation(
-        self, path: str, methods: List[str], view_func: Callable, **kwargs: DictStrAny
-    ):
+        self, path: str, methods: List[str], view_func: Callable, **kwargs: Any
+    ) -> None:
         response = kwargs["response"]
         if is_collection_type(response):
             view_func = _inject_pagination(view_func, self.pagination_class)
