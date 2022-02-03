@@ -98,9 +98,10 @@ def someview(request, **kwargs):
 
 ## Creating Custom Pagination Class
 
-To create a custom pagination class you should subclass `ninja.pagination.PaginationBase` and override the `Input` schema class and `paginate_queryset(self, queryset, request, **params)` method:
+To create a custom pagination class you should subclass `ninja.pagination.PaginationBase` and override the `Input` and `Output` schema classe and `paginate_queryset(self, queryset, request, **params)` method:
 
  - The `Input` schema is a Schema class that describes parameters that should be passed to your paginator (f.e. page-number or limit/offset values).
+ - The `Output` schema describes schema for page output (f.e. count/next-page/iitiems/etc).
  - The `paginate_queryset` method is passed the initial queryset and should return an iterable object that contains only the data in the requested page. This method accepts the following arguments:
     - `queryset`: a queryset (or iterable) returned by the api function
     - `pagination` - the paginator.Input parameters (parsed and validated)
@@ -109,7 +110,7 @@ To create a custom pagination class you should subclass `ninja.pagination.Pagina
 
 Example:
 
-```Python hl_lines="1 5 6 7 8 9 10 11 12 16"
+```Python hl_lines="7 11 16 26"
 from ninja.pagination import paginate, PaginationBase
 from ninja import Schema
 
@@ -118,10 +119,20 @@ class CustomPagination(PaginationBase):
     # only `skip` param, defaults to 5 per page
     class Input(Schema):
         skip: int
+        
+
+    class Output(Schema):
+        items: List[Any] # `items` is a requried attribute
+        total: int
+        per_page: int
 
     def paginate_queryset(self, queryset, pagination: Input, **params):
         skip = pagination.skip
-        return queryset[skip : skip + 5]
+        return {
+            'items': queryset[skip : skip + 5],
+            'total': queryset.count(),
+            'per_page': 5,
+        }
 
 
 @api.get('/users', response=List[UserSchema])

@@ -86,6 +86,10 @@ class Operation:
         self.exclude_defaults = exclude_defaults
         self.exclude_none = exclude_none
 
+        if hasattr(view_func, "_ninja_contribute_to_operation"):
+            # Allow 3rd party code to contribute to the operation behaviour
+            view_func._ninja_contribute_to_operation(self)
+
     def run(self, request: HttpRequest, **kw: Any) -> HttpResponseBase:
         error = self._run_checks(request)
         if error:

@@ -1,4 +1,5 @@
 from typing import List
+
 from ninja import NinjaAPI, Schema
 from ninja.pagination import RouterPaginated
 from ninja.testing import TestClient
@@ -52,7 +53,7 @@ def test_for_list_reponse():
 
     response = client.get("/items?offset=5&limit=1").json()
     print(response)
-    assert response == [{"id": 6}]
+    assert response == {"items": [{"id": 6}], "count": 50}
 
 
 def test_for_NON_list_reponse():

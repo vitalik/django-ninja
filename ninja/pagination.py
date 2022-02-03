@@ -1,14 +1,17 @@
 import inspect
 from abc import ABC, abstractmethod
-from functools import wraps
+from functools import partial, wraps
 from typing import Any, Callable, List, Optional, Tuple, Type
 
 from django.db.models import QuerySet
 from django.utils.module_loading import import_string
 
 from ninja import Field, Query, Router, Schema
+from ninja.compatibility.util import get_args as get_collection_args
 from ninja.conf import settings
 from ninja.constants import NOT_SET
+from ninja.errors import ConfigError
+from ninja.operation import Operation
 from ninja.signature.details import is_collection_type
 from ninja.types import DictStrAny
 
@@ -19,14 +22,32 @@ class PaginationBase(ABC):
 
     InputSource = Query(...)
 
+    class Output(Schema):
+        items: List[Any]
+        count: int
+
     def __init__(self, *, pass_parameter: Optional[str] = None, **kwargs: Any) -> None:
         self.pass_parameter = pass_parameter
 
     @abstractmethod
     def paginate_queryset(
-        self, queryset: QuerySet, pagination: Any, **params: DictStrAny
-    ) -> QuerySet:
+        self,
+        queryset: QuerySet,
+        pagination: Any,
+        **params: DictStrAny,
+    ) -> Any:
         pass  # pragma: no cover
+
+    def _items_count(self, queryset: QuerySet) -> int:
+        """
+        Since lists are mainly compatible with QuerySets and can be passed to paginator.
+        We will first to try to use .count - and if not there will use a len
+        """
+        try:
+            # forcing to find queryset.count instead of list.count:
+            return queryset.all().count()
+        except AttributeError:
+            return len(queryset)
 
 
 class LimitOffsetPagination(PaginationBase):
@@ -35,11 +56,17 @@ class LimitOffsetPagination(PaginationBase):
         offset: int = Field(0, gt=-1)
 
     def paginate_queryset(
-        self, queryset: QuerySet, pagination: Input, **params: DictStrAny
-    ) -> QuerySet:
+        self,
+        queryset: QuerySet,
+        pagination: Input,
+        **params: DictStrAny,
+    ) -> Any:
         offset = pagination.offset
         limit: int = pagination.limit
-        return queryset[offset : offset + limit]  # noqa: E203
+        return {
+            "items": queryset[offset : offset + limit],
+            "count": self._items_count(queryset),
+        }  # noqa: E203
 
 
 class PageNumberPagination(PaginationBase):
@@ -53,15 +80,33 @@ class PageNumberPagination(PaginationBase):
         super().__init__(**kwargs)
 
     def paginate_queryset(
-        self, queryset: QuerySet, pagination: Input, **params: DictStrAny
-    ) -> QuerySet:
+        self,
+        queryset: QuerySet,
+        pagination: Input,
+        **params: DictStrAny,
+    ) -> Any:
         offset = (pagination.page - 1) * self.page_size
-        return queryset[offset : offset + self.page_size]  # noqa: E203
+        return {
+            "items": queryset[offset : offset + self.page_size],
+            "count": self._items_count(queryset),
+        }  # noqa: E203
 
 
 def paginate(
     func_or_pgn_class: Any = NOT_SET, **paginator_params: DictStrAny
 ) -> Callable:
+    """
+    @api.get(...
+    @paginage
+    def my_view(request):
+
+    or
+
+    @api.get(...
+    @paginage(PageNumberPagination)
+    def my_view(request):
+
+    """
 
     isfunction = inspect.isfunction(func_or_pgn_class)
     isnotset = func_or_pgn_class == NOT_SET
@@ -95,9 +140,13 @@ def _inject_pagination(
 
         items = func(*args, **kwargs)
 
-        return paginator.paginate_queryset(
+        result = paginator.paginate_queryset(
             items, pagination=pagination_params, **kwargs
         )
+        if paginator.Output:
+            result["items"] = list(result["items"])
+        # ^ forcing queryset evaluation #TODO: check why pydantic did not do it here
+        return result
 
     view_with_pagination._ninja_contribute_args = [  # type: ignore
         (
@@ -106,6 +155,15 @@ def _inject_pagination(
             paginator.InputSource,
         ),
     ]
+
+    # def contribute_to_operation(op: Operation) -> None:
+
+    #     make_response_paginated(schema, paginator, op)
+
+    if paginator.Output:
+        view_with_pagination._ninja_contribute_to_operation = partial(  # type: ignore
+            make_response_paginated, paginator
+        )
 
     return view_with_pagination
 
@@ -122,3 +180,53 @@ class RouterPaginated(Router):
         if is_collection_type(response):
             view_func = _inject_pagination(view_func, self.pagination_class)
         return super().add_api_operation(path, methods, view_func, **kwargs)
+
+
+def make_response_paginated(paginator: PaginationBase, op: Operation) -> None:
+    """
+    Takes operation response and changes it to the paginated response
+    for example:
+        response=List[Some]
+    will be changed to:
+        response=PagedSome
+    where Paged some willbe a subclass of paginator.Output:
+        class PagedSome:
+            items: List[Some]
+            count: int
+    """
+    status_code, item_schema = _find_collection_response(op)
+
+    # Swithcing schema to Output shcema
+    try:
+        new_name = f"Paged{item_schema.__name__}"
+    except AttributeError:
+        new_name = f"Paged{item_schema._name}"  # typing.Any case
+
+    new_schema = type(
+        new_name,
+        (paginator.Output,),
+        {
+            "__annotations__": {"items": List[item_schema]},  # type: ignore
+            "items": [],
+        },
+    )  # typing: ignore
+
+    response = op._create_response_model(new_schema)
+
+    # chaging response model to newly created one
+    op.response_models[status_code] = response
+
+
+def _find_collection_response(op: Operation) -> Tuple[int, Any]:
+    for code, resp_model in op.response_models.items():
+        if resp_model is None or resp_model is NOT_SET:
+            continue
+
+        model = resp_model.__annotations__["response"]
+        if is_collection_type(model):
+            item_schema = get_collection_args(model)[0]
+            return code, item_schema
+
+    raise ConfigError(
+        f'"{op.view_func}" has no collection response (e.g. response=List[SomeSchema])'
+    )
