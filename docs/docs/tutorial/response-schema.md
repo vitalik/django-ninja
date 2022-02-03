@@ -139,6 +139,18 @@ class TaskSchema(Schema):
     owner_first_name: str = Field(None, alias="owner.first_name")
 ```
 
+Aliases also supprt django template syntax variables access:
+
+```Python hl_lines="2"
+class TaskSchema(Schema):
+    last_message: str = Field(None, alias="message_set.0.text")
+```
+
+```Python hl_lines="3"
+class TaskSchema(Schema):
+    type: str = Field(None)
+    type_display: str = Field(None, alias="get_type_dispaly") # callable will be executed
+```
 
 ## Resolvers
 
