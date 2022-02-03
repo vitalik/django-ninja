@@ -20,12 +20,12 @@ dotted attributes and resolver methods. For example::
             return "".join(n[:1] for n in self.name.split())
 
 """
-from operator import attrgetter
 from typing import Any, Callable, Dict, Type, TypeVar, Union, no_type_check
 
 import pydantic
 from django.db.models import Manager, QuerySet
 from django.db.models.fields.files import FieldFile
+from django.template import Variable, VariableDoesNotExist
 from pydantic import BaseModel, Field, validator
 from pydantic.main import ModelMetaclass
 from pydantic.utils import GetterDict
@@ -54,8 +54,11 @@ class DjangoGetter(GetterDict):
                 item = getattr(self._obj, key)
             except AttributeError:
                 try:
-                    item = attrgetter(key)(self._obj)
-                except AttributeError as e:
+                    # item = attrgetter(key)(self._obj)
+                    item = Variable(key).resolve(self._obj)
+                    # TODO: Variable(key) __init__ is actually slower than
+                    #       resolve - so it better be cached
+                except VariableDoesNotExist as e:
                     raise KeyError(key) from e
         return self.format_result(item)
 

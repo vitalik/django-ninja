@@ -148,6 +148,22 @@ def test_with_initials_schema():
     }
 
 
+def test_complex_alias_resolve():
+    class Top:
+        class Midddle:
+            def call(self):
+                return {"dict": [1, 10]}
+
+        m = Midddle()
+
+    class AliasSchema(Schema):
+        value: int = Field(..., alias="m.call.dict.1")
+
+    x = Top()
+
+    assert AliasSchema.from_orm(x).dict() == {"value": 10}
+
+
 def test_with_attr_that_has_resolve():
     class Obj:
         id = 1
