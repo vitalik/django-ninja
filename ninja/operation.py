@@ -88,7 +88,7 @@ class Operation:
 
         if hasattr(view_func, "_ninja_contribute_to_operation"):
             # Allow 3rd party code to contribute to the operation behaviour
-            view_func._ninja_contribute_to_operation(self)
+            view_func._ninja_contribute_to_operation(self)  # type: ignore
 
     def run(self, request: HttpRequest, **kw: Any) -> HttpResponseBase:
         error = self._run_checks(request)
