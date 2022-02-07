@@ -9,9 +9,10 @@ from django.utils.cache import get_cache_key, learn_cache_key, patch_response_he
 
 from ninja.conf import settings
 from ninja.operation import Operation
+from ninja.signature.utils import is_async
 from ninja.types import DictStrAny
 
-CACHEABLE_STATUS_CODES = {200, 304}
+HEADER_STATUS_CODES = {200, 304}
 
 
 def cache_page(
@@ -36,6 +37,8 @@ def cache_page(
         operation = op
 
     def _decorator(api_view_func: Callable) -> Callable:
+        is_async_view = is_async(api_view_func)
+
         @wraps(api_view_func)
         def wrapper(request: WSGIRequest, *args: Tuple, **kwargs: DictStrAny) -> Any:
             if request.method != "GET":
@@ -51,14 +54,20 @@ def cache_page(
                         _response[header] = value
                     return _response
                 return result
+            if is_async_view:  # pragma: no cover
 
-            result = api_view_func(request, *args, **kwargs)
+                async def tmp() -> Any:
+                    return await api_view_func(request, *args, **kwargs)
+
+                result = tmp()
+            else:
+                result = api_view_func(request, *args, **kwargs)
             if not operation:  # pragma: no cover
                 return result
 
             response: HttpResponseBase = operation._result_to_response(request, result)
 
-            if response.status_code in CACHEABLE_STATUS_CODES:
+            if response.status_code in HEADER_STATUS_CODES:
                 patch_response_headers(response, timeout)
 
             if (
