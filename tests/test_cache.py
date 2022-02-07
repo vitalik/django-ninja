@@ -186,3 +186,10 @@ def test_check_dict_in_cache():
         assert response.status_code == i and 200 or 400, response.content
         assert response.json() == {"test": i + 1}, response.content
         assert views_calls["/check_dict_in_cache"] == 1
+
+
+def test_cache_whithout_operation():
+    val = "no_cache"
+    func = cache_page()(lambda x: val)
+    request = client._build_request("GET", "/", {}, {})
+    assert func(request) == val

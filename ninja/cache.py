@@ -1,5 +1,5 @@
 from functools import wraps
-from typing import Any, Callable, Optional, Tuple
+from typing import Any, Optional, Tuple
 
 from django.core.cache import caches
 from django.core.cache.backends.base import BaseCache
@@ -9,83 +9,118 @@ from django.utils.cache import get_cache_key, learn_cache_key, patch_response_he
 
 from ninja.conf import settings
 from ninja.operation import Operation
-from ninja.signature.utils import is_async
-from ninja.types import DictStrAny
+from ninja.signature import is_async
+from ninja.types import DictStrAny, TCallable
 
 HEADER_STATUS_CODES = {200, 304}
 
 
-def cache_page(
-    timeout: int = settings.DEFAULT_CACHE_TIMEOUT,
-    cache_alias: str = "default",
-    key_prefix: Optional[str] = None,
-) -> Callable:
-    """Decorator for caching.
+class CachePage:
+    """Class decorator for caching.
 
     ```python
+    from ninja.cache import cache_page
     @router.get('/ping', response=...)
     @cache_page(timeout=..., cache_alias=..., key_prefix=...)
     def pong(request):
         ...
     ```
     """
-    operation: Optional[Operation] = None
-    cache: BaseCache = caches[cache_alias]
 
-    def set_operation(op: Operation) -> None:
-        nonlocal operation
-        operation = op
+    def __init__(
+        self,
+        timeout: int = settings.DEFAULT_CACHE_TIMEOUT,
+        cache_alias: str = "default",
+        key_prefix: Optional[str] = None,
+    ):
+        self.timeout = timeout
+        self.cache: BaseCache = caches[cache_alias]
+        self.key_prefix = key_prefix
+        self.operation: Optional[Operation] = None
 
-    def _decorator(api_view_func: Callable) -> Callable:
-        is_async_view = is_async(api_view_func)
+    def before(self, request: WSGIRequest, *args: Tuple, **kwargs: DictStrAny) -> Any:
+        if request.method != "GET":
+            return None
 
-        @wraps(api_view_func)
-        def wrapper(request: WSGIRequest, *args: Tuple, **kwargs: DictStrAny) -> Any:
-            if request.method != "GET":
-                return api_view_func(request, *args, **kwargs)
+        cache_key = get_cache_key(
+            request, self.key_prefix, request.method, cache=self.cache
+        )
 
-            cache_key = get_cache_key(request, key_prefix, request.method, cache=cache)
+        result = self.cache.get(cache_key)
+        if cache_key is not None and result:
+            if isinstance(result, dict):
+                _response = HttpResponse(content=result.get("content", b""))
+                for header, value in (result.get("headers") or {}).items():
+                    _response[header] = value
+                return _response
+            return result
 
-            result = cache.get(cache_key)
-            if cache_key is not None and result:
-                if isinstance(result, dict):
-                    _response = HttpResponse(content=result.pop("content", b""))
-                    for header, value in (result.get("headers") or {}).items():
-                        _response[header] = value
-                    return _response
-                return result
-            if is_async_view:  # pragma: no cover
+    def after(
+        self, result: Any, request: WSGIRequest, *args: Tuple, **kwargs: DictStrAny
+    ) -> Any:
+        if not self.operation:
+            return result
 
-                async def tmp() -> Any:
-                    return await api_view_func(request, *args, **kwargs)
+        response: HttpResponseBase = self.operation._result_to_response(request, result)
 
-                result = tmp()
-            else:
+        if response.status_code in HEADER_STATUS_CODES:
+            patch_response_headers(response, self.timeout)
+
+        if (
+            isinstance(response, HttpResponse)
+            and not response.streaming
+            and response.status_code == 200
+        ):
+            self.cache.set(
+                learn_cache_key(
+                    request, response, self.timeout, self.key_prefix, cache=self.cache
+                ),
+                response,
+                timeout=self.timeout,
+            )
+
+        return response
+
+    def __call__(self, api_view_func: TCallable) -> TCallable:
+        if is_async(api_view_func):
+
+            @wraps(api_view_func)
+            async def wrapper(
+                request: WSGIRequest, *args: Tuple, **kwargs: DictStrAny
+            ) -> Any:
+                result = self.before(request, *args, **kwargs)
+                if result:
+                    return result
+
+                result = await api_view_func(request, *args, **kwargs)
+
+                response = self.after(result, request, *args, **kwargs)
+
+                return response
+
+        else:
+
+            @wraps(api_view_func)
+            def wrapper(
+                request: WSGIRequest, *args: Tuple, **kwargs: DictStrAny
+            ) -> Any:
+                result = self.before(request, *args, **kwargs)
+                if result:
+                    return result
+
                 result = api_view_func(request, *args, **kwargs)
-            if not operation:  # pragma: no cover
-                return result
 
-            response: HttpResponseBase = operation._result_to_response(request, result)
+                response = self.after(result, request, *args, **kwargs)
 
-            if response.status_code in HEADER_STATUS_CODES:
-                patch_response_headers(response, timeout)
+                return response
 
-            if (
-                isinstance(response, HttpResponse)
-                and not response.streaming
-                and response.status_code == 200
-            ):
-                cache.set(
-                    learn_cache_key(
-                        request, response, timeout, key_prefix, cache=cache
-                    ),
-                    response,
-                    timeout=timeout,
-                )
+        wrapper._ninja_contribute_to_operation = self.set_operation  # type: ignore
+        return wrapper  # type: ignore
 
-            return response
+    def set_operation(self, op: Optional[Operation]) -> None:
+        self.operation = op
 
-        wrapper._ninja_contribute_to_operation = set_operation  # type: ignore
-        return wrapper
+    _ninja_contribute_to_operation = set_operation
 
-    return _decorator
+
+cache_page = CachePage
