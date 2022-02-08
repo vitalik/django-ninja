@@ -11,6 +11,7 @@ from ninja.security import (
     HttpBasicAuth,
     HttpBearer,
     django_auth,
+    django_auth_superuser
 )
 from ninja.security.base import AuthBase
 from ninja.testing import TestClient
@@ -75,6 +76,7 @@ def on_custom_error(request, exc):
 
 for path, auth in [
     ("django_auth", django_auth),
+    ("django_auth_superuser", django_auth_superuser),
     ("callable", callable_auth),
     ("apikeyquery", KeyQuery()),
     ("apikeyheader", KeyHeader()),
@@ -91,6 +93,12 @@ client = TestClient(api)
 
 class MockUser(str):
     is_authenticated = True
+    is_superuser = False
+
+
+class MockSuperUser(str):
+    is_authenticated = True
+    is_superuser = True
 
 
 BODY_UNAUTHORIZED_DEFAULT = dict(detail="Unauthorized")
@@ -101,6 +109,9 @@ BODY_UNAUTHORIZED_DEFAULT = dict(detail="Unauthorized")
     [
         ("/django_auth", {}, 401, BODY_UNAUTHORIZED_DEFAULT),
         ("/django_auth", dict(user=MockUser("admin")), 200, dict(auth="admin")),
+        ("/django_auth_superuser", {}, 401, BODY_UNAUTHORIZED_DEFAULT),
+        ("/django_auth_superuser", dict(user=MockUser("admin")), 401, BODY_UNAUTHORIZED_DEFAULT),
+        ("/django_auth_superuser", dict(user=MockSuperUser("admin")), 200, dict(auth="admin")),
         ("/callable", {}, 401, BODY_UNAUTHORIZED_DEFAULT),
         ("/callable?auth=demo", {}, 200, dict(auth="demo")),
         ("/apikeyquery", {}, 401, BODY_UNAUTHORIZED_DEFAULT),
