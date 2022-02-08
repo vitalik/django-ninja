@@ -195,6 +195,7 @@ def test_schema():
         "KeyHeaderCustomException": {"in": "header", "name": "key", "type": "apiKey"},
         "KeyQuery": {"in": "query", "name": "key", "type": "apiKey"},
         "SessionAuth": {"in": "cookie", "name": "sessionid", "type": "apiKey"},
+        "SessionAuthSuperUser": {"in": "cookie", "name": "sessionid", "type": "apiKey"},
     }
     # TODO: Samename for schema check
     # TODO: check operation security attributes
