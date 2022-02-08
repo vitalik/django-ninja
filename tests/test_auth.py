@@ -112,7 +112,7 @@ BODY_UNAUTHORIZED_DEFAULT = dict(detail="Unauthorized")
         ("/django_auth_superuser", {}, 401, BODY_UNAUTHORIZED_DEFAULT),
         (
             "/django_auth_superuser",
-            dict(user=MockSuperUser("admin")),
+            dict(user=MockUser("admin")),
             401,
             BODY_UNAUTHORIZED_DEFAULT,
         ),
