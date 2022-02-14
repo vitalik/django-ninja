@@ -18,6 +18,8 @@ def index(request):
 index_url = reverse_lazy("api-1.0.0:index")
 ```
 
+This implicit URL name will only be set for the first operation for each API path.
+
 ### Changing the URL name
 
 Rather than using the default URL name, you can specficy it explicitly as a property on the method decorator.
@@ -29,6 +31,9 @@ def users(request):
 
 users_url = reverse_lazy("api-1.0.0:user_list")
 ```
+
+This will override any implicit URL name to this API path.
+
 ### Customizing the namespace
 
 The default URL namespace is built by prepending the Schema's version with `"api-"`, however you can explicitly specify the namespace by overriding the `urls_namespace` attribute of the `NinjaAPI` Schema class.

@@ -31,6 +31,11 @@ def list_events(request):
     return list(Event.objects.all())
 
 
+@router.delete("")
+def delete_events(request):
+    Event.objects.all().delete()
+
+
 @router.get("/{id}", response=EventSchema)
 def get_event(request, id: int):
     event = get_object_or_404(Event, id=id)

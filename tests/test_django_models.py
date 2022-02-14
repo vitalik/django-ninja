@@ -24,8 +24,17 @@ def test_with_client(client: Client):
 
 
 def test_reverse():
-    # check that url reversing works
+    """
+    Check that url reversing works.
+    """
     assert reverse("api-1.0.0:event-create-url-name") == "/api/events/create"
+
+
+def test_reverse_implicit():
+    """
+    Check that implicit url reversing works.
+    """
+    assert reverse("api-1.0.0:list_events") == "/api/events"
 
 
 def json_payload(data):
