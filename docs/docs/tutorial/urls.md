@@ -18,7 +18,7 @@ def index(request):
 index_url = reverse_lazy("api-1.0.0:index")
 ```
 
-This implicit URL name will only be set for the first operation for each API path.
+This implicit URL name will only be set for the first operation for each API path.  If you *don't* want any implicit reverse URL name generated, just explicitly specify `url_name=""` (an empty string) on the method decorator.
 
 ### Changing the URL name
 
