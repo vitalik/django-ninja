@@ -24,7 +24,7 @@ class SessionAuthSuperUser(APIKeyCookie):
     param_name: str = settings.SESSION_COOKIE_NAME
 
     def authenticate(self, request: HttpRequest, key: Optional[str]) -> Optional[Any]:
-        if request.user.is_authenticated and request.user.is_superuser:
+        if request.user.is_authenticated and getattr(request.user, 'is_superuser', None):
             return request.user
 
         return None
