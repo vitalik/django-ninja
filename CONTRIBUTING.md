@@ -50,7 +50,9 @@ make test-cov
 
 Django Ninja uses `black`, `isort` and `flake8` for style check
 
-Before your commit please check your code with:
+Run `pre-commit install` to create a git hook to fix your styles before you commit.
+
+Alternatively, manually check your code with:
 
 ```
 black --check ninja tests
