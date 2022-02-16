@@ -60,11 +60,14 @@ test = [
     "black",
     "isort",
     "flake8",
-    "mypy==0.930",
+    "mypy==0.931",
     "django-stubs",
 ]
 doc = [
     "mkdocs",
     "mkdocs-material",
     "markdown-include"
+]
+dev = [
+    "pre-commit",
 ]
