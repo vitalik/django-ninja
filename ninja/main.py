@@ -324,8 +324,7 @@ class NinjaAPI:
         result = get_openapi_urls(self)
 
         for prefix, router in self._routers:
-            for path in router.urls_paths(prefix):
-                result.append(path)
+            result.extend(router.urls_paths(prefix))
 
         result.append(get_root_url(self))
         return result
