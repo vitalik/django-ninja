@@ -8,6 +8,10 @@ from django.middleware.csrf import CsrfViewMiddleware
 __all__ = ["check_csrf", "is_debug_server", "normalize_path"]
 
 
+def replace_path_param_notation(path: str) -> str:
+    return path.replace("{", "<").replace("}", ">")
+
+
 def normalize_path(path: str) -> str:
     while "//" in path:
         path = path.replace("//", "/")

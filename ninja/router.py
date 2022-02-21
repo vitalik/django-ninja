@@ -16,7 +16,7 @@ from ninja.constants import NOT_SET
 from ninja.errors import ConfigError
 from ninja.operation import PathView
 from ninja.types import TCallable
-from ninja.utils import normalize_path
+from ninja.utils import normalize_path, replace_path_param_notation
 
 if TYPE_CHECKING:
     from ninja import NinjaAPI  # pragma: no cover
@@ -316,8 +316,9 @@ class Router:
             router.set_api_instance(api, self)
 
     def urls_paths(self, prefix: str) -> Iterator[URLPattern]:
+        prefix = replace_path_param_notation(prefix)
         for path, path_view in self.path_operations.items():
-            path = path.replace("{", "<").replace("}", ">")
+            path = replace_path_param_notation(path)
             route = "/".join([i for i in (prefix, path) if i])
             # to skip lot of checks we simply treat double slash as a mistake:
             route = normalize_path(route)
