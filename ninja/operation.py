@@ -7,7 +7,6 @@ from typing import (
     List,
     Optional,
     Sequence,
-    Tuple,
     Type,
     Union,
     cast,
@@ -322,37 +321,35 @@ class PathView:
         view.__func__.csrf_exempt = True  # type: ignore
         return view
 
-    def _sync_view(self, request: HttpRequest, *a: Any, **kw: Any) -> HttpResponse:
-        operation, error = self._find_operation(request)
-        if error:
-            return error
-        return operation.run(request, *a, **kw)  # type: ignore
+    def _sync_view(self, request: HttpRequest, *a: Any, **kw: Any) -> HttpResponseBase:
+        operation = self._find_operation(request)
+        if operation is None:
+            return self._not_allowed()
+        return operation.run(request, *a, **kw)
 
     async def _async_view(
         self, request: HttpRequest, *a: Any, **kw: Any
-    ) -> HttpResponse:
+    ) -> HttpResponseBase:
         from asgiref.sync import sync_to_async
 
-        operation, error = self._find_operation(request)
-        if error:
-            return error
+        operation = self._find_operation(request)
+        if operation is None:
+            return self._not_allowed()
         if operation.is_async:
-            return await operation.run(request, *a, **kw)  # type: ignore
-        else:
-            return await sync_to_async(operation.run)(request, *a, **kw)  # type: ignore
+            return await cast(AsyncOperation, operation).run(request, *a, **kw)
+        return await sync_to_async(operation.run)(request, *a, **kw)  # type: ignore
 
-    def _find_operation(
-        self, request: HttpRequest
-    ) -> Tuple[Any, Optional[HttpResponse]]:
+    def _find_operation(self, request: HttpRequest) -> Optional[Operation]:
+        for op in self.operations:
+            if request.method in op.methods:
+                return op
+        return None
+
+    def _not_allowed(self) -> HttpResponse:
         allowed_methods = set()
         for op in self.operations:
             allowed_methods.update(op.methods)
-            if request.method in op.methods:
-                return op, None
-        return (
-            None,
-            HttpResponseNotAllowed(allowed_methods, content=b"Method not allowed"),
-        )
+        return HttpResponseNotAllowed(allowed_methods, content=b"Method not allowed")
 
 
 class ResponseObject:
