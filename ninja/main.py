@@ -358,7 +358,7 @@ class NinjaAPI:
 
         return response
 
-    def create_temporal_response(self) -> HttpResponse:
+    def create_temporal_response(self, request: HttpRequest) -> HttpResponse:
         return HttpResponse("", content_type=self.get_content_type())
 
     def get_content_type(self) -> str:
