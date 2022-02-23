@@ -94,9 +94,10 @@ class Operation:
         if error:
             return error
         try:
-            values = self._get_values(request, kw)
+            temporal_response = self.api.create_temporal_response()
+            values = self._get_values(request, kw, temporal_response)
             result = self.view_func(request, **values)
-            return self._result_to_response(request, result)
+            return self._result_to_response(request, result, temporal_response)
         except Exception as e:
             if isinstance(e, TypeError) and "required positional argument" in str(e):
                 msg = "Did you fail to use functools.wraps() in a decorator?"
@@ -151,7 +152,7 @@ class Operation:
         return self.api.create_response(request, {"detail": "Unauthorized"}, status=401)
 
     def _result_to_response(
-        self, request: HttpRequest, result: Any
+        self, request: HttpRequest, result: Any, temporal_response: HttpResponse
     ) -> HttpResponseBase:
         """
         The protocol for results
@@ -179,13 +180,16 @@ class Operation:
                 f"Schema for status {status} is not set in response {self.response_models.keys()}"
             )
 
+        temporal_response.status_code = status
+
         if response_model is NOT_SET:
-            return self.api.create_response(request, result, status=status)
+            return self.api.create_response(
+                request, result, temporal_response=temporal_response
+            )
 
         if response_model is None:
-            return HttpResponse(status=status)
-            # TODO: ^ maybe self.api.create_empty_response ?
-            # return self.api.create_response(request, result, status=status)
+            # Empty response.
+            return temporal_response
 
         resp_object = ResponseObject(result)
         # ^ we need object because getter_dict seems work only with from_orm
@@ -195,9 +199,13 @@ class Operation:
             exclude_defaults=self.exclude_defaults,
             exclude_none=self.exclude_none,
         )["response"]
-        return self.api.create_response(request, result, status=status)
+        return self.api.create_response(
+            request, result, temporal_response=temporal_response
+        )
 
-    def _get_values(self, request: HttpRequest, path_params: Any) -> DictStrAny:
+    def _get_values(
+        self, request: HttpRequest, path_params: Any, temporal_response: HttpResponse
+    ) -> DictStrAny:
         values, errors = {}, []
         for model in self.models:
             try:
@@ -213,6 +221,8 @@ class Operation:
                 errors.extend(items)
         if errors:
             raise ValidationError(errors)
+        if self.signature.response_arg:
+            values[self.signature.response_arg] = temporal_response
         return values
 
     def _create_response_model_multiple(
@@ -244,9 +254,10 @@ class AsyncOperation(Operation):
         if error:
             return error
         try:
-            values = self._get_values(request, kw)
+            temporal_response = self.api.create_temporal_response()
+            values = self._get_values(request, kw, temporal_response)
             result = await self.view_func(request, **values)
-            return self._result_to_response(request, result)
+            return self._result_to_response(request, result, temporal_response)
         except Exception as e:
             return self.api.on_exception(request, e)
 
