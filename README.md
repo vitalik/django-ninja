@@ -1,3 +1,8 @@
+<a href="https://github.com/vitalik/django-ninja/issues/383"><img width="858"  src="https://user-images.githubusercontent.com/95222/156410109-d41a76f8-377f-45cd-9f35-afaea1108a44.png"></a>
+
+
+
+
 <p align="center">
   <a href="https://django-ninja.rest-framework.com/"><img src="https://django-ninja.rest-framework.com/img/logo-big.png"></a>
 </p>
