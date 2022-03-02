@@ -121,3 +121,13 @@ def test_model_fields_all():
         },
         "required": ["field1"],
     }
+
+
+def test_model_schema_without_config():
+    with pytest.raises(
+        ConfigError,
+        match="ModelSchema class 'NoConfigSchema' requires a 'Config' subclass",
+    ):
+
+        class NoConfigSchema(ModelSchema):
+            pass
