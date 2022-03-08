@@ -3,6 +3,7 @@ from unittest.mock import Mock
 
 import django
 import pytest
+from django.contrib.postgres.fields.array import ArrayField
 from django.db import models
 from django.db.models import Manager
 
@@ -45,6 +46,7 @@ def test_all_fields():
     # test all except relational field
 
     class AllFields(models.Model):
+        arrayfield = ArrayField(models.IntegerField())
         bigintegerfield = models.BigIntegerField()
         binaryfield = models.BinaryField()
         booleanfield = models.BooleanField()
@@ -82,6 +84,11 @@ def test_all_fields():
         "type": "object",
         "properties": {
             "id": {"title": "Id", "type": "integer"},
+            "arrayfield": {
+                "title": "Arrayfield",
+                "type": "array",
+                "items": {"type": "integer"},
+            },
             "bigintegerfield": {"title": "Bigintegerfield", "type": "integer"},
             "binaryfield": {
                 "title": "Binaryfield",
@@ -139,6 +146,7 @@ def test_all_fields():
             "uuidfield": {"title": "Uuidfield", "type": "string", "format": "uuid"},
         },
         "required": [
+            "arrayfield",
             "bigintegerfield",
             "binaryfield",
             "booleanfield",

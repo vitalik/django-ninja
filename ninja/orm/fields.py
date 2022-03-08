@@ -15,6 +15,15 @@ from uuid import UUID
 
 from django.db.models import ManyToManyField
 from django.db.models.fields import Field
+
+try:
+    from django.contrib.postgres.fields.array import ArrayField
+except ModuleNotFoundError:  # pragma no cover
+    # psycopg2 not installed. ok to make a dummy here since it can't be in use
+    class ArrayField:  # type: ignore[no-redef]
+        pass
+
+
 from pydantic import IPvAnyAddress
 from pydantic.fields import FieldInfo, Undefined
 
@@ -117,8 +126,13 @@ def get_schema_field(field: Field, *, depth: int = 0) -> Tuple:
         null = field_options.get("null", False)
         max_length = field_options.get("max_length")
 
-        internal_type = field.get_internal_type()
-        python_type = TYPES[internal_type]
+        if isinstance(field, ArrayField):
+            inner_internal_type = field.base_field.get_internal_type()
+            inner_python_type = TYPES[inner_internal_type]
+            python_type = List[inner_python_type]  # type: ignore[valid-type]
+        else:
+            internal_type = field.get_internal_type()
+            python_type = TYPES[internal_type]
 
         if field.has_default():
             if callable(field.default):

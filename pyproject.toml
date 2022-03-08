@@ -62,6 +62,7 @@ test = [
     "flake8",
     "mypy==0.931",
     "django-stubs",
+    "psycopg2",
 ]
 doc = [
     "mkdocs",
