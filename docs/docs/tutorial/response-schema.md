@@ -149,7 +149,7 @@ class TaskSchema(Schema):
 ```Python hl_lines="3"
 class TaskSchema(Schema):
     type: str = Field(None)
-    type_display: str = Field(None, alias="get_type_dispaly") # callable will be executed
+    type_display: str = Field(None, alias="get_type_display") # callable will be executed
 ```
 
 ## Resolvers
