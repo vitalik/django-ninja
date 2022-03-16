@@ -19,7 +19,7 @@ def feed_cookiemonster(request: HttpRequest, response: HttpResponse):
 
 ## Temporal response object
 
-This response object is used for the base of all responses, including a n
+This response object is used for the base of all responses built by Django Ninja, including error responses. This object is *not* used if a Django `HttpResponse` object is returned directly by an operation.
 
 Obviously this response object won't contain the content yet, but it does have the `content_type` set (but you probably don't want to be changing it).
 
