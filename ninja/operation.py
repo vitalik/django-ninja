@@ -31,6 +31,27 @@ if TYPE_CHECKING:
 __all__ = ["Operation", "PathView", "ResponseObject"]
 
 
+def load_request(request: HttpRequest):
+    """
+    Loads a non-json PUT/PATCH request as a POST, reading data from request body
+    and placing them in request.POST and request.FILES.
+    This is required to fix the behaviour when we have a PUT/PATCH endpoint that also
+    receives a File as parameter, forcing the data to be sent as multipart/form-data and
+    making the ParamModel look up at request.POST and request.FILES
+    """
+    if request.method in ("PUT", "PATCH") and request.content_type != "application/json":
+        if hasattr(request, '_post'):
+            del request._post
+            del request._files
+        try:
+            request.method = "POST"
+            request.META['REQUEST_METHOD'] = 'POST'
+            request._load_post_and_files()
+            request.META['REQUEST_METHOD'] = 'PUT'
+            request.method = "PUT"
+        except Exception:
+            pass
+
 class Operation:
     def __init__(
         self,
@@ -90,6 +111,7 @@ class Operation:
             view_func._ninja_contribute_to_operation(self)  # type: ignore
 
     def run(self, request: HttpRequest, **kw: Any) -> HttpResponseBase:
+        load_request(request)
         error = self._run_checks(request)
         if error:
             return error
@@ -240,6 +262,7 @@ class AsyncOperation(Operation):
         self.is_async = True
 
     async def run(self, request: HttpRequest, **kw: Any) -> HttpResponseBase:  # type: ignore
+        load_request(request)
         error = self._run_checks(request)
         if error:
             return error
