@@ -1,4 +1,4 @@
-from typing import Any, Callable, Iterable, Optional, Type
+from typing import Any, Callable, Dict, Iterable, Optional, Type
 
 from django.core.files.uploadedfile import UploadedFile as DjangoUploadedFile
 from pydantic.fields import ModelField
@@ -18,5 +18,5 @@ class UploadedFile(DjangoUploadedFile):
         return v
 
     @classmethod
-    def __modify_schema__(cls, field_schema, field: Optional[ModelField]):
+    def __modify_schema__(cls, field_schema: Dict[str, Any], field: Optional[ModelField]):
         field_schema.update(type="string", format="binary")
