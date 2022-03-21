@@ -18,5 +18,7 @@ class UploadedFile(DjangoUploadedFile):
         return v
 
     @classmethod
-    def __modify_schema__(cls, field_schema: Dict[str, Any], field: Optional[ModelField]) -> None:
+    def __modify_schema__(
+        cls, field_schema: Dict[str, Any], field: Optional[ModelField]
+    ) -> None:
         field_schema.update(type="string", format="binary")
