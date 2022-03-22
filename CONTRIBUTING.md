@@ -48,7 +48,7 @@ make test-cov
  
 ## Code style
 
-Django Ninja uses `black`, `isort` and `flake8` for style check
+Django Ninja uses `black`, `isort`, `flake8` and `mypy` for style checks.
 
 Run `pre-commit install` to create a git hook to fix your styles before you commit.
 
@@ -58,6 +58,7 @@ Alternatively, manually check your code with:
 black --check ninja tests
 isort --check ninja tests
 flake8 ninja tests
+mypy ninja
 ```
 
 or using Makefile:
