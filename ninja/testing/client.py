@@ -168,3 +168,6 @@ class NinjaResponse:
 
     def __getitem__(self, key: str) -> Any:
         return self._response[key]
+
+    def __getattr__(self, attr: str) -> Any:
+        return getattr(self._response, attr)
