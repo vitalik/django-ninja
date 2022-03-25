@@ -135,7 +135,7 @@ class TaskSchema(Schema):
     id: int
     title: str
     # The first Field param is the default, use ... for required fields.
-    completed: bool = Field(..., alias="is_completed)
+    completed: bool = Field(..., alias="is_completed")
     owner_first_name: str = Field(None, alias="owner.first_name")
 ```
 
