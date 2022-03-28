@@ -38,6 +38,18 @@ def check_no_content(request, return_code: bool):
     return  # None
 
 
+@api.get("/check_single_status_one_response", response={202: None})
+def check_single_status_with_one_response(request):
+    # Single status code
+    return 202
+
+
+@api.get("/check_single_status_many_responses", response={202: None, 400: str})
+def check_single_status_with_many_responses(request):
+    # Single status code
+    return 202
+
+
 @api.get(
     "/check_multiple_codes",
     response={codes_2xx: int, codes_3xx: str, ...: float},
@@ -166,6 +178,22 @@ def test_no_content():
     schema = api.get_openapi_schema()
     details = schema["paths"]["/api/check_no_content"]["get"]["responses"]
     assert details == {204: {"description": "No Content"}}
+
+
+def test_single_status():
+    response = client.get("/check_single_status_one_response")
+    assert response.status_code == 202
+    assert response.content == b""
+
+    schema = api.get_openapi_schema()
+    details = schema["paths"]["/api/check_single_status_one_response"]["get"][
+        "responses"
+    ]
+    assert details == {202: {"description": "Accepted"}}
+
+    response = client.get("/check_single_status_many_responses")
+    assert response.status_code == 202
+    assert response.content == b""
 
 
 def test_validates():

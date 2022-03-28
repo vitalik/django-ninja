@@ -162,8 +162,11 @@ class Operation:
         if isinstance(result, HttpResponseBase):
             return result
 
-        status: int = 200
+        status: int = result if isinstance(result, int) else 200
+
         if len(self.response_models) == 1:
+            # Fast way to extract the first key of the response models dict,
+            # tuple or list to get the status.
             status = next(iter(self.response_models))
 
         if isinstance(result, tuple) and len(result) == 2:
