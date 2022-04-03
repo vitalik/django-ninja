@@ -145,9 +145,7 @@ def _inject_pagination(
         result = paginator.paginate_queryset(
             items, pagination=pagination_params, **kwargs
         )
-        if paginator.Output:
-            result["items"] = list(result["items"])
-        # ^ forcing queryset evaluation #TODO: check why pydantic did not do it here
+
         return result
 
     view_with_pagination._ninja_contribute_args = [  # type: ignore
