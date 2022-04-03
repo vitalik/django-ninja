@@ -176,9 +176,13 @@ class RouterPaginated(Router):
     def add_api_operation(
         self, path: str, methods: List[str], view_func: Callable, **kwargs: Any
     ) -> None:
-        response = kwargs["response"]
-        if is_collection_type(response):
-            view_func = _inject_pagination(view_func, self.pagination_class)
+        if methods[0] == 'GET':
+            response = kwargs["response"]
+            if isinstance(response, dict):
+                status: int = 200
+                response = response[status]
+            if is_collection_type(response):
+                view_func = _inject_pagination(view_func, self.pagination_class)
         return super().add_api_operation(path, methods, view_func, **kwargs)
 
 
