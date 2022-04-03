@@ -139,6 +139,8 @@ def _inject_pagination(
             kwargs[paginator.pass_parameter] = pagination_params
 
         items = func(*args, **kwargs)
+        if isinstance(items, tuple) and len(items) == 2:
+            items = items[1]
 
         result = paginator.paginate_queryset(
             items, pagination=pagination_params, **kwargs
