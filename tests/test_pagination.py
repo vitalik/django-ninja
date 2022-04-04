@@ -87,6 +87,12 @@ def items_7(request):
     return [7] * 7
 
 
+@api.get("/items_8", response={101: int, 200: List[int]})
+@paginate()
+def items_8(request, **kwargs):
+    return 200, ITEMS  # tuple type of return followed by multiple response schema
+
+
 client = TestClient(api)
 
 
@@ -252,6 +258,38 @@ def test_case7():
         "type": "array",
         "items": {"type": "integer"},
     }
+
+
+def test_case8_tuple_type_return():
+    response = client.get("/items_8?limit=10").json()
+    assert response == {"items": ITEMS[:10], "count": 100}
+
+    schema = api.get_openapi_schema()["paths"]["/api/items_8"]["get"]
+    print(schema["parameters"])
+    assert schema["parameters"] == [
+        {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+                "title": "Limit",
+                "default": 100,
+                "exclusiveMinimum": 0,
+                "type": "integer",
+            },
+            "required": False,
+        },
+        {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+                "title": "Offset",
+                "default": 0,
+                "exclusiveMinimum": -1,
+                "type": "integer",
+            },
+            "required": False,
+        },
+    ]
 
 
 def test_config_error_None():
