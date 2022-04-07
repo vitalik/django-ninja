@@ -1,6 +1,9 @@
 <a href="https://github.com/vitalik/django-ninja/issues/383"><img width="858"  src="https://user-images.githubusercontent.com/95222/156410109-d41a76f8-377f-45cd-9f35-afaea1108a44.png"></a>
 
 
+<a href="https://github.com/vitalik/django-ninja/issues/383">^ Please read ^</a>
+
+
 
 
 <p align="center">
