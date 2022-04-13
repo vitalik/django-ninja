@@ -265,7 +265,7 @@ def detect_collection_fields(
     better the input parameters if it's a list or a single value
     This method detects attributes that should be treated by ninja as lists and returns this list as a result
     """
-    result = [i.name for i in args if i.is_collection]
+    result = [i.alias or i.name for i in args if i.is_collection]
 
     if flatten_map:
         args_d = {arg.alias: arg for arg in args}
