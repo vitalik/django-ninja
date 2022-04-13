@@ -161,7 +161,7 @@ class NinjaResponse:
         if self.streaming:
             self.content = b"".join(http_response.streaming_content)  # type: ignore
         else:
-            self.content = http_response.content
+            self.content = http_response.content  # type: ignore
 
     def json(self) -> Any:
         return json_loads(self.content)
