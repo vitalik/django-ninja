@@ -1,5 +1,5 @@
 # Yeah, this is a bit strange
-# but the whole point of this mudule is to make mypy and typehints happy
+# but the whole point of this module is to make mypy and typehints happy
 # what it basically does makes function XXX that create instance of params.XXX
 # and annotates function with result = Any
 # idea from https://github.com/tiangolo/fastapi/blob/master/fastapi/param_functions.py

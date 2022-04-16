@@ -196,7 +196,7 @@ def make_response_paginated(paginator: PaginationBase, op: Operation) -> None:
     """
     status_code, item_schema = _find_collection_response(op)
 
-    # Swithcing schema to Output shcema
+    # Switching schema to Output schema
     try:
         new_name = f"Paged{item_schema.__name__}"
     except AttributeError:
@@ -213,7 +213,7 @@ def make_response_paginated(paginator: PaginationBase, op: Operation) -> None:
 
     response = op._create_response_model(new_schema)
 
-    # chaging response model to newly created one
+    # Changing response model to newly created one
     op.response_models[status_code] = response
 
 
