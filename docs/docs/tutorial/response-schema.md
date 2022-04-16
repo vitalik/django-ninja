@@ -139,7 +139,7 @@ class TaskSchema(Schema):
     owner_first_name: str = Field(None, alias="owner.first_name")
 ```
 
-Aliases also supprt django template syntax variables access:
+Aliases also support django template syntax variables access:
 
 ```Python hl_lines="2"
 class TaskSchema(Schema):
