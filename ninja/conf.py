@@ -7,6 +7,7 @@ class Settings(BaseModel):
         "ninja.pagination.LimitOffsetPagination", alias="NINJA_PAGINATION_CLASS"
     )
     PAGINATION_PER_PAGE: int = Field(100, alias="NINJA_PAGINATION_PER_PAGE")
+    DOCS_VIEW: str = Field("swagger", alias="NINJA_DOCS_VIEW")
 
     class Config:
         orm_mode = True

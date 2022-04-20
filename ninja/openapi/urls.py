@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Any, List
 
 from django.urls import path
 
-from .views import default_home, openapi_json, swagger
+from .views import default_home, openapi_json, openapi_view
 
 if TYPE_CHECKING:
     from ninja import NinjaAPI  # pragma: no cover
@@ -31,8 +31,8 @@ def get_openapi_urls(api: "NinjaAPI") -> List[Any]:
             result.append(
                 path(
                     api.docs_url.lstrip("/"),
-                    partial(swagger, api=api),
-                    name="openapi-swagger",
+                    partial(openapi_view, api=api),
+                    name="openapi-view",
                 )
             )
 
