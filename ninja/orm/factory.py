@@ -112,7 +112,7 @@ class SchemaFactory:
 
         invalid_fields = (set(fields or []) | set(exclude or [])) - all_fields.keys()
         if invalid_fields:
-            raise ConfigError(f"Field(s) {invalid_fields} are not in model.")
+            raise ConfigError(f"Field(s) {invalid_fields} are not in model {model}")
 
         if fields:
             for name in fields:
