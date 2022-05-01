@@ -20,7 +20,7 @@ index_url = reverse_lazy("api-1.0.0:index")
 
 ### Changing the URL name
 
-Rather than using the default URL name, you can specficy it explicitly as a property on the method decorator.
+Rather than using the default URL name, you can specify it explicitly as a property on the method decorator.
 
 ```Python
 @api.get("/users", url_name="user_list")
