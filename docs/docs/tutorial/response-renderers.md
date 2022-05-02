@@ -22,6 +22,7 @@ api = NinjaAPI(renderer=MyRenderer())
 ```
 
 The `render` method takes the following arguments:
+
  - request -> HttpRequest object 
  - data -> object that needs to be serialized
  - response_status as an `int` -> the HTTP status code that will be returned to the client

@@ -83,7 +83,7 @@ def list_users(...
 
 ## Accessing paginator parameters in view function
 
-If you need an access to `Input` parameters used for pagination in your vuew function - use `pass_parameter` argument
+If you need access to `Input` parameters used for pagination in your view function - use `pass_parameter` argument
 
 In that case input data will be available in `**kwargs`:
 
@@ -101,7 +101,7 @@ def someview(request, **kwargs):
 To create a custom pagination class you should subclass `ninja.pagination.PaginationBase` and override the `Input` and `Output` schema classes and `paginate_queryset(self, queryset, request, **params)` method:
 
  - The `Input` schema is a Schema class that describes parameters that should be passed to your paginator (f.e. page-number or limit/offset values).
- - The `Output` schema describes schema for page output (f.e. count/next-page/iitiems/etc).
+ - The `Output` schema describes schema for page output (f.e. count/next-page/items/etc).
  - The `paginate_queryset` method is passed the initial queryset and should return an iterable object that contains only the data in the requested page. This method accepts the following arguments:
     - `queryset`: a queryset (or iterable) returned by the api function
     - `pagination` - the paginator.Input parameters (parsed and validated)

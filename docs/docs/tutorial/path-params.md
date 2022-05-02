@@ -15,7 +15,7 @@ So, if you run this example and go to <a href="http://localhost:8000/api/items/f
 
 
 ### Path parameters with types
-You can declare the type of a path parameter in the function using standard Python type annotations:
+You can declare the type of path parameter in the function using standard Python type annotations:
 
 ```Python hl_lines="2"
 {!./src/tutorial/path/code02.py!}
@@ -69,7 +69,7 @@ match.  (e.g. if no other path matches, a *404 Not Found* will be returned)
 
 !!! tip
     Notice that, since **Django Ninja** uses a default type of `str` for unannotated parameters, the value the
-    function above received (and returned) is `"3"`, as a Python `str` - not an integer **3**, . To receive
+    function above received (and returned) is `"3"`, as a Python `str` - not an integer **3**. To receive
     an `int`, simply declare `item_id` as an `int` type annotation in the function definition as normal:
 
     ```Python hl_lines="2"
