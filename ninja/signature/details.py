@@ -252,7 +252,11 @@ def is_collection_type(annotation: Any) -> bool:
     origin = get_collection_origin(annotation)
     types = (List, list, set, tuple)
     if origin is None:
-        return issubclass(annotation, types)
+        return (
+            isinstance(annotation, types)
+            if not isinstance(annotation, type)
+            else issubclass(annotation, types)
+        )
     else:
         return origin in types  # TODO: I guess we should handle only list
 
