@@ -250,15 +250,15 @@ def is_pydantic_model(cls: Any) -> bool:
 
 def is_collection_type(annotation: Any) -> bool:
     origin = get_collection_origin(annotation)
-    types = (List, list, set, tuple)
+    collection_types = (List, list, set, tuple)
     if origin is None:
         return (
-            isinstance(annotation, types)
+            isinstance(annotation, collection_types)
             if not isinstance(annotation, type)
-            else issubclass(annotation, types)
+            else issubclass(annotation, collection_types)
         )
     else:
-        return origin in types  # TODO: I guess we should handle only list
+        return origin in collection_types  # TODO: I guess we should handle only list
 
 
 def detect_collection_fields(
