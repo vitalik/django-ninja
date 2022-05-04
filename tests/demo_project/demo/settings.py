@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     "ninja",
     "someapp",
     "multi_param",
+    "late_router_registration",
 ]
 
 MIDDLEWARE = [

@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.urls import path
+from late_router_registration.routers import api_late_registration
 
 from ninja import NinjaAPI
 
@@ -48,4 +49,5 @@ urlpatterns = [
     path("api/v2/", api_v2.urls),
     path("api/v3/", api_v3.urls),
     path("api/mp/", api_multi_param.urls),
+    path("api/late-registration", api_late_registration.urls),
 ]
