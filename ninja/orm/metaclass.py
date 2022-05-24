@@ -24,7 +24,12 @@ class ModelSchemaMetaclass(ResolverMetaclass):
                 and issubclass(base, ModelSchema)
                 and base == ModelSchema
             ):
-                config = namespace["Config"]
+                try:
+                    config = namespace["Config"]
+                except KeyError:
+                    raise ConfigError(
+                        f"ModelSchema class '{name}' requires a 'Config' subclass"
+                    )
 
                 assert issubclass(config.model, DjangoModel)
 

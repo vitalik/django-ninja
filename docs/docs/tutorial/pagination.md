@@ -83,7 +83,7 @@ def list_users(...
 
 ## Accessing paginator parameters in view function
 
-If you need an access to `Input` parameters used for pagination in your vuew function - use `pass_parameter` argument
+If you need access to `Input` parameters used for pagination in your view function - use `pass_parameter` argument
 
 In that case input data will be available in `**kwargs`:
 
@@ -98,10 +98,10 @@ def someview(request, **kwargs):
 
 ## Creating Custom Pagination Class
 
-To create a custom pagination class you should subclass `ninja.pagination.PaginationBase` and override the `Input` and `Output` schema classe and `paginate_queryset(self, queryset, request, **params)` method:
+To create a custom pagination class you should subclass `ninja.pagination.PaginationBase` and override the `Input` and `Output` schema classes and `paginate_queryset(self, queryset, request, **params)` method:
 
  - The `Input` schema is a Schema class that describes parameters that should be passed to your paginator (f.e. page-number or limit/offset values).
- - The `Output` schema describes schema for page output (f.e. count/next-page/iitiems/etc).
+ - The `Output` schema describes schema for page output (f.e. count/next-page/items/etc).
  - The `paginate_queryset` method is passed the initial queryset and should return an iterable object that contains only the data in the requested page. This method accepts the following arguments:
     - `queryset`: a queryset (or iterable) returned by the api function
     - `pagination` - the paginator.Input parameters (parsed and validated)
@@ -122,7 +122,7 @@ class CustomPagination(PaginationBase):
         
 
     class Output(Schema):
-        items: List[Any] # `items` is a requried attribute
+        items: List[Any] # `items` is a required attribute
         total: int
         per_page: int
 
@@ -146,7 +146,7 @@ def list_users(request):
 
 There is often a case when you need to add pagination to all views that returns querysets or list
 
-You can use a builtin router class (`RouterPaginated`) that automatically injects pagination to all operation that definded `response=List[SomeSchema]`:
+You can use a builtin router class (`RouterPaginated`) that automatically injects pagination to all operations that defined `response=List[SomeSchema]`:
 
 ```Python hl_lines="1 3 6 10"
 from ninja.pagination import RouterPaginated

@@ -162,7 +162,7 @@ class NinjaResponse:
         if self.streaming:
             self.content = b"".join(http_response.streaming_content)  # type: ignore
         else:
-            self.content = http_response.content
+            self.content = http_response.content  # type: ignore[union-attr]
 
     def json(self) -> Any:
         return json_loads(self.content)
@@ -173,3 +173,7 @@ class NinjaResponse:
     @property
     def cookies(self) -> cookies.SimpleCookie:
         return cast(cookies.SimpleCookie, self._response.cookies)
+
+    def __getattr__(self, attr: str) -> Any:
+        return getattr(self._response, attr)
+ 

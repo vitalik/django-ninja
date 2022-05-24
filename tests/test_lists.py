@@ -89,6 +89,14 @@ def listview5(
     }
 
 
+@router.post("/list6")
+def listview6(
+    request,
+    object_id: List[int] = Query(None, alias="id"),
+):
+    return {"query": object_id}
+
+
 client = TestClient(router)
 
 
@@ -140,6 +148,11 @@ client = TestClient(router)
             "/list5?query=1&query=2",
             dict(json=[5, 6]),
             {"query": [1, 2], "body": [5, 6]},
+        ),
+        (
+            "/list6?id=1&id=2",
+            {},
+            {"query": [1, 2]},
         ),
     ]
     # fmt: on

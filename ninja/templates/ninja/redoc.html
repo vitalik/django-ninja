@@ -1,0 +1,12 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="shortcut icon" href="{% static 'ninja/favicon.png' %}">
+    <title>{{ api.title }}</title>
+</head>
+<body>
+    <redoc spec-url='{{ openapi_json_url }}'></redoc>
+    <script src="{% static 'ninja/redoc@2.0.0-rc.66.standalone.js' %}"></script>
+</body>
+</html>

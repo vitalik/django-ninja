@@ -162,7 +162,7 @@ Whether fields which are equal to `None` should be excluded from the response (d
 If you need to exclude some operation from OpenAPI schema use `include_in_schema` argument:
 ```Python hl_lines="1"
 @api.post("/hidden", include_in_schema=False)
-def some_hiden_operation(request):
+def some_hidden_operation(request):
     pass
 ```
 
@@ -178,4 +178,3 @@ def some_operation(request):
 
 reverse('api-1.0.0:tasks')
 ```
-

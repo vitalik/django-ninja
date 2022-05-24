@@ -256,11 +256,15 @@ def is_pydantic_model(cls: Any) -> bool:
 
 def is_collection_type(annotation: Any) -> bool:
     origin = get_collection_origin(annotation)
-    types = (List, list, set, tuple)
+    collection_types = (List, list, set, tuple)
     if origin is None:
-        return issubclass(annotation, types)
+        return (
+            isinstance(annotation, collection_types)
+            if not isinstance(annotation, type)
+            else issubclass(annotation, collection_types)
+        )
     else:
-        return origin in types  # TODO: I guess we should handle only list
+        return origin in collection_types  # TODO: I guess we should handle only list
 
 
 def detect_collection_fields(
@@ -271,7 +275,7 @@ def detect_collection_fields(
     better the input parameters if it's a list or a single value
     This method detects attributes that should be treated by ninja as lists and returns this list as a result
     """
-    result = [i.name for i in args if i.is_collection]
+    result = [i.alias or i.name for i in args if i.is_collection]
 
     if flatten_map:
         args_d = {arg.alias: arg for arg in args}

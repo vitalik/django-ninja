@@ -1,4 +1,4 @@
-This `env-matrix` speeds up test execution across all environemnt  (Pytho 3.[6,7,8],  Django2.0,...,3.1)
+This `env-matrix` speeds up test execution across all environments (Pytho 3.[6,7,8],  Django2.0,...,3.1)
 
 To execute
 

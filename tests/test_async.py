@@ -43,7 +43,7 @@ async def test_asyncio_operations():
     res = await client.get("/async?payload=str&key=secret")
     assert res.status_code == 422
 
-    # async call to sync method for path that hahve async operations
+    # async call to sync method for path that have async operations
     res = await client.post("/async")
     assert res.json() == {"sync": True}
 
