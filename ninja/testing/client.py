@@ -170,10 +170,5 @@ class NinjaResponse:
     def __getitem__(self, key: str) -> Any:
         return self._response[key]
 
-    @property
-    def cookies(self) -> cookies.SimpleCookie:
-        return cast(cookies.SimpleCookie, self._response.cookies)
-
     def __getattr__(self, attr: str) -> Any:
         return getattr(self._response, attr)
- 
