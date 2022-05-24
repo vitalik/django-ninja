@@ -1,5 +1,6 @@
+from http import cookies
 from json import dumps as json_dumps, loads as json_loads
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 from unittest.mock import Mock
 from urllib.parse import urljoin
 
@@ -161,7 +162,7 @@ class NinjaResponse:
         if self.streaming:
             self.content = b"".join(http_response.streaming_content)  # type: ignore
         else:
-            self.content = http_response.content  # type: ignore
+            self.content = http_response.content  # type: ignore[union-attr]
 
     def json(self) -> Any:
         return json_loads(self.content)
@@ -169,5 +170,10 @@ class NinjaResponse:
     def __getitem__(self, key: str) -> Any:
         return self._response[key]
 
+    @property
+    def cookies(self) -> cookies.SimpleCookie:
+        return cast(cookies.SimpleCookie, self._response.cookies)
+
     def __getattr__(self, attr: str) -> Any:
         return getattr(self._response, attr)
+ 

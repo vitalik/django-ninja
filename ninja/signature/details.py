@@ -1,9 +1,10 @@
 import inspect
 import warnings
 from collections import defaultdict, namedtuple
-from typing import Any, Callable, Dict, Generator, List, Tuple, Union
+from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Union
 
 import pydantic
+from django.http import HttpResponse
 
 from ninja import UploadedFile, params
 from ninja.compatibility.util import get_args, get_origin as get_collection_origin
@@ -28,6 +29,7 @@ class ViewSignature:
     FLATTEN_PATH_SEP = (
         "\x1e"  # ASCII Record Separator.  IE: not generally used in query names
     )
+    response_arg: Optional[str] = None
 
     def __init__(self, path: str, view_func: Callable) -> None:
         self.view_func = view_func
@@ -52,6 +54,10 @@ class ViewSignature:
 
             if arg.kind == arg.VAR_POSITIONAL:
                 # Skipping *args
+                continue
+
+            if arg.annotation is HttpResponse:
+                self.response_arg = name
                 continue
 
             func_param = self._get_param_type(name, arg)
@@ -250,11 +256,15 @@ def is_pydantic_model(cls: Any) -> bool:
 
 def is_collection_type(annotation: Any) -> bool:
     origin = get_collection_origin(annotation)
-    types = (List, list, set, tuple)
+    collection_types = (List, list, set, tuple)
     if origin is None:
-        return issubclass(annotation, types)
+        return (
+            isinstance(annotation, collection_types)
+            if not isinstance(annotation, type)
+            else issubclass(annotation, collection_types)
+        )
     else:
-        return origin in types  # TODO: I guess we should handle only list
+        return origin in collection_types  # TODO: I guess we should handle only list
 
 
 def detect_collection_fields(

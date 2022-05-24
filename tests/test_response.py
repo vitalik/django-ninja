@@ -1,6 +1,7 @@
 from typing import List, Union
 
 import pytest
+from django.http import HttpResponse
 from pydantic import BaseModel, ValidationError
 
 from ninja import Router
@@ -65,6 +66,25 @@ def check_union(request, q: int):
     return "invalid"
 
 
+@router.get("/check_set_header")
+def check_set_header(request, response: HttpResponse):
+    response["Cache-Control"] = "no-cache"
+    return 1
+
+
+@router.get("/check_set_cookie")
+def check_set_cookie(request, set: bool, response: HttpResponse):
+    if set:
+        response.set_cookie("test", "me")
+    return 1
+
+
+@router.get("/check_del_cookie")
+def check_del_cookie(request, response: HttpResponse):
+    response.delete_cookie("test")
+    return 1
+
+
 client = TestClient(router)
 
 
@@ -95,3 +115,28 @@ def test_validates():
 
     with pytest.raises(ValidationError):
         client.get("/check_union?q=2")
+
+
+def test_set_header():
+    response = client.get("/check_set_header")
+    assert response.status_code == 200
+    assert response.content == b"1"
+    assert response["Cache-Control"] == "no-cache"
+
+
+def test_set_cookie():
+    response = client.get("/check_set_cookie?set=0")
+    assert "test" not in response.cookies
+
+    response = client.get("/check_set_cookie?set=1")
+    cookie = response.cookies.get("test")
+    assert cookie
+    assert cookie.value == "me"
+
+
+def test_del_cookie():
+    response = client.get("/check_del_cookie")
+    cookie = response.cookies.get("test")
+    assert cookie
+    assert cookie["expires"] == "Thu, 01 Jan 1970 00:00:00 GMT"
+    assert cookie["max-age"] == 0

@@ -67,9 +67,11 @@ class SchemaFactory:
             Type[Schema],
             create_pydantic_model(
                 name,
+                __config__=None,
                 __base__=base_class,
                 __module__=base_class.__module__,
-                **definitions,  # type: ignore
+                __validators__={},
+                **definitions,
             ),
         )
         self.schemas[key] = schema
