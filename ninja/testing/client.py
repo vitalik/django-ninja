@@ -1,6 +1,5 @@
-from http import cookies
 from json import dumps as json_dumps, loads as json_loads
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from unittest.mock import Mock
 from urllib.parse import urljoin
 
