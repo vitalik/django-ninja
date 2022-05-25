@@ -22,7 +22,7 @@ jobs:
       - name: Install core
         run: pip install "Django${{ matrix.django-version }}" pydantic
       - name: Install tests
-        run: pip install pytest pytest-asyncio pytest-django
+        run: pip install pytest pytest-asyncio pytest-django psycopg2-binary
       - name: Test
         run: pytest
 
