@@ -5,6 +5,7 @@ import django
 import pytest
 from django.db import models
 from django.db.models import Manager
+from django.contrib.postgres import fields as ps_fields
 
 from ninja.errors import ConfigError
 from ninja.orm import create_schema
@@ -71,12 +72,17 @@ def test_all_fields():
         timefield = models.TimeField()
         urlfield = models.URLField()
         uuidfield = models.UUIDField()
+        arrayfield = ps_fields.ArrayField(models.CharField())
+        cicharfield = ps_fields.CICharField()
+        ciemailfield = ps_fields.CIEmailField()
+        citextfield = ps_fields.CITextField()
+        hstorefield = ps_fields.HStoreField()
 
         class Meta:
             app_label = "tests"
 
     SchemaCls = create_schema(AllFields)
-    # print(SchemaCls.schema())
+    print(SchemaCls.schema())
     assert SchemaCls.schema() == {
         "title": "AllFields",
         "type": "object",
@@ -137,6 +143,15 @@ def test_all_fields():
             "timefield": {"title": "Timefield", "type": "string", "format": "time"},
             "urlfield": {"title": "Urlfield", "type": "string"},
             "uuidfield": {"title": "Uuidfield", "type": "string", "format": "uuid"},
+            "arrayfield": {"title": "Arrayfield", "type": "array", "items": {}},
+            "cicharfield": {"title": "Cicharfield", "type": "string"},
+            "ciemailfield": {
+                "title": "Ciemailfield",
+                "maxLength": 254,
+                "type": "string",
+            },
+            "citextfield": {"title": "Citextfield", "type": "string"},
+            "hstorefield": {"title": "Hstorefield", "type": "object"},
         },
         "required": [
             "bigintegerfield",
@@ -165,6 +180,11 @@ def test_all_fields():
             "timefield",
             "urlfield",
             "uuidfield",
+            "arrayfield",
+            "cicharfield",
+            "ciemailfield",
+            "citextfield",
+            "hstorefield",
         ],
     }
 

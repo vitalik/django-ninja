@@ -64,6 +64,12 @@ TYPES = {
     "TextField": str,
     "TimeField": datetime.time,
     "UUIDField": UUID,
+    # postgres fields:
+    "ArrayField": List,
+    "CICharField": str,
+    "CIEmailField": str,
+    "CITextField": str,
+    "HStoreField": Dict,
 }
 
 TModel = TypeVar("TModel")

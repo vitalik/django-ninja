@@ -57,6 +57,7 @@ test = [
     "pytest-cov",
     "pytest-django",
     "pytest-asyncio",
+    "psycopg2-binary",
     "black",
     "isort",
     "flake8",
