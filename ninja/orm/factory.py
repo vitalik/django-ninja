@@ -63,17 +63,14 @@ class SchemaFactory:
         if name in self.schema_names:
             name = self._get_unique_name(name)
 
-        schema = cast(
-            Type[Schema],
-            create_pydantic_model(
-                name,
-                __config__=None,
-                __base__=base_class,
-                __module__=base_class.__module__,
-                __validators__={},
-                **definitions,
-            ),
-        )
+        schema: Type[Schema] = create_pydantic_model(
+            name,
+            __config__=None,
+            __base__=base_class,
+            __module__=base_class.__module__,
+            __validators__={},
+            **definitions,
+        )  # type: ignore
         self.schemas[key] = schema
         self.schema_names.add(name)
         return schema
