@@ -3,9 +3,9 @@ from unittest.mock import Mock
 
 import django
 import pytest
+from django.contrib.postgres import fields as ps_fields
 from django.db import models
 from django.db.models import Manager
-from django.contrib.postgres import fields as ps_fields
 
 from ninja.errors import ConfigError
 from ninja.orm import create_schema
