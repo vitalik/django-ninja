@@ -18,7 +18,7 @@ from django.http import HttpRequest, HttpResponse, HttpResponseNotAllowed
 from django.http.response import HttpResponseBase
 
 from ninja.constants import NOT_SET
-from ninja.errors import ConfigError, ValidationError
+from ninja.errors import AuthenticationError, ConfigError, ValidationError
 from ninja.params_models import TModels
 from ninja.schema import Schema
 from ninja.signature import ViewSignature, is_async
@@ -149,7 +149,7 @@ class Operation:
             if result:
                 request.auth = result  # type: ignore
                 return None
-        return self.api.create_response(request, {"detail": "Unauthorized"}, status=401)
+        return self.api.on_exception(request, AuthenticationError())
 
     def _result_to_response(
         self, request: HttpRequest, result: Any, temporal_response: HttpResponse

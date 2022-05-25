@@ -55,6 +55,10 @@ function must return http response
 By default, **Django Ninja** initialized the following exception handlers:
 
 
+#### `ninja.errors.AuthenticationError`
+
+Raised when authentication data is not valid
+
 #### `ninja.errors.ValidationError`
 
 Raised when request data does not validate
