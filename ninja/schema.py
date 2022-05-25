@@ -60,7 +60,7 @@ class DjangoGetter(GetterDict):
                     #       resolve - so it better be cached
                 except VariableDoesNotExist as e:
                     raise KeyError(key) from e
-        return self.format_result(item)
+        return self._convert_result(item)
 
     def get(self, key: Any, default: Any = None) -> Any:
         try:
@@ -68,12 +68,15 @@ class DjangoGetter(GetterDict):
         except KeyError:
             return default
 
-    def format_result(self, result: Any) -> Any:
+    def _convert_result(self, result: Any) -> Any:
         if isinstance(result, Manager):
             return list(result.all())
 
         elif isinstance(result, getattr(QuerySet, "__origin__", QuerySet)):
             return list(result)
+
+        if callable(result):
+            return result()
 
         elif isinstance(result, FieldFile):
             if not result:

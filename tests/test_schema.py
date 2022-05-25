@@ -37,6 +37,7 @@ class Tag:
 # mocking some users:
 class Boss:
     name = "Jane Jackson"
+    title = "CEO"
 
 
 class User:
@@ -48,6 +49,9 @@ class User:
     @property
     def tags(self):
         return FakeQS([Tag(1, "foo"), Tag(2, "bar")])
+
+    def get_boss_title(self):
+        return self.boss and self.boss.title
 
 
 class TagSchema(Schema):
@@ -65,6 +69,7 @@ class UserSchema(Schema):
 class UserWithBossSchema(UserSchema):
     boss: Optional[str] = Field(None, alias="boss.name")
     has_boss: bool
+    boss_title: str = Field(None, alias="get_boss_title")
 
     @staticmethod
     def resolve_has_boss(obj):
@@ -119,6 +124,7 @@ def test_with_boss_schema():
         "groups": [1, 2, 3],
         "tags": [{"id": "1", "title": "foo"}, {"id": "2", "title": "bar"}],
         "avatar": None,
+        "boss_title": "CEO",
     }
 
     user_without_boss = User()
@@ -128,6 +134,7 @@ def test_with_boss_schema():
         "name": "John Smith",
         "boss": None,
         "has_boss": False,
+        "boss_title": None,
         "groups": [1, 2, 3],
         "tags": [{"id": "1", "title": "foo"}, {"id": "2", "title": "bar"}],
         "avatar": None,
@@ -145,6 +152,7 @@ def test_with_initials_schema():
         "groups": [1, 2, 3],
         "tags": [{"id": "1", "title": "foo"}, {"id": "2", "title": "bar"}],
         "avatar": None,
+        "boss_title": "CEO",
     }
 
 
