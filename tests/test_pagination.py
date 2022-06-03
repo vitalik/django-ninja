@@ -103,7 +103,7 @@ def test_case1():
             "schema": {
                 "title": "Limit",
                 "default": 100,
-                "exclusiveMinimum": 0,
+                "minimum": 1,
                 "type": "integer",
             },
             "required": False,
@@ -114,7 +114,7 @@ def test_case1():
             "schema": {
                 "title": "Offset",
                 "default": 0,
-                "exclusiveMinimum": -1,
+                "minimum": 0,
                 "type": "integer",
             },
             "required": False,
@@ -141,7 +141,7 @@ def test_case2():
             "schema": {
                 "title": "Limit",
                 "default": 100,
-                "exclusiveMinimum": 0,
+                "minimum": 1,
                 "type": "integer",
             },
             "required": False,
@@ -152,7 +152,7 @@ def test_case2():
             "schema": {
                 "title": "Offset",
                 "default": 0,
-                "exclusiveMinimum": -1,
+                "minimum": 0,
                 "type": "integer",
             },
             "required": False,
@@ -189,7 +189,7 @@ def test_case4():
             "schema": {
                 "title": "Page",
                 "default": 1,
-                "exclusiveMinimum": 0,
+                "minimum": 1,
                 "type": "integer",
             },
             "required": False,
@@ -210,7 +210,7 @@ def test_case5_no_kwargs():
             "schema": {
                 "title": "Page",
                 "default": 1,
-                "exclusiveMinimum": 0,
+                "minimum": 1,
                 "type": "integer",
             },
             "required": False,
@@ -232,7 +232,7 @@ def test_case6_pass_param_kwargs():
             "schema": {
                 "title": "Page",
                 "default": 1,
-                "exclusiveMinimum": 0,
+                "minimum": 1,
                 "type": "integer",
             },
             "required": False,

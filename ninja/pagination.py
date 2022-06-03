@@ -52,8 +52,8 @@ class PaginationBase(ABC):
 
 class LimitOffsetPagination(PaginationBase):
     class Input(Schema):
-        limit: int = Field(settings.PAGINATION_PER_PAGE, gt=0)
-        offset: int = Field(0, gt=-1)
+        limit: int = Field(settings.PAGINATION_PER_PAGE, ge=1)
+        offset: int = Field(0, ge=0)
 
     def paginate_queryset(
         self,
@@ -71,7 +71,7 @@ class LimitOffsetPagination(PaginationBase):
 
 class PageNumberPagination(PaginationBase):
     class Input(Schema):
-        page: int = Field(1, gt=0)
+        page: int = Field(1, ge=1)
 
     def __init__(
         self, page_size: int = settings.PAGINATION_PER_PAGE, **kwargs: Any

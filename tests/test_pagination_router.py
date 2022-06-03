@@ -33,7 +33,7 @@ def test_for_list_reponse():
             "schema": {
                 "title": "Limit",
                 "default": 100,
-                "exclusiveMinimum": 0,
+                "minimum": 1,
                 "type": "integer",
             },
             "required": False,
@@ -44,7 +44,7 @@ def test_for_list_reponse():
             "schema": {
                 "title": "Offset",
                 "default": 0,
-                "exclusiveMinimum": -1,
+                "minimum": 0,
                 "type": "integer",
             },
             "required": False,
