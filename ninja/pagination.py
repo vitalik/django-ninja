@@ -63,8 +63,11 @@ class LimitOffsetPagination(PaginationBase):
     ) -> Any:
         offset = pagination.offset
         limit: int = pagination.limit
+        _items = queryset[offset : offset + limit]
+        items = list(_items)
+        # ^ forcing queryset evaluation #TODO: check why pydantic did not do it here
         return {
-            "items": queryset[offset : offset + limit],
+            "items": items,
             "count": self._items_count(queryset),
         }  # noqa: E203
 
@@ -86,8 +89,11 @@ class PageNumberPagination(PaginationBase):
         **params: DictStrAny,
     ) -> Any:
         offset = (pagination.page - 1) * self.page_size
+        _items = queryset[offset : offset + self.page_size]
+        items = list(_items)
+        # ^ forcing queryset evaluation #TODO: check why pydantic did not do it here
         return {
-            "items": queryset[offset : offset + self.page_size],
+            "items": items,
             "count": self._items_count(queryset),
         }  # noqa: E203
 
@@ -143,9 +149,6 @@ def _inject_pagination(
         result = paginator.paginate_queryset(
             items, pagination=pagination_params, **kwargs
         )
-        if paginator.Output:
-            result["items"] = list(result["items"])
-        # ^ forcing queryset evaluation #TODO: check why pydantic did not do it here
         return result
 
     view_with_pagination._ninja_contribute_args = [  # type: ignore
