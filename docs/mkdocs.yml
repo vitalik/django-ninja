@@ -42,6 +42,7 @@ nav:
       - tutorial/errors.md
       - tutorial/csrf.md
       - tutorial/management-commands.md
+      - tutorial/alternative-api-docs.md
   - async-support.md
   - video.md
   - Enhancement Proposals:
