@@ -208,10 +208,7 @@ def make_response_paginated(paginator: PaginationBase, op: Operation) -> None:
     new_schema = type(
         new_name,
         (paginator.Output,),
-        {
-            "__annotations__": {"items": List[item_schema]},  # type: ignore
-            "items": [],
-        },
+        {},
     )  # typing: ignore
 
     response = op._create_response_model(new_schema)
