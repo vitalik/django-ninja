@@ -14,7 +14,7 @@ pip install django-ninja
 
 !!! note
     It is not required, but you can also put `ninja` to `INSTALLED_APPS`.
-    In that case the OpenAPI/Swagger UI will be loaded (faster) from the included JavaScript bundle (otherwise the JavaScript bundle comes from a CDN).
+    In that case the OpenAPI/Swagger UI (or Redoc) will be loaded (faster) from the included JavaScript bundle (otherwise the JavaScript bundle comes from a CDN).
 
 
 ## Create a Django project
