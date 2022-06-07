@@ -23,6 +23,7 @@ def upload(request, file: UploadedFile = File(...)):
  - content_type
  - etc.
 
+## Uploading array of files
 
 To **upload several files** at the same time, just declare a `List` of `UploadFile`:
 
