@@ -50,7 +50,9 @@ Django Ninja addresses all those issues, and integrates very well with Django (O
 
 Working at [Code-on a Django webdesign webedevelopment studio](https://code-on.be/) I get all sorts of challenges and to solve these I started Django-Ninja in 2020.
 
-Note: **Django Ninja is a production ready project** - my estimation is at this time already 100+ companies using it in production and 500 new developers joining every month.
+Note: **Django Ninja is a production ready project** - my estimation is at this time already 100+ companies using it in production and 500 new developers joining every month. 
+
+Some companies already looking for developers with django ninja experince. [Looking for a job? visit Jooble](https://jooble.org/)
 
 #### Main Features
 
