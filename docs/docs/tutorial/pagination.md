@@ -1,4 +1,4 @@
-# Pagination (beta)
+# Pagination
 
 **Django Ninja** comes with a pagination support. This allows you to split large result sets into individual pages.
 
@@ -122,7 +122,7 @@ class CustomPagination(PaginationBase):
         
 
     class Output(Schema):
-        items: List[Any] # `items` is a required attribute
+        items: List[Any] # `items` is a default attribute
         total: int
         per_page: int
 
@@ -139,6 +139,22 @@ class CustomPagination(PaginationBase):
 @paginate(CustomPagination)
 def list_users(request):
     return User.objects.all()
+```
+
+### Output attribute
+
+By defult page items are placed to `'items'` attribute. To override this behaviour use `items_attribute`:
+
+```Python hl_lines="4 8"
+class CustomPagination(PaginationBase):
+    ...
+    class Output(Schema):
+        results: List[Any]
+        total: int
+        per_page: int
+    
+    items_attribute: str = "results"
+
 ```
 
 

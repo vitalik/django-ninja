@@ -26,6 +26,8 @@ class PaginationBase(ABC):
         items: List[Any]
         count: int
 
+    items_attribute: str = "items"
+
     def __init__(self, *, pass_parameter: Optional[str] = None, **kwargs: Any) -> None:
         self.pass_parameter = pass_parameter
 
@@ -144,8 +146,8 @@ def _inject_pagination(
             items, pagination=pagination_params, **kwargs
         )
         if paginator.Output:
-            result["items"] = list(result["items"])
-        # ^ forcing queryset evaluation #TODO: check why pydantic did not do it here
+            result[paginator.items_attribute] = list(result[paginator.items_attribute])
+            # ^ forcing queryset evaluation #TODO: check why pydantic did not do it here
         return result
 
     view_with_pagination._ninja_contribute_args = [  # type: ignore
@@ -206,8 +208,8 @@ def make_response_paginated(paginator: PaginationBase, op: Operation) -> None:
         new_name,
         (paginator.Output,),
         {
-            "__annotations__": {"items": List[item_schema]},  # type: ignore
-            "items": [],
+            "__annotations__": {paginator.items_attribute: List[item_schema]},  # type: ignore
+            paginator.items_attribute: [],
         },
     )  # typing: ignore
 
