@@ -35,6 +35,7 @@ nav:
       - tutorial/authentication.md
       - tutorial/routers.md
       - tutorial/urls.md
+      - tutorial/pagination.md
       - tutorial/operation_params.md
       - tutorial/versioning.md
       - tutorial/request-parsers.md

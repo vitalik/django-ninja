@@ -44,6 +44,28 @@ class NoOutputPagination(PaginationBase):
         return items[skip : skip + 5]
 
 
+class ResultsPaginator(PaginationBase):
+    "Use 'results' insted of 'items' for the output"
+
+    class Input(Schema):
+        skip: int
+
+    class Output(Schema):
+        results: List[int]
+        count: int
+        skip: int
+
+    items_attribute: str = "results"
+
+    def paginate_queryset(self, items, pagination: Input, **params):
+        skip = pagination.skip
+        return {
+            "results": items[skip : skip + 5],
+            "count": self._items_count(items),
+            "skip": skip,
+        }
+
+
 @api.get("/items_1", response=List[int])
 @paginate  # WITHOUT brackets (should use default pagination)
 def items_1(request, **kwargs):
@@ -85,6 +107,12 @@ def items_6(request, **kwargs):
 @paginate(NoOutputPagination)
 def items_7(request):
     return [7] * 7
+
+
+@api.get("/items_8", response=List[int])
+@paginate(ResultsPaginator)
+def items_8(request):
+    return list(range(1000))
 
 
 client = TestClient(api)
@@ -252,6 +280,11 @@ def test_case7():
         "type": "array",
         "items": {"type": "integer"},
     }
+
+
+def test_case8():
+    response = client.get("/items_8?skip=5").json()
+    assert response == {"results": [5, 6, 7, 8, 9], "count": 1000, "skip": 5}
 
 
 def test_config_error_None():
