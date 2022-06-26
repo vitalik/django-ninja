@@ -374,6 +374,9 @@ class NinjaAPI:
         module = operation.view_func.__module__
         return (module + "_" + name).replace(".", "_")
 
+    def get_operation_url_name(self, operation: "Operation") -> str:
+        return operation.view_func.__name__
+
     def add_exception_handler(
         self, exc_class: Type[Exception], handler: ExcHandler
     ) -> None:

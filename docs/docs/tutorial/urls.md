@@ -34,6 +34,19 @@ users_url = reverse_lazy("api-1.0.0:user_list")
 
 This will override any implicit URL name to this API path.
 
+
+#### Overriding default url names
+
+You can also override implicit url naming by overwriting the `get_operation_url_name` method:
+
+```Python
+class MyAPI(NinjaAPI):
+    def get_operation_url_name(self, operation):
+        return operation.view_func.__name__ + '_my_extra_suffix'
+
+api = MyAPI()
+```
+
 ### Customizing the namespace
 
 The default URL namespace is built by prepending the Schema's version with `"api-"`, however you can explicitly specify the namespace by overriding the `urls_namespace` attribute of the `NinjaAPI` Schema class.
