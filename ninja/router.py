@@ -324,9 +324,12 @@ class Router:
             route = normalize_path(route)
             route = route.lstrip("/")
 
-            yield django_path(
-                route, path_view.get_view(), name=cast(str, path_view.url_name)
-            )
+            if not path_view.url_name:
+                url_name = self.api.get_operation_url_name(path_view.operations[0])  # type: ignore
+            else:
+                url_name = path_view.url_name
+
+            yield django_path(route, path_view.get_view(), name=url_name)
 
     def add_router(
         self,
