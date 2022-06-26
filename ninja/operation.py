@@ -288,6 +288,10 @@ class PathView:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
     ) -> Operation:
+        # If the url_name was not provided, and it hasn't already been set yet,
+        # use the function name as the implicit url name.
+        if url_name is None and not self.url_name:
+            url_name = view_func.__name__
         if url_name:
             self.url_name = url_name
 
