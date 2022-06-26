@@ -7,7 +7,6 @@ from typing import (
     List,
     Optional,
     Tuple,
-    cast,
 )
 
 from django.urls import URLPattern, path as django_path
