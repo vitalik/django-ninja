@@ -47,8 +47,8 @@ nav:
       - guides/async-support.md
       - guides/versioning.md
   - Reference:
-      - NinjaAPI:
-          - reference/csrf.md
+      - NinjaAPI class: reference/api.md
+      - reference/csrf.md
       - reference/operations-parameters.md
       - reference/management-commands.md
       - reference/settings.md
@@ -68,3 +68,12 @@ markdown_extensions:
   - codehilite
   - admonition
   - pymdownx.superfences
+plugins:
+  - mkdocstrings:
+      handlers:
+        python:
+          setup_commands:
+            - from django.conf import settings
+            - settings.configure()
+      watch:
+        - ../ninja

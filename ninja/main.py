@@ -15,7 +15,7 @@ from typing import (
 from django.http import HttpRequest, HttpResponse
 from django.urls import URLPattern, URLResolver, reverse
 
-from ninja.constants import NOT_SET
+from ninja.constants import NOT_SET, NOT_SET_TYPE
 from ninja.errors import ConfigError, set_default_exc_handlers
 from ninja.openapi import get_schema
 from ninja.openapi.schema import OpenAPISchema
@@ -36,6 +36,10 @@ ExcHandler = Callable[[HttpRequest, Exc], HttpResponse]
 
 
 class NinjaAPI:
+    """
+    Ninja API
+    """
+
     _registry: List[str] = []
 
     def __init__(
@@ -49,11 +53,24 @@ class NinjaAPI:
         docs_decorator: Optional[Callable[[TCallable], TCallable]] = None,
         urls_namespace: Optional[str] = None,
         csrf: bool = False,
-        auth: Union[Sequence[Callable], Callable, object] = NOT_SET,
+        auth: Optional[Union[Sequence[Callable], Callable, NOT_SET_TYPE]] = NOT_SET,
         renderer: Optional[BaseRenderer] = None,
         parser: Optional[Parser] = None,
         default_router: Optional[Router] = None,
     ):
+        """
+        Args:
+            title: A title for the api.
+            description: A description for the api.
+            version: The API version.
+            urls_namespace: The Django URL namespace for the API. If not provided, the namespace will be ``"api-" + self.version``.
+            openapi_url: The relative URL to serve the openAPI spec.
+            docs_url: The relative URL to serve the API docs.
+            csrf: Require a CSRF token for unsafe request types. See <a href="../csrf">CSRF</a> docs.
+            auth (Callable | Sequence[Callable] | NOT_SET | None): Authentication class
+            renderer: Default response renderer
+            parser: Default request parser
+        """
         self.title = title
         self.version = version
         self.description = description
@@ -68,9 +85,10 @@ class NinjaAPI:
         self._exception_handlers: Dict[Exc, ExcHandler] = {}
         self.set_default_exception_handlers()
 
-        self.auth: Union[Sequence[Callable], Type[NOT_SET]] = NOT_SET
-        if auth is not None and auth is not NOT_SET:
-            self.auth = isinstance(auth, Sequence) and auth or [auth]
+        if isinstance(auth, Callable):
+            self.auth = [auth]
+        else:
+            self.auth = auth
 
         self._routers: List[Tuple[str, Router]] = []
         self.default_router = default_router or Router()
@@ -94,6 +112,10 @@ class NinjaAPI:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
     ) -> Callable[[TCallable], TCallable]:
+        """
+        `GET` operation. See <a href="../operations-parameters">operations
+        parameters</a> reference.
+        """
         return self.default_router.get(
             path,
             auth=auth is NOT_SET and self.auth or auth,
@@ -129,6 +151,10 @@ class NinjaAPI:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
     ) -> Callable[[TCallable], TCallable]:
+        """
+        `POST` operation. See <a href="../operations-parameters">operations
+        parameters</a> reference.
+        """
         return self.default_router.post(
             path,
             auth=auth is NOT_SET and self.auth or auth,
@@ -164,6 +190,10 @@ class NinjaAPI:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
     ) -> Callable[[TCallable], TCallable]:
+        """
+        `DELETE` operation. See <a href="../operations-parameters">operations
+        parameters</a> reference.
+        """
         return self.default_router.delete(
             path,
             auth=auth is NOT_SET and self.auth or auth,
@@ -199,6 +229,10 @@ class NinjaAPI:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
     ) -> Callable[[TCallable], TCallable]:
+        """
+        `PATCH` operation. See <a href="../operations-parameters">operations
+        parameters</a> reference.
+        """
         return self.default_router.patch(
             path,
             auth=auth is NOT_SET and self.auth or auth,
@@ -234,6 +268,10 @@ class NinjaAPI:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
     ) -> Callable[[TCallable], TCallable]:
+        """
+        `PUT` operation. See <a href="../operations-parameters">operations
+        parameters</a> reference.
+        """
         return self.default_router.put(
             path,
             auth=auth is NOT_SET and self.auth or auth,
@@ -314,6 +352,13 @@ class NinjaAPI:
 
     @property
     def urls(self) -> Tuple[List[Union[URLResolver, URLPattern]], str, str]:
+        """
+        str: URL configuration
+
+        Returns:
+
+            Django URL configuration
+        """
         self._validate()
         return (
             self._get_urls(),
@@ -448,37 +493,46 @@ _imported_while_running_in_debug_server = is_debug_server()
 
 
 def debug_server_url_reimport() -> bool:
-    """Detect reimport of URL module to allow error to propagate to developer
+    """
+    Detect reimport of URL module to allow error to propagate to developer.
 
-    When Django loads urls it uses: django.urls.resolvers.urlconf_module()
+    When Django loads urls it uses: ``django.urls.resolvers.urlconf_module()``
 
-        @cached_property
-        def urlconf_module(self):
-            if isinstance(self.urlconf_name, str):
-                return import_module(self.urlconf_name)
-            else:
-                return self.urlconf_name
+    ```Python
+    @cached_property
+    def urlconf_module(self):
+        if isinstance(self.urlconf_name, str):
+            return import_module(self.urlconf_name)
+        else:
+            return self.urlconf_name
+    ```
 
-    This uses the @cached_property to generally only import once.  But if the import
-    throws an error when using the development server, the following code in
-    django.utils.autoreload.BaseReloader.run() is used:
+    This uses ``@cached_property`` to generally only import once.  But if the
+    import throws an error when using the development server, the following
+    code in ``django.utils.autoreload.BaseReloader.run()`` is used:
 
-        # Prevent a race condition where URL modules aren't loaded when the
-        # reloader starts by accessing the urlconf_module property.
-        try:
-            get_resolver().urlconf_module
-        except Exception:
-            # Loading the urlconf can result in errors during development.
-            # If this occurs then swallow the error and continue.
-            pass
+    ```Python
+    # Prevent a race condition where URL modules aren't loaded when the
+    # reloader starts by accessing the urlconf_module property.
+    try:
+        get_resolver().urlconf_module
+    except Exception:
+        # Loading the urlconf can result in errors during development.
+        # If this occurs then swallow the error and continue.
+        pass
+    ```
 
-    This means the (likely) developer error that caused the Exception is initially ignored. This is
-    not generally a problem since the error will usually be exercised again, and reported at that
-    time.  But Ninja has various code which guards against errors where items that cannot be reused,
-    are attempted to be reused.  This results in Ninja throwing a false error, and hiding the
-    true error from the developer when running under the development server.
+    This means the (likely) developer error that caused the Exception is
+    initially ignored. This is not generally a problem since the error will
+    usually be exercised again, and reported at that time.  But Ninja has
+    various code which guards against errors where items that cannot be reused,
+    are attempted to be reused.  This results in Ninja throwing a false error,
+    and hiding the true error from the developer when running under the
+    development server.
 
-    :return: True if this module was originally imported during Django dev-server
+    Returns:
+
+        True if this module was originally imported during Django dev-server
         init but the caller is not being running during Django dev-server init.
     """
     return _imported_while_running_in_debug_server and not is_debug_server()
