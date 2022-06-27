@@ -174,4 +174,4 @@ the same way an operation would:
 {!./src/tutorial/authentication/bearer02.py!}
 ```
 
-See [Handling errors](https://django-ninja.rest-framework.com/tutorial/errors/) for more information.
+See [Handling errors](errors.md) for more information.
