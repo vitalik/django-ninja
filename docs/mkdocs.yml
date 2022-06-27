@@ -59,12 +59,12 @@ nav:
       - reference/operations-parameters.md
       - reference/management-commands.md
       - reference/settings.md
+      - releases.md
   - help.md
   - Enhancement Proposals:
       - Intro: proposals/index.md
       - proposals/cbv.md
       - proposals/v1.md
-  - releases.md
 markdown_extensions:
   - markdown_include.include
   - markdown.extensions.codehilite:
