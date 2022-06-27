@@ -13,7 +13,7 @@ def upload(request, file: UploadedFile = File(...)):
 ```
 
 
-`UploadedFile` is an alias to [Django's UploadFile](https://docs.djangoproject.com/en/3.1/ref/files/uploads/) and has all the methods and attributes to access the uploaded file:
+`UploadedFile` is an alias to [Django's UploadFile](https://docs.djangoproject.com/en/stable/ref/files/uploads/#django.core.files.uploadedfile.UploadedFile) and has all the methods and attributes to access the uploaded file:
 
  - read()
  - multiple_chunks(chunk_size=None)

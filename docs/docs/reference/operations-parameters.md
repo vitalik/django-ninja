@@ -171,7 +171,7 @@ Whether fields which are equal to `None` should be excluded from the response (d
 
 
 ## url_name
-Allows you to set api endpoint url name (using [django path's naming](https://docs.djangoproject.com/en/3.1/topics/http/urls/#reversing-namespaced-urls))
+Allows you to set api endpoint url name (using [django path's naming](https://docs.djangoproject.com/en/stable/topics/http/urls/#reversing-namespaced-urls))
 ```Python hl_lines="1 7"
 @api.post("/tasks", url_name='tasks')
 def some_operation(request):

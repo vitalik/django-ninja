@@ -163,7 +163,7 @@ async def search(request, q: str):
 
 Currently, certain key parts of Django are not able to operate safely in an async environment, as they have global state that is not coroutine-aware. These parts of Django are classified as “async-unsafe”, and are protected from execution in an async environment. **The ORM** is the main example, but there are other parts that are also protected in this way.
 
-Learn more about async safety here in the <a href="https://docs.djangoproject.com/en/3.2/topics/async/#async-safety" target="_blank">official Django docs</a>.
+Learn more about async safety here in the <a href="https://docs.djangoproject.com/en/stable/topics/async/#async-safety" target="_blank">official Django docs</a>.
 
 
 So, if you do this:
