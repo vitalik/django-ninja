@@ -8,6 +8,8 @@ extra:
   analytics:
     provider: google
     property: UA-170474207-1
+extra_css:
+  - extra.css
 theme:
   name: material
   palette:
