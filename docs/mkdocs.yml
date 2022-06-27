@@ -40,6 +40,7 @@ nav:
           - guides/input/request-parsers.md
       - Handling responses:
           - Defining a Schema: guides/response/index.md
+          - guides/response/temporal_response.md
           - Generating a Schema from Django models: guides/response/django-pydantic.md
           - Generating a Schema dynamically: guides/response/django-pydantic-create-schema.md
           - guides/response/config-pydantic.md
