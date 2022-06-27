@@ -78,17 +78,17 @@ With just that Python type declaration, **Django Ninja** will:
 
 The JSON Schemas of your models will be part of your OpenAPI generated schema, and will be shown in the interactive API docs:
 
-![Openapi schema](../img/body-schema-doc.png)
+![Openapi schema](../../img/body-schema-doc.png)
 
 ... and they will be also used in the API docs inside each *path operation* that needs them:
 
-![Openapi schema](../img/body-schema-doc2.png)
+![Openapi schema](../../img/body-schema-doc2.png)
 
 ## Editor support
 
 In your editor, inside your function you will get type hints and completion everywhere (this wouldn't happen if you received a `dict` instead of a Schema object):
 
-![Type hints](../img/body-editor.gif)
+![Type hints](../../img/body-editor.gif)
 
 
 The previous screenshots were taken with <a href="https://code.visualstudio.com" class="external-link" target="_blank">Visual Studio Code</a>.

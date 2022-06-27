@@ -104,4 +104,4 @@ You can also use Schema to encapsulate path parameters that depend on each other
 
 ### Documentation
 Now, when you open your browser at <a href="http://localhost:8000/api/docs" target="_blank">http://localhost:8000/api/docs</a>, you will see the automatic, interactive, API documentation.
-![Django Ninja Swagger](../img/tutorial-path-swagger.png)
+![Django Ninja Swagger](../../img/tutorial-path-swagger.png)
