@@ -4,7 +4,7 @@ from typing import Type
 from django.core.management.base import BaseCommand
 
 
-def command_docstring(cmd: Type[BaseCommand]):
+def command_docstring(cmd: Type[BaseCommand]) -> str:
     base_args = []
     if cmd is not BaseCommand:  # pragma: no branch
         base_parser = cmd().create_parser("base", "")
@@ -28,9 +28,9 @@ def command_docstring(cmd: Type[BaseCommand]):
             if not action_type and action.nargs != 0:
                 action_type = str
             if action_type:
-                if not isinstance(action_type, type):  # pragma: no cover
-                    action_type = action_type.__class__
-                name += f" ({action_type.__name__})"
+                if isinstance(action_type, type):
+                    action_type = action_type.__name__
+                name += f" ({action_type})"
             help = action.help or ""
             if help and not action.required and action.nargs != 0:
                 if not help.endswith("."):
