@@ -86,7 +86,7 @@ def file_response(request):
         ("delete", "/delete", 200, "this is DELETE", False),
         ("get",    "/multi",  200, "this is GET", False),
         ("post",   "/multi",  200, "this is POST", False),
-        ("patch",  "/multi",  405, b"Method not allowed", False),
+        ("patch",  "/multi",  405, {'detail': 'Method not allowed'}, False),
         ("get",    "/html",   200, b"html", False),
         ("get",    "/file",   200, b"this is a file", True),
     ],
