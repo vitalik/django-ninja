@@ -28,7 +28,7 @@ def command_docstring(cmd: Type[BaseCommand]) -> str:
             if not action_type and action.nargs != 0:
                 action_type = str
             if action_type:
-                if isinstance(action_type, type):
+                if isinstance(action_type, type):  # pragma: no branch
                     action_type = action_type.__name__
                 name += f" ({action_type})"
             help = action.help or ""
