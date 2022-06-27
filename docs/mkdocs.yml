@@ -20,12 +20,16 @@ theme:
 nav:
   - Intro: index.md
   - motivation.md
-  - Tutorials:
-      - Intro: tutorial/index.md
-      - tutorial/video.md
-      - tutorial/crud.md
+  - Tutorial:
+      - "First Steps": tutorial/index.md
+      - "Parsing Input": tutorial/step2.md
+      - "Handling Responses": tutorial/step3.md
+      - Other Tutorials:
+          - tutorial/other/video.md
+          - tutorial/other/crud.md
   - How-to Guides:
       - Parsing input:
+          - guides/input/operations.md
           - guides/input/path-params.md
           - guides/input/query-params.md
           - guides/input/body.md
@@ -65,6 +69,7 @@ markdown_extensions:
   # Uncomment these 2 lines during development to more easily add highlights
   #- pymdownx.highlight:
   #    linenums: true
+  - abbr
   - codehilite
   - admonition
   - pymdownx.superfences
