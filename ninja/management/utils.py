@@ -11,7 +11,7 @@ def command_docstring(cmd: Type[BaseCommand]):
         for group in base_parser._action_groups:
             for action in group._group_actions:
                 base_args.append(",".join(action.option_strings))
-    parser = cmd().create_parser("command", "", add_help=False)
+    parser = cmd().create_parser("command", "")
     doc = parser.description or ""
 
     if cmd.__doc__:  # pragma: no branch
@@ -21,6 +21,8 @@ def command_docstring(cmd: Type[BaseCommand]):
     args = []
     for group in parser._action_groups:
         for action in group._group_actions:
+            if "--help" in action.option_strings:
+                continue
             name = ",".join(action.option_strings)
             action_type = action.type
             if not action_type and action.nargs != 0:
