@@ -85,7 +85,9 @@ class NinjaAPI:
         self._exception_handlers: Dict[Exc, ExcHandler] = {}
         self.set_default_exception_handlers()
 
-        if isinstance(auth, Callable):
+        self.auth: Optional[Union[Sequence[Callable], NOT_SET_TYPE]]
+
+        if callable(auth):
             self.auth = [auth]
         else:
             self.auth = auth
