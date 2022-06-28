@@ -41,7 +41,7 @@ You can also override implicit url naming by overwriting the `get_operation_url_
 
 ```Python
 class MyAPI(NinjaAPI):
-    def get_operation_url_name(self, operation):
+    def get_operation_url_name(self, operation, router):
         return operation.view_func.__name__ + '_my_extra_suffix'
 
 api = MyAPI()
