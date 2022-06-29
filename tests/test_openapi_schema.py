@@ -1,6 +1,8 @@
 from typing import List, Union
+from unittest.mock import Mock
 
 import pytest
+from django.contrib.admin.views.decorators import staff_member_required
 from django.test import Client, override_settings
 
 from ninja import Body, Field, File, Form, NinjaAPI, Query, Schema, UploadedFile
@@ -688,3 +690,19 @@ def test_unique_operation_ids():
     match = 'operation_id "test_openapi_schema_same_name" is already used'
     with pytest.warns(UserWarning, match=match):
         api.get_openapi_schema()
+
+
+def test_docs_decorator():
+    api = NinjaAPI(docs_decorator=staff_member_required)
+
+    paths = get_openapi_urls(api)
+    assert len(paths) == 2
+    for ptrn in paths:
+        request = Mock(user=Mock(is_staff=True))
+        result = ptrn.callback(request)
+        assert result.status_code == 200
+
+        request = Mock(user=Mock(is_staff=False))
+        request.build_absolute_uri = lambda: "http://example.com"
+        result = ptrn.callback(request)
+        assert result.status_code == 302
