@@ -11,7 +11,13 @@ from ninja.types import DictStrAny
 if TYPE_CHECKING:
     from ninja import NinjaAPI  # pragma: no cover
 
-__all__ = ["ConfigError", "ValidationError", "HttpError", "set_default_exc_handlers"]
+__all__ = [
+    "ConfigError",
+    "AuthenticationError",
+    "ValidationError",
+    "HttpError",
+    "set_default_exc_handlers",
+]
 
 
 logger = logging.getLogger("django")
