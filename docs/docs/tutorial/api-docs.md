@@ -35,7 +35,7 @@ api = NinjaAPI(docs_url=None)
 
 To protect docs with authentication (or decorate for some other use case) use `docs_decorator` argument:
 
-```
+```Python
 from django.contrib.admin.views.decorators import staff_member_required
 
 api = NinjaAPI(docs_decorator=staff_member_required)
