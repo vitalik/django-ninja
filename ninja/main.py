@@ -46,6 +46,7 @@ class NinjaAPI:
         description: str = "",
         openapi_url: Optional[str] = "/openapi.json",
         docs_url: Optional[str] = "/docs",
+        docs_decorator: Optional[Callable[[TCallable], TCallable]] = None,
         urls_namespace: Optional[str] = None,
         csrf: bool = False,
         auth: Union[Sequence[Callable], Callable, object] = NOT_SET,
@@ -58,6 +59,7 @@ class NinjaAPI:
         self.description = description
         self.openapi_url = openapi_url
         self.docs_url = docs_url
+        self.docs_decorator = docs_decorator
         self.urls_namespace = urls_namespace or f"api-{self.version}"
         self.csrf = csrf
         self.renderer = renderer or JSONRenderer()
