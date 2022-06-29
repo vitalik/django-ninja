@@ -12,10 +12,11 @@ if TYPE_CHECKING:
     from ninja import NinjaAPI  # pragma: no cover
 
 __all__ = [
-    "ConfigError",
     "AuthenticationError",
-    "ValidationError",
+    "ConfigError",
     "HttpError",
+    "MethodNotAllowedError",
+    "ValidationError",
     "set_default_exc_handlers",
 ]
 
@@ -49,7 +50,7 @@ class HttpError(Exception):
         super().__init__(message)
 
 
-class MethodNotAllowed(Exception):
+class MethodNotAllowedError(Exception):
     def __init__(self, allowed_methods: Set[str]) -> None:
         self.allowed_methods = allowed_methods
         super().__init__()
@@ -75,7 +76,9 @@ def set_default_exc_handlers(api: "NinjaAPI") -> None:
     api.add_exception_handler(
         AuthenticationError,
         partial(_default_authentication_error, api=api),
-        MethodNotAllowed,
+    )
+    api.add_exception_handler(
+        MethodNotAllowedError,
         partial(_default_method_not_allowed, api=api),
     )
 
@@ -103,8 +106,10 @@ def _default_authentication_error(
     request: HttpRequest, exc: AuthenticationError, api: "NinjaAPI"
 ) -> HttpResponse:
     return api.create_response(request, {"detail": "Unauthorized"}, status=401)
+
+
 def _default_method_not_allowed(
-    request: HttpRequest, exc: MethodNotAllowed, api: "NinjaAPI"
+    request: HttpRequest, exc: MethodNotAllowedError, api: "NinjaAPI"
 ) -> HttpResponse:
     msg = "Method not allowed"
     if settings.DEBUG:

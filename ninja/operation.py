@@ -18,8 +18,12 @@ from django.http import HttpRequest, HttpResponse
 from django.http.response import HttpResponseBase
 
 from ninja.constants import NOT_SET
-from ninja.errors import AuthenticationError, ConfigError, ValidationError
-from ninja.errors import ConfigError, MethodNotAllowed, ValidationError
+from ninja.errors import (
+    AuthenticationError,
+    ConfigError,
+    MethodNotAllowedError,
+    ValidationError,
+)
 from ninja.params_models import TModels
 from ninja.schema import Schema
 from ninja.signature import ViewSignature, is_async
@@ -361,7 +365,7 @@ class PathView:
         allowed_methods = set()
         for op in self.operations:
             allowed_methods.update(op.methods)
-        return self.api.on_exception(request, MethodNotAllowed(allowed_methods))
+        return self.api.on_exception(request, MethodNotAllowedError(allowed_methods))
 
 
 class ResponseObject:

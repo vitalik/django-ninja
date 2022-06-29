@@ -67,7 +67,7 @@ Raised when request data does not validate
 
 Used to throw http error with status code from any place of the code
 
-#### `ninja.errors.MethodNotAllowed`
+#### `ninja.errors.MethodNotAllowedError`
 
 Raised when request method not allowed
 
