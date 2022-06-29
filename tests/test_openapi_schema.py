@@ -1,10 +1,9 @@
 from typing import List, Union
+from unittest.mock import Mock
 
 import pytest
-from unittest.mock import Mock
 from django.contrib.admin.views.decorators import staff_member_required
 from django.test import Client, override_settings
-
 
 from ninja import Body, Field, File, Form, NinjaAPI, Query, Schema, UploadedFile
 from ninja.openapi.urls import get_openapi_urls
