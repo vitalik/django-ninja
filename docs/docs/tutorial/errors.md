@@ -92,7 +92,7 @@ from ninja.errors import ValidationError
 
 @api.exception_handler(ValidationError)
 def validation_errors(request, exc):
-    return HttpResponse("Invalid input", status_code=422)
+    return HttpResponse("Invalid input", status=422)
 ```
 
 
