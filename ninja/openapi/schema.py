@@ -97,7 +97,7 @@ class OpenAPISchema(dict):
                 and isinstance(main_dict[key], dict)
                 and isinstance(update_dict[key], dict)
             ):
-                self.deep_dict_update(main_dict[key], update_dict[key])
+                self.deep_dict_update(main_dict[key], update_dict[key])  # pragma: no cover
             else:
                 main_dict[key] = update_dict[key]
 
