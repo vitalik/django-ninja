@@ -369,3 +369,38 @@ UserSchema = create_schema(
 )
 UserSchema.update_forward_refs()
 ```
+
+## Serializing Outside of Views
+
+Serialization of your objects can be done directly in code through the use of
+the `.from_orm()` method on the schema object.
+
+Consider the following model:
+
+```
+class Person(models.Model):
+    name = models.CharField(max_length=50)
+```
+
+Which can be accessed using this schema:
+
+```
+class PersonSchema(Schema):
+    name: str
+```
+
+Direct serialization can be performed using the `.from_orm()` method on the
+schema. Once you have an instance of the schema object, the `.dict()` and
+`.json()` methods allow you to get at both dictionary output and string JSON
+versions.
+
+```
+>>> person = Person.objects.get(id=1)
+>>> data = PersonSchema.from_orm(person)
+>>> data
+PersonSchema(id=1, name='Mr. Smith')
+>>> data.dict()
+{'id':1, 'name':'Mr. Smith'}
+>>> data.json()
+'{"id":1, "name":"Mr. Smith"}'
+```
