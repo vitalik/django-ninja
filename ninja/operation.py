@@ -50,6 +50,7 @@ class Operation:
         exclude_defaults: bool = False,
         exclude_none: bool = False,
         include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> None:
         self.is_async = False
         self.path: str = path
@@ -78,6 +79,7 @@ class Operation:
         self.tags = tags
         self.deprecated = deprecated
         self.include_in_schema = include_in_schema
+        self.openapi_extra = openapi_extra
 
         # Exporting models params
         self.by_alias = by_alias
@@ -287,6 +289,7 @@ class PathView:
         exclude_none: bool = False,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Operation:
         if url_name:
             self.url_name = url_name
@@ -312,6 +315,7 @@ class PathView:
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
             include_in_schema=include_in_schema,
+            openapi_extra=openapi_extra,
         )
 
         self.operations.append(operation)

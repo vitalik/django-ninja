@@ -121,6 +121,31 @@ def method_test_title_description(
     return dict(i=param1, f=param2)
 
 
+@api.post("/test-deprecated-example-examples/")
+def method_test_deprecated_example_examples(
+    request,
+    param1: int = Query(None, deprecated=True),
+    param2: str = Query(..., example="Example Value"),
+    param3: str = Query(
+        ...,
+        max_length=5,
+        examples={
+            "normal": {
+                "summary": "A normal example",
+                "description": "A **normal** string works correctly.",
+                "value": "Foo",
+            },
+            "invalid": {
+                "summary": "Invalid data is rejected with an error",
+                "value": "MoreThan5Length",
+            },
+        },
+    ),
+    param4: int = Query(None, deprecated=True, include_in_schema=False),
+):
+    return dict(i=param2, f=param3)
+
+
 def test_schema_views(client: Client):
     assert client.get("/api/").status_code == 404
     assert client.get("/api/docs").status_code == 200
@@ -619,6 +644,65 @@ def test_schema_title_description(schema):
     }
 
 
+def test_schema_deprecated_example_examples(schema):
+    method_list = schema["paths"]["/api/test-deprecated-example-examples/"]["post"]
+
+    assert method_list["parameters"] == [
+        {
+            "deprecated": True,
+            "in": "query",
+            "name": "param1",
+            "required": False,
+            "schema": {"title": "Param1", "type": "integer", "deprecated": True},
+        },
+        {
+            "in": "query",
+            "name": "param2",
+            "required": True,
+            "schema": {"title": "Param2", "type": "string", "example": "Example Value"},
+            "example": "Example Value",
+        },
+        {
+            "in": "query",
+            "name": "param3",
+            "required": True,
+            "schema": {
+                "maxLength": 5,
+                "title": "Param3",
+                "type": "string",
+                "examples": {
+                    "invalid": {
+                        "summary": "Invalid data is rejected with an error",
+                        "value": "MoreThan5Length",
+                    },
+                    "normal": {
+                        "description": "A **normal** string works correctly.",
+                        "summary": "A normal example",
+                        "value": "Foo",
+                    },
+                },
+            },
+            "examples": {
+                "invalid": {
+                    "summary": "Invalid data is rejected with an error",
+                    "value": "MoreThan5Length",
+                },
+                "normal": {
+                    "description": "A **normal** string works correctly.",
+                    "summary": "A normal example",
+                    "value": "Foo",
+                },
+            },
+        },
+    ]
+
+    assert method_list["responses"] == {
+        200: {
+            "description": "OK",
+        }
+    }
+
+
 def test_union_payload_type(schema):
     method = schema["paths"]["/api/test-union-type"]["post"]
 
@@ -659,7 +743,6 @@ def test_union_payload_simple(schema):
 
 
 def test_get_openapi_urls():
-
     api = NinjaAPI(openapi_url=None)
     paths = get_openapi_urls(api)
     assert len(paths) == 0
@@ -676,7 +759,6 @@ def test_get_openapi_urls():
 
 
 def test_unique_operation_ids():
-
     api = NinjaAPI()
 
     @api.get("/1")

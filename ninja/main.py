@@ -113,6 +113,7 @@ class NinjaAPI:
         exclude_none: bool = False,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         """
         `GET` operation. See <a href="../operations-parameters">operations
@@ -133,6 +134,7 @@ class NinjaAPI:
             exclude_none=exclude_none,
             url_name=url_name,
             include_in_schema=include_in_schema,
+            openapi_extra=openapi_extra,
         )
 
     def post(
@@ -152,6 +154,7 @@ class NinjaAPI:
         exclude_none: bool = False,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         """
         `POST` operation. See <a href="../operations-parameters">operations
@@ -172,6 +175,7 @@ class NinjaAPI:
             exclude_none=exclude_none,
             url_name=url_name,
             include_in_schema=include_in_schema,
+            openapi_extra=openapi_extra,
         )
 
     def delete(
@@ -191,6 +195,7 @@ class NinjaAPI:
         exclude_none: bool = False,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         """
         `DELETE` operation. See <a href="../operations-parameters">operations
@@ -211,6 +216,7 @@ class NinjaAPI:
             exclude_none=exclude_none,
             url_name=url_name,
             include_in_schema=include_in_schema,
+            openapi_extra=openapi_extra,
         )
 
     def patch(
@@ -230,6 +236,7 @@ class NinjaAPI:
         exclude_none: bool = False,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         """
         `PATCH` operation. See <a href="../operations-parameters">operations
@@ -250,6 +257,7 @@ class NinjaAPI:
             exclude_none=exclude_none,
             url_name=url_name,
             include_in_schema=include_in_schema,
+            openapi_extra=openapi_extra,
         )
 
     def put(
@@ -269,6 +277,7 @@ class NinjaAPI:
         exclude_none: bool = False,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         """
         `PUT` operation. See <a href="../operations-parameters">operations
@@ -289,6 +298,7 @@ class NinjaAPI:
             exclude_none=exclude_none,
             url_name=url_name,
             include_in_schema=include_in_schema,
+            openapi_extra=openapi_extra,
         )
 
     def api_operation(
@@ -309,6 +319,7 @@ class NinjaAPI:
         exclude_none: bool = False,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         return self.default_router.api_operation(
             methods,
@@ -326,6 +337,7 @@ class NinjaAPI:
             exclude_none=exclude_none,
             url_name=url_name,
             include_in_schema=include_in_schema,
+            openapi_extra=openapi_extra,
         )
 
     def add_router(

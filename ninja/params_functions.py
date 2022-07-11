@@ -3,7 +3,7 @@
 # what it basically does makes function XXX that create instance of params.XXX
 # and annotates function with result = Any
 # idea from https://github.com/tiangolo/fastapi/blob/master/fastapi/param_functions.py
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 from ninja import params
 
@@ -21,7 +21,10 @@ def Path(  # noqa: N802
     min_length: Optional[int] = None,
     max_length: Optional[int] = None,
     regex: Optional[str] = None,
+    example: Any = None,
+    examples: Optional[Dict[str, Any]] = None,
     deprecated: Optional[bool] = None,
+    include_in_schema: bool = True,
     **extra: Any,
 ) -> Any:
     return params.Path(
@@ -36,7 +39,10 @@ def Path(  # noqa: N802
         min_length=min_length,
         max_length=max_length,
         regex=regex,
+        example=example,
+        examples=examples,
         deprecated=deprecated,
+        include_in_schema=include_in_schema,
         **extra,
     )
 
@@ -54,7 +60,10 @@ def Query(  # noqa: N802
     min_length: Optional[int] = None,
     max_length: Optional[int] = None,
     regex: Optional[str] = None,
+    example: Any = None,
+    examples: Optional[Dict[str, Any]] = None,
     deprecated: Optional[bool] = None,
+    include_in_schema: bool = True,
     **extra: Any,
 ) -> Any:
     return params.Query(
@@ -69,7 +78,10 @@ def Query(  # noqa: N802
         min_length=min_length,
         max_length=max_length,
         regex=regex,
+        example=example,
+        examples=examples,
         deprecated=deprecated,
+        include_in_schema=include_in_schema,
         **extra,
     )
 
@@ -87,7 +99,10 @@ def Header(  # noqa: N802
     min_length: Optional[int] = None,
     max_length: Optional[int] = None,
     regex: Optional[str] = None,
+    example: Any = None,
+    examples: Optional[Dict[str, Any]] = None,
     deprecated: Optional[bool] = None,
+    include_in_schema: bool = True,
     **extra: Any,
 ) -> Any:
     return params.Header(
@@ -102,7 +117,10 @@ def Header(  # noqa: N802
         min_length=min_length,
         max_length=max_length,
         regex=regex,
+        example=example,
+        examples=examples,
         deprecated=deprecated,
+        include_in_schema=include_in_schema,
         **extra,
     )
 
@@ -120,7 +138,10 @@ def Cookie(  # noqa: N802
     min_length: Optional[int] = None,
     max_length: Optional[int] = None,
     regex: Optional[str] = None,
+    example: Any = None,
+    examples: Optional[Dict[str, Any]] = None,
     deprecated: Optional[bool] = None,
+    include_in_schema: bool = True,
     **extra: Any,
 ) -> Any:
     return params.Cookie(
@@ -135,7 +156,10 @@ def Cookie(  # noqa: N802
         min_length=min_length,
         max_length=max_length,
         regex=regex,
+        example=example,
+        examples=examples,
         deprecated=deprecated,
+        include_in_schema=include_in_schema,
         **extra,
     )
 
@@ -153,7 +177,10 @@ def Body(  # noqa: N802
     min_length: Optional[int] = None,
     max_length: Optional[int] = None,
     regex: Optional[str] = None,
+    example: Any = None,
+    examples: Optional[Dict[str, Any]] = None,
     deprecated: Optional[bool] = None,
+    include_in_schema: bool = True,
     **extra: Any,
 ) -> Any:
     return params.Body(
@@ -168,7 +195,10 @@ def Body(  # noqa: N802
         min_length=min_length,
         max_length=max_length,
         regex=regex,
+        example=example,
+        examples=examples,
         deprecated=deprecated,
+        include_in_schema=include_in_schema,
         **extra,
     )
 
@@ -186,7 +216,10 @@ def Form(  # noqa: N802
     min_length: Optional[int] = None,
     max_length: Optional[int] = None,
     regex: Optional[str] = None,
+    example: Any = None,
+    examples: Optional[Dict[str, Any]] = None,
     deprecated: Optional[bool] = None,
+    include_in_schema: bool = True,
     **extra: Any,
 ) -> Any:
     return params.Form(
@@ -201,7 +234,10 @@ def Form(  # noqa: N802
         min_length=min_length,
         max_length=max_length,
         regex=regex,
+        example=example,
+        examples=examples,
         deprecated=deprecated,
+        include_in_schema=include_in_schema,
         **extra,
     )
 
@@ -219,7 +255,10 @@ def File(  # noqa: N802
     min_length: Optional[int] = None,
     max_length: Optional[int] = None,
     regex: Optional[str] = None,
+    example: Any = None,
+    examples: Optional[Dict[str, Any]] = None,
     deprecated: Optional[bool] = None,
+    include_in_schema: bool = True,
     **extra: Any,
 ) -> Any:
     return params.File(
@@ -234,6 +273,9 @@ def File(  # noqa: N802
         min_length=min_length,
         max_length=max_length,
         regex=regex,
+        example=example,
+        examples=examples,
         deprecated=deprecated,
+        include_in_schema=include_in_schema,
         **extra,
     )
