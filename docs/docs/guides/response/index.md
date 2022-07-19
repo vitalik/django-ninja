@@ -194,15 +194,17 @@ def tasks(request):
     return Task.objects.all()
 ```
 
-### Note about async mode
+!!! warning
 
-If your operation is async [async-support](https://django-ninja.rest-framework.com/async-support), this example will not work.
+    If your operation is async, this example will not work because the ORM query needs to be called safely.
 
-```Python hl_lines="2 3"
-@api.get("/tasks", response=List[TaskSchema])
-async def tasks(request):
-    return Task.objects.all()
-```
+    ```Python hl_lines="2"
+    @api.get("/tasks", response=List[TaskSchema])
+    async def tasks(request):
+        return Task.objects.all()
+    ```
+
+    See the [async support](../async-support#using-orm) guide for more information.
 
 
 ## FileField and ImageField

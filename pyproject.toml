@@ -68,7 +68,8 @@ test = [
 doc = [
     "mkdocs",
     "mkdocs-material",
-    "markdown-include"
+    "markdown-include",
+    "mkdocstrings",
 ]
 dev = [
     "pre-commit",

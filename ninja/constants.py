@@ -3,7 +3,10 @@ from typing import Any, Dict
 __all__ = ["NOT_SET"]
 
 
-class NOT_SET:
+class NOT_SET_TYPE:
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"{__name__}.{self.__class__.__name__}"
+
     def __copy__(self) -> Any:
         return NOT_SET
 
@@ -11,4 +14,4 @@ class NOT_SET:
         return NOT_SET
 
 
-NOT_SET: Any = NOT_SET()  # type: ignore  # noqa: F811
+NOT_SET = NOT_SET_TYPE()

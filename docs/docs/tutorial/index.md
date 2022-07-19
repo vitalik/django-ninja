@@ -1,55 +1,39 @@
-# Tutorial - Intro
+# Tutorial - First Steps
 
-This tutorial shows you how to use **Django Ninja** with most of its features. 
-It is also built to work as reference documentation.
+This tutorial shows you how to use **Django Ninja** with most of its features.
 
 This tutorial assumes that you know at least some basics of the <a href="https://www.djangoproject.com/" target="_blank">Django Framework</a>, like how to create a project and run it.
 
-
 ## Installation
 
-```
+```console
 pip install django-ninja
 ```
 
 !!! note
+
     It is not required, but you can also put `ninja` to `INSTALLED_APPS`.
     In that case the OpenAPI/Swagger UI (or Redoc) will be loaded (faster) from the included JavaScript bundle (otherwise the JavaScript bundle comes from a CDN).
 
-
 ## Create a Django project
 
-(If you already have an existing Django project, skip to the next step).
-
-Start a new Django project (or use an existing one).
+Start a new Django project (or if you already have an existing Django project, skip to the next step).
 
 ```
 django-admin startproject myproject
 ```
 
+## Create the API
 
-## First steps
-
-Let's create a module for our API.  Create an **api.py** file in the same directory location as **urls.py**:
-
-
-`api.py`
-
+Let's create a module for our API. Create an `api.py` file in the same directory location as your Django project's root `urls.py`:
 
 ```Python
 from ninja import NinjaAPI
 
 api = NinjaAPI()
-
-
-@api.get("/hello")
-def hello(request):
-    return "Hello world"
-
 ```
 
-Now go to **urls.py** and add the following:
-
+Now go to `urls.py` and add the following:
 
 ```Python hl_lines="3 7"
 from django.contrib import admin
@@ -62,58 +46,29 @@ urlpatterns = [
 ]
 ```
 
-## Defining operation methods
+## Our first operation
 
-"Operation" can be one of the HTTP "methods":
+**Django Ninja** comes with a decorator for each HTTP method (`GET`, `POST`,
+`PUT`, etc). In our `api.py` file, let's add in a simple "hello world"
+operation.
 
- - GET
- - POST
- - PUT
- - DELETE
- - PATCH
- - ... and more
+```Python hl_lines="5-7"
+from ninja import NinjaAPI
 
+api = NinjaAPI()
 
-**Django Ninja** comes with a decorator for each method:
-
-
-```Python hl_lines="1 5 9 13 17"
-@api.get("/path")
-def get_operation(request):
-    ...
-
-@api.post("/path")
-def post_operation(request):
-    ...
-
-@api.put("/path")
-def put_operation(request):
-    ...
-
-@api.delete("/path")
-def delete_operation(request):
-    ...
-
-@api.patch("/path")
-def patch_operation(request):
-    ...
+@api.get("/hello")
+def hello(request):
+    return "Hello world"
 ```
 
-If you need to handle multiple methods with a single function for a given path,
-you can use the `api_operation` method:
-
-
-```Python hl_lines="1"
-@api.api_operation(["POST", "PATCH"], "/path")
-def mixed(request):
-    ...
+Now browsing to <a href="http://localhost:8000/api/hello"
+target="_blank">localhost:8000/api/hello</a> will return a simple JSON
+response:
+```json
+"Hello world"
 ```
 
-This feature can also be used to implement other HTTP methods that don't have 
-corresponding django-ninja methods, such as `HEAD` or `OPTIONS`.
+!!! success
 
-```Python hl_lines="1"
-@api.api_operation(["HEAD", "OPTIONS"], "/path")
-def mixed(request):
-    ...
-```
+    Continue on to **[Parsing input](step2.md)**.

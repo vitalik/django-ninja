@@ -55,7 +55,7 @@ On the other hand, if you go to the browser at <a href="http://localhost:8000/ap
 
 ### Django Path Converters
 
-You can use [Django Path Converters](https://docs.djangoproject.com/en/3.2/topics/http/urls/#path-converters)
+You can use [Django Path Converters](https://docs.djangoproject.com/en/stable/topics/http/urls/#path-converters)
 to help parse the path:
 
 ```Python hl_lines="1"
@@ -104,4 +104,4 @@ You can also use Schema to encapsulate path parameters that depend on each other
 
 ### Documentation
 Now, when you open your browser at <a href="http://localhost:8000/api/docs" target="_blank">http://localhost:8000/api/docs</a>, you will see the automatic, interactive, API documentation.
-![Django Ninja Swagger](../img/tutorial-path-swagger.png)
+![Django Ninja Swagger](../../img/tutorial-path-swagger.png)

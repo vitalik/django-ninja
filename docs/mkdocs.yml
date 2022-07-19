@@ -4,9 +4,12 @@ site_url: https://django-ninja.rest-framework.com
 repo_name: vitalik/django-ninja
 repo_url: https://github.com/vitalik/django-ninja
 edit_uri: ""
-google_analytics:
-  - UA-170474207-1
-  - auto
+extra:
+  analytics:
+    provider: google
+    property: UA-170474207-1
+extra_css:
+  - extra.css
 theme:
   name: material
   palette:
@@ -19,39 +22,49 @@ theme:
 nav:
   - Intro: index.md
   - motivation.md
-  - Tutorial / Reference:
-      - tutorial/index.md
-      - tutorial/path-params.md
-      - tutorial/query-params.md
-      - tutorial/body.md
-      - tutorial/form-params.md
-      - tutorial/file-params.md
-      - tutorial/response-schema.md
-      - tutorial/crud.md
-      - tutorial/django-pydantic.md
-      - Advanced Schema:
-          - tutorial/django-pydantic-create-schema.md
-          - tutorial/config-pydantic.md
-      - tutorial/authentication.md
-      - tutorial/routers.md
-      - tutorial/urls.md
-      - tutorial/pagination.md
-      - tutorial/operation_params.md
-      - tutorial/versioning.md
-      - tutorial/request-parsers.md
-      - tutorial/response-renderers.md
-      - tutorial/errors.md
-      - tutorial/csrf.md
-      - tutorial/management-commands.md
-      - tutorial/api-docs.md
-  - async-support.md
-  - video.md
+  - Tutorial:
+      - "First Steps": tutorial/index.md
+      - "Parsing Input": tutorial/step2.md
+      - "Handling Responses": tutorial/step3.md
+      - Other Tutorials:
+          - tutorial/other/video.md
+          - tutorial/other/crud.md
+  - How-to Guides:
+      - Parsing input:
+          - guides/input/operations.md
+          - guides/input/path-params.md
+          - guides/input/query-params.md
+          - guides/input/body.md
+          - guides/input/form-params.md
+          - guides/input/file-params.md
+          - guides/input/request-parsers.md
+      - Handling responses:
+          - Defining a Schema: guides/response/index.md
+          - guides/response/temporal_response.md
+          - Generating a Schema from Django models: guides/response/django-pydantic.md
+          - Generating a Schema dynamically: guides/response/django-pydantic-create-schema.md
+          - guides/response/config-pydantic.md
+          - guides/response/pagination.md
+          - guides/response/response-renderers.md
+      - Splitting your API with Routers: guides/routers.md
+      - guides/authentication.md
+      - guides/api-docs.md
+      - guides/errors.md
+      - guides/urls.md
+      - guides/async-support.md
+      - guides/versioning.md
+  - Reference:
+      - NinjaAPI class: reference/api.md
+      - reference/csrf.md
+      - reference/operations-parameters.md
+      - reference/management-commands.md
+      - reference/settings.md
+      - releases.md
+  - help.md
   - Enhancement Proposals:
       - Intro: proposals/index.md
       - proposals/cbv.md
       - proposals/v1.md
-  - help.md
-  - releases.md
 markdown_extensions:
   - markdown_include.include
   - markdown.extensions.codehilite:
@@ -59,6 +72,16 @@ markdown_extensions:
   # Uncomment these 2 lines during development to more easily add highlights
   #- pymdownx.highlight:
   #    linenums: true
+  - abbr
   - codehilite
   - admonition
   - pymdownx.superfences
+plugins:
+  - mkdocstrings:
+      handlers:
+        python:
+          setup_commands:
+            - from django.conf import settings
+            - settings.configure()
+      watch:
+        - ../ninja

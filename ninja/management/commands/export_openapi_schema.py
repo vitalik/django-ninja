@@ -6,10 +6,23 @@ from django.urls.base import resolve
 from django.utils.module_loading import import_string
 
 from ninja.main import NinjaAPI
+from ninja.management.utils import command_docstring
 from ninja.responses import NinjaJSONEncoder
 
 
 class Command(BaseCommand):
+    """
+    Example:
+
+        ```terminal
+        python manage.py export_openapi_schema
+        ```
+
+        ```terminal
+        python manage.py export_openapi_schema --api project.urls.api
+        ```
+    """
+
     help = "Exports Open API schema"
 
     def _get_api_instance(self, api_path: Optional[str] = None) -> NinjaAPI:
@@ -35,10 +48,14 @@ class Command(BaseCommand):
             help="Specify api instance module",
         )
         parser.add_argument(
-            "--output", dest="output", default=None, type=str, help="Output schema path"
+            "--output",
+            dest="output",
+            default=None,
+            type=str,
+            help="Output schema to a file (outputs to stdout if omitted).",
         )
         parser.add_argument(
-            "--indent", dest="indent", default=None, type=int, help="json indent"
+            "--indent", dest="indent", default=None, type=int, help="JSON indent"
         )
 
     def handle(self, *args: Any, **options: Any) -> None:
@@ -51,3 +68,6 @@ class Command(BaseCommand):
                 f.write(result.encode())
         else:
             self.stdout.write(result)
+
+
+__doc__ = command_docstring(Command)
