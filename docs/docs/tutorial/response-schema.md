@@ -404,3 +404,11 @@ PersonSchema(id=1, name='Mr. Smith')
 >>> data.json()
 '{"id":1, "name":"Mr. Smith"}'
 ```
+
+Multiple Items: or a queryset (or list)
+
+```
+>>> persons = Person.objects.all()
+>>> data = [PersonSchema.from_orm(i).dict() for i in persons]
+[{'id':1, 'name':'Mr. Smith'},{'id': 2, 'name': 'Mrs. Smith'}...]
+```
