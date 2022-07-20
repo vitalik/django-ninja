@@ -84,7 +84,10 @@ def create_m2m_link_type(type_: Type[TModel]) -> Type[TModel]:
 
         @classmethod
         def validate(cls, v):
-            return v.pk
+            try:
+                return v.pk  # when we output queryset - we have db instances
+            except AttributeError:
+                return type_(v)  # when we read payloads we have primakey keys
 
     return M2MLink
 
