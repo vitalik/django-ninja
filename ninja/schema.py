@@ -27,8 +27,9 @@ from django.db.models import Manager, QuerySet
 from django.db.models.fields.files import FieldFile
 from django.template import Variable, VariableDoesNotExist
 from pydantic import BaseModel, Field, validator
-from pydantic.main import ModelMetaclass
+from pydantic.main import ModelMetaclass, __dataclass_transform__
 from pydantic.utils import GetterDict
+from pydantic.fields import Field, FieldInfo
 
 pydantic_version = list(map(int, pydantic.VERSION.split(".")[:2]))
 assert pydantic_version >= [1, 6], "Pydantic 1.6+ required"
@@ -119,7 +120,7 @@ class Resolver:
 
         return PartialSchema()
 
-
+@__dataclass_transform__(kw_only_default=True, field_descriptors=(Field, FieldInfo))
 class ResolverMetaclass(ModelMetaclass):
     _ninja_resolvers: Dict[str, Resolver]
 
