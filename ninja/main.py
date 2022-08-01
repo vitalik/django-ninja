@@ -469,14 +469,14 @@ class NinjaAPI:
             and self.urls_namespace in NinjaAPI._registry
             and not debug_server_url_reimport()
         ):
-            msg = [
-                "Looks like you created multiple NinjaAPIs or TestClients",
-                "To let ninja distinguish them you need to set either unique version or url_namespace",
-                " - NinjaAPI(..., version='2.0.0')",
-                " - NinjaAPI(..., urls_namespace='otherapi')",
-                f"Already registered: {NinjaAPI._registry}",
-            ]
-            raise ConfigError("\n".join(msg))
+            msg = f"""
+Looks like you created multiple NinjaAPIs or TestClients
+To let ninja distinguish them you need to set either unique version or urls_namespace
+ - NinjaAPI(..., version='2.0.0')
+ - NinjaAPI(..., urls_namespace='otherapi')
+Already registered: {NinjaAPI._registry}
+"""
+            raise ConfigError(msg.strip())
         NinjaAPI._registry.append(self.urls_namespace)
 
         # 2) csrf
