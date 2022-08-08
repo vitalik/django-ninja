@@ -5,4 +5,4 @@ set -e
 pip install -r docs/requirements.txt
 
 cd docs
-mkdocs build
+PYTHONPATH=../ mkdocs build
