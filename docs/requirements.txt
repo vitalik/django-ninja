@@ -1,4 +1,4 @@
 mkdocs
 mkdocs-material
 markdown-include
-mkdocstrings[python]>=0.18
+mkdocstrings[python]
