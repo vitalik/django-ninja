@@ -1,5 +1,5 @@
-mkdocs==1.2.4
-mkdocs-material==5.1.7
-markdown-include==0.5.1
-jinja2==3.0.3
+mkdocs
+mkdocs-material
+markdown-include
+jinja2
 mkdocstrings[python]>=0.18
