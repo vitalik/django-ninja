@@ -17,6 +17,8 @@ theme:
   logo: img/docs-logo.png
   favicon: img/favicon.png
   language: en
+  features:
+    - navigation.expand
   icon:
     repo: fontawesome/brands/github-alt
 nav:
