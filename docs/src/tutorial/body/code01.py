@@ -3,7 +3,7 @@ from ninja import Schema
 
 class Item(Schema):
     name: str
-    description: str = None
+    description: str = ""
     price: float
     quantity: int
 
