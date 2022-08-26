@@ -1,6 +1,7 @@
 import json
 from typing import Any, Optional
 
+import yaml
 from django.core.management.base import BaseCommand, CommandError, CommandParser
 from django.urls.base import resolve
 from django.utils.module_loading import import_string
@@ -41,6 +42,15 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser: CommandParser) -> None:
         parser.add_argument(
+            "-f",
+            "--format",
+            dest="format",
+            default="json",
+            type=str,
+            choices=("json", "yaml"),
+            help="OpenAPI schema format",
+        )
+        parser.add_argument(
             "--api",
             dest="api",
             default=None,
@@ -55,7 +65,7 @@ class Command(BaseCommand):
             help="Output schema to a file (outputs to stdout if omitted).",
         )
         parser.add_argument(
-            "--indent", dest="indent", default=None, type=int, help="JSON indent"
+            "--indent", dest="indent", default=None, type=int, help="Schema indentation level"
         )
         parser.add_argument(
             "--sorted",
@@ -74,6 +84,10 @@ class Command(BaseCommand):
             indent=options["indent"],
             sort_keys=options["sort_keys"],
         )
+
+        if options["format"] == "yaml":
+            data = json.loads(result)
+            result = yaml.dump(data, indent=options["indent"])
 
         if options["output"]:
             with open(options["output"], "wb") as f:

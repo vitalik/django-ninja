@@ -4,6 +4,7 @@ import tempfile
 from io import StringIO
 
 import pytest
+import yaml
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
@@ -45,3 +46,15 @@ def test_export_custom():
 
     call_command(ExportCmd(), api="demo.urls.api_v1")
     call_command(ExportCmd(), api="demo.urls.api_v2")
+
+
+def test_export_yaml():
+    yaml_output = StringIO()
+    call_command(ExportCmd(), stdout=yaml_output, format="yaml")
+    yaml_data = yaml.safe_load(yaml_output.getvalue())
+
+    json_output = StringIO()
+    call_command(ExportCmd(), stdout=json_output, format="json")
+    json_data = json.loads(json_output.getvalue())
+
+    assert yaml_data == json_data
