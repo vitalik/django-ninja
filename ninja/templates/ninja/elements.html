@@ -1,0 +1,13 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="{% static 'ninja/elements-ui-bundle.7.6.5.js' %}"></script>
+    <link type="text/css" rel="stylesheet" href="{% static 'ninja/elements-ui-bundle.7.6.5.css' %}">
+    <link rel="shortcut icon" href="{% static 'ninja/favicon.png' %}">
+    <title>{{ api.title }}</title>
+</head>
+<body>
+    <elements-api apiDescriptionUrl="{{ openapi_json_url }}" router="hash" layout="sidebar" />
+</body>
+</html>

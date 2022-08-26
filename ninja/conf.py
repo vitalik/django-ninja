@@ -13,10 +13,12 @@ class Settings(BaseModel):
             `ninja.pagination.Pagination`.
         NINJA_PAGINATION_PAGE_SIZE (int):
             The default page size. Defaults to `100`.
-        NINJA_DOCS_VIEW ("swagger"|"redoc"):
+        NINJA_DOCS_VIEW ("swagger"|"redoc"|"elements"):
             The view to use for the documentation. Defaults to `swagger`, but
-            change to `redoc` to use alternative
-            [Redoc](https://github.com/Redocly/redoc) automatic documentation.
+            can be changed to:
+                - `redoc` to use [Redoc](https://github.com/Redocly/redoc)
+                - `elements` to use [Elements](https://github.com/stoplightio/elements)
+            automatic documentation viewers
     """
 
     PAGINATION_CLASS: str = Field(

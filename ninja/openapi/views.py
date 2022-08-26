@@ -16,13 +16,20 @@ if TYPE_CHECKING:
 __all__ = ["default_home", "openapi_json", "openapi_view", "openapi_view_cdn"]
 
 
-render_swagger = ninja_settings.DOCS_VIEW == "swagger"
-view_tpl = "ninja/swagger.html" if render_swagger else "ninja/redoc.html"
-view_cdn_tpl = (
-    "../templates/ninja/swagger_cdn.html"
-    if render_swagger
-    else "../templates/ninja/redoc_cdn.html"
-)
+viewer_template = {
+    "swagger": "ninja/swagger.html",
+    "redoc": "ninja/redoc.html",
+    "elements": "ninja/elements.html",
+}
+
+viewer_template_cdn = {
+    "swagger": "ninja/swagger_cdn.html",
+    "redoc": "ninja/redoc_cdn.html",
+    "elements": "ninja/elements_cdn.html",
+}
+
+view_tpl = viewer_template.get(ninja_settings.DOCS_VIEW, "ninja/swagger.html")
+view_cdn_tpl = viewer_template_cdn.get(ninja_settings.DOCS_VIEW, "ninja/swagger_cdn.html")
 
 
 def default_home(request: HttpRequest, api: "NinjaAPI") -> NoReturn:
@@ -60,7 +67,7 @@ def openapi_view_cdn(
     from django.http import HttpResponse
     from django.template import RequestContext, Template
 
-    tpl_file = os.path.join(os.path.dirname(__file__), view_cdn_tpl)
+    tpl_file = os.path.join(os.path.dirname(__file__), "../templates/", view_cdn_tpl)
     with open(tpl_file) as f:
         tpl = Template(f.read())
     html = tpl.render(RequestContext(request, context))
