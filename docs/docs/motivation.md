@@ -88,6 +88,6 @@ def tasks_details(request):
     task = Task.objects.first()
     return task
 ```
-3) [Create Schema's from Django Models](/tutorial/django-pydantic/).
+3) [Create Schema's from Django Models](/guides/response/django-pydantic/).
 
-4) Instead of dependency arguments, **Django Ninja** uses `request` instance attributes (in the same way as regular Django views) - more detail at [Authentication](/tutorial/authentication/).
+4) Instead of dependency arguments, **Django Ninja** uses `request` instance attributes (in the same way as regular Django views) - more detail at [Authentication](/guides/authentication/).
