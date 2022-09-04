@@ -151,6 +151,7 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
     class Config:
         orm_mode = True
         getter_dict = DjangoGetter
+        allow_population_by_field_name = True
 
     @classmethod
     def from_orm(cls: Type[S], obj: Any) -> S:
