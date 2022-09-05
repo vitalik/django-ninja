@@ -23,8 +23,8 @@ class EventSchema(Schema):
 @router.post("/create", url_name="event-create-url-name", response=EventSchema)
 def create_event(request, event: EventSchema):
     payload = event.dict()
-    category_title = payload.pop('category')
-    
+    category_title = payload.pop("category")
+
     if category_title is not None:
         category, created = Category.objects.get_or_create(title=category_title)
     else:
