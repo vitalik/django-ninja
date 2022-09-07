@@ -44,7 +44,7 @@ class SchemaFactory:
     ) -> Type[Schema]:
         name = name or model.__name__
 
-        if fields and exclude:
+        if fields is not None and exclude is not None:
             raise ConfigError("Only one of 'fields' or 'exclude' should be set.")
 
         key = self.get_key(model, name, depth, fields, exclude, custom_fields)
@@ -105,7 +105,7 @@ class SchemaFactory:
         "Returns iterator for model fields based on `exclude` or `fields` arguments"
         all_fields = {f.name: f for f in self._model_fields(model)}
 
-        if not fields and not exclude:
+        if fields is None and exclude is None:
             for f in all_fields.values():
                 yield f
 
@@ -113,10 +113,10 @@ class SchemaFactory:
         if invalid_fields:
             raise ConfigError(f"Field(s) {invalid_fields} are not in model {model}")
 
-        if fields:
+        if fields is not None:
             for name in fields:
                 yield all_fields[name]
-        if exclude:
+        if exclude is not None:
             for f in all_fields.values():
                 if f.name not in exclude:
                     yield f

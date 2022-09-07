@@ -36,7 +36,7 @@ class ModelSchemaMetaclass(ResolverMetaclass):
                 fields = getattr(config, "model_fields", None)
                 exclude = getattr(config, "model_exclude", None)
 
-                if not fields and not exclude:
+                if fields is None and exclude is None:
                     raise ConfigError(
                         "Creating a ModelSchema without either the 'model_fields' attribute"
                         " or the 'model_exclude' attribute is prohibited"

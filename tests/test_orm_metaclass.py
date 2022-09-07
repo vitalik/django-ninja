@@ -50,6 +50,33 @@ def test_simple():
         "required": ["firstname"],
     }
 
+    class SampleSchema3(ModelSchema):
+        class Config:
+            model = User
+            model_fields = []
+
+    assert SampleSchema3.schema() == {
+        "title": "SampleSchema3",
+        "type": "object",
+        "properties": {},
+    }
+
+    class SampleSchema4(ModelSchema):
+        class Config:
+            model = User
+            model_exclude = []
+
+    assert SampleSchema4.schema() == {
+        "title": "SampleSchema4",
+        "type": "object",
+        "properties": {
+            "id": {"title": "Id", "type": "integer"},
+            "firstname": {"title": "Firstname", "type": "string"},
+            "lastname": {"title": "Lastname", "type": "string"},
+        },
+        "required": ["firstname"],
+    }
+
 
 def test_custom():
     class CustomModel(models.Model):
