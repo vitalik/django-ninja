@@ -7,7 +7,6 @@ from django.urls import register_converter
 from django.urls.converters import UUIDConverter
 from pydantic.typing import evaluate_forwardref
 
-
 from ninja.types import DictStrAny
 
 __all__ = [
