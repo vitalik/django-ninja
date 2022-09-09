@@ -8,6 +8,7 @@ dist-name = "django-ninja"
 author = "Vitaliy Kucheryaviy"
 author-email = "ppr.vitaly@gmail.com"
 home-page = "https://django-ninja.rest-framework.com"
+repository = "https://github.com/vitalik/django-ninja"
 classifiers = [
     "Intended Audience :: Information Technology",
     "Intended Audience :: System Administrators",
