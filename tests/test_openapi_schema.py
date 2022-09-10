@@ -6,6 +6,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.test import Client, override_settings
 
 from ninja import Body, Field, File, Form, NinjaAPI, Query, Schema, UploadedFile
+from ninja.pagination import paginate
 from ninja.openapi.urls import get_openapi_urls
 
 api = NinjaAPI()
@@ -49,6 +50,12 @@ def method_alias(request, data: Payload):
 
 @api.post("/test_list", response=List[Response])
 def method_list_response(request, data: List[Payload]):
+    return []
+
+
+@api.post("/test_paginated_list", response=List[Response])
+@paginate()
+def method_paginated_list_response(request, data: List[Payload]):
     return []
 
 
@@ -200,6 +207,19 @@ def test_schema(schema):
             "title": "TypeB",
             "type": "object",
         },
+        "PagedResponse": {
+            "properties": {
+                "count": { "title": "Count", "type": "integer" },
+                "items": {
+                    "items": { "$ref": "#/components/schemas/Response" },
+                    "title": "Items",
+                    "type": "array"
+                }
+            },
+            "required": ["items", "count"],
+            "title": "PagedResponse",
+            "type": "object"
+        }
     }
 
 
@@ -312,6 +332,98 @@ def test_schema_list(schema):
             "title": "Response",
             "type": "object",
         },
+        "PagedResponse": {
+            "properties": {
+                "count": {"title": "Count", "type": "integer"},
+                "items": {
+                    "items": {"$ref": "#/components/schemas/Response"},
+                    "title": "Items",
+                    "type": "array"
+                }
+            },
+            "required": ["items", "count"],
+            "title": "PagedResponse",
+            "type": "object"
+        }
+    }
+
+
+def test_schema_paginated_list(schema):
+    method_list = schema["paths"]["/api/test_paginated_list"]["post"]
+
+    assert method_list["requestBody"] == {
+        "content": {
+            "application/json": {
+                "schema": {
+                    "items": {"$ref": "#/components/schemas/Payload"},
+                    "title": "Data",
+                    "type": "array",
+                }
+            }
+        },
+        "required": True,
+    }
+    assert method_list["responses"] == {
+        200: {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "#/components/schemas/PagedResponse"
+                    },
+                }
+            },
+            "description": "OK",
+        }
+    }
+
+    assert schema["components"]["schemas"] == {
+        "Payload": {
+            "properties": {
+                "f": {"title": "F", "type": "number"},
+                "i": {"title": "I", "type": "integer"},
+            },
+            "required": ["i", "f"],
+            "title": "Payload",
+            "type": "object",
+        },
+        "TypeA": {
+            "properties": {
+                "a": {"title": "A", "type": "string"},
+            },
+            "required": ["a"],
+            "title": "TypeA",
+            "type": "object",
+        },
+        "TypeB": {
+            "properties": {
+                "b": {"title": "B", "type": "string"},
+            },
+            "required": ["b"],
+            "title": "TypeB",
+            "type": "object",
+        },
+        "Response": {
+            "properties": {
+                "f": {"description": "f desc", "title": "f title", "type": "number"},
+                "i": {"title": "I", "type": "integer"},
+            },
+            "required": ["i", "f"],
+            "title": "Response",
+            "type": "object",
+        },
+        "PagedResponse": {
+            "properties": {
+                "count": {"title": "Count", "type": "integer"},
+                "items": {
+                    "items": {"$ref": "#/components/schemas/Response"},
+                    "title": "Items",
+                    "type": "array"
+                }
+            },
+            "required": ["items", "count"],
+            "title": "PagedResponse",
+            "type": "object"
+        }
     }
 
 
