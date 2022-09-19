@@ -57,6 +57,9 @@ class Command(BaseCommand):
         parser.add_argument(
             "--indent", dest="indent", default=None, type=int, help="JSON indent"
         )
+        parser.add_argument(
+            "--sorted", dest="sort_keys", default=False, action='store_true', help="Sort Json keys"
+        )
 
     def handle(self, *args: Any, **options: Any) -> None:
         api = self._get_api_instance(options["api"])
