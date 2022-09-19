@@ -64,7 +64,7 @@ class Command(BaseCommand):
     def handle(self, *args: Any, **options: Any) -> None:
         api = self._get_api_instance(options["api"])
         schema = api.get_openapi_schema()
-        result = json.dumps(schema, cls=NinjaJSONEncoder, indent=options["indent"])
+        result = json.dumps(schema, cls=NinjaJSONEncoder, indent=options["indent"], sort_keys=options["sort_keys"])
 
         if options["output"]:
             with open(options["output"], "wb") as f:
