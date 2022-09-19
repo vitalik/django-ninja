@@ -28,6 +28,11 @@ test: ## Run tests
 test-cov: ## Run tests with coverage
 	pytest --cov=ninja --cov-report term-missing tests
 
+.PHONY: test-cov-server
+test-cov-server: ## Run tests with coverage and open the server to see coverage details
+	-pytest --cov=ninja --cov-fail-under=0 --cov-report html:htmlcov tests
+	cd htmlcov && python -m http.server 8001 --bind 0.0.0.0
+
 .PHONY: docs
 docs: ## Serve documentation locally
 	pip install -r docs/requirements.txt

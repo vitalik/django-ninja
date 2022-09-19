@@ -125,21 +125,31 @@ class Operation:
 
     def _run_checks(self, request: HttpRequest) -> Optional[HttpResponse]:
         "Runs security checks for each operation"
-        # auth:
+        error = self._run_checks_auth(request)
+        if not error:
+            error = self._run_checks_csrf(request)
+
+        if error:
+            return error
+        return None
+
+    def _run_checks_auth(self, request: HttpRequest) -> Optional[HttpResponse]:
         if self.auth_callbacks:
             error = self._run_authentication(request)
             if error:
                 return error
+        return None
 
-        # csrf:
+    def _run_checks_csrf(self, request: HttpRequest) -> Optional[HttpResponse]:
         if self.api.csrf:
             error = check_csrf(request, self.view_func)
             if error:
                 return error
-
         return None
 
     def _run_authentication(self, request: HttpRequest) -> Optional[HttpResponse]:
+        request.auth_callbacks = self.auth_callbacks  # type: ignore
+
         for callback in self.auth_callbacks:
             try:
                 result = callback(request)
@@ -250,7 +260,7 @@ class AsyncOperation(Operation):
         self.is_async = True
 
     async def run(self, request: HttpRequest, **kw: Any) -> HttpResponseBase:  # type: ignore
-        error = self._run_checks(request)
+        error = await self._run_checks(request)
         if error:
             return error
         try:
@@ -260,6 +270,40 @@ class AsyncOperation(Operation):
             return self._result_to_response(request, result, temporal_response)
         except Exception as e:
             return self.api.on_exception(request, e)
+
+    async def _run_checks(self, request: HttpRequest) -> Optional[HttpResponse]:  # type: ignore
+        """Runs security checks for each operation"""
+        error = await self._run_checks_auth(request)
+        if not error:
+            error = self._run_checks_csrf(request)
+
+        if error:
+            return error
+        return None
+
+    async def _run_checks_auth(self, request: HttpRequest) -> Optional[HttpResponse]:  # type: ignore
+        if self.auth_callbacks:
+            error = await self._run_authentication(request)
+            if error:
+                return error
+        return None
+
+    async def _run_authentication(self, request: HttpRequest) -> Optional[HttpResponse]:  # type: ignore
+        request.auth_callbacks = self.auth_callbacks  # type: ignore
+
+        for callback in self.auth_callbacks:
+            try:
+                if is_async(callback.__call__):  # type: ignore
+                    result = await callback(request)
+                else:
+                    result = callback(request)
+            except Exception as exc:
+                return self.api.on_exception(request, exc)
+
+            if result:
+                request.auth = result  # type: ignore
+                return None
+        return self.api.on_exception(request, AuthenticationError())
 
 
 class PathView:
