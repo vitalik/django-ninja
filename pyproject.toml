@@ -8,7 +8,6 @@ dist-name = "django-ninja"
 author = "Vitaliy Kucheryaviy"
 author-email = "ppr.vitaly@gmail.com"
 home-page = "https://django-ninja.rest-framework.com"
-repository = "https://github.com/vitalik/django-ninja"
 classifiers = [
     "Intended Audience :: Information Technology",
     "Intended Audience :: System Administrators",
@@ -52,6 +51,8 @@ requires-python = ">=3.6"
 
 [tool.flit.metadata.urls]
 Documentation = "https://django-ninja.rest-framework.com"
+Repository = "https://github.com/vitalik/django-ninja"
+
 
 [tool.flit.metadata.requires-extra]
 test = [
