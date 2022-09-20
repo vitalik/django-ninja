@@ -297,8 +297,8 @@ def flatten_properties(
     if "allOf" in prop_details:
         resolve_allOf(prop_details, definitions)
         if len(prop_details["allOf"]) == 1 and "enum" in prop_details["allOf"][0]:
-            is_required = "default" not in prop_details
-            yield prop_name, prop_details, is_required
+            # is_required = "default" not in prop_details
+            yield prop_name, prop_details, prop_required
         else:
             for item in prop_details["allOf"]:
                 yield from flatten_properties("", item, True, definitions)

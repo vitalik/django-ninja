@@ -1,9 +1,10 @@
 from datetime import date
 from enum import Enum
+from typing import Optional
 
 from pydantic import BaseModel
 
-from ninja import NinjaAPI
+from ninja import NinjaAPI, Query
 from ninja.testing import TestClient
 
 
@@ -32,6 +33,13 @@ def booking_search(request, room: RoomEnum):
     return {"room": room}
 
 
+@api.get("/optional")
+def enum_optioanal(
+    request, room: Optional[RoomEnum] = Query(None, description="description")
+):
+    return {"room": room}
+
+
 client = TestClient(api)
 
 
@@ -57,6 +65,13 @@ def test_enums():
 
     response = client.get("/search?room=other")
     assert response.status_code == 422
+
+    response = client.get("/optional?room=twin")
+    assert response.status_code == 200
+
+    response = client.get("/optional")
+    assert response.status_code == 200
+    assert response.json() == {"room": None}
 
 
 def test_schema():
@@ -96,4 +111,24 @@ def test_schema():
             "enum": ["double", "twin", "single"],
             "type": "string",
         },
+    }
+
+    optional_operation = schema["paths"]["/api/optional"]["get"]
+    room_param = optional_operation["parameters"][0]
+    assert room_param == {
+        "in": "query",
+        "name": "room",
+        "schema": {
+            "description": "description",
+            "allOf": [
+                {
+                    "title": "RoomEnum",
+                    "description": "An enumeration.",
+                    "enum": ["double", "twin", "single"],
+                    "type": "string",
+                }
+            ],
+        },
+        "required": False,
+        "description": "description",
     }
