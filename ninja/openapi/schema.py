@@ -61,6 +61,7 @@ class OpenAPISchema(dict):
                 ),
                 ("paths", self.get_paths()),
                 ("components", self.get_components()),
+                ("servers", self.get_servers()),
             ]
         )
 
@@ -274,6 +275,11 @@ class OpenAPISchema(dict):
         if self.securitySchemes:
             result["securitySchemes"] = self.securitySchemes
         return result
+
+    def get_servers(self) -> Optional[List[DictStrAny]]:
+        if self.api.servers:
+            return [server.to_dict() for server in self.api.servers]
+        return None
 
     def add_schema_definitions(self, definitions: dict) -> None:
         # TODO: check if schema["definitions"] are unique
