@@ -67,6 +67,7 @@ class NinjaAPI:
             urls_namespace: The Django URL namespace for the API. If not provided, the namespace will be ``"api-" + self.version``.
             openapi_url: The relative URL to serve the openAPI spec.
             docs_url: The relative URL to serve the API docs.
+            servers: List of target hosts used in openAPI spec.
             csrf: Require a CSRF token for unsafe request types. See <a href="../csrf">CSRF</a> docs.
             auth (Callable | Sequence[Callable] | NOT_SET | None): Authentication class
             renderer: Default response renderer
