@@ -51,7 +51,7 @@ class NinjaAPI:
         description: str = "",
         openapi_url: Optional[str] = "/openapi.json",
         docs_url: Optional[str] = "/docs",
-        servers: Optional[List[Server]] = None,
+        servers: Optional[List[Dict[str, Union[str, Any]]]] = None,
         docs_decorator: Optional[Callable[[TCallable], TCallable]] = None,
         urls_namespace: Optional[str] = None,
         csrf: bool = False,
