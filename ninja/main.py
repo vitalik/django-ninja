@@ -21,9 +21,9 @@ from ninja.openapi import get_schema
 from ninja.openapi.schema import OpenAPISchema
 from ninja.openapi.urls import get_openapi_urls, get_root_url
 from ninja.parser import Parser
-from ninja.server import Server
 from ninja.renderers import BaseRenderer, JSONRenderer
 from ninja.router import Router
+from ninja.server import Server
 from ninja.types import TCallable
 from ninja.utils import is_debug_server, normalize_path
 
