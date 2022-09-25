@@ -183,3 +183,18 @@ reverse('api-1.0.0:tasks')
 ```
 
 See the [Reverse Resolution of URLs](../guides/urls.md) guide for more details.
+
+## Specifying servers
+If you want to specify single or multiple servers for OpenAPI specification `servers` can be used when initializing NinjaAPI instance:
+```Python hl_lines="4 5 6 7"
+from ninja import NinjaAPI
+
+api = NinjaAPI(
+        servers=[
+            {"url": "https://stag.example.com", "description": "Staging env"},
+            {"url": "https://prod.example.com", "description": "Production env"},
+        ]
+)
+```
+This will allow switching between enviroments when using interactive OpenAPI docs:
+![Servers](../img/servers.png)
