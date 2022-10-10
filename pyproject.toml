@@ -44,7 +44,6 @@ classifiers = [
 requires = [
     "Django >=2.2",
     "pydantic >=1.6,<2.0.0",
-    "PyYAML >= 5.3.1",
 ]
 description-file = "README.md"
 requires-python = ">=3.6"
@@ -76,4 +75,7 @@ doc = [
 ]
 dev = [
     "pre-commit",
+]
+yaml = [
+    "PyYAML >= 5.3.1",
 ]

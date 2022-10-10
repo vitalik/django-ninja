@@ -1,7 +1,11 @@
 import json
 from typing import Any, Optional
 
-import yaml
+try:
+    from django.core.serializers.pyyaml import yaml, DjangoSafeDumper
+except ImportError:
+    yaml = None
+
 from django.core.management.base import BaseCommand, CommandError, CommandParser
 from django.urls.base import resolve
 from django.utils.module_loading import import_string
@@ -65,7 +69,11 @@ class Command(BaseCommand):
             help="Output schema to a file (outputs to stdout if omitted).",
         )
         parser.add_argument(
-            "--indent", dest="indent", default=None, type=int, help="Schema indentation level"
+            "--indent",
+            dest="indent",
+            default=None,
+            type=int,
+            help="Schema indentation level",
         )
         parser.add_argument(
             "--sorted",
@@ -88,6 +96,20 @@ class Command(BaseCommand):
         if options["format"] == "yaml":
             data = json.loads(result)
             result = yaml.dump(data, indent=options["indent"])
+
+        format = options["format"]
+        if format == "json":
+            result = json.dumps(schema, cls=NinjaJSONEncoder, indent=options["indent"])
+        elif format == "yaml":
+            if not yaml:
+                self.stderr.write("Install PyYAML or django-ninja[yaml].")
+                self.exitcode = 1
+                return
+            result = yaml.dump(dict(schema), Dumper=DjangoSafeDumper)
+        else:
+            self.stderr.write(f"Unknown format: {format}")
+            self.exitcode = 2
+            return
 
         if options["output"]:
             with open(options["output"], "wb") as f:
