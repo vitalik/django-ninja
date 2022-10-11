@@ -1,6 +1,4 @@
 import json
-import os
-import tempfile
 from io import StringIO
 from unittest import mock
 
@@ -34,12 +32,12 @@ def test_export_indent(call_cmd):
     assert len(output.splitlines()) > 1
 
 
-def test_export_to_file(call_cmd):
-    with tempfile.TemporaryDirectory() as tmp:
-        output_file = os.path.join(tmp, "result.json")
-        call_cmd(output=output_file)
-        with open(output_file, "r") as f:
-            json.loads(f.read())
+def test_export_to_file(tmp_path, call_cmd):
+    output_file = tmp_path / "result.json"
+    stdout = call_cmd(output=output_file)
+    parsed_file = json.loads(output_file.read_text())
+    assert len(stdout) == 0
+    assert type(parsed_file) is dict
 
 
 def test_export_custom(call_cmd):
