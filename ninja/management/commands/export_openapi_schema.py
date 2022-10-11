@@ -1,11 +1,6 @@
 import json
 from typing import Any, Optional
 
-try:
-    from django.core.serializers.pyyaml import yaml, DjangoSafeDumper
-except ImportError:
-    yaml = None
-
 from django.core.management.base import BaseCommand, CommandError, CommandParser
 from django.urls.base import resolve
 from django.utils.module_loading import import_string
@@ -80,36 +75,38 @@ class Command(BaseCommand):
             dest="sort_keys",
             default=False,
             action="store_true",
-            help="Sort Json keys",
+            help="Sort schema keys",
         )
 
     def handle(self, *args: Any, **options: Any) -> None:
         api = self._get_api_instance(options["api"])
         schema = api.get_openapi_schema()
-        result = json.dumps(
-            schema,
-            cls=NinjaJSONEncoder,
-            indent=options["indent"],
-            sort_keys=options["sort_keys"],
-        )
 
-        if options["format"] == "yaml":
-            data = json.loads(result)
-            result = yaml.dump(data, indent=options["indent"])
+        fmt = options["format"]
+        if fmt == "json":
+            result = json.dumps(
+                schema,
+                cls=NinjaJSONEncoder,
+                indent=options["indent"],
+                sort_keys=options["sort_keys"],
+            )
+        elif fmt == "yaml":
+            try:
+                import yaml
 
-        format = options["format"]
-        if format == "json":
-            result = json.dumps(schema, cls=NinjaJSONEncoder, indent=options["indent"])
-        elif format == "yaml":
-            if not yaml:
-                self.stderr.write("Install PyYAML or django-ninja[yaml].")
-                self.exitcode = 1
-                return
-            result = yaml.dump(dict(schema), Dumper=DjangoSafeDumper)
+                from ninja.yaml import NinjaSafeDumper
+            except ImportError:
+                raise CommandError("Install PyYAML or django-ninja[yaml].")
+            result = yaml.dump(
+                schema,
+                Dumper=NinjaSafeDumper,
+                default_flow_style=False,
+                indent=options["indent"],
+                sort_keys=options["sort_keys"],
+            )
         else:
-            self.stderr.write(f"Unknown format: {format}")
-            self.exitcode = 2
-            return
+            # this shouldn't happen, argparse would already complain
+            raise CommandError(f"Unknown schema format: '{fmt}'")
 
         if options["output"]:
             with open(options["output"], "wb") as f:
