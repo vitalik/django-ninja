@@ -65,7 +65,13 @@ def test_export_yaml(call_cmd):
     json_output = call_cmd(format="json")
     json_data = json.loads(json_output)
 
-    # recursively serialize dictionary keys so we can compare it to json
+    # in json, keys can only be strings. in yaml, keys can be other types, or
+    # even complex objects. therefore, the python dict {200: 'OK'} will be
+    # represented as {"200": "OK"} in json, and as {200: OK} in yaml. when
+    # deserializing these representations, the resulting python dicts will have
+    # different key types: string vs. int.
+    # this function serializes the keys of a given dict in order to fairly
+    # compare json output to yaml output.
     def serialize_keys(val):
         if type(val) == dict:
             return {str(k): serialize_keys(v) for k, v in val.items()}
