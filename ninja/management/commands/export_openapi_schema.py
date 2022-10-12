@@ -100,7 +100,6 @@ class Command(BaseCommand):
             result = yaml.dump(
                 schema,
                 Dumper=NinjaSafeDumper,
-                default_flow_style=False,
                 indent=options["indent"],
                 sort_keys=options["sort_keys"],
             )
