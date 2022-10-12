@@ -10,7 +10,7 @@ from django.core.management.base import CommandError
 
 @pytest.fixture
 def call_cmd():
-    def function(**kwargs):
+    def inner(**kwargs):
         import ninja.management.commands.export_openapi_schema as cmd_module
 
         output = StringIO()
@@ -18,7 +18,7 @@ def call_cmd():
         call_command(command, stdout=output, **kwargs)
         return output.getvalue()
 
-    return function
+    return inner
 
 
 def test_export_default(call_cmd):
