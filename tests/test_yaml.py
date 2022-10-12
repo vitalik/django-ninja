@@ -41,10 +41,7 @@ def test_yaml_dump_decimal(dump_yaml):
 
 def test_yaml_dump_ordered_dict(dump_yaml):
     output = dump_yaml(OrderedDict([(1, "foo"), (2, "bar")]))
-    assert (
-        output
-        == "1: foo\n2: bar\n"
-    )
+    assert output == "1: foo\n2: bar\n"
 
 
 def test_yaml_dump_openapi_schema(dump_yaml, api_schema):
