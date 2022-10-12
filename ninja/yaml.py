@@ -1,12 +1,10 @@
 from collections import OrderedDict
 from decimal import Decimal
 
-from ninja.openapi.schema import OpenAPISchema
+# automatically imports fast C version if available
+from yaml import SafeDumper
 
-try:
-    from yaml import CSafeDumper as SafeDumper
-except ImportError:
-    from yaml import SafeDumper
+from ninja.openapi.schema import OpenAPISchema
 
 
 class NinjaSafeDumper(SafeDumper):
