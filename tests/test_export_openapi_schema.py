@@ -30,7 +30,7 @@ def test_export_default(call_cmd):
 @pytest.mark.parametrize("sort_keys", (None, False, True))
 def test_export_json_sort_keys(sort_keys, mocker, call_cmd):
     encoder = mocker.spy(NinjaJSONEncoder, "__init__")
-    call_cmd(sort_keys=sort_keys)
+    call_cmd(format="json", sort_keys=sort_keys)
     assert encoder.call_args.kwargs["sort_keys"] is sort_keys
 
 
