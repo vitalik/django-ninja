@@ -6,3 +6,4 @@ exclude =
     __pycache__
     .history
     tests/demo_project
+    tests/mock
