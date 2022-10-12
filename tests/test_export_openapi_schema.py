@@ -13,10 +13,10 @@ def call_cmd():
     def inner(**kwargs):
         import ninja.management.commands.export_openapi_schema as cmd_module
 
-        output = StringIO()
+        stdout = StringIO()
         command = cmd_module.Command()
-        call_command(command, stdout=output, **kwargs)
-        return output.getvalue()
+        call_command(command, stdout=stdout, **kwargs)
+        return stdout.getvalue()
 
     return inner
 
