@@ -64,12 +64,8 @@ def test_export_custom(call_cmd):
     with pytest.raises(CommandError):
         call_cmd(api="something.that.doesnotexist")
 
-    with pytest.raises(CommandError) as e:
+    with pytest.raises(CommandError, match="not instance of NinjaAPI"):
         call_cmd(api="django.core.management.base.BaseCommand")
-    assert (
-        str(e.value)
-        == "django.core.management.base.BaseCommand is not instance of NinjaAPI!"
-    )
 
     call_cmd(api="demo.urls.api_v1")
     call_cmd(api="demo.urls.api_v2")
