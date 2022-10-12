@@ -71,10 +71,7 @@ def test_export_custom(call_cmd):
     call_cmd(api="demo.urls.api_v2")
 
 
-def test_export_yaml(call_cmd):
-    """
-    Check that exported YAML is equivalent to exported JSON.
-    """
+def test_export_yaml_json_equivalent(call_cmd):
     yaml_output = call_cmd(format="yaml")
     yaml_data = yaml.load(yaml_output, Loader=yaml.SafeLoader)
 
