@@ -100,11 +100,6 @@ def test_export_yaml(call_cmd):
     assert serialize_keys(yaml_data) == json_data
 
 
-def test_export_unknown_format(call_cmd):
-    with pytest.raises(CommandError, match="Unknown schema format"):
-        call_cmd(format="foobar")
-
-
 @mock.patch.dict("sys.modules", {"yaml": None})
 def test_export_yaml_missing_module(call_cmd):
     with pytest.raises(CommandError, match="PyYAML"):

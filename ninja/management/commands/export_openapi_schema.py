@@ -82,6 +82,7 @@ class Command(BaseCommand):
         api = self._get_api_instance(options["api"])
         schema = api.get_openapi_schema()
 
+        result = ""
         fmt = options["format"]
         if fmt == "json":
             result = json.dumps(
@@ -103,9 +104,7 @@ class Command(BaseCommand):
                 indent=options["indent"],
                 sort_keys=options["sort_keys"],
             )
-        else:
-            # this shouldn't happen, argparse would already complain
-            raise CommandError(f"Unknown schema format: '{fmt}'")
+        # `else` intentionally left out - argparse has validated the option
 
         if options["output"]:
             with open(options["output"], "wb") as f:
