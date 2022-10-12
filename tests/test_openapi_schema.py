@@ -202,7 +202,11 @@ def test_schema(schema):
             "type": "object",
             "properties": {
                 "i": {"title": "I", "type": "integer"},
-                "f": {"description": "f desc", "title": "f title", "type": "number"},
+                "f": {
+                    "title": "f title",
+                    "description": "f desc",
+                    "type": "number",
+                },
             },
             "required": ["i", "f"],
         },
@@ -216,20 +220,29 @@ def test_schema(schema):
             "required": ["i", "f"],
         },
         "TypeA": {
-            "properties": {
-                "a": {"title": "A", "type": "string"},
-            },
-            "required": ["a"],
             "title": "TypeA",
             "type": "object",
+            "properties": {"a": {"title": "A", "type": "string"}},
+            "required": ["a"],
         },
         "TypeB": {
-            "properties": {
-                "b": {"title": "B", "type": "string"},
-            },
-            "required": ["b"],
             "title": "TypeB",
             "type": "object",
+            "properties": {"b": {"title": "B", "type": "string"}},
+            "required": ["b"],
+        },
+        "ExamplesResponse": {
+            "title": "ExamplesResponse",
+            "type": "object",
+            "properties": {
+                "i": {"title": "I", "type": "integer"},
+                "f": {
+                    "title": "f title",
+                    "description": "f desc",
+                    "type": "number",
+                },
+            },
+            "required": ["i", "f"],
         },
     }
 
@@ -241,23 +254,25 @@ def test_schema_examples(schema):
         "content": {
             "application/json": {
                 "schema": {
-                    "$ref": "#/components/schemas/Payload",
-                    "examples": {
-                        "example1": {
-                            "summary": "example1",
-                            "value": {"i": 123, "f": 0.5},
-                        }
-                    },
-                }
+                    "title": "Data",
+                    "anyOf": [
+                        {"type": "integer"},
+                        {"$ref": "#/components/schemas/TypeB"},
+                    ],
+                },
+                "examples": {
+                    "example1": {"summary": "example1", "value": {"i": 123, "f": 0.5}}
+                },
             }
         },
         "required": True,
     }
     assert method["responses"] == {
         200: {
+            "description": "OK",
             "content": {
                 "application/json": {
-                    "schema": {"$ref": "#/components/schemas/Response"},
+                    "schema": {"$ref": "#/components/schemas/ExamplesResponse"},
                     "examples": {
                         "example1": {
                             "summary": "example1",
@@ -266,7 +281,6 @@ def test_schema_examples(schema):
                     },
                 }
             },
-            "description": "OK",
         }
     }
 
@@ -379,6 +393,19 @@ def test_schema_list(schema):
             "required": ["i", "f"],
             "title": "Response",
             "type": "object",
+        },
+        "ExamplesResponse": {
+            "title": "ExamplesResponse",
+            "type": "object",
+            "properties": {
+                "i": {"title": "I", "type": "integer"},
+                "f": {
+                    "title": "f title",
+                    "description": "f desc",
+                    "type": "number",
+                },
+            },
+            "required": ["i", "f"],
         },
     }
 

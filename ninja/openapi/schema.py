@@ -240,9 +240,10 @@ class OpenAPISchema(dict):
             "content": {content_type: {"schema": schema}},
             "required": required,
         }
-        # examples = []
-        # if examples:
-        ret["content"][content_type]["examples"] = {}  # type: ignore
+        for param_name, param in operation.signature.signature.parameters.items():
+            if param_name == "data":
+                if hasattr(param.default, "examples") and param.default.examples:
+                    ret["content"][content_type]["examples"] = param.default.examples  # type: ignore
         return ret
 
     def responses(self, operation: Operation) -> Dict[int, DictStrAny]:
@@ -261,9 +262,20 @@ class OpenAPISchema(dict):
                 schema = self._create_schema_from_model(
                     model, by_alias=operation.by_alias
                 )[0]
-                details[status]["content"] = {
-                    "application/json": {"schema": schema, "examples": {}}
-                }
+                details[status]["content"] = {"application/json": {"schema": schema}}
+
+                for (
+                    param_name,
+                    param,
+                ) in operation.signature.signature.parameters.items():
+                    if param_name == "data":
+                        if (
+                            hasattr(param.default, "examples")
+                            and param.default.examples
+                        ):
+                            details[status]["content"]["application/json"][
+                                "examples"
+                            ] = param.default.examples
             result.update(details)
 
         return result
