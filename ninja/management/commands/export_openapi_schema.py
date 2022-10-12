@@ -92,12 +92,8 @@ class Command(BaseCommand):
                 sort_keys=options["sort_keys"],
             )
         elif fmt == "yaml":
-            try:
-                import yaml
+            from ninja.yaml import NinjaSafeDumper, yaml
 
-                from ninja.yaml import NinjaSafeDumper
-            except ImportError:
-                raise CommandError("Install PyYAML or django-ninja[yaml].")
             result = yaml.dump(
                 schema,
                 Dumper=NinjaSafeDumper,

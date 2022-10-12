@@ -2,9 +2,12 @@ from collections import OrderedDict
 from decimal import Decimal
 from typing import IO, Mapping, Optional, Tuple
 
-import yaml
-
 from ninja.openapi.schema import OpenAPISchema
+
+try:
+    import yaml as yaml
+except ImportError:
+    raise ModuleNotFoundError("Install PyYAML or django-ninja[yaml].")
 
 
 class NinjaSafeDumper(yaml.SafeDumper):
