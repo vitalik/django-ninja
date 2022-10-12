@@ -11,11 +11,8 @@ from django.core.management.base import CommandError
 @pytest.fixture
 def call_cmd():
     def inner(**kwargs):
-        import ninja.management.commands.export_openapi_schema as cmd_module
-
         stdout = StringIO()
-        command = cmd_module.Command()
-        call_command(command, stdout=stdout, **kwargs)
+        call_command("export_openapi_schema", stdout=stdout, **kwargs)
         return stdout.getvalue()
 
     return inner
