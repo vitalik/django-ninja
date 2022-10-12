@@ -21,10 +21,17 @@ def call_cmd():
     return inner
 
 
-def test_export_default(call_cmd):
-    output = call_cmd()
-    json.loads(output)  # if no exception, then OK
-    assert len(output.splitlines()) == 1
+@pytest.mark.parametrize(
+    "fmt,is_ok",
+    (
+        ("json", json.loads),
+        ("yaml", yaml.safe_load),
+        ("foobarbaz", id),
+    ),
+)
+def test_export_default(fmt, is_ok, call_cmd):
+    output = call_cmd(format=fmt)
+    assert is_ok(output)  # if no exception, then OK
 
 
 @pytest.mark.parametrize("sort_keys", (None, False, True))
