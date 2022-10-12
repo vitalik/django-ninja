@@ -60,6 +60,7 @@ test = [
     "pytest-cov",
     "pytest-django",
     "pytest-asyncio",
+    "pytest-mock",
     "psycopg2-binary",
     "black",
     "isort",
