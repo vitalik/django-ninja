@@ -16,9 +16,11 @@ from typing import (
 )
 
 from pydantic import BaseModel
+from pydantic.fields import Undefined
 from pydantic.schema import model_schema
 
 from ninja.constants import NOT_SET
+from ninja.encoders import jsonable_encoder  # type: ignore
 from ninja.operation import Operation
 from ninja.params_models import TModel, TModels
 from ninja.types import DictStrAny
@@ -155,6 +157,10 @@ class OpenAPISchema(dict):
                 # copy description from schema description to param description
                 if "description" in p_schema:
                     param["description"] = p_schema["description"]
+                if "examples" in p_schema:
+                    param["examples"] = jsonable_encoder(p_schema["examples"])
+                elif "example" in p_schema and p_schema["example"] != Undefined:
+                    param["example"] = jsonable_encoder(p_schema["example"])
 
                 result.append(param)
 
@@ -230,11 +236,14 @@ class OpenAPISchema(dict):
         else:
             schema, content_type = self._create_multipart_schema_from_models(models)
             required = True
-
-        return {
+        ret = {
             "content": {content_type: {"schema": schema}},
             "required": required,
         }
+        # examples = []
+        # if examples:
+        ret["content"][content_type]["examples"] = {}  # type: ignore
+        return ret
 
     def responses(self, operation: Operation) -> Dict[int, DictStrAny]:
         assert bool(operation.response_models), f"{operation.response_models} empty"
@@ -252,7 +261,9 @@ class OpenAPISchema(dict):
                 schema = self._create_schema_from_model(
                     model, by_alias=operation.by_alias
                 )[0]
-                details[status]["content"] = {"application/json": {"schema": schema}}
+                details[status]["content"] = {
+                    "application/json": {"schema": schema, "examples": {}}
+                }
             result.update(details)
 
         return result

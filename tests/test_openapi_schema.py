@@ -37,6 +37,21 @@ class Response(Schema):
         allow_population_by_field_name = True
 
 
+class ExamplesResponse(Schema):
+    i: int
+    f: float = Field(..., title="f title", description="f desc")
+
+    class Config(Schema.Config):
+        alias_generator = to_camel
+        allow_population_by_field_name = True
+        examples = {
+            "example1": {
+                "summary": "example1",
+                "value": {"i": 123, "f": 0.5},
+            }
+        }
+
+
 @api.post("/test", response=Response)
 def method(request, data: Payload):
     return data.dict()
@@ -103,6 +118,22 @@ def method_union_payload(request, data: Union[TypeA, TypeB]):
 
 @api.post("/test-union-type-with-simple", response=Response)
 def method_union_payload_and_simple(request, data: Union[int, TypeB]):
+    return data.dict()
+
+
+@api.post("/test-examples", response=ExamplesResponse)
+def method_examples(
+    request,
+    data: Union[int, TypeB] = Body(
+        ...,
+        examples={
+            "example1": {
+                "summary": "example1",
+                "value": {"i": 123, "f": 0.5},
+            }
+        },
+    ),
+):
     return data.dict()
 
 
@@ -200,6 +231,43 @@ def test_schema(schema):
             "title": "TypeB",
             "type": "object",
         },
+    }
+
+
+def test_schema_examples(schema):
+    method = schema["paths"]["/api/test-examples"]["post"]
+
+    assert method["requestBody"] == {
+        "content": {
+            "application/json": {
+                "schema": {
+                    "$ref": "#/components/schemas/Payload",
+                    "examples": {
+                        "example1": {
+                            "summary": "example1",
+                            "value": {"i": 123, "f": 0.5},
+                        }
+                    },
+                }
+            }
+        },
+        "required": True,
+    }
+    assert method["responses"] == {
+        200: {
+            "content": {
+                "application/json": {
+                    "schema": {"$ref": "#/components/schemas/Response"},
+                    "examples": {
+                        "example1": {
+                            "summary": "example1",
+                            "value": {"i": 123, "f": 0.5},
+                        }
+                    },
+                }
+            },
+            "description": "OK",
+        }
     }
 
 
