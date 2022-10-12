@@ -1,14 +1,13 @@
 import json
+import sys
 from io import StringIO
-from unittest import mock
 
 import pytest
-import yaml
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
 from ninja.responses import NinjaJSONEncoder
-from ninja.yaml import NinjaSafeDumper
+from ninja.yaml import NinjaSafeDumper, yaml
 
 
 @pytest.fixture
@@ -100,7 +99,9 @@ def test_export_yaml_json_equivalent(call_cmd):
     assert serialize_keys(yaml_data) == json_data
 
 
-@mock.patch.dict("sys.modules", {"yaml": None})
-def test_export_yaml_missing_module(call_cmd):
-    with pytest.raises(CommandError, match="PyYAML"):
+def test_export_yaml_missing_package(call_cmd, monkeypatch):
+    monkeypatch.syspath_prepend("tests/mock")
+    del sys.modules["yaml"]
+    del sys.modules["ninja.yaml"]
+    with pytest.raises(ModuleNotFoundError, match="PyYAML"):
         call_cmd(format="yaml")
