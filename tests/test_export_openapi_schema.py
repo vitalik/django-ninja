@@ -30,15 +30,21 @@ def test_export_default(call_cmd):
 @pytest.mark.parametrize("sort_keys", (None, False, True))
 def test_export_json_sort_keys(sort_keys, mocker, call_cmd):
     encoder = mocker.spy(NinjaJSONEncoder, "__init__")
-    call_cmd(format="json", sort_keys=sort_keys)
+    output = call_cmd(format="json", sort_keys=sort_keys)
     assert encoder.call_args.kwargs["sort_keys"] is sort_keys
+    if sort_keys:
+        data = json.loads(output)
+        assert [*data.keys()] == sorted(data.keys())
 
 
 @pytest.mark.parametrize("sort_keys", (None, False, True))
 def test_export_yaml_sort_keys(sort_keys, mocker, call_cmd):
     dumper = mocker.spy(NinjaSafeDumper, "__init__")
-    call_cmd(format="yaml", sort_keys=sort_keys)
+    output = call_cmd(format="yaml", sort_keys=sort_keys)
     assert dumper.call_args.kwargs["sort_keys"] is sort_keys
+    if sort_keys:
+        data = yaml.safe_load(output)
+        assert [*data.keys()] == sorted(data.keys())
 
 
 def test_export_indent(call_cmd):
