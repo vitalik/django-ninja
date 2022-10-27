@@ -252,7 +252,9 @@ class OpenAPISchema(dict):
                 schema = self._create_schema_from_model(
                     model, by_alias=operation.by_alias
                 )[0]
-                details[status]["content"] = {"application/json": {"schema": schema}}
+                details[status]["content"] = {
+                    self.api.renderer.media_type: {"schema": schema}
+                }
             result.update(details)
 
         return result

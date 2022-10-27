@@ -7,6 +7,7 @@ from django.test import Client, override_settings
 
 from ninja import Body, Field, File, Form, NinjaAPI, Query, Schema, UploadedFile
 from ninja.openapi.urls import get_openapi_urls
+from ninja.renderers import JSONRenderer
 
 api = NinjaAPI()
 
@@ -706,3 +707,28 @@ def test_docs_decorator():
         request.build_absolute_uri = lambda: "http://example.com"
         result = ptrn.callback(request)
         assert result.status_code == 302
+
+
+class TestRenderer(JSONRenderer):
+    media_type = "custom/type"
+
+
+def test_renderer_media_type():
+    api = NinjaAPI(renderer=TestRenderer)
+
+    @api.get("/1", response=TypeA)
+    def same_name(
+        request,
+    ):
+        pass
+
+    schema = api.get_openapi_schema()
+    method = schema["paths"]["/api/1"]["get"]
+    assert method["responses"] == {
+        200: {
+            "content": {
+                "custom/type": {"schema": {"$ref": "#/components/schemas/TypeA"}}
+            },
+            "description": "OK",
+        }
+    }
