@@ -1,5 +1,4 @@
 import copy
-import uuid
 
 import pytest
 from pydantic import BaseModel
@@ -7,7 +6,6 @@ from pydantic import BaseModel
 from ninja import NinjaAPI
 from ninja.constants import NOT_SET
 from ninja.signature.details import is_pydantic_model
-from ninja.signature.utils import NinjaUUIDConverter
 from ninja.testing import TestClient
 
 
