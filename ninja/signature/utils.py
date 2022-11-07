@@ -1,12 +1,15 @@
 import asyncio
 import inspect
 import re
-from typing import Any, Callable, Set
+from typing import Any, Callable, Set, Type
 
 from django.urls import register_converter
 from django.urls.converters import UUIDConverter
 from pydantic.typing import ForwardRef, evaluate_forwardref  # type: ignore
 
+from ninja.errors import ConfigError
+from ninja.params import Param
+from ninja.schema import Schema
 from ninja.types import DictStrAny
 
 __all__ = [
@@ -69,3 +72,19 @@ class NinjaUUIDConverter:
 
 
 register_converter(NinjaUUIDConverter, "uuid")
+
+
+def inject_contribute_args(
+    func: Callable, p_name: str, p_type: Type[Schema], p_source: Param
+) -> Callable:
+    """Injects _ninja_contribute_args to the function"""
+
+    contribution_args = (p_name, p_type, p_source)
+    if hasattr(func, "_ninja_contribute_args"):
+        if isinstance(func._ninja_contribute_args, list):  # type: ignore[attr-defined]
+            func._ninja_contribute_args.append(contribution_args)  # type: ignore[attr-defined]
+        else:
+            raise ConfigError(f"{func} has an invalid _ninja_contribute_args value")
+    else:
+        func._ninja_contribute_args = [contribution_args]  # type: ignore[attr-defined]
+    return func
