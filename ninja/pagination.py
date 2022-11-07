@@ -13,6 +13,7 @@ from ninja.constants import NOT_SET
 from ninja.errors import ConfigError
 from ninja.operation import Operation
 from ninja.signature.details import is_collection_type
+from ninja.signature.utils import inject_contribute_args
 from ninja.types import DictStrAny
 
 
@@ -150,13 +151,9 @@ def _inject_pagination(
             # ^ forcing queryset evaluation #TODO: check why pydantic did not do it here
         return result
 
-    view_with_pagination._ninja_contribute_args = [  # type: ignore
-        (
-            "ninja_pagination",
-            paginator.Input,
-            paginator.InputSource,
-        ),
-    ]
+    inject_contribute_args(
+        view_with_pagination, "ninja_pagination", paginator.Input, paginator.InputSource
+    )
 
     # def contribute_to_operation(op: Operation) -> None:
 
