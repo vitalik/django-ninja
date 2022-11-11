@@ -9,7 +9,7 @@ __all__ = ["BaseRenderer", "JSONRenderer"]
 
 
 class BaseRenderer:
-    media_type: Optional[str] = None
+    media_type: str = "text/plain"
     charset: Optional[str] = "utf-8"
 
     def render(self, request: HttpRequest, data: Any, *, response_status: int) -> Any:
