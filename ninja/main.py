@@ -411,7 +411,11 @@ class NinjaAPI:
         return HttpResponse("", content_type=self.get_content_type())
 
     def get_content_type(self) -> str:
-        return "{}; charset={}".format(self.renderer.media_type, self.renderer.charset)
+        if self.renderer.charset is not None:
+            return "{}; charset={}".format(
+                self.renderer.media_type, self.renderer.charset
+            )
+        return self.renderer.media_type
 
     def get_openapi_schema(self, path_prefix: Optional[str] = None) -> OpenAPISchema:
         if path_prefix is None:

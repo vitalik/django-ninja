@@ -10,7 +10,7 @@ __all__ = ["BaseRenderer", "JSONRenderer"]
 
 class BaseRenderer:
     media_type: Optional[str] = None
-    charset: str = "utf-8"
+    charset: Optional[str] = "utf-8"
 
     def render(self, request: HttpRequest, data: Any, *, response_status: int) -> Any:
         raise NotImplementedError("Please implement .render() method")

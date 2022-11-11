@@ -102,13 +102,14 @@ def test_implment_render():
     with pytest.raises(NotImplementedError):
         renderer.render(None, None, response_status=200)
 
+
 def test_none_charset():
     class FooRenderer(BaseRenderer):
         media_type = "custom-type"
         charset = None
 
         def render(self, *args, **kwargs):
-            return ''
+            return ""
 
     api = NinjaAPI(renderer=FooRenderer())
     api.get("/test")(operation)
