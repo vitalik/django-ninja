@@ -5,8 +5,8 @@ from django.http import QueryDict  # noqa
 from pydantic import BaseModel, Field, conlist
 
 from ninja import File, Form, Query, Router, Schema
-from ninja.testing import TestClient
 from ninja.files import UploadedFile
+from ninja.testing import TestClient
 
 router = Router()
 
@@ -99,7 +99,9 @@ def listview6(
 
 
 @router.post("/list7")
-def listview7(request, body: List[BodyModel], file: Union[UploadedFile, None] = File(None)):
+def listview7(
+    request, body: List[BodyModel], file: Union[UploadedFile, None] = File(None)
+):
     return {
         "body": body,
     }

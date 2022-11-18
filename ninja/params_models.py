@@ -166,6 +166,7 @@ class _HttpRequest(HttpRequest):
 
     body: bytes = b""
 
+
 class _MultiPartBodyModel(BodyModel):
     _body_params: DictStrAny
 
@@ -175,6 +176,7 @@ class _MultiPartBodyModel(BodyModel):
     ) -> Optional[DictStrAny]:
         results: DictStrAny = {}
         list_fields = getattr(cls, "_collection_fields", [])
+
         def parse_data(data, annotation=None):
             req = _HttpRequest()
             get_request_data = super(_MultiPartBodyModel, cls).get_request_data
@@ -182,11 +184,13 @@ class _MultiPartBodyModel(BodyModel):
                 data = f'"{data}"'
             req.body = data.encode()
             return get_request_data(req, api, path_params)
-        
+
         for name, annotation in cls._body_params.items():
             if name in request.POST:
                 if name in list_fields:
-                    data = [parse_data(d, annotation) for d in request.POST.getlist(name)]
+                    data = [
+                        parse_data(d, annotation) for d in request.POST.getlist(name)
+                    ]
                 else:
                     data = parse_data(request.POST[name], annotation)
                 results[name] = data
