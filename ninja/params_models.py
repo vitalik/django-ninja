@@ -166,7 +166,6 @@ class _HttpRequest(HttpRequest):
 
     body: bytes = b""
 
-
 class _MultiPartBodyModel(BodyModel):
     _body_params: DictStrAny
 
@@ -174,14 +173,21 @@ class _MultiPartBodyModel(BodyModel):
     def get_request_data(
         cls, request: HttpRequest, api: "NinjaAPI", path_params: DictStrAny
     ) -> Optional[DictStrAny]:
-        req = _HttpRequest()
-        get_request_data = super(_MultiPartBodyModel, cls).get_request_data
         results: DictStrAny = {}
+        list_fields = getattr(cls, "_collection_fields", [])
+        def parse_data(data, annotation=None):
+            req = _HttpRequest()
+            get_request_data = super(_MultiPartBodyModel, cls).get_request_data
+            if annotation == str and data[0] != '"' and data[-1] != '"':
+                data = f'"{data}"'
+            req.body = data.encode()
+            return get_request_data(req, api, path_params)
+        
         for name, annotation in cls._body_params.items():
             if name in request.POST:
-                data = request.POST[name]
-                if annotation == str and data[0] != '"' and data[-1] != '"':
-                    data = f'"{data}"'
-                req.body = data.encode()
-                results[name] = get_request_data(req, api, path_params)
+                if name in list_fields:
+                    data = [parse_data(d, annotation) for d in request.POST.getlist(name)]
+                else:
+                    data = parse_data(request.POST[name], annotation)
+                results[name] = data
         return results

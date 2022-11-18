@@ -4,8 +4,9 @@ import pytest
 from django.http import QueryDict  # noqa
 from pydantic import BaseModel, Field, conlist
 
-from ninja import Form, Query, Router, Schema
+from ninja import File, Form, Query, Router, Schema
 from ninja.testing import TestClient
+from ninja.files import UploadedFile
 
 router = Router()
 
@@ -97,6 +98,13 @@ def listview6(
     return {"query": object_id}
 
 
+@router.post("/list7")
+def listview7(request, body: List[BodyModel], file: UploadedFile | None = File(None)):
+    return {
+        "body": body,
+    }
+
+
 client = TestClient(router)
 
 
@@ -153,6 +161,11 @@ client = TestClient(router)
             "/list6?id=1&id=2",
             {},
             {"query": [1, 2]},
+        ),
+        (
+            "/list7",
+            dict(data=QueryDict('body={"x":1,"y":1}&body={"x":1,"y":1}')),
+            {"body": [{"x": 1, "y": 1}, {"x": 1, "y": 1}]},
         ),
     ]
     # fmt: on
