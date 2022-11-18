@@ -17,6 +17,10 @@ theme:
   logo: img/docs-logo.png
   favicon: img/favicon.png
   language: en
+  features:
+    - navigation.expand
+    - search.highlight
+    - search.suggest
   icon:
     repo: fontawesome/brands/github-alt
 nav:
@@ -77,6 +81,7 @@ markdown_extensions:
   - admonition
   - pymdownx.superfences
 plugins:
+  - search
   - mkdocstrings:
       handlers:
         python:
