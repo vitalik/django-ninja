@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 
 import pytest
 from django.http import QueryDict  # noqa
@@ -99,7 +99,7 @@ def listview6(
 
 
 @router.post("/list7")
-def listview7(request, body: List[BodyModel], file: UploadedFile | None = File(None)):
+def listview7(request, body: List[BodyModel], file: Union[UploadedFile, None] = File(None)):
     return {
         "body": body,
     }
