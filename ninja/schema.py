@@ -30,7 +30,7 @@ from pydantic import BaseModel, Field, validator
 from pydantic.fields import FieldInfo
 from pydantic.main import ModelMetaclass
 from pydantic.utils import GetterDict
-from typing_extensions import dataclass_transform
+from typing_extensions import dataclass_transform  # type: ignore
 
 pydantic_version = list(map(int, pydantic.VERSION.split(".")[:2]))
 assert pydantic_version >= [1, 6], "Pydantic 1.6+ required"
