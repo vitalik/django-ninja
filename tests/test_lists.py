@@ -169,6 +169,16 @@ client = TestClient(router)
             dict(data=QueryDict('body={"x":1,"y":1}&body={"x":1,"y":1}')),
             {"body": [{"x": 1, "y": 1}, {"x": 1, "y": 1}]},
         ),
+        (
+            "/list7",
+            dict(data=QueryDict('body={"x":1,"y":1}')),
+            {"body": [{"x": 1, "y": 1}]},
+        ),
+        (
+            "/list7",
+            dict(data=QueryDict('body=[{"x":1,"y":1},{"x":1,"y":1}]')),
+            {"body": [{"x": 1, "y": 1}, {"x": 1, "y": 1}]},
+        ),
     ]
     # fmt: on
 )

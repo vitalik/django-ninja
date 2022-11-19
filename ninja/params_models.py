@@ -188,9 +188,16 @@ class _MultiPartBodyModel(BodyModel):
         for name, annotation in cls._body_params.items():
             if name in request.POST:
                 if name in list_fields:
-                    data = [
-                        parse_data(d, annotation) for d in request.POST.getlist(name)
-                    ]
+                    datalist = request.POST.getlist(name)
+                    if (
+                        len(datalist) == 1
+                        and datalist[0] != ""
+                        and datalist[0][0] == "["
+                        and datalist[0][-1] == "]"
+                    ):
+                        data = parse_data(datalist[0], annotation)
+                    else:
+                        data = [parse_data(d) for d in request.POST.getlist(name)]
                 else:
                     data = parse_data(request.POST[name], annotation)
                 results[name] = data
