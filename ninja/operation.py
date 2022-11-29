@@ -40,6 +40,7 @@ def load_request(request: HttpRequest):
     making the ParamModel look up at request.POST and request.FILES
     """
     if request.method in ("PUT", "PATCH") and request.content_type != "application/json":
+        original_method = request.method
         if hasattr(request, '_post'):
             del request._post
             del request._files
@@ -47,8 +48,8 @@ def load_request(request: HttpRequest):
             request.method = "POST"
             request.META['REQUEST_METHOD'] = 'POST'
             request._load_post_and_files()
-            request.META['REQUEST_METHOD'] = 'PUT'
-            request.method = "PUT"
+            request.META['REQUEST_METHOD'] = original_method
+            request.method = original_method
         except Exception:
             pass
 
