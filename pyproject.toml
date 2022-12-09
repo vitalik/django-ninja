@@ -30,7 +30,6 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3 :: Only",
     "Framework :: Django",
-    "Framework :: Django :: 2.1",
     "Framework :: Django :: 2.2",
     "Framework :: Django :: 3.0",
     "Framework :: Django :: 3.1",
@@ -46,7 +45,7 @@ requires = [
     "pydantic >=1.6,<2.0.0"
 ]
 description-file = "README.md"
-requires-python = ">=3.6"
+requires-python = ">=3.7"
 
 
 [tool.flit.metadata.urls]
