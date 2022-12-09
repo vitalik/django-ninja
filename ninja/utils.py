@@ -31,5 +31,5 @@ def is_debug_server() -> bool:
     """Check if running under the Django Debug Server"""
     return settings.DEBUG and any(
         s.filename.endswith("runserver.py") and s.function == "run"
-        for s in inspect.stack()[1:]
+        for s in inspect.stack(0)[1:]
     )
