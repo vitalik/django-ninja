@@ -77,7 +77,17 @@ match.  (e.g. if no other path matches, a *404 Not Found* will be returned)
     def read_item(request, item_id:int):
         return {"item_id": item_id}
     ```
+ 
+#### Path params with slashes
 
+Django's `path` converter allows you to handle path-like parameters:
+
+```Python hl_lines="1"
+@api.get('/dir/{path:value}')
+def someview(request, value: str):
+       return value
+```
+you can quiery this operation with `/dir/some/path/with-slashes` and your `value` will be euqual to `some/path/with-slashes`
 
 ### Multiple parameters
 
