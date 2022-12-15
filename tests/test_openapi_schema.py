@@ -1,5 +1,6 @@
 from typing import List, Union
 from unittest.mock import Mock
+import enum
 
 import pytest
 from django.contrib.admin.views.decorators import staff_member_required
@@ -17,8 +18,13 @@ class Payload(Schema):
     f: float
 
 
+class ATypeEnum(str, enum.Enum):
+    x = "X"
+    y = "Y"
+
 class TypeA(Schema):
     a: str
+    a_type: ATypeEnum
 
 
 class TypeB(Schema):
@@ -188,8 +194,9 @@ def test_schema(schema):
         "TypeA": {
             "properties": {
                 "a": {"title": "A", "type": "string"},
+                "a_type": {'$ref': '#/components/schemas/ATypeEnum'}
             },
-            "required": ["a"],
+            "required": ["a", "a_type"],
             "title": "TypeA",
             "type": "object",
         },
@@ -201,6 +208,12 @@ def test_schema(schema):
             "title": "TypeB",
             "type": "object",
         },
+        "ATypeEnum": {
+            "description": "An enumeration.",
+            "enum": ["X", "Y"],
+            "title": "ATypeEnum",
+            "type": "string"
+        }
     }
 
 
@@ -291,8 +304,9 @@ def test_schema_list(schema):
         "TypeA": {
             "properties": {
                 "a": {"title": "A", "type": "string"},
+                "a_type": {"$ref": "#/components/schemas/ATypeEnum"}
             },
-            "required": ["a"],
+            "required": ["a", "a_type"],
             "title": "TypeA",
             "type": "object",
         },
@@ -303,6 +317,12 @@ def test_schema_list(schema):
             "required": ["b"],
             "title": "TypeB",
             "type": "object",
+        },
+        "ATypeEnum": {
+            "description": "An enumeration.",
+            "enum": ["X", "Y"],
+            "title": "ATypeEnum",
+            "type": "string"
         },
         "Response": {
             "properties": {
