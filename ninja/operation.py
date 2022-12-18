@@ -191,14 +191,16 @@ class Operation:
             # Empty response.
             return temporal_response
 
-        resp_object = ResponseObject(result)
-        # ^ we need object because getter_dict seems work only with from_orm
-        result = response_model.from_orm(resp_object).dict(
-            by_alias=self.by_alias,
-            exclude_unset=self.exclude_unset,
-            exclude_defaults=self.exclude_defaults,
-            exclude_none=self.exclude_none,
-        )["response"]
+        result = self.api.serialize_response_model_data(
+            request,
+            response_model,
+            result,
+            self.by_alias,
+            self.exclude_unset,
+            self.exclude_defaults,
+            self.exclude_none,
+        )
+
         return self.api.create_response(
             request, result, temporal_response=temporal_response
         )
