@@ -29,7 +29,7 @@ from ninja.utils import is_debug_server, normalize_path
 
 if TYPE_CHECKING:
     from .operation import Operation  # pragma: no cover
-    from .schema import Schema
+    from .schema import Schema  # pragma: no cover
 
 __all__ = ["NinjaAPI"]
 
