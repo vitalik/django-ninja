@@ -388,7 +388,7 @@ class NinjaAPI:
         name = f"{self.urls_namespace}:api-root"
         return reverse(name)
 
-    def serialize_response_model_data(
+    def serialize_response(
         self,
         request: HttpRequest,
         response_model: "Schema",

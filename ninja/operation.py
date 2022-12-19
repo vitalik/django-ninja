@@ -191,7 +191,7 @@ class Operation:
             # Empty response.
             return temporal_response
 
-        result = self.api.serialize_response_model_data(
+        result = self.api.serialize_response(
             request,
             response_model,
             result,
