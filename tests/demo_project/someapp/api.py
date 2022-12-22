@@ -40,3 +40,25 @@ def delete_events(request):
 def get_event(request, id: int):
     event = get_object_or_404(Event, id=id)
     return event
+
+
+class EventSchemaWithPeriod(BaseModel):
+    title: str
+    start_date: date
+    end_date: date
+    period: str
+
+    def resolve_period(self, obj):
+        return f"{obj.start_date} - {obj.end_date}"
+
+
+@router.get("/{id}/with-period-dict", response=EventSchemaWithPeriod)
+def get_event_with_period_dict(request, id: int):
+    event = get_object_or_404(Event, id=id)
+    return {"title": event.title, "start_date": event.start_date, "end_date": event.end_date}
+
+
+@router.get("/{id}/with-period-model", response=EventSchemaWithPeriod)
+def get_event_with_period_dict(request, id: int):
+    event = get_object_or_404(Event, id=id)
+    return event

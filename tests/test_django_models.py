@@ -41,3 +41,25 @@ def json_payload(data):
     import json
 
     return dict(data=json.dumps(data), content_type="application/json")
+
+
+@pytest.mark.django_db
+def test_with_client_with_period_model(client: Client):
+    test_item = {"start_date": "2020-01-01", "end_date": "2020-01-02", "title": "test"}
+    client.post("/api/events/create", **json_payload(test_item))
+
+    test_item_with_period = test_item | {"period": "2020-01-01 - 2020-01-02"}
+    response = client.get("/api/events/1/with-period-model")
+    assert response.status_code == 200
+    assert response.json() == test_item_with_period
+
+
+@pytest.mark.django_db
+def test_with_client_with_period_dict(client: Client):
+    test_item = {"start_date": "2020-01-01", "end_date": "2020-01-02", "title": "test"}
+    client.post("/api/events/create", **json_payload(test_item))
+
+    test_item_with_period = test_item | {"period": "2020-01-01 - 2020-01-02"}
+    response = client.get("/api/events/1/with-period-dict")
+    assert response.status_code == 200
+    assert response.json() == test_item_with_period
