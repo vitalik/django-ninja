@@ -308,19 +308,18 @@ class Router:
     def urls_paths(self, prefix: str) -> Iterator[URLPattern]:
         prefix = replace_path_param_notation(prefix)
         for path, path_view in self.path_operations.items():
-            path = replace_path_param_notation(path)
-            route = "/".join([i for i in (prefix, path) if i])
-            # to skip lot of checks we simply treat double slash as a mistake:
-            route = normalize_path(route)
-            route = route.lstrip("/")
+            for operation in path_view.operations:
+                path = replace_path_param_notation(path)
+                route = "/".join([i for i in (prefix, path) if i])
+                # to skip lot of checks we simply treat double slash as a mistake:
+                route = normalize_path(route)
+                route = route.lstrip("/")
 
-            url_name = path_view.url_name or ""
-            if not url_name and self.api:
-                url_name = self.api.get_operation_url_name(
-                    path_view.operations[0], router=self
-                )
+                url_name = getattr(operation, "url_name", "")
+                if not url_name and self.api:
+                    url_name = self.api.get_operation_url_name(operation, router=self)
 
-            yield django_path(route, path_view.get_view(), name=url_name)
+                yield django_path(route, path_view.get_view(), name=url_name)
 
     def add_router(
         self,
@@ -349,7 +348,8 @@ class Router:
 
             if not debug_server_url_reimport():
                 raise ConfigError(
-                    f"Router@'{prefix}' has already been attached to API {self.api.title}:{self.api.version} "
+                    f"Router@'{prefix}' has already been attached to API"
+                    f" {self.api.title}:{self.api.version} "
                 )
         internal_routes = []
         for inter_prefix, inter_router in self._routers:
