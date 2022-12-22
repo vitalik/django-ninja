@@ -5,6 +5,7 @@ from django.shortcuts import get_object_or_404
 from pydantic import BaseModel
 
 from ninja import Router
+from ninja.schema import Schema
 
 from .models import Event
 
@@ -42,7 +43,7 @@ def get_event(request, id: int):
     return event
 
 
-class EventSchemaWithPeriod(BaseModel):
+class EventSchemaWithPeriod(Schema):
     title: str
     start_date: date
     end_date: date
@@ -59,6 +60,6 @@ def get_event_with_period_dict(request, id: int):
 
 
 @router.get("/{id}/with-period-model", response=EventSchemaWithPeriod)
-def get_event_with_period_dict(request, id: int):
+def get_event_with_period_model(request, id: int):
     event = get_object_or_404(Event, id=id)
     return event
