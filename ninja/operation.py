@@ -57,7 +57,6 @@ class Operation:
         self.methods: List[str] = methods
         self.view_func: Callable = view_func
         self.api: "NinjaAPI" = cast("NinjaAPI", None)
-        self.url_name = url_name if url_name is not None else ""
         if url_name is not None:
             self.url_name = url_name
 
