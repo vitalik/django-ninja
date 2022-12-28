@@ -16,12 +16,16 @@ if TYPE_CHECKING:
 __all__ = ["default_home", "openapi_json", "openapi_view", "openapi_view_cdn"]
 
 
-render_swagger = ninja_settings.DOCS_VIEW == "swagger"
-view_tpl = "ninja/swagger.html" if render_swagger else "ninja/redoc.html"
+render_doc = "swagger"
+
+if ninja_settings.DOCS_VIEW == "redoc":
+    render_doc = "redoc"
+elif ninja_settings.DOCS_VIEW == "rapidoc":
+    render_doc = "rapidoc"
+
+view_tpl = f"ninja/{render_doc}.html"
 view_cdn_tpl = (
-    "../templates/ninja/swagger_cdn.html"
-    if render_swagger
-    else "../templates/ninja/redoc_cdn.html"
+    f"../templates/ninja/{render_doc}_cdn.html"
 )
 
 
