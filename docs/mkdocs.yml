@@ -53,6 +53,7 @@ nav:
       - Splitting your API with Routers: guides/routers.md
       - guides/authentication.md
       - guides/api-docs.md
+      - guides/caching.md
       - guides/errors.md
       - guides/urls.md
       - guides/async-support.md
