@@ -62,10 +62,10 @@ from ninja import UploadedFile, File
 STORAGE = FileSystemStorage()
 
 @api.post("/employees")
-def create_employee(request, payload: EmployeeIn, file: UploadedFile = File(...)):
-    filename = STORAGE.save(file.name, file)
+def create_employee(request, payload: EmployeeIn, cv: UploadedFile = File(...)):
+    filename = STORAGE.save(cv.name, cv)
     payload_dict = payload.dict()
-    payload_dict["file"] = filename
+    payload_dict["cv"] = filename
     employee = Employee.objects.create(**payload_dict)
     return {"id": employee.id}
 ```
