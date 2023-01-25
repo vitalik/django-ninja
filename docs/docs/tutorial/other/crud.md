@@ -53,7 +53,7 @@ def create_employee(request, payload: EmployeeIn):
 
     You can pass it as `**kwargs` to the Django model's `create` method (or model `__init__`).
 
-See the recipe below for the file upload:
+See the recipe below for handling the file upload:
 
 ```Python hl_lines="2"
 from django.core.files.storage import FileSystemStorage
