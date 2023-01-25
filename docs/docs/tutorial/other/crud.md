@@ -18,6 +18,7 @@ class Employee(models.Model):
     last_name = models.CharField(max_length=100)
     department = models.ForeignKey(Department)
     birthdate = models.DateField(null=True, blank=True)
+    cv = models.FileField(null=True, blank=True)
 ```
 
 Now let's create CRUD operations for the Employee model.
@@ -45,13 +46,29 @@ This schema will be our input payload:
 def create_employee(request, payload: EmployeeIn):
     employee = Employee.objects.create(**payload.dict())
     return {"id": employee.id}
-
 ```
 
 !!! tip
     `Schema` objects have `.dict()` attribute with all the schema attributes represented as a dict.
 
     You can pass it as `**kwargs` to the Django model's `create` method (or model `__init__`).
+
+See the recipe below for the file upload:
+
+```Python hl_lines="2"
+from django.core.files.storage import FileSystemStorage
+from ninja import UploadedFile, File
+
+STORAGE = FileSystemStorage()
+
+@api.post("/employees")
+def create_employee(request, payload: EmployeeIn, file: UploadedFile = File(...)):
+    filename = STORAGE.save(file.name, file)
+    payload_dict = payload.dict()
+    payload_dict["file"] = filename
+    employee = Employee.objects.create(**payload_dict)
+    return {"id": employee.id}
+```
 
 ## Retrieve
 
