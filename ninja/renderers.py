@@ -19,6 +19,7 @@ class BaseRenderer:
     def pydantic_to_dict(
         self,
         data: BaseModel,
+        request: HttpRequest,
         *,
         by_alias: bool = False,
         exclude_unset: bool = False,

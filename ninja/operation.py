@@ -195,6 +195,7 @@ class Operation:
         # ^ we need object because getter_dict seems work only with from_orm
         result = self.api.renderer.pydantic_to_dict(
             data=response_model.from_orm(resp_object),
+            request=request,
             by_alias=self.by_alias,
             exclude_unset=self.exclude_unset,
             exclude_defaults=self.exclude_defaults,
