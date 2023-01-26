@@ -2,6 +2,7 @@ import json
 from typing import Any, Mapping, Optional, Type
 
 from django.http import HttpRequest
+from pydantic import BaseModel
 
 from ninja.responses import NinjaJSONEncoder
 
@@ -14,6 +15,22 @@ class BaseRenderer:
 
     def render(self, request: HttpRequest, data: Any, *, response_status: int) -> Any:
         raise NotImplementedError("Please implement .render() method")
+
+    def pydantic_to_dict(
+        self,
+        data: BaseModel,
+        *,
+        by_alias: bool = False,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = False,
+    ) -> dict:
+        return data.dict(
+            by_alias=by_alias,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
+        )
 
 
 class JSONRenderer(BaseRenderer):

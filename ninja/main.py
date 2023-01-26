@@ -20,7 +20,6 @@ from ninja.errors import ConfigError, set_default_exc_handlers
 from ninja.openapi import get_schema
 from ninja.openapi.schema import OpenAPISchema
 from ninja.openapi.urls import get_openapi_urls, get_root_url
-from ninja.operation import ResponseObject
 from ninja.parser import Parser
 from ninja.renderers import BaseRenderer, JSONRenderer
 from ninja.router import Router
@@ -29,7 +28,6 @@ from ninja.utils import is_debug_server, normalize_path
 
 if TYPE_CHECKING:
     from .operation import Operation  # pragma: no cover
-    from .schema import Schema  # pragma: no cover
 
 __all__ = ["NinjaAPI"]
 
@@ -387,26 +385,6 @@ class NinjaAPI:
     def root_path(self) -> str:
         name = f"{self.urls_namespace}:api-root"
         return reverse(name)
-
-    def serialize_response(
-        self,
-        request: HttpRequest,
-        response_model: "Schema",
-        response_data: Any,
-        by_alias: bool = False,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
-    ) -> Any:
-        resp_object = ResponseObject(response_data)
-        # ^ we need object because getter_dict seems work only with from_orm
-        result = response_model.from_orm(resp_object).dict(
-            by_alias=by_alias,
-            exclude_unset=exclude_unset,
-            exclude_defaults=exclude_defaults,
-            exclude_none=exclude_none,
-        )["response"]
-        return result
 
     def create_response(
         self,
