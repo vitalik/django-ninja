@@ -53,7 +53,20 @@ def create_employee(request, payload: EmployeeIn):
 
     You can pass it as `**kwargs` to the Django model's `create` method (or model `__init__`).
 
-See the recipe below for handling the file upload:
+See the recipe below for handling the file upload (when using Django models):
+
+```Python hl_lines="2"
+from ninja import UploadedFile, File
+
+@api.post("/employees")
+def create_employee(request, payload: EmployeeIn, cv: UploadedFile = File(...)):
+    payload_dict = payload.dict()
+    employee = Employee(**payload_dict)
+    employee.cv.save(cv.name, cv) # will save model instance as well
+    return {"id": employee.id}
+```
+
+If you just need to handle a file upload:
 
 ```Python hl_lines="2"
 from django.core.files.storage import FileSystemStorage
@@ -61,13 +74,10 @@ from ninja import UploadedFile, File
 
 STORAGE = FileSystemStorage()
 
-@api.post("/employees")
-def create_employee(request, payload: EmployeeIn, cv: UploadedFile = File(...)):
+@api.post("/upload")
+def create_upload(request, cv: UploadedFile = File(...)):
     filename = STORAGE.save(cv.name, cv)
-    payload_dict = payload.dict()
-    payload_dict["cv"] = filename
-    employee = Employee.objects.create(**payload_dict)
-    return {"id": employee.id}
+    # Handle things further
 ```
 
 ## Retrieve
