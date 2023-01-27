@@ -353,7 +353,7 @@ class NinjaAPI:
             prefix = normalize_path("/".join((parent_prefix, prefix))).lstrip("/")
 
         self._routers.extend(router.build_routers(prefix))
-        router.set_api_instance(self)
+        router.set_api_instance(self, parent_router)
 
     @property
     def urls(self) -> Tuple[List[Union[URLResolver, URLPattern]], str, str]:
