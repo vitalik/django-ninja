@@ -58,7 +58,7 @@ def get_task(request, id: int):
         cache.set(f"task_{id}", c) # assumes default timeout
     return c
 
-@api.get("/tasks", response=List[TaskSchema])# remove response to default ninja to JsonResponse
+@api.get("/tasks")# remove response to default ninja to JsonResponse
 def tasks(request):
     c = cache.get("all_tasks", None)
     if c is None:
