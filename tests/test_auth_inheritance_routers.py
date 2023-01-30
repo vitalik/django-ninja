@@ -1,8 +1,8 @@
 import pytest
-from ninja.testing import TestClient
 
 from ninja import NinjaAPI, Router
 from ninja.security import APIKeyQuery
+from ninja.testing import TestClient
 
 
 class Auth(APIKeyQuery):
