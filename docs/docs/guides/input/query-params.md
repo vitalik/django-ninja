@@ -105,3 +105,5 @@ You can also use Schema to encapsulate GET parameters:
 ```Python hl_lines="1 2  5 6 7 8"
 {!./src/tutorial/query/code010.py!}
 ```
+
+For more complex filtering scenarios please refer to [filtering](./filtering.md).

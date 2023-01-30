@@ -5,6 +5,7 @@ __version__ = "0.20.0"
 from pydantic import Field
 
 from ninja.files import UploadedFile
+from ninja.filter_schema import FilterSchema
 from ninja.main import NinjaAPI
 from ninja.orm import ModelSchema
 from ninja.params_functions import Body, Cookie, File, Form, Header, Path, Query
@@ -25,4 +26,5 @@ __all__ = [
     "Router",
     "Schema",
     "ModelSchema",
+    "FilterSchema",
 ]
