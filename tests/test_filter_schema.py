@@ -59,7 +59,7 @@ def test_q_expressions3():
 
 def test_ignore_none():
     class DummyFilterSchema(FilterSchema):
-        tag: str | None = Field(q="tag", ignore_none=False)
+        tag: Optional[str] = Field(q="tag", ignore_none=False)
 
     filter_instance = DummyFilterSchema()
     q = filter_instance.get_filter_expression()
