@@ -179,7 +179,6 @@ class OpenAPISchema(dict):
         by_alias: bool = True,
         remove_level: bool = True,
     ) -> Tuple[DictStrAny, bool]:
-
         if hasattr(model, "_flatten_map"):
             schema = self._flatten_schema(model)
         else:
@@ -242,7 +241,6 @@ class OpenAPISchema(dict):
 
         result = {}
         for status, model in operation.response_models.items():
-
             if status == Ellipsis:
                 continue  # it's not yet clear what it means if user wants to output any other code
 

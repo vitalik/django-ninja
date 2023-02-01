@@ -5,7 +5,6 @@ from ninja.testing import TestClient
 
 
 def test_examples():
-
     api = NinjaAPI()
 
     with patch("builtins.api", api, create=True):
