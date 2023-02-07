@@ -660,7 +660,6 @@ def test_union_payload_simple(schema):
 
 
 def test_get_openapi_urls():
-
     api = NinjaAPI(openapi_url=None)
     paths = get_openapi_urls(api)
     assert len(paths) == 0
@@ -677,7 +676,6 @@ def test_get_openapi_urls():
 
 
 def test_unique_operation_ids():
-
     api = NinjaAPI()
 
     @api.get("/1")

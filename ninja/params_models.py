@@ -163,7 +163,6 @@ class FileModel(ParamModel):
 
 
 class _HttpRequest(HttpRequest):
-
     body: bytes = b""
 
 

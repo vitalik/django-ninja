@@ -83,5 +83,7 @@ class HttpBasicAuth(HttpAuthBase, ABC):  # TODO: maybe HttpBasicAuthBase
         try:
             username, password = b64decode(user_pass_encoded).decode().split(":", 1)
             return unquote(username), unquote(password)
-        except Exception as e:  # dear contributors please do not change to valueerror - here can be multiple exceptions
+        except (
+            Exception
+        ) as e:  # dear contributors please do not change to valueerror - here can be multiple exceptions
             raise DecodeError("Invalid Authorization header") from e

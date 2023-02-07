@@ -11,7 +11,6 @@ from ninja.management.commands.export_openapi_schema import Command as ExportCmd
 
 
 def test_export_default():
-
     output = StringIO()
     call_command(ExportCmd(), stdout=output)
     json.loads(output.getvalue())  # if no exception, then OK
