@@ -114,8 +114,10 @@ class BookFilterSchema(FilterSchema):
     name: Optional[str] = Field(q='name__icontains')
     
     class Config:
-        expression_connector = 'OR'     # can be 'AND', 'OR', 'XOR'
+        expression_connector = 'OR'
 ```
+
+An expression connector can take the values of `"OR"`, `"AND"` and `"XOR"`, but the latter is only [supported](https://docs.djangoproject.com/en/4.1/ref/models/querysets/#xor) in Django starting with 4.1.
 
 Now, a request with these query parameters 
 ```

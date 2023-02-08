@@ -12,7 +12,7 @@ DEFAULT_IGNORE_NONE = True
 DEFAULT_CLASS_LEVEL_EXPRESSION_CONNECTOR = "AND"
 DEFAULT_FIELD_LEVEL_EXPRESSION_CONNECTOR = "OR"
 
-
+# XOR is available only in Django 4.1+: https://docs.djangoproject.com/en/4.1/ref/models/querysets/#xor
 ExpressionConnector = Literal["AND", "OR", "XOR"]
 
 

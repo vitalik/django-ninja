@@ -115,11 +115,11 @@ def test_class_level_and_field_level_expression_connector():
         tag: Optional[str] = Field(q="tag")
 
         class Config:
-            expression_connector = "XOR"
+            expression_connector = "OR"
 
     filter_instance = DummyFilterSchema(name="foo", tag="bar")
     q = filter_instance.get_filter_expression()
-    assert q == Q(name__icontains="foo") & Q(user__username__icontains="foo") ^ Q(
+    assert q == Q(name__icontains="foo") & Q(user__username__icontains="foo") | Q(
         tag="bar"
     )
 
