@@ -18,16 +18,25 @@ class FakeQS(QuerySet):
         return self
 
 
-def test_absent_q_expression():
+def test_simple_config():
     class DummyFilterSchema(FilterSchema):
         name: Optional[str]
+
+    filter_instance = DummyFilterSchema(name="foobar")
+    q = filter_instance.get_filter_expression()
+    assert q == Q(name="foobar")
+
+
+def test_improperly_configured():
+    class DummyFilterSchema(FilterSchema):
+        popular: Optional[str] = Field(q=Q(view_count__gt=1000))
 
     filter_instance = DummyFilterSchema()
     with pytest.raises(ImproperlyConfigured):
         filter_instance.get_filter_expression()
 
 
-def test_q_expressions1():
+def test_empty_q_when_none_ignored():
     class DummyFilterSchema(FilterSchema):
         name: Optional[str] = Field(q="name__icontains")
         tag: Optional[str] = Field(q="tag")
@@ -57,6 +66,64 @@ def test_q_expressions3():
     assert q == Q(name__icontains="John") & Q(tag="active")
 
 
+def test_q_is_a_list():
+    class DummyFilterSchema(FilterSchema):
+        name: Optional[str] = Field(q=["name__icontains", "user__username__icontains"])
+        tag: Optional[str] = Field(q="tag")
+
+    filter_instance = DummyFilterSchema(name="foo", tag="bar")
+    q = filter_instance.get_filter_expression()
+    assert q == (Q(name__icontains="foo") | Q(user__username__icontains="foo")) & Q(
+        tag="bar"
+    )
+
+
+def test_field_level_expression_connector():
+    class DummyFilterSchema(FilterSchema):
+        name: Optional[str] = Field(
+            q=["name__icontains", "user__username__icontains"],
+            expression_connector="AND",
+        )
+        tag: Optional[str] = Field(q="tag")
+
+    filter_instance = DummyFilterSchema(name="foo", tag="bar")
+    q = filter_instance.get_filter_expression()
+    assert q == Q(name__icontains="foo") & Q(user__username__icontains="foo") & Q(
+        tag="bar"
+    )
+
+
+def test_class_level_expression_connector():
+    class DummyFilterSchema(FilterSchema):
+        tag1: Optional[str] = Field(q="tag1")
+        tag2: Optional[str] = Field(q="tag2")
+
+        class Config:
+            expression_connector = "OR"
+
+    filter_instance = DummyFilterSchema(tag1="foo", tag2="bar")
+    q = filter_instance.get_filter_expression()
+    assert q == Q(tag1="foo") | Q(tag2="bar")
+
+
+def test_class_level_and_field_level_expression_connector():
+    class DummyFilterSchema(FilterSchema):
+        name: Optional[str] = Field(
+            q=["name__icontains", "user__username__icontains"],
+            expression_connector="AND",
+        )
+        tag: Optional[str] = Field(q="tag")
+
+        class Config:
+            expression_connector = "XOR"
+
+    filter_instance = DummyFilterSchema(name="foo", tag="bar")
+    q = filter_instance.get_filter_expression()
+    assert q == Q(name__icontains="foo") & Q(user__username__icontains="foo") ^ Q(
+        tag="bar"
+    )
+
+
 def test_ignore_none():
     class DummyFilterSchema(FilterSchema):
         tag: Optional[str] = Field(q="tag", ignore_none=False)
@@ -79,20 +146,28 @@ def test_ignore_none_class_level():
     assert q == Q(tag1=None) & Q(tag2=None)
 
 
-def test_expression_connector():
+def test_field_level_custom_expression():
     class DummyFilterSchema(FilterSchema):
-        tag1: Optional[str] = Field(q="tag1")
-        tag2: Optional[str] = Field(q="tag2")
+        name: Optional[str]
+        popular: Optional[bool]
 
-        class Config:
-            expression_connector = "OR"
+        def filter_popular(self, value):
+            return Q(downloads__gt=100) | Q(view_count__gt=1000) if value else Q()
 
-    filter_instance = DummyFilterSchema(tag1="foo", tag2="bar")
+    filter_instance = DummyFilterSchema(name="foo", popular=True)
     q = filter_instance.get_filter_expression()
-    assert q == Q(tag1="foo") | Q(tag2="bar")
+    assert q == Q(name="foo") & (Q(downloads__gt=100) | Q(view_count__gt=1000))
+
+    filter_instance = DummyFilterSchema(name="foo")
+    q = filter_instance.get_filter_expression()
+    assert q == Q(name="foo")
+
+    filter_instance = DummyFilterSchema()
+    q = filter_instance.get_filter_expression()
+    assert q == Q()
 
 
-def test_custom_expression():
+def test_class_level_custom_expression():
     class DummyFilterSchema(FilterSchema):
         adult: Optional[bool] = Field(q="this_will_be_ignored")
 

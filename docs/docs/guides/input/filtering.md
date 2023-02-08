@@ -13,13 +13,10 @@ from typing import Optional
 
 
 class BookFilterSchema(FilterSchema):
-    name: Optional[str] = Field(q='name__icontains')
-    author: Optional[str] = Field(q='author__name__icontains')
-    created_after: Optional[datetime] = Field(q='created__gte')
+    name: Optional[str]
+    author: Optional[str]
+    created_after: Optional[datetime]
 ```
-
-Pay attention to the field definition. `FilterSchema` requires that you provide a kwarg `q`, which should contain
-a keyword argument name which will then under the hood be used to translate the filter values into a [Q](https://docs.djangoproject.com/en/3.1/topics/db/queries/#complex-lookups-with-q-objects) expression used for filtering the queryset.
 
 
 Next, use this schema in conjunction with `Query` in your API handler:
@@ -43,9 +40,12 @@ def list_books(request, filters: BookFilterSchema = Query(...)):
     return books
 ```
 
-Alternatively, you can get the prepared `Q`-expression and perform the filtering yourself.
-That can be useful, when you have some additional queryset filtering on top of what you expose to the API:
-```python hl_lines="4 5 7 8"
+Under the hood, `FilterSchema` converts its fields into [Q expressions](https://docs.djangoproject.com/en/3.1/topics/db/queries/#complex-lookups-with-q-objects) which it then combines and uses to filter your queryset.
+
+
+Alternatively to using the `.filter` method, you can get the prepared `Q`-expression and perform the filtering yourself.
+That can be useful, when you have some additional queryset filtering on top of what you expose to the user through the API:
+```python hl_lines="5 8"
 @api.get("/books")
 def list_books(request, filters: BookFilterSchema = Query(...)):
 
@@ -63,6 +63,65 @@ By default, the filters will behave the following way:
 * Every non-`None` field will be converted into a `Q`-expression based on the `Field` definition of each field;
 * All `Q`-expressions will be merged into one using `AND` logical operator;
 * The resulting `Q`-expression is used to filter the queryset and return you a qeryset with a `.filter` clause applied.
+
+## Customizing Fields
+By default, `FilterSet` will use the field names to generate Q expressions:
+```python
+class BookFilterSchema(FilterSchema):
+    name: Optional[str]
+```
+The `name` field will be converted into `Q(name=...)` expression.
+
+When your database lookups are more complicated than that, you can explicitly specify them in the field definition using a `"q"` kwarg:
+```python hl_lines="2"
+class BookFilterSchema(FilterSchema):
+    name: Optional[str] = Field(q='name__icontains') 
+```
+You can even specify multiple lookup keyword argument names as a list:
+```python hl_lines="2 3 4"
+class BookFilterSchema(FilterSchema):
+    search: Optional[str] = Field(q=['name__icontains',
+                                     'author__name__icontains',
+                                     'publisher__name__icontains']) 
+```
+By default, field-level expressions are combined using `"OR"` connector, so with the above setup, a query parameter `?search=foobar` will search for books that have "foobar" in either of their name, author or publisher.
+
+
+## Combining expressions
+By default,
+
+* Field-level expressions are joined together using `OR` operator.
+* The fields themselves are joined together using `AND` operator.
+
+So, with the following `FilterSchema`...
+```python
+class BookFilterSchema(FilterSchema):
+    search: Optional[str] = Field(q=['name__icontains', 'author__name__icontains'])
+    popular: Optional[bool]
+```
+...and the following query parameters from the user
+```
+http://localhost:8000/api/books?search=harry&popular=true
+```
+the `FilterSchema` instance will look for popular books that have `harry` in the book's _or_ author's name. 
+
+
+You can customize this behavior using an `expression_connector` argument in field-level and class-level definition:
+```python hl_lines="3 7"
+class BookFilterSchema(FilterSchema):
+    active: Optional[bool] = Field(q=['is_active', 'publisher__is_active'],
+                                   expression_connector='AND')
+    name: Optional[str] = Field(q='name__icontains')
+    
+    class Config:
+        expression_connector = 'OR'     # can be 'AND', 'OR', 'XOR'
+```
+
+Now, a request with these query parameters 
+```
+http://localhost:8000/api/books?name=harry&active=true
+```
+...shall search for books that have `harry` in their name _or_ are active themselves _and_ are published by active publishers.
 
 
 ## Filtering by Nones
@@ -88,34 +147,26 @@ class BookFilterSchema(FilterSchema):
 ```
 
 
-## Combining expressions
-By default filters are joined together using `AND` operator. This can be changed in the schema Config:
-
-```python
-class BookFilterSchema(FilterSchema):
-    name: Optional[str] = Field(q='name__icontains')
-    author: Optional[str] = Field(q='author__name__icontains')
-    created_after: Optional[datetime] = Field(q='created__gte')
-    
-    class Config:
-        expression_connector = 'OR'     # can be 'AND', 'OR', 'XOR'
-```
-
-With such filtering configuration the endpoint...
-```python
-http://localhost:8000/api/books?name=harry&author=poe
-```
-...will return Harry Potter series as well as books from Edgar Allan Poe.
-
-
 ## Custom expressions
 Sometimes you might want to have complex filtering scenarios that cannot be handled by individual Field annotations.
-For such cases you can implement your own custom logic in a `custom_expression` method:
+For such cases you can implement your field filtering logic as a custom method. Simply define a method called `filter_<fieldname>` which takes a filter value and returns a Q expression:
 
-```python
+```python hl_lines="5"
 class BookFilterSchema(FilterSchema):
-    name: Optional[str]         # No need to supply "q" kwarg
-    popular: Optional[bool]     # when custom expression is used
+    tag: Optional[str]
+    popular: Optional[bool]
+    
+    def filter_popular(self, value: bool) -> Q:
+        return Q(view_count__gt=1000) | Q(download_count__gt=100) if value else Q()
+```
+Such field methods take precedence over what is specified in the `Field()` definition of the corresponding fields.
+
+If that is not enough, you can implement your own custom filtering logic for the entire `FilterSet` class in a `custom_expression` method:
+
+```python hl_lines="5"
+class BookFilterSchema(FilterSchema):
+    name: Optional[str]
+    popular: Optional[bool]
 
     def custom_expression(self) -> Q:
         q = Q()
@@ -129,3 +180,4 @@ class BookFilterSchema(FilterSchema):
             )
         return q
 ```
+The `custom_expression` method takes precedence over any other definitions described earlier, including `filter_<fieldname>` methods.
