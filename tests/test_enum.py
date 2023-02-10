@@ -1,6 +1,7 @@
 from datetime import date
 from enum import Enum
-from typing import Optional
+from pprint import pprint
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -34,10 +35,27 @@ def booking_search(request, room: RoomEnum):
 
 
 @api.get("/optional")
-def enum_optioanal(
+def enum_optional(
     request, room: Optional[RoomEnum] = Query(None, description="description")
 ):
     return {"room": room}
+
+
+@api.get("/list")
+def enum_list(request, rooms: List[RoomEnum] = Query(None, description="description")):
+    return {"rooms": rooms}
+
+
+class QueryOnlyEnum(str, Enum):
+    one = "one"
+    two = "two"
+
+
+@api.get("/new-list")
+def new_enum_list(
+    request, q: List[QueryOnlyEnum] = Query(None, description="description")
+):
+    return {"q": q}
 
 
 client = TestClient(api)
@@ -72,6 +90,14 @@ def test_enums():
     response = client.get("/optional")
     assert response.status_code == 200
     assert response.json() == {"room": None}
+
+    response = client.get("/list?rooms=twin&rooms=single")
+    assert response.status_code == 200
+    assert response.json() == {"rooms": ["twin", "single"]}
+
+    response = client.get("/new-list?q=one&q=one")
+    assert response.status_code == 200
+    assert response.json() == {"q": ["one", "one"]}
 
 
 def test_schema():
@@ -131,4 +157,21 @@ def test_schema():
         },
         "required": False,
         "description": "description",
+    }
+
+    assert schema["paths"]["/api/new-list"]["get"]["parameters"][0] == {
+        "description": "description",
+        "in": "query",
+        "name": "q",
+        "required": False,
+        "schema": {
+            "description": "description",
+            "items": {
+                "description": "An " "enumeration.",
+                "enum": ["one", "two"],
+                "title": "QueryOnlyEnum",
+                "type": "string",
+            },
+            "type": "array",
+        },
     }

@@ -304,6 +304,12 @@ def flatten_properties(
             for item in prop_details["allOf"]:
                 yield from flatten_properties("", item, True, definitions)
 
+    elif "items" in prop_details and "$ref" in prop_details["items"]:
+        def_name = prop_details["items"]["$ref"].rsplit("/", 1)[-1]
+        prop_details["items"].update(definitions[def_name])
+        del prop_details["items"]["$ref"]
+        yield prop_name, prop_details, prop_required
+
     elif "$ref" in prop_details:
         def_name = prop_details["$ref"].split("/")[-1]
         definition = definitions[def_name]
