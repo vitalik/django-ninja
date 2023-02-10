@@ -166,7 +166,7 @@ def test_schema():
         "schema": {
             "description": "description",
             "items": {
-                "description": "An " "enumeration.",
+                "description": "An enumeration.",
                 "enum": ["one", "two"],
                 "title": "QueryOnlyEnum",
                 "type": "string",
