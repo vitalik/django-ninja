@@ -3,7 +3,9 @@
 # what it basically does makes function XXX that create instance of params.XXX
 # and annotates function with result = Any
 # idea from https://github.com/tiangolo/fastapi/blob/master/fastapi/param_functions.py
-from typing import Any, Optional
+from typing import Any, Dict, Optional
+
+from pydantic.fields import Undefined
 
 from ninja import params
 
@@ -21,6 +23,8 @@ def Path(  # noqa: N802
     min_length: Optional[int] = None,
     max_length: Optional[int] = None,
     regex: Optional[str] = None,
+    example: Any = Undefined,
+    examples: Optional[Dict[str, Any]] = None,
     deprecated: Optional[bool] = None,
     **extra: Any,
 ) -> Any:
@@ -36,6 +40,8 @@ def Path(  # noqa: N802
         min_length=min_length,
         max_length=max_length,
         regex=regex,
+        example=example,
+        examples=examples,
         deprecated=deprecated,
         **extra,
     )
@@ -54,6 +60,8 @@ def Query(  # noqa: N802
     min_length: Optional[int] = None,
     max_length: Optional[int] = None,
     regex: Optional[str] = None,
+    example: Any = Undefined,
+    examples: Optional[Dict[str, Any]] = None,
     deprecated: Optional[bool] = None,
     **extra: Any,
 ) -> Any:
@@ -69,6 +77,8 @@ def Query(  # noqa: N802
         min_length=min_length,
         max_length=max_length,
         regex=regex,
+        example=example,
+        examples=examples,
         deprecated=deprecated,
         **extra,
     )
@@ -87,6 +97,8 @@ def Header(  # noqa: N802
     min_length: Optional[int] = None,
     max_length: Optional[int] = None,
     regex: Optional[str] = None,
+    example: Any = Undefined,
+    examples: Optional[Dict[str, Any]] = None,
     deprecated: Optional[bool] = None,
     **extra: Any,
 ) -> Any:
@@ -102,6 +114,8 @@ def Header(  # noqa: N802
         min_length=min_length,
         max_length=max_length,
         regex=regex,
+        example=example,
+        examples=examples,
         deprecated=deprecated,
         **extra,
     )
@@ -120,6 +134,8 @@ def Cookie(  # noqa: N802
     min_length: Optional[int] = None,
     max_length: Optional[int] = None,
     regex: Optional[str] = None,
+    example: Any = Undefined,
+    examples: Optional[Dict[str, Any]] = None,
     deprecated: Optional[bool] = None,
     **extra: Any,
 ) -> Any:
@@ -135,6 +151,8 @@ def Cookie(  # noqa: N802
         min_length=min_length,
         max_length=max_length,
         regex=regex,
+        example=example,
+        examples=examples,
         deprecated=deprecated,
         **extra,
     )
@@ -153,6 +171,8 @@ def Body(  # noqa: N802
     min_length: Optional[int] = None,
     max_length: Optional[int] = None,
     regex: Optional[str] = None,
+    example: Any = Undefined,
+    examples: Optional[Dict[str, Any]] = None,
     deprecated: Optional[bool] = None,
     **extra: Any,
 ) -> Any:
@@ -168,6 +188,8 @@ def Body(  # noqa: N802
         min_length=min_length,
         max_length=max_length,
         regex=regex,
+        example=example,
+        examples=examples,
         deprecated=deprecated,
         **extra,
     )
@@ -186,6 +208,8 @@ def Form(  # noqa: N802
     min_length: Optional[int] = None,
     max_length: Optional[int] = None,
     regex: Optional[str] = None,
+    example: Any = Undefined,
+    examples: Optional[Dict[str, Any]] = None,
     deprecated: Optional[bool] = None,
     **extra: Any,
 ) -> Any:
@@ -201,6 +225,8 @@ def Form(  # noqa: N802
         min_length=min_length,
         max_length=max_length,
         regex=regex,
+        example=example,
+        examples=examples,
         deprecated=deprecated,
         **extra,
     )
@@ -219,6 +245,8 @@ def File(  # noqa: N802
     min_length: Optional[int] = None,
     max_length: Optional[int] = None,
     regex: Optional[str] = None,
+    example: Any = Undefined,
+    examples: Optional[Dict[str, Any]] = None,
     deprecated: Optional[bool] = None,
     **extra: Any,
 ) -> Any:
@@ -234,6 +262,8 @@ def File(  # noqa: N802
         min_length=min_length,
         max_length=max_length,
         regex=regex,
+        example=example,
+        examples=examples,
         deprecated=deprecated,
         **extra,
     )

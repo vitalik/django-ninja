@@ -38,6 +38,21 @@ class Response(Schema):
         allow_population_by_field_name = True
 
 
+class ExamplesResponse(Schema):
+    i: int
+    f: float = Field(..., title="f title", description="f desc")
+
+    class Config(Schema.Config):
+        alias_generator = to_camel
+        allow_population_by_field_name = True
+        examples = {
+            "example1": {
+                "summary": "example1",
+                "value": {"i": 123, "f": 0.5},
+            }
+        }
+
+
 @api.post("/test", response=Response)
 def method(request, data: Payload):
     return data.dict()
@@ -107,6 +122,22 @@ def method_union_payload_and_simple(request, data: Union[int, TypeB]):
     return data.dict()
 
 
+@api.post("/test-examples", response=ExamplesResponse)
+def method_examples(
+    request,
+    data: Union[int, TypeB] = Body(
+        ...,
+        examples={
+            "example1": {
+                "summary": "example1",
+                "value": {"i": 123, "f": 0.5},
+            }
+        },
+    ),
+):
+    return data.dict()
+
+
 @api.post(
     "/test-title-description/",
     tags=["a-tag"],
@@ -172,7 +203,11 @@ def test_schema(schema):
             "type": "object",
             "properties": {
                 "i": {"title": "I", "type": "integer"},
-                "f": {"description": "f desc", "title": "f title", "type": "number"},
+                "f": {
+                    "title": "f title",
+                    "description": "f desc",
+                    "type": "number",
+                },
             },
             "required": ["i", "f"],
         },
@@ -186,21 +221,68 @@ def test_schema(schema):
             "required": ["i", "f"],
         },
         "TypeA": {
-            "properties": {
-                "a": {"title": "A", "type": "string"},
-            },
-            "required": ["a"],
             "title": "TypeA",
             "type": "object",
+            "properties": {"a": {"title": "A", "type": "string"}},
+            "required": ["a"],
         },
         "TypeB": {
-            "properties": {
-                "b": {"title": "B", "type": "string"},
-            },
-            "required": ["b"],
             "title": "TypeB",
             "type": "object",
+            "properties": {"b": {"title": "B", "type": "string"}},
+            "required": ["b"],
         },
+        "ExamplesResponse": {
+            "title": "ExamplesResponse",
+            "type": "object",
+            "properties": {
+                "i": {"title": "I", "type": "integer"},
+                "f": {
+                    "title": "f title",
+                    "description": "f desc",
+                    "type": "number",
+                },
+            },
+            "required": ["i", "f"],
+        },
+    }
+
+
+def test_schema_examples(schema):
+    method = schema["paths"]["/api/test-examples"]["post"]
+
+    assert method["requestBody"] == {
+        "content": {
+            "application/json": {
+                "schema": {
+                    "title": "Data",
+                    "anyOf": [
+                        {"type": "integer"},
+                        {"$ref": "#/components/schemas/TypeB"},
+                    ],
+                },
+                "examples": {
+                    "example1": {"summary": "example1", "value": {"i": 123, "f": 0.5}}
+                },
+            }
+        },
+        "required": True,
+    }
+    assert method["responses"] == {
+        200: {
+            "description": "OK",
+            "content": {
+                "application/json": {
+                    "schema": {"$ref": "#/components/schemas/ExamplesResponse"},
+                    "examples": {
+                        "example1": {
+                            "summary": "example1",
+                            "value": {"i": 123, "f": 0.5},
+                        }
+                    },
+                }
+            },
+        }
     }
 
 
@@ -312,6 +394,19 @@ def test_schema_list(schema):
             "required": ["i", "f"],
             "title": "Response",
             "type": "object",
+        },
+        "ExamplesResponse": {
+            "title": "ExamplesResponse",
+            "type": "object",
+            "properties": {
+                "i": {"title": "I", "type": "integer"},
+                "f": {
+                    "title": "f title",
+                    "description": "f desc",
+                    "type": "number",
+                },
+            },
+            "required": ["i", "f"],
         },
     }
 

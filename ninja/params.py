@@ -1,6 +1,6 @@
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
-from pydantic.fields import FieldInfo, ModelField
+from pydantic.fields import FieldInfo, ModelField, Undefined
 
 from ninja import params_models
 
@@ -22,12 +22,16 @@ class Param(FieldInfo):
         min_length: int = None,
         max_length: int = None,
         regex: str = None,
+        example: Any = Undefined,
+        examples: Optional[Dict[str, Any]] = None,
         deprecated: bool = None,
         # param_name: str = None,
         # param_type: Any = None,
         **extra: Any,
     ):
         self.deprecated = deprecated
+        self.example = example
+        self.examples = examples
         # self.param_name: str = None
         # self.param_type: Any = None
         self.model_field: Optional[ModelField] = None
