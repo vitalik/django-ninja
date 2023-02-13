@@ -238,7 +238,15 @@ class Operation:
     def _create_response_model(self, response_param: Any) -> Optional[Type[Schema]]:
         if response_param is None:
             return None
-        attrs = {"__annotations__": {"response": response_param}}
+
+        # Get resolvers
+        resolvers = {
+            name: func for name, func in response_param.__dict__.items()
+            if name.startswith("resolve_")
+        }
+
+        attrs = {"__annotations__": {"response": response_param}} | resolvers
+
         return type("NinjaResponseSchema", (Schema,), attrs)
 
 

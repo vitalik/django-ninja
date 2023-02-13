@@ -155,6 +155,10 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
     @classmethod
     def from_orm(cls: Type[S], obj: Any) -> S:
         getter_dict = cls.__config__.getter_dict
+
+        for name, resolver in cls._ninja_resolvers.items():
+            obj.response[name] = resolver._func(getter_dict)
+
         obj = (
             # DjangoGetter also needs the class so it can find resolver methods.
             getter_dict(obj, cls)
