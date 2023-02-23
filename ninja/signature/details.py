@@ -24,6 +24,13 @@ FuncParam = namedtuple(
     "FuncParam", ["name", "alias", "source", "annotation", "is_collection"]
 )
 
+try:
+    from types import UnionType
+
+    UNION_TYPES = (Union, UnionType)
+except ImportError:
+    UNION_TYPES = (Union,)
+
 
 class ViewSignature:
     FLATTEN_PATH_SEP = (
@@ -247,7 +254,7 @@ class ViewSignature:
 
 def is_pydantic_model(cls: Any) -> bool:
     try:
-        if get_collection_origin(cls) == Union:
+        if get_collection_origin(cls) in UNION_TYPES:
             return any(issubclass(arg, pydantic.BaseModel) for arg in get_args(cls))
         return issubclass(cls, pydantic.BaseModel)
     except TypeError:
