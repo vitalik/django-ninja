@@ -1,3 +1,4 @@
+import sys
 from typing import List, Union
 from unittest.mock import Mock
 
@@ -105,6 +106,18 @@ def method_union_payload(request, data: Union[TypeA, TypeB]):
 @api.post("/test-union-type-with-simple", response=Response)
 def method_union_payload_and_simple(request, data: Union[int, TypeB]):
     return data.dict()
+
+
+if sys.version_info >= (3, 10):
+    # This requires Python 3.10 or higher (PEP 604), so we're using eval to
+    # conditionally make it available
+    exec(
+        """
+@api.post("/test-new-union-type", response=Response)
+def method_new_union_payload(request, data: TypeA | TypeB):
+    return dict(i=data.i, f=data.f)
+"""
+    )
 
 
 @api.post(
@@ -652,6 +665,29 @@ def test_union_payload_simple(schema):
                         {"type": "integer"},
                         {"$ref": "#/components/schemas/TypeB"},
                     ],
+                }
+            }
+        },
+        "required": True,
+    }
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 10),
+    reason="requires Python 3.10 or higher (PEP 604)",
+)
+def test_new_union_payload_type(schema):
+    method = schema["paths"]["/api/test-new-union-type"]["post"]
+
+    assert method["requestBody"] == {
+        "content": {
+            "application/json": {
+                "schema": {
+                    "anyOf": [
+                        {"$ref": "#/components/schemas/TypeA"},
+                        {"$ref": "#/components/schemas/TypeB"},
+                    ],
+                    "title": "Data",
                 }
             }
         },
