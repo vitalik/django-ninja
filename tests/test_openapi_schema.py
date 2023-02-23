@@ -111,13 +111,9 @@ def method_union_payload_and_simple(request, data: Union[int, TypeB]):
 if sys.version_info >= (3, 10):
     # This requires Python 3.10 or higher (PEP 604), so we're using eval to
     # conditionally make it available
-    exec(
-        """
-@api.post("/test-new-union-type", response=Response)
-def method_new_union_payload(request, data: TypeA | TypeB):
-    return dict(i=data.i, f=data.f)
-"""
-    )
+    @api.post("/test-new-union-type", response=Response)
+    def method_new_union_payload(request, data: "TypeA | TypeB"):
+        return dict(i=data.i, f=data.f)
 
 
 @api.post(
