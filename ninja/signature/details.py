@@ -7,7 +7,11 @@ import pydantic
 from django.http import HttpResponse
 
 from ninja import UploadedFile, params
-from ninja.compatibility.util import get_args, get_origin as get_collection_origin
+from ninja.compatibility.util import (
+    UNION_TYPES,
+    get_args,
+    get_origin as get_collection_origin,
+)
 from ninja.errors import ConfigError
 from ninja.params import Body, File, Form, _MultiPartBody
 from ninja.params_models import TModel, TModels
@@ -23,13 +27,6 @@ __all__ = [
 FuncParam = namedtuple(
     "FuncParam", ["name", "alias", "source", "annotation", "is_collection"]
 )
-
-try:
-    from types import UnionType
-
-    UNION_TYPES = (Union, UnionType)
-except ImportError:
-    UNION_TYPES = (Union,)
 
 
 class ViewSignature:
