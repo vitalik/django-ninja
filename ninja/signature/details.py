@@ -7,7 +7,11 @@ import pydantic
 from django.http import HttpResponse
 
 from ninja import UploadedFile, params
-from ninja.compatibility.util import get_args, get_origin as get_collection_origin
+from ninja.compatibility.util import (
+    UNION_TYPES,
+    get_args,
+    get_origin as get_collection_origin,
+)
 from ninja.errors import ConfigError
 from ninja.params import Body, File, Form, _MultiPartBody
 from ninja.params_models import TModel, TModels
@@ -247,7 +251,7 @@ class ViewSignature:
 
 def is_pydantic_model(cls: Any) -> bool:
     try:
-        if get_collection_origin(cls) == Union:
+        if get_collection_origin(cls) in UNION_TYPES:
             return any(issubclass(arg, pydantic.BaseModel) for arg in get_args(cls))
         return issubclass(cls, pydantic.BaseModel)
     except TypeError:
