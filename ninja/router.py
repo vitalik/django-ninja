@@ -42,6 +42,7 @@ class Router:
         exclude_none: bool = False,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         return self.api_operation(
             ["GET"],
@@ -59,6 +60,7 @@ class Router:
             exclude_none=exclude_none,
             url_name=url_name,
             include_in_schema=include_in_schema,
+            openapi_extra=openapi_extra,
         )
 
     def post(
@@ -78,6 +80,7 @@ class Router:
         exclude_none: bool = False,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         return self.api_operation(
             ["POST"],
@@ -95,6 +98,7 @@ class Router:
             exclude_none=exclude_none,
             url_name=url_name,
             include_in_schema=include_in_schema,
+            openapi_extra=openapi_extra,
         )
 
     def delete(
@@ -114,6 +118,7 @@ class Router:
         exclude_none: bool = False,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         return self.api_operation(
             ["DELETE"],
@@ -131,6 +136,7 @@ class Router:
             exclude_none=exclude_none,
             url_name=url_name,
             include_in_schema=include_in_schema,
+            openapi_extra=openapi_extra,
         )
 
     def patch(
@@ -150,6 +156,7 @@ class Router:
         exclude_none: bool = False,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         return self.api_operation(
             ["PATCH"],
@@ -167,6 +174,7 @@ class Router:
             exclude_none=exclude_none,
             url_name=url_name,
             include_in_schema=include_in_schema,
+            openapi_extra=openapi_extra,
         )
 
     def put(
@@ -186,6 +194,7 @@ class Router:
         exclude_none: bool = False,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         return self.api_operation(
             ["PUT"],
@@ -203,6 +212,7 @@ class Router:
             exclude_none=exclude_none,
             url_name=url_name,
             include_in_schema=include_in_schema,
+            openapi_extra=openapi_extra,
         )
 
     def api_operation(
@@ -223,6 +233,7 @@ class Router:
         exclude_none: bool = False,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         def decorator(view_func: TCallable) -> TCallable:
             self.add_api_operation(
@@ -242,6 +253,7 @@ class Router:
                 exclude_none=exclude_none,
                 url_name=url_name,
                 include_in_schema=include_in_schema,
+                openapi_extra=openapi_extra,
             )
             return view_func
 
@@ -266,6 +278,7 @@ class Router:
         exclude_none: bool = False,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> None:
         if path not in self.path_operations:
             path_view = PathView()
@@ -289,6 +302,7 @@ class Router:
             exclude_none=exclude_none,
             url_name=url_name,
             include_in_schema=include_in_schema,
+            openapi_extra=openapi_extra,
         )
         if self.api:
             path_view.set_api_instance(self.api, self)
