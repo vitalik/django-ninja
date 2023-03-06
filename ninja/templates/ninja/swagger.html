@@ -7,27 +7,19 @@
     <title>{{ api.title }}</title>
 </head>
 <body>
+
+    <!--Hidden inputs for the swagger-bundle-handler-->
+    <input type="hidden" value="{{ openapi_json_url }}" id="openapi_url">
+    {% if api.csrf and csrf_token %}
+    <input type="hidden" value="{{ api.csrf }}" id="api_csrf">
+    <input type="hidden" value="{{ csrf_token }}" id="csrf_token">
+    {% endif %}
+    
     <div id="swagger-ui">
     </div>
 
     <script src="{% static 'ninja/swagger-ui-bundle.js' %}"></script>
-    <script>
-        const ui = SwaggerUIBundle({
-            url: '{{ openapi_json_url }}',
-            dom_id: '#swagger-ui',
-            presets: [
-            SwaggerUIBundle.presets.apis,
-            SwaggerUIBundle.SwaggerUIStandalonePreset
-            ],
-            layout: "BaseLayout",
-        {% if api.csrf and csrf_token %}
-            requestInterceptor: (req) => {
-				req.headers['X-CSRFToken'] = "{{csrf_token}}"
-				return req;
-			},
-        {% endif %}
-            deepLinking: true
-        })
-    </script>
+    <script src="{% static 'ninja/swagger-bundle-handler.js' %}"></script>
+
 </body>
 </html>
