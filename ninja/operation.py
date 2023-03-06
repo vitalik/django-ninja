@@ -50,12 +50,16 @@ class Operation:
         exclude_defaults: bool = False,
         exclude_none: bool = False,
         include_in_schema: bool = True,
+        url_name: str = None,
+        openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> None:
         self.is_async = False
         self.path: str = path
         self.methods: List[str] = methods
         self.view_func: Callable = view_func
         self.api: "NinjaAPI" = cast("NinjaAPI", None)
+        if url_name is not None:
+            self.url_name = url_name
 
         self.auth_param: Optional[Union[Sequence[Callable], Callable, object]] = auth
         self.auth_callbacks: Sequence[Callable] = []
@@ -78,6 +82,7 @@ class Operation:
         self.tags = tags
         self.deprecated = deprecated
         self.include_in_schema = include_in_schema
+        self.openapi_extra = openapi_extra
 
         # Exporting models params
         self.by_alias = by_alias
@@ -177,7 +182,8 @@ class Operation:
             response_model = self.response_models[Ellipsis]
         else:
             raise ConfigError(
-                f"Schema for status {status} is not set in response {self.response_models.keys()}"
+                f"Schema for status {status} is not set in response"
+                f" {self.response_models.keys()}"
             )
 
         temporal_response.status_code = status
@@ -287,6 +293,7 @@ class PathView:
         exclude_none: bool = False,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Operation:
         if url_name:
             self.url_name = url_name
@@ -312,6 +319,8 @@ class PathView:
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
             include_in_schema=include_in_schema,
+            url_name=url_name,
+            openapi_extra=openapi_extra,
         )
 
         self.operations.append(operation)

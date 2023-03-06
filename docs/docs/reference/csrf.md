@@ -12,7 +12,7 @@ from ninja import NinjaAPI
 api = NinjaAPI(csrf=True)
 ```
 
-<span style="color: red;">Warning</span>: It is not secure to use API's with cookie-based authentication! (like `CookieKey`, or `django_auth`)
+<span style="color: red;">Warning</span>: It is not secure to use API's with cookie-based authentication! (like `CookieKey`, or `django_auth`) when csrf is turned OFF.
 
 
 **Django Ninja** will prevent you from doing this. So, if you do this:

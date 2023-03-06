@@ -89,6 +89,21 @@ class OpenAPISchema(dict):
                     result[method.lower()] = operation_details
         return result
 
+    def deep_dict_update(
+        self, main_dict: Dict[Any, Any], update_dict: Dict[Any, Any]
+    ) -> None:
+        for key in update_dict:
+            if (
+                key in main_dict
+                and isinstance(main_dict[key], dict)
+                and isinstance(update_dict[key], dict)
+            ):
+                self.deep_dict_update(
+                    main_dict[key], update_dict[key]
+                )  # pragma: no cover
+            else:
+                main_dict[key] = update_dict[key]
+
     def operation_details(self, operation: Operation) -> DictStrAny:
         op_id = operation.operation_id or self.api.get_openapi_operation_id(operation)
         if op_id in self.all_operation_ids:
@@ -120,6 +135,9 @@ class OpenAPISchema(dict):
         if security:
             result["security"] = security
 
+        if operation.openapi_extra:
+            self.deep_dict_update(result, operation.openapi_extra)
+
         return result
 
     def operation_parameters(self, operation: Operation) -> List[DictStrAny]:
@@ -146,6 +164,9 @@ class OpenAPISchema(dict):
             for p_name, p_schema, p_required in flatten_properties(
                 name, details, is_required, schema.get("definitions", {})
             ):
+                if not p_schema.get("include_in_schema", True):
+                    continue
+
                 param = {
                     "in": model._param_source,
                     "name": p_name,
@@ -156,6 +177,12 @@ class OpenAPISchema(dict):
                 # copy description from schema description to param description
                 if "description" in p_schema:
                     param["description"] = p_schema["description"]
+                if "examples" in p_schema:
+                    param["examples"] = p_schema["examples"]
+                elif "example" in p_schema:
+                    param["example"] = p_schema["example"]
+                if "deprecated" in p_schema:
+                    param["deprecated"] = p_schema["deprecated"]
 
                 result.append(param)
 
@@ -179,7 +206,6 @@ class OpenAPISchema(dict):
         by_alias: bool = True,
         remove_level: bool = True,
     ) -> Tuple[DictStrAny, bool]:
-
         if hasattr(model, "_flatten_map"):
             schema = self._flatten_schema(model)
         else:
@@ -242,7 +268,6 @@ class OpenAPISchema(dict):
 
         result = {}
         for status, model in operation.response_models.items():
-
             if status == Ellipsis:
                 continue  # it's not yet clear what it means if user wants to output any other code
 
@@ -305,6 +330,12 @@ def flatten_properties(
         else:
             for item in prop_details["allOf"]:
                 yield from flatten_properties("", item, True, definitions)
+
+    elif "items" in prop_details and "$ref" in prop_details["items"]:
+        def_name = prop_details["items"]["$ref"].rsplit("/", 1)[-1]
+        prop_details["items"].update(definitions[def_name])
+        del prop_details["items"]["$ref"]  # seems num data is there so ref not needed
+        yield prop_name, prop_details, prop_required
 
     elif "$ref" in prop_details:
         def_name = prop_details["$ref"].split("/")[-1]

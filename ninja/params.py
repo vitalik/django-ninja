@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 from pydantic.fields import FieldInfo, ModelField
 
@@ -22,7 +22,10 @@ class Param(FieldInfo):
         min_length: int = None,
         max_length: int = None,
         regex: str = None,
+        example: Any = None,
+        examples: Optional[Dict[str, Any]] = None,
         deprecated: bool = None,
+        include_in_schema: bool = True,
         # param_name: str = None,
         # param_type: Any = None,
         **extra: Any,
@@ -31,6 +34,14 @@ class Param(FieldInfo):
         # self.param_name: str = None
         # self.param_type: Any = None
         self.model_field: Optional[ModelField] = None
+        if example:
+            extra["example"] = example
+        if examples:
+            extra["examples"] = examples
+        if deprecated:
+            extra["deprecated"] = deprecated
+        if not include_in_schema:
+            extra["include_in_schema"] = include_in_schema
         super().__init__(
             default,
             alias=alias,

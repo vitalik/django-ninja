@@ -52,7 +52,7 @@ Working at [Code-on a Django webdesign webedevelopment studio](https://code-on.b
 
 Note: **Django Ninja is a production ready project** - my estimation is at this time already 100+ companies using it in production and 500 new developers joining every month. 
 
-Some companies already looking for developers with django ninja experince. [Looking for a job? visit Jooble](https://jooble.org/)
+Some companies already looking for developers with django ninja experince.
 
 #### Main Features
 

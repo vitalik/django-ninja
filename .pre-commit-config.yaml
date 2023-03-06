@@ -12,7 +12,7 @@ repos:
         additional_dependencies: ["django-stubs", "pydantic"]
         exclude: (tests|docs)/
   - repo: https://github.com/psf/black
-    rev: "22.3.0"
+    rev: "23.1.0"
     hooks:
       - id: black
         exclude: docs/src/

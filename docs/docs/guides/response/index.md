@@ -414,3 +414,24 @@ Multiple Items: or a queryset (or list)
 >>> data = [PersonSchema.from_orm(i).dict() for i in persons]
 [{'id':1, 'name':'Mr. Smith'},{'id': 2, 'name': 'Mrs. Smith'}...]
 ```
+
+## Django HTTP responses
+
+It is also possible to return regular django http responses:
+
+```Python
+from django.http import HttpResponse
+from django.shortcuts import redirect
+
+
+@api.get("/http")
+def result_django(request):
+    return HttpResponse('some data')   # !!!!
+
+
+@api.get("/something")
+def some_redirect(request):
+    return redirect("/some-path")  # !!!!
+
+
+```

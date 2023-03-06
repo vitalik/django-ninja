@@ -31,6 +31,16 @@ def foobar(request):
     return "foobar"
 
 
+@api_v3.post("foobar")
+def post_foobar(request):
+    return "foobar"
+
+
+@api_v3.put("foobar", url_name="foobar_put")
+def put_foobar(request):
+    return "foobar"
+
+
 api_multi_param = NinjaAPI(version="1.0.1")
 api_multi_param.add_router("", multi_param)
 

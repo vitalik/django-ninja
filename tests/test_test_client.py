@@ -67,7 +67,6 @@ def test_django_2_2_plus_headers(version, has_headers):
 
 
 class ClientTestSchema(Schema):
-
     time: datetime
 
 
