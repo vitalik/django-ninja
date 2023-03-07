@@ -1,14 +1,8 @@
 /**JS file for handling the SwaggerUIBundle and avoid inline script */
-let openapi_url = document.getElementById("openapi_url")
-let api_csrf = document.getElementById("api_csrf")
-let csrf_token = document.getElementById("csrf_token")
-
-openapi_url = openapi_url ? openapi_url.value : null
-api_csrf = api_csrf ? api_csrf.value : null
-csrf_token = csrf_token ? csrf_token.value : null
+const swaggerUi = document.querySelector("body")
 
 SwaggerUIBundle({
-    url: openapi_url,
+    url: swaggerUi.dataset.openapiUrl,
     dom_id: '#swagger-ui',
     presets: [
     SwaggerUIBundle.presets.apis,
@@ -16,8 +10,8 @@ SwaggerUIBundle({
     ],
     layout: "BaseLayout",
     requestInterceptor: (req) => {
-        if (api_csrf && csrf_token) {
-            req.headers['X-CSRFToken'] = csrf_token
+        if (swaggerUi.dataset.apiCsrf && swaggerUi.dataset.csrfToken) {
+            req.headers['X-CSRFToken'] = swaggerUi.dataset.csrfToken
             return req;
         }
     },
