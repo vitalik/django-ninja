@@ -33,6 +33,40 @@ class CamelModelSchema(Schema):
 !!! note
     When overriding the schema's `Config`, it is necessary to inherit from the base `Config` class. 
 
+Keep in mind that when you want modify output for field names (like cammel case) - you need to set as well  `allow_population_by_field_name` and `by_alias`
+
+```python hl_lines="6 9"
+class UserSchema(ModelSchema):
+    class Config:
+        model = User
+        model_fields = ["id", "email"]
+        alias_generator = to_camel
+        allow_population_by_field_name = True  # !!!!!! <--------
+
+
+@api.get("/users", response=list[UserSchema], by_alias=True) # !!!!!! <-------- by_alias
+def get_users(request):
+    return User.objects.all()
+
+```
+
+results:
+
+```JSON
+[
+  {
+    "Id": 1,
+    "Email": "tim@apple.com"
+  },
+  {
+    "Id": 2,
+    "Email": "sarah@smith.com"
+  }
+  ...
+]
+
+```
+
 ## Custom Config from Django Model
 
 When using [`create_schema`](../django-pydantic-create-schema/#create_schema), the resulting
