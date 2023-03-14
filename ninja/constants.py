@@ -15,3 +15,6 @@ class NOT_SET_TYPE:
 
 
 NOT_SET = NOT_SET_TYPE()
+
+# 1 second
+CACHE_TIMEOUT = 1

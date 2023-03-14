@@ -1,3 +1,4 @@
+import contextlib
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -14,6 +15,7 @@ from typing import (
 
 import django
 import pydantic
+from django.core.cache import cache as dj_cache, InvalidCacheBackendError
 from django.http import HttpRequest, HttpResponse, HttpResponseNotAllowed
 from django.http.response import HttpResponseBase
 
@@ -33,25 +35,27 @@ __all__ = ["Operation", "PathView", "ResponseObject"]
 
 class Operation:
     def __init__(
-        self,
-        path: str,
-        methods: List[str],
-        view_func: Callable,
-        *,
-        auth: Optional[Union[Sequence[Callable], Callable, object]] = NOT_SET,
-        response: Any = NOT_SET,
-        operation_id: Optional[str] = None,
-        summary: Optional[str] = None,
-        description: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-        deprecated: Optional[bool] = None,
-        by_alias: bool = False,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
-        include_in_schema: bool = True,
-        url_name: str = None,
-        openapi_extra: Optional[Dict[str, Any]] = None,
+            self,
+            path: str,
+            methods: List[str],
+            view_func: Callable,
+            *,
+            auth: Optional[Union[Sequence[Callable], Callable, object]] = NOT_SET,
+            response: Any = NOT_SET,
+            operation_id: Optional[str] = None,
+            summary: Optional[str] = None,
+            description: Optional[str] = None,
+            tags: Optional[List[str]] = None,
+            deprecated: Optional[bool] = None,
+            by_alias: bool = False,
+            exclude_unset: bool = False,
+            exclude_defaults: bool = False,
+            exclude_none: bool = False,
+            include_in_schema: bool = True,
+            url_name: str = None,
+            openapi_extra: Optional[Dict[str, Any]] = None,
+            cache_timeout: Optional[int] = None,
+            cache: bool = False,
     ) -> None:
         self.is_async = False
         self.path: str = path
@@ -83,6 +87,8 @@ class Operation:
         self.deprecated = deprecated
         self.include_in_schema = include_in_schema
         self.openapi_extra = openapi_extra
+        self.cache_timeout = cache_timeout
+        self.cache = cache
 
         # Exporting models params
         self.by_alias = by_alias
@@ -101,7 +107,17 @@ class Operation:
         try:
             temporal_response = self.api.create_temporal_response(request)
             values = self._get_values(request, kw, temporal_response)
-            result = self.view_func(request, **values)
+
+            key = f"{self.view_func.__name__}_{request.path}"
+
+            if self.api.cache and self.cache:
+                with contextlib.suppress(InvalidCacheBackendError):
+                    result = dj_cache.get(key)
+                if result is None:
+                    result = self.view_func(request, **values)
+                    dj_cache.set(key, result, timeout=self.cache_timeout or self.api.cache_timeout)
+            else:
+                result = self.view_func(request, **values)
             return self._result_to_response(request, result, temporal_response)
         except Exception as e:
             if isinstance(e, TypeError) and "required positional argument" in str(e):
@@ -123,7 +139,7 @@ class Operation:
                 self.tags = router.tags
 
     def _set_auth(
-        self, auth: Optional[Union[Sequence[Callable], Callable, object]]
+            self, auth: Optional[Union[Sequence[Callable], Callable, object]]
     ) -> None:
         if auth is not None and auth is not NOT_SET:  # TODO: can it even happen ?
             self.auth_callbacks = isinstance(auth, Sequence) and auth or [auth]
@@ -157,7 +173,7 @@ class Operation:
         return self.api.on_exception(request, AuthenticationError())
 
     def _result_to_response(
-        self, request: HttpRequest, result: Any, temporal_response: HttpResponse
+            self, request: HttpRequest, result: Any, temporal_response: HttpResponse
     ) -> HttpResponseBase:
         """
         The protocol for results
@@ -210,7 +226,7 @@ class Operation:
         )
 
     def _get_values(
-        self, request: HttpRequest, path_params: Any, temporal_response: HttpResponse
+            self, request: HttpRequest, path_params: Any, temporal_response: HttpResponse
     ) -> DictStrAny:
         values, errors = {}, []
         for model in self.models:
@@ -232,7 +248,7 @@ class Operation:
         return values
 
     def _create_response_model_multiple(
-        self, response_param: DictStrAny
+            self, response_param: DictStrAny
     ) -> Dict[str, Optional[Type[Schema]]]:
         result = {}
         for key, model in response_param.items():
@@ -262,7 +278,17 @@ class AsyncOperation(Operation):
         try:
             temporal_response = self.api.create_temporal_response(request)
             values = self._get_values(request, kw, temporal_response)
-            result = await self.view_func(request, **values)
+
+            key = f"{self.view_func.__name__}_{request.path}"
+
+            if self.api.cache and self.cache:
+                with contextlib.suppress(InvalidCacheBackendError):
+                    result = dj_cache.get(key)
+                if result is None:
+                    result = await self.view_func(request, **values)
+                    dj_cache.set(key, result, timeout=self.cache_timeout or self.api.cache_timeout)
+            else:
+                result = await self.view_func(request, **values)
             return self._result_to_response(request, result, temporal_response)
         except Exception as e:
             return self.api.on_exception(request, e)
@@ -275,25 +301,27 @@ class PathView:
         self.url_name: Optional[str] = None
 
     def add_operation(
-        self,
-        path: str,
-        methods: List[str],
-        view_func: Callable,
-        *,
-        auth: Optional[Union[Sequence[Callable], Callable, object]] = NOT_SET,
-        response: Any = NOT_SET,
-        operation_id: Optional[str] = None,
-        summary: Optional[str] = None,
-        description: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-        deprecated: Optional[bool] = None,
-        by_alias: bool = False,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
-        url_name: Optional[str] = None,
-        include_in_schema: bool = True,
-        openapi_extra: Optional[Dict[str, Any]] = None,
+            self,
+            path: str,
+            methods: List[str],
+            view_func: Callable,
+            *,
+            auth: Optional[Union[Sequence[Callable], Callable, object]] = NOT_SET,
+            response: Any = NOT_SET,
+            operation_id: Optional[str] = None,
+            summary: Optional[str] = None,
+            description: Optional[str] = None,
+            tags: Optional[List[str]] = None,
+            deprecated: Optional[bool] = None,
+            by_alias: bool = False,
+            exclude_unset: bool = False,
+            exclude_defaults: bool = False,
+            exclude_none: bool = False,
+            url_name: Optional[str] = None,
+            include_in_schema: bool = True,
+            openapi_extra: Optional[Dict[str, Any]] = None,
+            cache_timeout: Optional[int] = None,
+            cache: bool = False,
     ) -> Operation:
         if url_name:
             self.url_name = url_name
@@ -321,6 +349,8 @@ class PathView:
             include_in_schema=include_in_schema,
             url_name=url_name,
             openapi_extra=openapi_extra,
+            cache_timeout=cache_timeout,
+            cache=cache,
         )
 
         self.operations.append(operation)
@@ -348,7 +378,7 @@ class PathView:
         return operation.run(request, *a, **kw)
 
     async def _async_view(
-        self, request: HttpRequest, *a: Any, **kw: Any
+            self, request: HttpRequest, *a: Any, **kw: Any
     ) -> HttpResponseBase:
         from asgiref.sync import sync_to_async
 
