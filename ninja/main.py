@@ -15,7 +15,7 @@ from typing import (
 from django.http import HttpRequest, HttpResponse
 from django.urls import URLPattern, URLResolver, reverse
 
-from ninja.constants import NOT_SET, NOT_SET_TYPE
+from ninja.constants import NOT_SET, NOT_SET_TYPE, CACHE_TIMEOUT
 from ninja.errors import ConfigError, set_default_exc_handlers
 from ninja.openapi import get_schema
 from ninja.openapi.schema import OpenAPISchema
@@ -58,6 +58,8 @@ class NinjaAPI:
         renderer: Optional[BaseRenderer] = None,
         parser: Optional[Parser] = None,
         default_router: Optional[Router] = None,
+        cache_timeout: Optional[int] = None,
+        cache: bool = False,
     ):
         """
         Args:
@@ -90,6 +92,9 @@ class NinjaAPI:
 
         self.auth: Optional[Union[Sequence[Callable], NOT_SET_TYPE]]
 
+        self.cache_timeout = cache_timeout if cache_timeout else CACHE_TIMEOUT
+        self.cache = cache
+
         if callable(auth):
             self.auth = [auth]
         else:
@@ -117,6 +122,8 @@ class NinjaAPI:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
+        cache_timeout: Optional[int] = None,
+        cache: bool = False,
     ) -> Callable[[TCallable], TCallable]:
         """
         `GET` operation. See <a href="../operations-parameters">operations
@@ -138,6 +145,8 @@ class NinjaAPI:
             url_name=url_name,
             include_in_schema=include_in_schema,
             openapi_extra=openapi_extra,
+            cache_timeout=cache_timeout,
+            cache=cache,
         )
 
     def post(
@@ -158,6 +167,8 @@ class NinjaAPI:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
+        cache_timeout: Optional[int] = None,
+        cache: bool = False,
     ) -> Callable[[TCallable], TCallable]:
         """
         `POST` operation. See <a href="../operations-parameters">operations
@@ -179,6 +190,8 @@ class NinjaAPI:
             url_name=url_name,
             include_in_schema=include_in_schema,
             openapi_extra=openapi_extra,
+            cache_timeout=cache_timeout,
+            cache=cache,
         )
 
     def delete(
@@ -199,6 +212,8 @@ class NinjaAPI:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
+        cache_timeout: Optional[int] = None,
+        cache: bool = False,
     ) -> Callable[[TCallable], TCallable]:
         """
         `DELETE` operation. See <a href="../operations-parameters">operations
@@ -220,6 +235,8 @@ class NinjaAPI:
             url_name=url_name,
             include_in_schema=include_in_schema,
             openapi_extra=openapi_extra,
+            cache_timeout=cache_timeout,
+            cache=cache,
         )
 
     def patch(
@@ -240,6 +257,8 @@ class NinjaAPI:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
+        cache_timeout: Optional[int] = None,
+        cache: bool = False,
     ) -> Callable[[TCallable], TCallable]:
         """
         `PATCH` operation. See <a href="../operations-parameters">operations
@@ -261,6 +280,8 @@ class NinjaAPI:
             url_name=url_name,
             include_in_schema=include_in_schema,
             openapi_extra=openapi_extra,
+            cache_timeout=cache_timeout,
+            cache=cache,
         )
 
     def put(
@@ -281,6 +302,8 @@ class NinjaAPI:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
+        cache_timeout: Optional[int] = None,
+        cache: bool = False,
     ) -> Callable[[TCallable], TCallable]:
         """
         `PUT` operation. See <a href="../operations-parameters">operations
@@ -302,6 +325,8 @@ class NinjaAPI:
             url_name=url_name,
             include_in_schema=include_in_schema,
             openapi_extra=openapi_extra,
+            cache_timeout=cache_timeout,
+            cache=cache,
         )
 
     def api_operation(
@@ -323,6 +348,8 @@ class NinjaAPI:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
+        cache_timeout: Optional[int] = None,
+        cache: bool = False,
     ) -> Callable[[TCallable], TCallable]:
         return self.default_router.api_operation(
             methods,
@@ -341,6 +368,8 @@ class NinjaAPI:
             url_name=url_name,
             include_in_schema=include_in_schema,
             openapi_extra=openapi_extra,
+            cache_timeout=cache_timeout,
+            cache=cache,
         )
 
     def add_router(
