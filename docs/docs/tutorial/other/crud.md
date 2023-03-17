@@ -49,7 +49,7 @@ def create_employee(request, payload: EmployeeIn):
 ```
 
 !!! tip
-    `Schema` objects have `.dict()` attribute with all the schema attributes represented as a dict.
+    `Schema` objects have `.dict()` method with all the schema attributes represented as a dict.
 
     You can pass it as `**kwargs` to the Django model's `create` method (or model `__init__`).
 
