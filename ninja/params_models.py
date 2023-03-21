@@ -173,14 +173,31 @@ class _MultiPartBodyModel(BodyModel):
     def get_request_data(
         cls, request: HttpRequest, api: "NinjaAPI", path_params: DictStrAny
     ) -> Optional[DictStrAny]:
-        req = _HttpRequest()
-        get_request_data = super(_MultiPartBodyModel, cls).get_request_data
         results: DictStrAny = {}
+        list_fields = getattr(cls, "_collection_fields", [])
+        get_request_data = super(_MultiPartBodyModel, cls).get_request_data
+
+        def parse_data(data: str, annotation: Any = None) -> Any:
+            req = _HttpRequest()
+            if annotation == str and data[0] != '"' and data[-1] != '"':
+                data = f'"{data}"'
+            req.body = data.encode()
+            return get_request_data(req, api, path_params)
+
         for name, annotation in cls._body_params.items():
             if name in request.POST:
-                data = request.POST[name]
-                if annotation == str and data[0] != '"' and data[-1] != '"':
-                    data = f'"{data}"'
-                req.body = data.encode()
-                results[name] = get_request_data(req, api, path_params)
+                if name in list_fields:
+                    datalist = request.POST.getlist(name)
+                    if (
+                        len(datalist) == 1
+                        and datalist[0] != ""
+                        and datalist[0][0] == "["
+                        and datalist[0][-1] == "]"
+                    ):
+                        data = parse_data(datalist[0], annotation)
+                    else:
+                        data = [parse_data(d) for d in datalist]
+                else:
+                    data = parse_data(request.POST[name], annotation)
+                results[name] = data
         return results
