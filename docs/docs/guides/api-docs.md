@@ -23,6 +23,19 @@ NINJA_DOCS_VIEW = 'redoc'
 
 Then you will see the alternative automatic documentation (provided by <a href="https://github.com/Redocly/redoc" target="_blank">Redoc</a>).
 
+## Customize Docs
+use a custom favicon_url
+    
+```Python
+api = NinjaAPI(favicon_url="https://example.com/favicon.ico")
+```
+use a custom logo for (only supported in redoc)
+    
+```Python
+api = NinjaAPI(x_logo_url="https://example.com/logo.png")
+```
+
+
 ## Hiding docs
 
 In case you do not need to display interactive documetation - set `docs_url` argument to `None`

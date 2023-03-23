@@ -48,6 +48,9 @@ class OpenAPISchema(dict):
         self.schemas: DictStrAny = {}
         self.securitySchemes: DictStrAny = {}
         self.all_operation_ids: Set = set()
+        info_kwargs = {}
+        if api.x_logo_url:
+            info_kwargs["x-logo"] = {"url": api.x_logo_url}
         super().__init__(
             [
                 ("openapi", "3.0.2"),
@@ -57,6 +60,7 @@ class OpenAPISchema(dict):
                         "title": api.title,
                         "version": api.version,
                         "description": api.description,
+                        **info_kwargs
                     },
                 ),
                 ("paths", self.get_paths()),
