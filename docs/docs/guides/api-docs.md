@@ -29,7 +29,7 @@ use a custom favicon_url
 ```Python
 api = NinjaAPI(favicon_url="https://example.com/favicon.ico")
 ```
-use a custom logo for (only supported in redoc)
+use a custom logo (only supported in Redoc)
     
 ```Python
 api = NinjaAPI(x_logo_url="https://example.com/logo.png")
