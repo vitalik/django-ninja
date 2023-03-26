@@ -48,6 +48,7 @@ class NinjaAPI:
         title: str = "NinjaAPI",
         version: str = "1.0.0",
         description: str = "",
+        additional_info: Optional[Dict[str, Any]] = {},
         openapi_url: Optional[str] = "/openapi.json",
         docs_url: Optional[str] = "/docs",
         servers: Optional[List[Dict[str, Union[str, Any]]]] = None,
@@ -76,6 +77,7 @@ class NinjaAPI:
         self.title = title
         self.version = version
         self.description = description
+        self.additional_info = additional_info
         self.openapi_url = openapi_url
         self.docs_url = docs_url
         self.servers = servers
