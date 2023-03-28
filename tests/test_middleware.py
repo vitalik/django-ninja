@@ -1,15 +1,14 @@
-import django
+from unittest import mock
+
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import override_settings
+from django.test import RequestFactory, TestCase, override_settings
 
 from ninja import File, NinjaAPI, UploadedFile
+from ninja.middlewares import process_put_patch
 from ninja.testing import TestAsyncClient, TestClient
 
 
-@pytest.mark.skipif(
-    django.VERSION < (3, 1), reason="Async Middleware is available in django 3.1 only"
-)
 @override_settings(MIDDLEWARES=("ninja.middlewares.process_put_patch"))
 def test_sync_patch_put_middleware():
     api = NinjaAPI()
@@ -42,7 +41,6 @@ def test_sync_patch_put_middleware():
     assert response.json() == {"name": "foo.txt", "data": "bar"}
 
 
-@pytest.mark.skipif(django.VERSION < (3, 1), reason="requires django 3.1 or higher")
 @pytest.mark.asyncio
 @override_settings(MIDDLEWARES=("ninja.middlewares.process_put_patch"))
 async def test_async_patch_put_middleware():
@@ -73,14 +71,6 @@ async def test_async_patch_put_middleware():
     response = await client.put("/async/random-file", FILES={"file": file})
     assert response.status_code == 200
     assert response.json() == {"name": "foo.txt", "data": "bar"}
-
-
-from unittest import mock
-
-from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import RequestFactory, TestCase, override_settings
-
-from ninja.middlewares import process_put_patch
 
 
 @override_settings(ROOT_URLCONF="middleware.urls")

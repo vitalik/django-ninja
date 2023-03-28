@@ -19,8 +19,6 @@ sys.exit(1)
 # To be removed once GitHub catches up.
 
 setup(
-    name='django-ninja',
-    install_requires=[
-        'Django>=2.0.13'
-    ],
+    name="django-ninja",
+    install_requires=["Django>=3.2"],
 )

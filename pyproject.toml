@@ -30,8 +30,6 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3 :: Only",
     "Framework :: Django",
-    "Framework :: Django :: 2.2",
-    "Framework :: Django :: 3.0",
     "Framework :: Django :: 3.1",
     "Framework :: Django :: 3.2",
     "Framework :: Django :: 4.0",
@@ -42,9 +40,9 @@ classifiers = [
 ]
 
 requires = [
-    "Django >=2.2",
-    "pydantic >=1.6,<2.0.0",
-    "asgiref >= 3.6.0"
+    "asgiref < 4.0.0",
+    "Django >= 3.2",
+    "pydantic >= 1.6,<2.0.0",
 ]
 description-file = "README.md"
 requires-python = ">=3.7"

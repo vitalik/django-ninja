@@ -1,7 +1,6 @@
 from typing import List
 from unittest.mock import Mock
 
-import django
 import pytest
 from django.contrib.postgres import fields as ps_fields
 from django.db import models
@@ -205,9 +204,6 @@ def test_bigautofield():
     }
 
 
-@pytest.mark.skipif(
-    django.VERSION < (3, 1), reason="json field introduced in django 3.1"
-)
 def test_django_31_fields():
     class ModelNewFields(models.Model):
         jsonfield = models.JSONField()
