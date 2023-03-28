@@ -1,6 +1,8 @@
-from ninja import Form, Schema
-from pydantic.fields import ModelField
 from typing import Generic, TypeVar
+
+from pydantic.fields import ModelField
+
+from ninja import Form, Schema
 
 PydanticField = TypeVar("PydanticField")
 
