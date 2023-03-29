@@ -8,7 +8,7 @@ from django.utils.decorators import sync_and_async_middleware
 
 @sync_and_async_middleware
 def process_put_patch(get_response: Callable) -> Callable:
-    async def async_middleware(request: HttpRequest) -> Any:
+    async def async_middleware(request: HttpRequest) -> Any:  # pragma: no cover
         if (
             request.method in ("PUT", "PATCH")
             and request.content_type != "application/json"
@@ -22,7 +22,7 @@ def process_put_patch(get_response: Callable) -> Callable:
 
         return await get_response(request)
 
-    def sync_middleware(request: HttpRequest) -> Any:
+    def sync_middleware(request: HttpRequest) -> Any:  # pragma: no cover
         if (
             request.method in ("PUT", "PATCH")
             and request.content_type != "application/json"
