@@ -1,8 +1,6 @@
-from typing import Generic, TypeVar
-
-from pydantic.fields import ModelField
-
 from ninja import Form, Schema
+from pydantic.fields import ModelField
+from typing import Generic, TypeVar
 
 PydanticField = TypeVar("PydanticField")
 
@@ -28,5 +26,5 @@ class Item(Schema):
 
 
 @api.post("/items-blank-default")
-def update(request, item: Item = Form(...)):
+def update(request, item: Item=Form(...)):
     return item.dict()
