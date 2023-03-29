@@ -12,21 +12,19 @@ def upload(request, file: UploadedFile = File(...)):
     return {'name': file.name, 'len': len(data)}
 ```
 
-
 `UploadedFile` is an alias to [Django's UploadFile](https://docs.djangoproject.com/en/stable/ref/files/uploads/#django.core.files.uploadedfile.UploadedFile) and has all the methods and attributes to access the uploaded file:
 
- - read()
- - multiple_chunks(chunk_size=None)
- - chunks(chunk_size=None)
- - name
- - size
- - content_type
- - etc.
+-   read()
+-   multiple_chunks(chunk_size=None)
+-   chunks(chunk_size=None)
+-   name
+-   size
+-   content_type
+-   etc.
 
 ## Uploading array of files
 
 To **upload several files** at the same time, just declare a `List` of `UploadFile`:
-
 
 ```Python hl_lines="1 6"
 from typing import List
@@ -75,6 +73,19 @@ def create_user(request, details: UserDetails, file: UploadedFile = File(...)):
 ```
 
 this will expect from client side to send data as multipart/form-data with 2 fields:
-  
-  - details: Json as string
-  - file: file
+
+-   details: Json as string
+-   file: file
+
+# Uploading files via PUT / PATCH method
+
+Note: Django doesn't allow uploading files via [`PATCH` | `PUT` request](https://docs.djangoproject.com/en/4.1/topics/http/file-uploads/#file-uploads). In order to facilitate this feature `django-ninja` ships a middleware to load the files in `PATCH` | `PUT` request.
+
+You can add this middleware to django's settings.py:
+
+```python
+MIDDLEWARES = [
+    "ninja.middlewares.process_put_patch",
+    ...
+]
+```

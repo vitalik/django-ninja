@@ -73,7 +73,6 @@ async def test_async_patch_put_middleware():
     assert response.json() == {"name": "foo.txt", "data": "bar"}
 
 
-@override_settings(ROOT_URLCONF="middleware.urls")
 class TestMiddleware(TestCase):
     def setUp(self) -> None:
         self.factory = RequestFactory()
