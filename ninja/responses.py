@@ -20,7 +20,7 @@ class NinjaJSONEncoder(DjangoJSONEncoder):
     def default(self, o: Any) -> Any:
         if isinstance(o, BaseModel):
             return o.dict()
-        if isinstance(o, (IPv4Address, IPv6Address)):  # ref: #717
+        if isinstance(o, (IPv4Address, IPv6Address)):
             return str(o)
         return super().default(o)
 

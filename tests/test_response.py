@@ -146,7 +146,6 @@ def test_del_cookie():
 
 
 def test_ipv4address_encoding():
-    # ref: https://github.com/vitalik/django-ninja/issues/717
     data = {"ipv4": IPv4Address("127.0.0.1")}
     response = Response(data)
     response_data = json.loads(response.content)
@@ -154,7 +153,6 @@ def test_ipv4address_encoding():
 
 
 def test_ipv6address_encoding():
-    # ref: https://github.com/vitalik/django-ninja/issues/717
     data = {"ipv6": IPv6Address("::1")}
     response = Response(data)
     response_data = json.loads(response.content)
