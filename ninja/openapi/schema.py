@@ -77,7 +77,11 @@ class OpenAPISchema(dict):
                 )  # remove path converters
                 path_methods = self.methods(path_view.operations)
                 if path_methods:
-                    result[full_path] = path_methods
+                    try:
+                        result[full_path].update(path_methods)
+                    except KeyError:
+                        result[full_path] = path_methods
+
         return result
 
     def methods(self, operations: list) -> DictStrAny:
