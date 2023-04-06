@@ -66,7 +66,7 @@ class OpenAPISchema(dict):
         )
 
     def get_paths(self) -> DictStrAny:
-        result = {}
+        result: DictStrAny = {}
         for prefix, router in self.api._routers:
             for path, path_view in router.path_operations.items():
                 full_path = "/".join([i for i in (prefix, path) if i])
