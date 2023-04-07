@@ -846,3 +846,63 @@ def test_renderer_media_type():
             "description": "OK",
         }
     }
+
+
+def test_all_paths_rendered():
+    api = NinjaAPI(renderer=TestRenderer)
+
+    @api.post("/1")
+    def some_name_create(
+        request,
+    ):
+        pass
+
+    @api.get("/1")
+    def some_name_list(
+        request,
+    ):
+        pass
+
+    @api.get("/1/{param}")
+    def some_name_get_one(request, param: int):
+        pass
+
+    @api.delete("/1/{param}")
+    def some_name_delete(request, param: int):
+        pass
+
+    schema = api.get_openapi_schema()
+
+    expected_result = {"/api/1": ["post", "get"], "/api/1/{param}": ["get", "delete"]}
+    result = {p: list(schema["paths"][p].keys()) for p in schema["paths"].keys()}
+    assert expected_result == result
+
+
+def test_all_paths_typed_params_rendered():
+    api = NinjaAPI(renderer=TestRenderer)
+
+    @api.post("/1")
+    def some_name_create(
+        request,
+    ):
+        pass
+
+    @api.get("/1")
+    def some_name_list(
+        request,
+    ):
+        pass
+
+    @api.get("/1/{int:param}")
+    def some_name_get_one(request, param: int):
+        pass
+
+    @api.delete("/1/{str:param}")
+    def some_name_delete(request, param: str):
+        pass
+
+    schema = api.get_openapi_schema()
+
+    expected_result = {"/api/1": ["post", "get"], "/api/1/{param}": ["get", "delete"]}
+    result = {p: list(schema["paths"][p].keys()) for p in schema["paths"].keys()}
+    assert expected_result == result
