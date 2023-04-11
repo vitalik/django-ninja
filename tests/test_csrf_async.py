@@ -17,20 +17,6 @@ class TestAsyncClient(BaseTestAsyncClient):
         return request
 
 
-csrf_OFF = NinjaAPI(urls_namespace="csrf_OFF")
-csrf_ON = NinjaAPI(urls_namespace="csrf_ON", csrf=True)
-
-
-@csrf_OFF.post("/post")
-async def post_off(request):
-    return {"success": True}
-
-
-@csrf_ON.post("/post")
-async def post_on(request):
-    return {"success": True}
-
-
 TOKEN = "1bcdefghij2bcdefghij3bcdefghij4bcdefghij5bcdefghij6bcdefghijABCD"
 COOKIES = {settings.CSRF_COOKIE_NAME: TOKEN}
 
@@ -38,6 +24,12 @@ COOKIES = {settings.CSRF_COOKIE_NAME: TOKEN}
 @pytest.mark.skipif(django.VERSION < (3, 1), reason="requires django 3.1 or higher")
 @pytest.mark.asyncio
 async def test_csrf_off():
+    csrf_OFF = NinjaAPI(urls_namespace="csrf_OFF")
+
+    @csrf_OFF.post("/post")
+    async def post_off(request):
+        return {"success": True}
+
     client = TestAsyncClient(csrf_OFF)
     response = await client.post("/post", COOKIES=COOKIES)
     assert response.status_code == 200
@@ -46,6 +38,12 @@ async def test_csrf_off():
 @pytest.mark.skipif(django.VERSION < (3, 1), reason="requires django 3.1 or higher")
 @pytest.mark.asyncio
 async def test_csrf_on():
+    csrf_ON = NinjaAPI(urls_namespace="csrf_ON", csrf=True)
+
+    @csrf_ON.post("/post")
+    async def post_on(request):
+        return {"success": True}
+
     client = TestAsyncClient(csrf_ON)
 
     response = await client.post("/post", COOKIES=COOKIES)
