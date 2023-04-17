@@ -164,6 +164,8 @@ or using router constructor
 router = Router(auth=BasicAuth())
 ```
 
+This overrides any API level authentication. To allow router operations to not use the API-level authentication by default, you can explicitly set the router's `auth=None`.
+
 
 ## Custom exceptions
 

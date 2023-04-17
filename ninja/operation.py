@@ -113,10 +113,10 @@ class Operation:
     def set_api_instance(self, api: "NinjaAPI", router: "Router") -> None:
         self.api = api
         if self.auth_param == NOT_SET:
-            if api.auth != NOT_SET:
-                self._set_auth(self.api.auth)
             if router.auth != NOT_SET:
                 self._set_auth(router.auth)
+            elif api.auth != NOT_SET:
+                self._set_auth(self.api.auth)
 
         if self.tags is None:
             if router.tags is not None:
