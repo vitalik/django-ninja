@@ -27,9 +27,7 @@ class NinjaClientBase:
     def __init__(self, router_or_app: Union[NinjaAPI, Router]) -> None:
         self.router_or_app = router_or_app
 
-    def get(
-        self, path: str, data: Dict = {}, **request_params: Dict
-    ) -> "NinjaResponse":
+    def get(self, path: str, data: Dict = {}, **request_params: Any) -> "NinjaResponse":
         return self.request("GET", path, data, **request_params)
 
     def post(

@@ -13,7 +13,6 @@ from ninja.constants import NOT_SET
 from ninja.errors import ConfigError
 from ninja.operation import Operation
 from ninja.signature.details import is_collection_type
-from ninja.types import DictStrAny
 
 
 class PaginationBase(ABC):
@@ -36,7 +35,7 @@ class PaginationBase(ABC):
         self,
         queryset: QuerySet,
         pagination: Any,
-        **params: DictStrAny,
+        **params: Any,
     ) -> Any:
         pass  # pragma: no cover
 
@@ -61,7 +60,7 @@ class LimitOffsetPagination(PaginationBase):
         self,
         queryset: QuerySet,
         pagination: Input,
-        **params: DictStrAny,
+        **params: Any,
     ) -> Any:
         offset = pagination.offset
         limit: int = pagination.limit
@@ -85,7 +84,7 @@ class PageNumberPagination(PaginationBase):
         self,
         queryset: QuerySet,
         pagination: Input,
-        **params: DictStrAny,
+        **params: Any,
     ) -> Any:
         offset = (pagination.page - 1) * self.page_size
         return {
@@ -94,9 +93,7 @@ class PageNumberPagination(PaginationBase):
         }  # noqa: E203
 
 
-def paginate(
-    func_or_pgn_class: Any = NOT_SET, **paginator_params: DictStrAny
-) -> Callable:
+def paginate(func_or_pgn_class: Any = NOT_SET, **paginator_params: Any) -> Callable:
     """
     @api.get(...
     @paginage
@@ -135,7 +132,7 @@ def _inject_pagination(
     paginator: PaginationBase = paginator_class(**paginator_params)
 
     @wraps(func)
-    def view_with_pagination(*args: Tuple[Any], **kwargs: DictStrAny) -> Any:
+    def view_with_pagination(*args: Tuple[Any], **kwargs: Any) -> Any:
         pagination_params = kwargs.pop("ninja_pagination")
         if paginator.pass_parameter:
             kwargs[paginator.pass_parameter] = pagination_params
