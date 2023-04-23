@@ -96,13 +96,13 @@ class PageNumberPagination(PaginationBase):
 def paginate(func_or_pgn_class: Any = NOT_SET, **paginator_params: Any) -> Callable:
     """
     @api.get(...
-    @paginage
+    @paginate
     def my_view(request):
 
     or
 
     @api.get(...
-    @paginage(PageNumberPagination)
+    @paginate(PageNumberPagination)
     def my_view(request):
 
     """
