@@ -117,6 +117,7 @@ class NinjaAPI:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
+        renderer: Optional[BaseRenderer] = None,
     ) -> Callable[[TCallable], TCallable]:
         """
         `GET` operation. See <a href="../operations-parameters">operations
@@ -138,6 +139,7 @@ class NinjaAPI:
             url_name=url_name,
             include_in_schema=include_in_schema,
             openapi_extra=openapi_extra,
+            renderer=renderer,
         )
 
     def post(
@@ -405,28 +407,32 @@ class NinjaAPI:
         *,
         status: int = None,
         temporal_response: HttpResponse = None,
+        renderer: Optional[BaseRenderer] = None,
     ) -> HttpResponse:
         if temporal_response:
             status = temporal_response.status_code
         assert status
 
-        content = self.renderer.render(request, data, response_status=status)
+        _renderer = self.renderer
+        if renderer:
+            _renderer = renderer
+        content = _renderer.render(request, data, response_status=status)
 
         if temporal_response:
             response = temporal_response
             response.content = content
         else:
             response = HttpResponse(
-                content, status=status, content_type=self.get_content_type()
+                content, status=status, content_type=self.get_content_type(_renderer)
             )
 
         return response
 
-    def create_temporal_response(self, request: HttpRequest) -> HttpResponse:
-        return HttpResponse("", content_type=self.get_content_type())
+    def create_temporal_response(self, request: HttpRequest, renderer: Optional[BaseRenderer] = None) -> HttpResponse:
+        return HttpResponse("", content_type=self.get_content_type(renderer or self.renderer))
 
-    def get_content_type(self) -> str:
-        return "{}; charset={}".format(self.renderer.media_type, self.renderer.charset)
+    def get_content_type(self, renderer: BaseRenderer) -> str:
+        return "{}; charset={}".format(renderer.media_type, renderer.charset)
 
     def get_openapi_schema(self, path_prefix: Optional[str] = None) -> OpenAPISchema:
         if path_prefix is None:
