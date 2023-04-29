@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from abc import ABC, abstractmethod
 from base64 import b64decode
@@ -24,7 +25,7 @@ class HttpBearer(HttpAuthBase, ABC):
     openapi_scheme: str = "bearer"
     header: str = "Authorization"
 
-    def __call__(self, request: HttpRequest) -> Optional[Any]:
+    async def __call__(self, request: HttpRequest) -> Optional[Any]:
         headers = get_headers(request)
         auth_value = headers.get(self.header)
         if not auth_value:
@@ -36,6 +37,8 @@ class HttpBearer(HttpAuthBase, ABC):
                 logger.error(f"Unexpected auth - '{auth_value}'")
             return None
         token = " ".join(parts[1:])
+        if asyncio.iscoroutinefunction(self.authenticate):
+            return await self.authenticate(request, token)
         return self.authenticate(request, token)
 
     @abstractmethod
