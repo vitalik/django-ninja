@@ -1,4 +1,3 @@
-import asyncio
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -13,6 +12,7 @@ from typing import (
     cast,
 )
 
+from asgiref.sync import sync_to_async
 import django
 import pydantic
 from django.http import HttpRequest, HttpResponse, HttpResponseNotAllowed
@@ -129,11 +129,11 @@ class Operation:
         if auth is not None and auth is not NOT_SET:  # TODO: can it even happen ?
             self.auth_callbacks = isinstance(auth, Sequence) and auth or [auth]
 
-    async def _run_checks(self, request: HttpRequest) -> Optional[HttpResponse]:
+    def _run_checks(self, request: HttpRequest) -> Optional[HttpResponse]:
         "Runs security checks for each operation"
         # auth:
         if self.auth_callbacks:
-            error = await self._run_authentication(request)
+            error = self._run_authentication(request)
             if error:
                 return error
 
@@ -145,13 +145,10 @@ class Operation:
 
         return None
 
-    async def _run_authentication(self, request: HttpRequest) -> Optional[HttpResponse]:
+    def _run_authentication(self, request: HttpRequest) -> Optional[HttpResponse]:
         for callback in self.auth_callbacks:
             try:
-                if asyncio.iscoroutinefunction(callback.authenticate):
-                    result = await callback(request)
-                else:
-                    result = callback(request)
+                result = callback(request)
             except Exception as exc:
                 return self.api.on_exception(request, exc)
 
@@ -260,7 +257,7 @@ class AsyncOperation(Operation):
         self.is_async = True
 
     async def run(self, request: HttpRequest, **kw: Any) -> HttpResponseBase:  # type: ignore
-        error = await self._run_checks(request)
+        error = await sync_to_async(self._run_checks)(request)
         if error:
             return error
         try:
