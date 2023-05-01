@@ -1,3 +1,4 @@
+import asyncio
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -12,7 +13,7 @@ from typing import (
     cast,
 )
 
-from asgiref.sync import sync_to_async
+from asgiref.sync import async_to_sync, sync_to_async
 import django
 import pydantic
 from django.http import HttpRequest, HttpResponse, HttpResponseNotAllowed
@@ -22,6 +23,7 @@ from ninja.constants import NOT_SET
 from ninja.errors import AuthenticationError, ConfigError, ValidationError
 from ninja.params_models import TModels
 from ninja.schema import Schema
+from ninja.security.base import AuthBase
 from ninja.signature import ViewSignature, is_async
 from ninja.types import DictStrAny
 from ninja.utils import check_csrf
@@ -148,7 +150,12 @@ class Operation:
     def _run_authentication(self, request: HttpRequest) -> Optional[HttpResponse]:
         for callback in self.auth_callbacks:
             try:
-                result = callback(request)
+                if asyncio.iscoroutinefunction(callback):
+                    result = async_to_sync(callback)(request)
+                elif isinstance(callback, AuthBase) and asyncio.iscoroutinefunction(callback.authenticate):
+                    result = async_to_sync(callback)(request)
+                else:
+                    result = callback(request)
             except Exception as exc:
                 return self.api.on_exception(request, exc)
 

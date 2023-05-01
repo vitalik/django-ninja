@@ -21,14 +21,30 @@ def callable_auth(request):
     return request.GET.get("auth")
 
 
+async def async_callable_auth(request):
+    return request.GET.get("auth")
+
+
 class KeyQuery(APIKeyQuery):
     def authenticate(self, request, key):
         if key == "keyquerysecret":
             return key
 
 
+class AsyncKeyQuery(APIKeyQuery):
+    async def authenticate(self, request, key):
+        if key == "keyquerysecret":
+            return key
+
+
 class KeyHeader(APIKeyHeader):
     def authenticate(self, request, key):
+        if key == "keyheadersecret":
+            return key
+
+
+class AsyncKeyHeader(APIKeyHeader):
+    async def authenticate(self, request, key):
         if key == "keyheadersecret":
             return key
 
@@ -44,8 +60,21 @@ class KeyHeaderCustomException(APIKeyHeader):
         return key
 
 
+class AsyncKeyHeaderCustomException(APIKeyHeader):
+    async def authenticate(self, request, key):
+        if key != "keyheadersecret":
+            raise CustomException
+        return key
+
+
 class KeyCookie(APIKeyCookie):
     def authenticate(self, request, key):
+        if key == "keycookiersecret":
+            return key
+
+
+class AsyncKeyCookie(APIKeyCookie):
+    async def authenticate(self, request, key):
         if key == "keycookiersecret":
             return key
 
@@ -56,8 +85,20 @@ class BasicAuth(HttpBasicAuth):
             return username
 
 
+class AsyncBasicAuth(HttpBasicAuth):
+    async def authenticate(self, request, username, password):
+        if username == "admin" and password == "secret":
+            return username
+
+
 class BearerAuth(HttpBearer):
     def authenticate(self, request, token):
+        if token == "bearertoken":
+            return token
+
+
+class AsyncBearerAuth(HttpBearer):
+    async def authenticate(self, request, token):
         if token == "bearertoken":
             return token
 
@@ -77,13 +118,20 @@ def on_custom_error(request, exc):
 for path, auth in [
     ("django_auth", django_auth),
     ("django_auth_superuser", django_auth_superuser),
+    ("async_callable", async_callable_auth),
     ("callable", callable_auth),
     ("apikeyquery", KeyQuery()),
+    ("async_apikeyquery", AsyncKeyQuery()),
     ("apikeyheader", KeyHeader()),
+    ("async_apikeyheader", AsyncKeyHeader()),
     ("apikeycookie", KeyCookie()),
+    ("async_apikeycookie", AsyncKeyCookie()),
     ("basic", BasicAuth()),
+    ("async_basic", AsyncBasicAuth()),
     ("bearer", BearerAuth()),
+    ("async_bearer", AsyncBearerAuth()),
     ("customexception", KeyHeaderCustomException()),
+    ("async_customexception", AsyncKeyHeaderCustomException()),
 ]:
     api.get(f"/{path}", auth=auth, operation_id=path)(demo_operation)
 
@@ -124,8 +172,12 @@ BODY_UNAUTHORIZED_DEFAULT = dict(detail="Unauthorized")
         ),
         ("/callable", {}, 401, BODY_UNAUTHORIZED_DEFAULT),
         ("/callable?auth=demo", {}, 200, dict(auth="demo")),
+        ("/async_callable", {}, 401, BODY_UNAUTHORIZED_DEFAULT),
+        ("/async_callable?auth=demo", {}, 200, dict(auth="demo")),
         ("/apikeyquery", {}, 401, BODY_UNAUTHORIZED_DEFAULT),
         ("/apikeyquery?key=keyquerysecret", {}, 200, dict(auth="keyquerysecret")),
+        ("/async_apikeyquery", {}, 401, BODY_UNAUTHORIZED_DEFAULT),
+        ("/async_apikeyquery?key=keyquerysecret", {}, 200, dict(auth="keyquerysecret")),
         ("/apikeyheader", {}, 401, BODY_UNAUTHORIZED_DEFAULT),
         (
             "/apikeyheader",
@@ -133,9 +185,23 @@ BODY_UNAUTHORIZED_DEFAULT = dict(detail="Unauthorized")
             200,
             dict(auth="keyheadersecret"),
         ),
+        ("/async_apikeyheader", {}, 401, BODY_UNAUTHORIZED_DEFAULT),
+        (
+            "/async_apikeyheader",
+            dict(headers={"key": "keyheadersecret"}),
+            200,
+            dict(auth="keyheadersecret"),
+        ),
         ("/apikeycookie", {}, 401, BODY_UNAUTHORIZED_DEFAULT),
         (
             "/apikeycookie",
+            dict(COOKIES={"key": "keycookiersecret"}),
+            200,
+            dict(auth="keycookiersecret"),
+        ),
+        ("/async_apikeycookie", {}, 401, BODY_UNAUTHORIZED_DEFAULT),
+        (
+            "/async_apikeycookie",
             dict(COOKIES={"key": "keycookiersecret"}),
             200,
             dict(auth="keycookiersecret"),
@@ -185,6 +251,13 @@ BODY_UNAUTHORIZED_DEFAULT = dict(detail="Unauthorized")
             200,
             dict(auth="keyheadersecret"),
         ),
+        ("/async_customexception", {}, 401, dict(custom=True)),
+        (
+            "/async_customexception",
+            dict(headers={"key": "keyheadersecret"}),
+            200,
+            dict(auth="keyheadersecret"),
+        ),
     ],
 )
 def test_auth(path, kwargs, expected_code, expected_body, settings):
@@ -199,11 +272,17 @@ def test_schema():
     schema = api.get_openapi_schema()
     assert schema["components"]["securitySchemes"] == {
         "BasicAuth": {"scheme": "basic", "type": "http"},
+        "AsyncBearerAuth": {"scheme": "bearer", "type": "http"},
         "BearerAuth": {"scheme": "bearer", "type": "http"},
+        "AsyncBasicAuth": {"scheme": "basic", "type": "http"},
         "KeyCookie": {"in": "cookie", "name": "key", "type": "apiKey"},
+        "AsyncKeyCookie": {"in": "cookie", "name": "key", "type": "apiKey"},
         "KeyHeader": {"in": "header", "name": "key", "type": "apiKey"},
+        "AsyncKeyHeader": {"in": "header", "name": "key", "type": "apiKey"},
         "KeyHeaderCustomException": {"in": "header", "name": "key", "type": "apiKey"},
+        "AsyncKeyHeaderCustomException": {"in": "header", "name": "key", "type": "apiKey"},
         "KeyQuery": {"in": "query", "name": "key", "type": "apiKey"},
+        "AsyncKeyQuery": {"in": "query", "name": "key", "type": "apiKey"},
         "SessionAuth": {"in": "cookie", "name": "sessionid", "type": "apiKey"},
         "SessionAuthSuperUser": {"in": "cookie", "name": "sessionid", "type": "apiKey"},
     }
