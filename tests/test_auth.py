@@ -118,8 +118,8 @@ def on_custom_error(request, exc):
 for path, auth in [
     ("django_auth", django_auth),
     ("django_auth_superuser", django_auth_superuser),
-    ("async_callable", async_callable_auth),
     ("callable", callable_auth),
+    ("async_callable", async_callable_auth),
     ("apikeyquery", KeyQuery()),
     ("async_apikeyquery", AsyncKeyQuery()),
     ("apikeyheader", KeyHeader()),
