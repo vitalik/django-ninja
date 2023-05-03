@@ -174,4 +174,29 @@ the same way an operation would:
 {!./src/tutorial/authentication/bearer02.py!}
 ```
 
+## Async authentication
+
+**Django Ninja** has basic support for asynchronous authentication. While the default authentication classes are not async-compatible, you can still define your custom asynchronous authentication callables and pass them in using `auth`.
+
+```python hl_lines="3 12"
+from ninja.security import HttpBearer
+
+async def async_auth(request):
+    ...
+
+@api.get("/pets", auth=async_auth)
+def pets(request):
+    ...
+
+# Also
+class AsyncBearerAuth(HttpBearer):
+    def authenticate(self, request, token):
+        ...
+
+@api.get("/pets", auth=AsyncBearerAuth())
+def pets(request):
+    ...
+```
+
+
 See [Handling errors](errors.md) for more information.
