@@ -280,7 +280,11 @@ def test_schema():
         "KeyHeader": {"in": "header", "name": "key", "type": "apiKey"},
         "AsyncKeyHeader": {"in": "header", "name": "key", "type": "apiKey"},
         "KeyHeaderCustomException": {"in": "header", "name": "key", "type": "apiKey"},
-        "AsyncKeyHeaderCustomException": {"in": "header", "name": "key", "type": "apiKey"},
+        "AsyncKeyHeaderCustomException": {
+            "in": "header",
+            "name": "key",
+            "type": "apiKey",
+        },
         "KeyQuery": {"in": "query", "name": "key", "type": "apiKey"},
         "AsyncKeyQuery": {"in": "query", "name": "key", "type": "apiKey"},
         "SessionAuth": {"in": "cookie", "name": "sessionid", "type": "apiKey"},
