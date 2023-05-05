@@ -12,7 +12,7 @@ from typing import (
     cast,
 )
 
-from asgiref.sync import async_to_sync, sync_to_async, iscoroutinefunction
+from asgiref.sync import async_to_sync, sync_to_async
 import django
 import pydantic
 from django.http import HttpRequest, HttpResponse, HttpResponseNotAllowed
@@ -149,9 +149,9 @@ class Operation:
     def _run_authentication(self, request: HttpRequest) -> Optional[HttpResponse]:
         for callback in self.auth_callbacks:
             try:
-                if iscoroutinefunction(callback):
+                if is_async(callback):
                     result = async_to_sync(callback)(request)
-                elif isinstance(callback, AuthBase) and iscoroutinefunction(callback.authenticate):
+                elif isinstance(callback, AuthBase) and is_async(callback.authenticate):
                     result = async_to_sync(callback)(request)
                 else:
                     result = callback(request)
