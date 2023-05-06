@@ -48,7 +48,7 @@ class NinjaAPI:
         title: str = "NinjaAPI",
         version: str = "1.0.0",
         description: str = "",
-        additional_info: Optional[Dict[str, Any]] = {},
+        openapi_info: Optional[Dict[str, Any]] = {},
         openapi_url: Optional[str] = "/openapi.json",
         docs_url: Optional[str] = "/docs",
         servers: Optional[List[Dict[str, Union[str, Any]]]] = None,
@@ -67,6 +67,7 @@ class NinjaAPI:
             version: The API version.
             urls_namespace: The Django URL namespace for the API. If not provided, the namespace will be ``"api-" + self.version``.
             openapi_url: The relative URL to serve the openAPI spec.
+            openapi_info: Additional info for the openAPI spec.
             docs_url: The relative URL to serve the API docs.
             servers: List of target hosts used in openAPI spec.
             csrf: Require a CSRF token for unsafe request types. See <a href="../csrf">CSRF</a> docs.
@@ -77,7 +78,7 @@ class NinjaAPI:
         self.title = title
         self.version = version
         self.description = description
-        self.additional_info = additional_info
+        self.openapi_info = openapi_info
         self.openapi_url = openapi_url
         self.docs_url = docs_url
         self.servers = servers

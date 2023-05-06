@@ -57,7 +57,7 @@ class OpenAPISchema(dict):
                         "title": api.title,
                         "version": api.version,
                         "description": api.description,
-                        **api.additional_info,
+                        **api.openapi_info,
                     },
                 ),
                 ("paths", self.get_paths()),

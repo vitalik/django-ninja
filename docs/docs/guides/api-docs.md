@@ -40,3 +40,17 @@ from django.contrib.admin.views.decorators import staff_member_required
 
 api = NinjaAPI(docs_decorator=staff_member_required)
 ```
+
+## Extending OpenAPI Spec with custom attributes
+
+You can extend OpenAPI spec with custom attributes, for example to add `termsOfService`
+
+```Python
+api = NinjaAPI(
+   openapi_info={
+       "termsOfService": "https://example.com/terms/",
+   },
+   title="Demo API",
+   description="This is a demo API with dynamic OpenAPI info section"
+)
+```
