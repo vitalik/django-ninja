@@ -44,7 +44,7 @@ def test_simple():
         "title": "SampleSchema2",
         "type": "object",
         "properties": {
-            "id": {"title": "Id", "type": "integer"},
+            "id": {"title": "ID", "type": "integer"},
             "firstname": {"title": "Firstname", "type": "string"},
         },
         "required": ["firstname"],
@@ -115,7 +115,7 @@ def test_model_fields_all():
         "title": "SomeSchema",
         "type": "object",
         "properties": {
-            "id": {"title": "Id", "type": "integer"},
+            "id": {"title": "ID", "type": "integer"},
             "field1": {"title": "Field1", "type": "string"},
             "field2": {"title": "Field2", "type": "string"},
         },

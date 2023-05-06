@@ -221,4 +221,4 @@ all_blogs = [blog async for blog in Blog.objects.all()]
 ...
 ```
 
-Learn more about the async ORM interface in the<a href="https://docs.djangoproject.com/en/4.1/releases/4.1/#asynchronous-orm-interface" target="_blank">official Django docs</a>.
+Learn more about the async ORM interface in the <a href="https://docs.djangoproject.com/en/4.1/releases/4.1/#asynchronous-orm-interface" target="_blank">official Django docs</a>.

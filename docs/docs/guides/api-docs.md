@@ -9,7 +9,7 @@ You will see the automatic, interactive API documentation (provided by the <a hr
 
 ## CDN vs staticfiles
 
-You are not required to put django ninja to `INSTALLED_APPS`. In that case the interactive UI is hosted by CDN. 
+You are not required to put django ninja to `INSTALLED_APPS`. In that case the interactive UI is hosted by CDN.
 
 To host docs (Js/css) from your own server - just put "ninja" to INSTALLED_APPS - in that case standard django staticfiles mechanics will host it.
 
@@ -53,4 +53,23 @@ api = NinjaAPI(
    title="Demo API",
    description="This is a demo API with dynamic OpenAPI info section"
 )
+```
+
+## Resolving the doc's url
+
+The url for the api's documentation view can be reversed by referencing the view's name `openapi-view`.
+
+In Python code, for example:
+```Python
+from django.urls import reverse
+
+reverse('api-1.0.0:openapi-view')
+
+```
+
+In a Django template, for example:
+```Html
+<a href="{% url 'api-1.0.0:openapi-view' %}">API Docs</a>
+
+<a href="/api/docs">API Docs</a>
 ```
