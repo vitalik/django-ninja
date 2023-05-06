@@ -5,7 +5,7 @@ class TestOpenAPIInfo:
     def test_openapi_info_defined(self):
         openapi_info = {
             "termsOfService": "https://example.com/terms/",
-            "title": "Test API"
+            "title": "Test API",
         }
         api = NinjaAPI(openapi_info=openapi_info, version="1.0.0")
         schema = api.get_openapi_schema()
