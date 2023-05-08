@@ -33,7 +33,7 @@ def test_inheritance():
         "title": "ChildModel",
         "type": "object",
         "properties": {
-            "id": {"title": "Id", "type": "integer"},
+            "id": {"title": "ID", "type": "integer"},
             "parent_field": {"title": "Parent Field", "type": "string"},
             "parentmodel_ptr_id": {"title": "Parentmodel Ptr", "type": "integer"},
             "child_field": {"title": "Child Field", "type": "string"},
@@ -87,7 +87,7 @@ def test_all_fields():
         "title": "AllFields",
         "type": "object",
         "properties": {
-            "id": {"title": "Id", "type": "integer"},
+            "id": {"title": "ID", "type": "integer"},
             "bigintegerfield": {"title": "Bigintegerfield", "type": "integer"},
             "binaryfield": {
                 "title": "Binaryfield",
@@ -222,7 +222,7 @@ def test_django_31_fields():
         "title": "ModelNewFields",
         "type": "object",
         "properties": {
-            "id": {"title": "Id", "type": "integer"},
+            "id": {"title": "ID", "type": "integer"},
             "jsonfield": {"title": "Jsonfield", "type": "object"},
             "positivebigintegerfield": {
                 "title": "Positivebigintegerfield",
@@ -261,7 +261,7 @@ def test_relational():
         "title": "TestSchema",
         "type": "object",
         "properties": {
-            "id": {"title": "Id", "type": "integer"},
+            "id": {"title": "ID", "type": "integer"},
             "onetoonefield_id": {"title": "Onetoonefield", "type": "integer"},
             "foreignkey_id": {"title": "Foreignkey", "type": "integer"},
             "manytomanyfield": {
@@ -279,7 +279,7 @@ def test_relational():
         "title": "TestSchemaDeep",
         "type": "object",
         "properties": {
-            "id": {"title": "Id", "type": "integer"},
+            "id": {"title": "ID", "type": "integer"},
             "onetoonefield": {
                 "title": "Onetoonefield",
                 "allOf": [{"$ref": "#/definitions/Related"}],
@@ -300,7 +300,7 @@ def test_relational():
                 "title": "Related",
                 "type": "object",
                 "properties": {
-                    "id": {"title": "Id", "type": "integer"},
+                    "id": {"title": "ID", "type": "integer"},
                     "charfield": {"title": "Charfield", "type": "string"},
                 },
                 "required": ["charfield"],
@@ -323,7 +323,7 @@ def test_default():
         "title": "MyModel",
         "type": "object",
         "properties": {
-            "id": {"title": "Id", "type": "integer"},
+            "id": {"title": "ID", "type": "integer"},
             "default_static": {
                 "title": "Default Static",
                 "default": "hello",
@@ -373,7 +373,7 @@ def test_fields_exclude():
         "title": "SampleModel3",
         "type": "object",
         "properties": {
-            "id": {"title": "Id", "type": "integer"},
+            "id": {"title": "ID", "type": "integer"},
             "f1": {"title": "F1", "type": "string"},
             "f2": {"title": "F2", "type": "string"},
         },
@@ -421,7 +421,7 @@ def test_with_relations():
         "title": "Category",
         "type": "object",
         "properties": {
-            "id": {"title": "Id", "type": "integer"},
+            "id": {"title": "ID", "type": "integer"},
             "title": {"title": "Title", "maxLength": 100, "type": "string"},
         },
         "required": ["title"],
@@ -475,7 +475,7 @@ def test_custom_fields():
         "title": "SmallModel",
         "type": "object",
         "properties": {
-            "id": {"title": "Id", "type": "integer"},
+            "id": {"title": "ID", "type": "integer"},
             "f1": {"title": "F1", "type": "string"},
             "f2": {"title": "F2", "type": "string"},
             "custom": {"title": "Custom", "type": "integer"},
@@ -490,7 +490,7 @@ def test_custom_fields():
         "title": "SmallModel2",
         "type": "object",
         "properties": {
-            "id": {"title": "Id", "type": "integer"},
+            "id": {"title": "ID", "type": "integer"},
             "f1": {"title": "F1", "type": "integer"},
             "f2": {"title": "F2", "type": "string"},
         },

@@ -15,12 +15,20 @@ from uuid import UUID
 
 from django.db.models import ManyToManyField
 from django.db.models.fields import Field
+from django.utils.functional import keep_lazy_text
 from pydantic import IPvAnyAddress
 from pydantic.fields import FieldInfo, Undefined
 
 from ninja.openapi.schema import OpenAPISchema
 
 __all__ = ["create_m2m_link_type", "get_schema_field", "get_related_field_schema"]
+
+
+@keep_lazy_text
+def title_if_lower(s: str) -> str:
+    if s == s.lower():
+        return s.title()
+    return s
 
 
 class AnyObject:
@@ -141,7 +149,7 @@ def get_schema_field(field: Field, *, depth: int = 0) -> Tuple:
         default = Undefined
 
     description = field.help_text
-    title = field.verbose_name.title()
+    title = title_if_lower(field.verbose_name)
 
     return (
         python_type,
@@ -173,6 +181,6 @@ def get_related_field_schema(field: Field, *, depth: int) -> Tuple[OpenAPISchema
         FieldInfo(
             default=default,
             description=field.help_text,
-            title=field.verbose_name.title(),
+            title=title_if_lower(field.verbose_name),
         ),
     )
