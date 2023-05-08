@@ -58,7 +58,7 @@ class NinjaAPI:
         renderer: Optional[BaseRenderer] = None,
         parser: Optional[Parser] = None,
         default_router: Optional[Router] = None,
-        openapi_info: Optional[Dict[str, Any]] = {},
+        openapi_info: Optional[Dict[str, Any]] = None,
     ):
         """
         Args:
@@ -78,7 +78,6 @@ class NinjaAPI:
         self.title = title
         self.version = version
         self.description = description
-        self.openapi_info = openapi_info
         self.openapi_url = openapi_url
         self.docs_url = docs_url
         self.servers = servers
@@ -87,6 +86,7 @@ class NinjaAPI:
         self.csrf = csrf
         self.renderer = renderer or JSONRenderer()
         self.parser = parser or Parser()
+        self.openapi_info = openapi_info or {}
 
         self._exception_handlers: Dict[Exc, ExcHandler] = {}
         self.set_default_exception_handlers()
