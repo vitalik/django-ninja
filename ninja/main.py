@@ -48,7 +48,6 @@ class NinjaAPI:
         title: str = "NinjaAPI",
         version: str = "1.0.0",
         description: str = "",
-        openapi_info: Optional[Dict[str, Any]] = {},
         openapi_url: Optional[str] = "/openapi.json",
         docs_url: Optional[str] = "/docs",
         servers: Optional[List[Dict[str, Union[str, Any]]]] = None,
@@ -59,6 +58,7 @@ class NinjaAPI:
         renderer: Optional[BaseRenderer] = None,
         parser: Optional[Parser] = None,
         default_router: Optional[Router] = None,
+        openapi_info: Optional[Dict[str, Any]] = {},
     ):
         """
         Args:
