@@ -451,7 +451,7 @@ class NinjaAPI:
         assert issubclass(exc_class, Exception)
         self._exception_handlers[exc_class] = handler
 
-    def exception_handler(self, exc_class: Type[Exception]) -> Callable:
+    def exception_handler(self, exc_class: Type[Exception]) -> Callable[..., Any]:
         def decorator(func: Callable) -> Callable:
             self.add_exception_handler(exc_class, func)
             return func
