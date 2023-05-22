@@ -19,6 +19,6 @@ class UploadedFile(DjangoUploadedFile):
 
     @classmethod
     def __modify_schema__(
-        cls, field_schema: Dict[str, Any], field: Optional[ModelField]
+        cls, field_schema: Dict[str, Any], field: Optional[ModelField] = None
     ) -> None:
         field_schema.update(type="string", format="binary")
