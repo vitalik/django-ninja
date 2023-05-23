@@ -43,6 +43,8 @@ class Router:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
+        cache_timeout: Optional[int] = None,
+        cache: bool = False,
     ) -> Callable[[TCallable], TCallable]:
         return self.api_operation(
             ["GET"],
@@ -61,6 +63,8 @@ class Router:
             url_name=url_name,
             include_in_schema=include_in_schema,
             openapi_extra=openapi_extra,
+            cache_timeout=cache_timeout,
+            cache=cache,
         )
 
     def post(
@@ -81,6 +85,8 @@ class Router:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
+        cache_timeout: Optional[int] = None,
+        cache: bool = False,
     ) -> Callable[[TCallable], TCallable]:
         return self.api_operation(
             ["POST"],
@@ -99,6 +105,8 @@ class Router:
             url_name=url_name,
             include_in_schema=include_in_schema,
             openapi_extra=openapi_extra,
+            cache_timeout=cache_timeout,
+            cache=cache,
         )
 
     def delete(
@@ -119,6 +127,8 @@ class Router:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
+        cache_timeout: Optional[int] = None,
+        cache: bool = False,
     ) -> Callable[[TCallable], TCallable]:
         return self.api_operation(
             ["DELETE"],
@@ -137,6 +147,8 @@ class Router:
             url_name=url_name,
             include_in_schema=include_in_schema,
             openapi_extra=openapi_extra,
+            cache_timeout=cache_timeout,
+            cache=cache,
         )
 
     def patch(
@@ -157,6 +169,8 @@ class Router:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
+        cache_timeout: Optional[int] = None,
+        cache: bool = False,
     ) -> Callable[[TCallable], TCallable]:
         return self.api_operation(
             ["PATCH"],
@@ -175,6 +189,8 @@ class Router:
             url_name=url_name,
             include_in_schema=include_in_schema,
             openapi_extra=openapi_extra,
+            cache_timeout=cache_timeout,
+            cache=cache,
         )
 
     def put(
@@ -195,6 +211,8 @@ class Router:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
+        cache_timeout: Optional[int] = None,
+        cache: bool = False,
     ) -> Callable[[TCallable], TCallable]:
         return self.api_operation(
             ["PUT"],
@@ -213,6 +231,8 @@ class Router:
             url_name=url_name,
             include_in_schema=include_in_schema,
             openapi_extra=openapi_extra,
+            cache_timeout=cache_timeout,
+            cache=cache,
         )
 
     def api_operation(
@@ -234,6 +254,8 @@ class Router:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
+        cache_timeout: Optional[int] = None,
+        cache: bool = False,
     ) -> Callable[[TCallable], TCallable]:
         def decorator(view_func: TCallable) -> TCallable:
             self.add_api_operation(
@@ -254,6 +276,8 @@ class Router:
                 url_name=url_name,
                 include_in_schema=include_in_schema,
                 openapi_extra=openapi_extra,
+                cache_timeout=cache_timeout,
+                cache=cache,
             )
             return view_func
 
@@ -279,6 +303,8 @@ class Router:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
+        cache_timeout: Optional[int] = None,
+        cache: bool = False,
     ) -> None:
         if path not in self.path_operations:
             path_view = PathView()
@@ -303,6 +329,8 @@ class Router:
             url_name=url_name,
             include_in_schema=include_in_schema,
             openapi_extra=openapi_extra,
+            cache_timeout=cache_timeout,
+            cache=cache,
         )
         if self.api:
             path_view.set_api_instance(self.api, self)
