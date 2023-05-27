@@ -23,7 +23,7 @@ from ninja.schema import Schema
 
 __all__ = ["SchemaFactory", "factory", "create_schema"]
 
-SchemaKey = Tuple[Type[Model], str, int, str, str, str]
+SchemaKey = Tuple[Type[Model], str, int, str, str, str, str]
 
 
 class SchemaFactory:
