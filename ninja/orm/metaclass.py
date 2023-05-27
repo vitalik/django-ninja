@@ -35,6 +35,7 @@ class ModelSchemaMetaclass(ResolverMetaclass):
 
                 fields = getattr(config, "model_fields", None)
                 exclude = getattr(config, "model_exclude", None)
+                optional_fields = getattr(config, "model_fields_optional", None)
 
                 if not fields and not exclude:
                     raise ConfigError(
@@ -64,6 +65,7 @@ class ModelSchemaMetaclass(ResolverMetaclass):
                     name=name,
                     fields=fields,
                     exclude=exclude,
+                    optional_fields=optional_fields,
                     custom_fields=custom_fields,
                     base_class=cls,
                 )

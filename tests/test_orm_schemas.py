@@ -540,3 +540,24 @@ def test_duplicate_schema_names():
             },
         },
     }
+
+
+def test_optional_fields():
+    class SomeReqFieldModel(models.Model):
+        some_field = models.CharField()
+        other_field = models.IntegerField()
+        optional = models.IntegerField(null=True, blank=True)
+
+        class Meta:
+            app_label = "tests"
+
+    Schema = create_schema(SomeReqFieldModel)
+    assert Schema.schema()["required"] == ["some_field", "other_field"]
+
+    Schema = create_schema(SomeReqFieldModel, optional_fields=["some_field"])
+    assert Schema.schema()["required"] == ["other_field"]
+
+    Schema = create_schema(
+        SomeReqFieldModel, optional_fields=["some_field", "other_field", "optional"]
+    )
+    assert Schema.schema().get("required") is None

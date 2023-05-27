@@ -97,6 +97,33 @@ def test_config():
                 model = Category
 
 
+def test_optional():
+    class OptModel(models.Model):
+        title = models.CharField()
+        other = models.CharField(null=True)
+
+        class Meta:
+            app_label = "tests"
+
+    class OptSchema(ModelSchema):
+        class Config:
+            model = OptModel
+            model_fields = "__all__"
+            model_fields_optional = ["title"]
+
+    class OptSchema2(ModelSchema):
+        class Config:
+            model = OptModel
+            model_fields = "__all__"
+            model_fields_optional = "__all__"
+
+    print(OptSchema.schema())
+    assert OptSchema.schema().get("required") is None
+
+    print(OptSchema2.schema())
+    assert OptSchema2.schema().get("required") is None
+
+
 def test_model_fields_all():
     class SomeModel(models.Model):
         field1 = models.CharField()

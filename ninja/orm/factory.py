@@ -39,6 +39,7 @@ class SchemaFactory:
         depth: int = 0,
         fields: Optional[List[str]] = None,
         exclude: Optional[List[str]] = None,
+        optional_fields: Optional[List[str]] = None,
         custom_fields: Optional[List[Tuple[str, Any, Any]]] = None,
         base_class: Type[Schema] = Schema,
     ) -> Type[Schema]:
@@ -47,7 +48,9 @@ class SchemaFactory:
         if fields and exclude:
             raise ConfigError("Only one of 'fields' or 'exclude' should be set.")
 
-        key = self.get_key(model, name, depth, fields, exclude, custom_fields)
+        key = self.get_key(
+            model, name, depth, fields, exclude, optional_fields, custom_fields
+        )
         if key in self.schemas:
             return self.schemas[key]
 
@@ -55,6 +58,15 @@ class SchemaFactory:
         for fld in self._selected_model_fields(model, fields, exclude):
             python_type, field_info = get_schema_field(fld, depth=depth)
             definitions[fld.name] = (python_type, field_info)
+
+        if optional_fields:
+            if optional_fields == "__all__":
+                optional_fields = list(definitions.keys())
+            for fld_name in optional_fields:
+                python_type, field_info = definitions[fld_name]
+
+                if field_info.default == ...:  # if field is required (... = Ellipsis)
+                    field_info.default = None
 
         if custom_fields:
             for fld_name, python_type, field_info in custom_fields:
@@ -82,11 +94,20 @@ class SchemaFactory:
         depth: int,
         fields: Union[str, List[str], None],
         exclude: Optional[List[str]],
+        optional_fields: Optional[Union[List[str], str]],
         custom_fields: Optional[List[Tuple[str, str, Any]]],
     ) -> SchemaKey:
         "returns a hashable value for all given parameters"
         # TODO: must be a test that compares all kwargs from init to get_key
-        return model, name, depth, str(fields), str(exclude), str(custom_fields)
+        return (
+            model,
+            name,
+            depth,
+            str(fields),
+            str(exclude),
+            str(optional_fields),
+            str(custom_fields),
+        )
 
     def _get_unique_name(self, name: str) -> str:
         "Returns a unique name by adding counter suffix"
