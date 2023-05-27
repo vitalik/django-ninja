@@ -388,7 +388,7 @@ class PathView:
             return self._not_allowed()
         if operation.is_async:
             return await cast(AsyncOperation, operation).run(request, *a, **kw)
-        return await sync_to_async(operation.run)(request, *a, **kw)  # type: ignore
+        return await sync_to_async(operation.run)(request, *a, **kw)
 
     def _find_operation(self, request: HttpRequest) -> Optional[Operation]:
         for op in self.operations:
