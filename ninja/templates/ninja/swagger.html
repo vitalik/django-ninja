@@ -6,28 +6,15 @@
     <link rel="shortcut icon" href="{% static 'ninja/favicon.png' %}">
     <title>{{ api.title }}</title>
 </head>
-<body>
-    <div id="swagger-ui">
-    </div>
+<body
+    data-openapi-url="{{ openapi_json_url }}"
+    data-csrf-token="{% if api.csrf %}{{ csrf_token }}{% endif %}"
+    data-api-csrf="{{ api.csrf|default:"" }}">
+    
+    <div id="swagger-ui"></div>
 
     <script src="{% static 'ninja/swagger-ui-bundle.js' %}"></script>
-    <script>
-        const ui = SwaggerUIBundle({
-            url: '{{ openapi_json_url }}',
-            dom_id: '#swagger-ui',
-            presets: [
-            SwaggerUIBundle.presets.apis,
-            SwaggerUIBundle.SwaggerUIStandalonePreset
-            ],
-            layout: "BaseLayout",
-        {% if api.csrf and csrf_token %}
-            requestInterceptor: (req) => {
-				req.headers['X-CSRFToken'] = "{{csrf_token}}"
-				return req;
-			},
-        {% endif %}
-            deepLinking: true
-        })
-    </script>
+    <script src="{% static 'ninja/swagger-bundle-handler.js' %}"></script>
+
 </body>
 </html>
