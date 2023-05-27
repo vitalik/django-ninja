@@ -34,7 +34,7 @@ Now, when you click the **Authorize** button, you will get a prompt to input you
 When you do test calls, the Authorization header will be passed for every request.
 
 
-## Global authentication 
+## Global authentication
 
 In case you need to secure **all** methods of your API, you can pass the `auth` argument to the `NinjaAPI` constructor:
 
@@ -173,5 +173,21 @@ the same way an operation would:
 ```Python hl_lines="1 4"
 {!./src/tutorial/authentication/bearer02.py!}
 ```
+
+
+## Async authentication
+
+**Django Ninja** has basic support for asynchronous authentication. While the default authentication classes are not async-compatible, you can still define your custom asynchronous authentication callables and pass them in using `auth`.
+
+```python
+async def async_auth(request):
+    ...
+
+
+@api.get("/pets", auth=async_auth)
+def pets(request):
+    ...
+```
+
 
 See [Handling errors](errors.md) for more information.
