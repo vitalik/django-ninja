@@ -48,6 +48,7 @@ class OpenAPISchema(dict):
         self.schemas: DictStrAny = {}
         self.securitySchemes: DictStrAny = {}
         self.all_operation_ids: Set = set()
+        extra_info = api.openapi_extra.get("info", {})
         super().__init__(
             [
                 ("openapi", "3.0.2"),
@@ -57,7 +58,7 @@ class OpenAPISchema(dict):
                         "title": api.title,
                         "version": api.version,
                         "description": api.description,
-                        **api.openapi_info,
+                        **extra_info,
                     },
                 ),
                 ("paths", self.get_paths()),
@@ -65,6 +66,9 @@ class OpenAPISchema(dict):
                 ("servers", api.servers),
             ]
         )
+        for k, v in api.openapi_extra.items():
+            if k not in self:
+                self[k] = v
 
     def get_paths(self) -> DictStrAny:
         result: DictStrAny = {}

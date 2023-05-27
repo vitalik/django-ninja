@@ -47,8 +47,12 @@ You can extend OpenAPI spec with custom attributes, for example to add `termsOfS
 
 ```Python
 api = NinjaAPI(
-   openapi_info={
-       "termsOfService": "https://example.com/terms/",
+   openapi_extra={
+            "info": {
+                "termsOfService": "https://example.com/terms/",
+            }
+        }
+       
    },
    title="Demo API",
    description="This is a demo API with dynamic OpenAPI info section"
