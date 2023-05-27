@@ -41,6 +41,20 @@ from django.contrib.admin.views.decorators import staff_member_required
 api = NinjaAPI(docs_decorator=staff_member_required)
 ```
 
+## Extending OpenAPI Spec with custom attributes
+
+You can extend OpenAPI spec with custom attributes, for example to add `termsOfService`
+
+```Python
+api = NinjaAPI(
+   openapi_info={
+       "termsOfService": "https://example.com/terms/",
+   },
+   title="Demo API",
+   description="This is a demo API with dynamic OpenAPI info section"
+)
+```
+
 ## Resolving the doc's url
 
 The url for the api's documentation view can be reversed by referencing the view's name `openapi-view`.
@@ -58,5 +72,5 @@ In a Django template, for example:
 ```Html
 <a href="{% url 'api-1.0.0:openapi-view' %}">API Docs</a>
 
->>> <a href="/api/docs">API Docs</a>
+<a href="/api/docs">API Docs</a>
 ```
