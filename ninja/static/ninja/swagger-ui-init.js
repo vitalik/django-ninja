@@ -12,8 +12,8 @@ SwaggerUIBundle({
     requestInterceptor: (req) => {
         if (swaggerUi.dataset.apiCsrf && swaggerUi.dataset.csrfToken) {
             req.headers['X-CSRFToken'] = swaggerUi.dataset.csrfToken
-            return req;
         }
+        return req;
     },
     deepLinking: true
 })
