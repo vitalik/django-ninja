@@ -15,7 +15,6 @@ from uuid import UUID
 
 from django.db.models import ManyToManyField
 from django.db.models.fields import Field
-from django.utils.functional import keep_lazy_text
 from pydantic import IPvAnyAddress
 from pydantic.fields import FieldInfo, Undefined
 
@@ -24,7 +23,9 @@ from ninja.openapi.schema import OpenAPISchema
 __all__ = ["create_m2m_link_type", "get_schema_field", "get_related_field_schema"]
 
 
-@keep_lazy_text
+# keep_lazy seems not needed as .title forces translation anyway
+# https://github.com/vitalik/django-ninja/issues/774
+# @keep_lazy_text
 def title_if_lower(s: str) -> str:
     if s == s.lower():
         return s.title()
