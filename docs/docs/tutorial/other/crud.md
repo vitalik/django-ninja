@@ -16,8 +16,9 @@ class Department(models.Model):
 class Employee(models.Model):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
-    department = models.ForeignKey(Department)
+    department = models.ForeignKey(Department, on_delete=models.CASCADE)
     birthdate = models.DateField(null=True, blank=True)
+    cv = models.FileField(null=True, blank=True)
 ```
 
 Now let's create CRUD operations for the Employee model.
@@ -45,13 +46,39 @@ This schema will be our input payload:
 def create_employee(request, payload: EmployeeIn):
     employee = Employee.objects.create(**payload.dict())
     return {"id": employee.id}
-
 ```
 
 !!! tip
-    `Schema` objects have `.dict()` attribute with all the schema attributes represented as a dict.
+    `Schema` objects have `.dict()` method with all the schema attributes represented as a dict.
 
     You can pass it as `**kwargs` to the Django model's `create` method (or model `__init__`).
+
+See the recipe below for handling the file upload (when using Django models):
+
+```Python hl_lines="2"
+from ninja import UploadedFile, File
+
+@api.post("/employees")
+def create_employee(request, payload: EmployeeIn, cv: UploadedFile = File(...)):
+    payload_dict = payload.dict()
+    employee = Employee(**payload_dict)
+    employee.cv.save(cv.name, cv) # will save model instance as well
+    return {"id": employee.id}
+```
+
+If you just need to handle a file upload:
+
+```Python hl_lines="2"
+from django.core.files.storage import FileSystemStorage
+from ninja import UploadedFile, File
+
+STORAGE = FileSystemStorage()
+
+@api.post("/upload")
+def create_upload(request, cv: UploadedFile = File(...)):
+    filename = STORAGE.save(cv.name, cv)
+    # Handle things further
+```
 
 ## Retrieve
 

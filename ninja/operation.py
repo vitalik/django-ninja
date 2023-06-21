@@ -23,7 +23,7 @@ from ninja.params_models import TModels
 from ninja.schema import Schema
 from ninja.signature import ViewSignature, is_async
 from ninja.types import DictStrAny
-from ninja.utils import check_csrf
+from ninja.utils import check_csrf, is_async_callable
 
 if TYPE_CHECKING:
     from ninja import NinjaAPI, Router  # pragma: no cover
@@ -50,12 +50,16 @@ class Operation:
         exclude_defaults: bool = False,
         exclude_none: bool = False,
         include_in_schema: bool = True,
+        url_name: str = None,
+        openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> None:
         self.is_async = False
         self.path: str = path
         self.methods: List[str] = methods
         self.view_func: Callable = view_func
         self.api: "NinjaAPI" = cast("NinjaAPI", None)
+        if url_name is not None:
+            self.url_name = url_name
 
         self.auth_param: Optional[Union[Sequence[Callable], Callable, object]] = auth
         self.auth_callbacks: Sequence[Callable] = []
@@ -78,6 +82,7 @@ class Operation:
         self.tags = tags
         self.deprecated = deprecated
         self.include_in_schema = include_in_schema
+        self.openapi_extra = openapi_extra
 
         # Exporting models params
         self.by_alias = by_alias
@@ -177,7 +182,8 @@ class Operation:
             response_model = self.response_models[Ellipsis]
         else:
             raise ConfigError(
-                f"Schema for status {status} is not set in response {self.response_models.keys()}"
+                f"Schema for status {status} is not set in response"
+                f" {self.response_models.keys()}"
             )
 
         temporal_response.status_code = status
@@ -250,7 +256,7 @@ class AsyncOperation(Operation):
         self.is_async = True
 
     async def run(self, request: HttpRequest, **kw: Any) -> HttpResponseBase:  # type: ignore
-        error = self._run_checks(request)
+        error = await self._run_checks(request)
         if error:
             return error
         try:
@@ -260,6 +266,37 @@ class AsyncOperation(Operation):
             return self._result_to_response(request, result, temporal_response)
         except Exception as e:
             return self.api.on_exception(request, e)
+
+    async def _run_checks(self, request: HttpRequest) -> Optional[HttpResponse]:  # type: ignore
+        "Runs security checks for each operation"
+        # auth:
+        if self.auth_callbacks:
+            error = await self._run_authentication(request)
+            if error:
+                return error
+
+        # csrf:
+        if self.api.csrf:
+            error = check_csrf(request, self.view_func)
+            if error:
+                return error
+
+        return None
+
+    async def _run_authentication(self, request: HttpRequest) -> Optional[HttpResponse]:  # type: ignore
+        for callback in self.auth_callbacks:
+            try:
+                if is_async_callable(callback):
+                    result = await callback(request)
+                else:
+                    result = callback(request)
+            except Exception as exc:
+                return self.api.on_exception(request, exc)
+
+            if result:
+                request.auth = result  # type: ignore
+                return None
+        return self.api.on_exception(request, AuthenticationError())
 
 
 class PathView:
@@ -287,6 +324,7 @@ class PathView:
         exclude_none: bool = False,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Operation:
         if url_name:
             self.url_name = url_name
@@ -312,6 +350,8 @@ class PathView:
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
             include_in_schema=include_in_schema,
+            url_name=url_name,
+            openapi_extra=openapi_extra,
         )
 
         self.operations.append(operation)
@@ -348,7 +388,7 @@ class PathView:
             return self._not_allowed()
         if operation.is_async:
             return await cast(AsyncOperation, operation).run(request, *a, **kw)
-        return await sync_to_async(operation.run)(request, *a, **kw)  # type: ignore
+        return await sync_to_async(operation.run)(request, *a, **kw)
 
     def _find_operation(self, request: HttpRequest) -> Optional[Operation]:
         for op in self.operations:

@@ -50,6 +50,7 @@ class NinjaAPI:
         description: str = "",
         openapi_url: Optional[str] = "/openapi.json",
         docs_url: Optional[str] = "/docs",
+        servers: Optional[List[Dict[str, Union[str, Any]]]] = None,
         docs_decorator: Optional[Callable[[TCallable], TCallable]] = None,
         urls_namespace: Optional[str] = None,
         csrf: bool = False,
@@ -57,6 +58,7 @@ class NinjaAPI:
         renderer: Optional[BaseRenderer] = None,
         parser: Optional[Parser] = None,
         default_router: Optional[Router] = None,
+        openapi_extra: Optional[Dict[str, Any]] = None,
     ):
         """
         Args:
@@ -65,7 +67,9 @@ class NinjaAPI:
             version: The API version.
             urls_namespace: The Django URL namespace for the API. If not provided, the namespace will be ``"api-" + self.version``.
             openapi_url: The relative URL to serve the openAPI spec.
+            openapi_extra: Additional attributes for the openAPI spec.
             docs_url: The relative URL to serve the API docs.
+            servers: List of target hosts used in openAPI spec.
             csrf: Require a CSRF token for unsafe request types. See <a href="../csrf">CSRF</a> docs.
             auth (Callable | Sequence[Callable] | NOT_SET | None): Authentication class
             renderer: Default response renderer
@@ -76,11 +80,13 @@ class NinjaAPI:
         self.description = description
         self.openapi_url = openapi_url
         self.docs_url = docs_url
+        self.servers = servers
         self.docs_decorator = docs_decorator
         self.urls_namespace = urls_namespace or f"api-{self.version}"
         self.csrf = csrf
         self.renderer = renderer or JSONRenderer()
         self.parser = parser or Parser()
+        self.openapi_extra = openapi_extra or {}
 
         self._exception_handlers: Dict[Exc, ExcHandler] = {}
         self.set_default_exception_handlers()
@@ -113,6 +119,7 @@ class NinjaAPI:
         exclude_none: bool = False,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         """
         `GET` operation. See <a href="../operations-parameters">operations
@@ -133,6 +140,7 @@ class NinjaAPI:
             exclude_none=exclude_none,
             url_name=url_name,
             include_in_schema=include_in_schema,
+            openapi_extra=openapi_extra,
         )
 
     def post(
@@ -152,6 +160,7 @@ class NinjaAPI:
         exclude_none: bool = False,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         """
         `POST` operation. See <a href="../operations-parameters">operations
@@ -172,6 +181,7 @@ class NinjaAPI:
             exclude_none=exclude_none,
             url_name=url_name,
             include_in_schema=include_in_schema,
+            openapi_extra=openapi_extra,
         )
 
     def delete(
@@ -191,6 +201,7 @@ class NinjaAPI:
         exclude_none: bool = False,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         """
         `DELETE` operation. See <a href="../operations-parameters">operations
@@ -211,6 +222,7 @@ class NinjaAPI:
             exclude_none=exclude_none,
             url_name=url_name,
             include_in_schema=include_in_schema,
+            openapi_extra=openapi_extra,
         )
 
     def patch(
@@ -230,6 +242,7 @@ class NinjaAPI:
         exclude_none: bool = False,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         """
         `PATCH` operation. See <a href="../operations-parameters">operations
@@ -250,6 +263,7 @@ class NinjaAPI:
             exclude_none=exclude_none,
             url_name=url_name,
             include_in_schema=include_in_schema,
+            openapi_extra=openapi_extra,
         )
 
     def put(
@@ -269,6 +283,7 @@ class NinjaAPI:
         exclude_none: bool = False,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         """
         `PUT` operation. See <a href="../operations-parameters">operations
@@ -289,6 +304,7 @@ class NinjaAPI:
             exclude_none=exclude_none,
             url_name=url_name,
             include_in_schema=include_in_schema,
+            openapi_extra=openapi_extra,
         )
 
     def api_operation(
@@ -309,6 +325,7 @@ class NinjaAPI:
         exclude_none: bool = False,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         return self.default_router.api_operation(
             methods,
@@ -326,6 +343,7 @@ class NinjaAPI:
             exclude_none=exclude_none,
             url_name=url_name,
             include_in_schema=include_in_schema,
+            openapi_extra=openapi_extra,
         )
 
     def add_router(
@@ -350,7 +368,7 @@ class NinjaAPI:
             prefix = normalize_path("/".join((parent_prefix, prefix))).lstrip("/")
 
         self._routers.extend(router.build_routers(prefix))
-        router.set_api_instance(self)
+        router.set_api_instance(self, parent_router)
 
     @property
     def urls(self) -> Tuple[List[Union[URLResolver, URLPattern]], str, str]:
@@ -436,7 +454,7 @@ class NinjaAPI:
         assert issubclass(exc_class, Exception)
         self._exception_handlers[exc_class] = handler
 
-    def exception_handler(self, exc_class: Type[Exception]) -> Callable:
+    def exception_handler(self, exc_class: Type[Exception]) -> Callable[..., Any]:
         def decorator(func: Callable) -> Callable:
             self.add_exception_handler(exc_class, func)
             return func

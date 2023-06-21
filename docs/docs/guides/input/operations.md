@@ -42,7 +42,7 @@ reference docs for information on what you can pass to any of these decorators.
 ## Handling multiple methods
 
 If you need to handle multiple methods with a single function for a given path,
-you can use the `api_operation` method:
+you can use the `api_operation` decorator:
 
 ```Python hl_lines="1"
 @api.api_operation(["POST", "PATCH"], "/path")

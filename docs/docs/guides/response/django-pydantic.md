@@ -87,3 +87,22 @@ class UserSchema(ModelSchema):
         model_fields = ['id', 'username', 'first_name', 'last_name']
 
 ```
+
+
+### Making fields optional
+
+Pretty often for PATCH API operations you need to make all fields of your schema optional. To do that you can use config model_fields_optional
+
+```Python hl_lines="5"
+class PatchGroupSchema(ModelSchema):
+    class Config:
+        model = Group
+        model_fields = ['id', 'name', 'description'] # Note: all these fields are required on model level
+        model_fields_optional = '__all__'
+```
+
+also you can define just a few optional fields instead of all:
+
+```
+     model_fields_optional = ['description']
+```

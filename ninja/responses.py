@@ -1,3 +1,4 @@
+from ipaddress import IPv4Address, IPv6Address
 from typing import Any, FrozenSet
 
 from django.core.serializers.json import DjangoJSONEncoder
@@ -19,6 +20,8 @@ class NinjaJSONEncoder(DjangoJSONEncoder):
     def default(self, o: Any) -> Any:
         if isinstance(o, BaseModel):
             return o.dict()
+        if isinstance(o, (IPv4Address, IPv6Address)):
+            return str(o)
         return super().default(o)
 
 

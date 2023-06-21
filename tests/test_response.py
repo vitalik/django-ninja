@@ -1,3 +1,5 @@
+import json
+from ipaddress import IPv4Address, IPv6Address
 from typing import List, Union
 
 import pytest
@@ -5,6 +7,7 @@ from django.http import HttpResponse
 from pydantic import BaseModel, ValidationError
 
 from ninja import Router
+from ninja.responses import Response
 from ninja.testing import TestClient
 
 router = Router()
@@ -140,3 +143,17 @@ def test_del_cookie():
     assert cookie
     assert cookie["expires"] == "Thu, 01 Jan 1970 00:00:00 GMT"
     assert cookie["max-age"] == 0
+
+
+def test_ipv4address_encoding():
+    data = {"ipv4": IPv4Address("127.0.0.1")}
+    response = Response(data)
+    response_data = json.loads(response.content)
+    assert response_data["ipv4"] == str(data["ipv4"])
+
+
+def test_ipv6address_encoding():
+    data = {"ipv6": IPv6Address("::1")}
+    response = Response(data)
+    response_data = json.loads(response.content)
+    assert response_data["ipv6"] == str(data["ipv6"])

@@ -23,6 +23,15 @@ from ninja.openapi.schema import OpenAPISchema
 __all__ = ["create_m2m_link_type", "get_schema_field", "get_related_field_schema"]
 
 
+# keep_lazy seems not needed as .title forces translation anyway
+# https://github.com/vitalik/django-ninja/issues/774
+# @keep_lazy_text
+def title_if_lower(s: str) -> str:
+    if s == s.lower():
+        return s.title()
+    return s
+
+
 class AnyObject:
     @classmethod
     def __modify_schema__(cls, field_schema: Dict[str, Any]) -> None:
@@ -141,7 +150,7 @@ def get_schema_field(field: Field, *, depth: int = 0) -> Tuple:
         default = Undefined
 
     description = field.help_text
-    title = field.verbose_name.title()
+    title = title_if_lower(field.verbose_name)
 
     return (
         python_type,
@@ -173,6 +182,6 @@ def get_related_field_schema(field: Field, *, depth: int) -> Tuple[OpenAPISchema
         FieldInfo(
             default=default,
             description=field.help_text,
-            title=field.verbose_name.title(),
+            title=title_if_lower(field.verbose_name),
         ),
     )

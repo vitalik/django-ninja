@@ -27,7 +27,12 @@ class Command(BaseCommand):
 
     def _get_api_instance(self, api_path: Optional[str] = None) -> NinjaAPI:
         if not api_path:
-            return resolve("/api/").func.keywords["api"]  # type: ignore
+            try:
+                return resolve("/api/").func.keywords["api"]  # type: ignore
+            except AttributeError:
+                raise CommandError(
+                    "No NinjaAPI instance found; please specify one with --api"
+                )
 
         try:
             api = import_string(api_path)

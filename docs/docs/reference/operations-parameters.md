@@ -148,6 +148,53 @@ def some_hidden_operation(request):
     pass
 ```
 
+## openapi_extra
+You can customize your OpenAPI schema for specific endpoint (detail [OpenAPI Customize Options](https://swagger.io/docs/specification/about/))
+```Python hl_lines="1 26"
+# You can set requestBody from openapi_extra
+@api.get(
+    "/tasks",
+    openapi_extra={
+        "requestBody": {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "required": ["email"],
+                        "type": "object",
+                        "properties": {
+                            "name": {"type": "string"},
+                            "phone": {"type": "number"},
+                            "email": {"type": "string"},
+                        },
+                    }
+                }
+            },
+            "required": True,
+        }
+    },
+)
+def some_operation(request):
+    pass
+    
+# You can add additional responses to the automatically generated schema
+@api.post(
+    "/tasks",
+    openapi_extra={
+        "responses": {
+            "400": {
+                "description": "Error Response",
+            },
+            "404": {
+                "description": "Not Found Response",
+            },
+        },
+    },
+)
+def some_operation_2(request):
+    pass
+
+```
+
 
 ## Response output options
 
@@ -183,3 +230,19 @@ reverse('api-1.0.0:tasks')
 ```
 
 See the [Reverse Resolution of URLs](../guides/urls.md) guide for more details.
+
+
+## Specifying servers
+If you want to specify single or multiple servers for OpenAPI specification `servers` can be used when initializing NinjaAPI instance:
+```Python hl_lines="4 5 6 7"
+from ninja import NinjaAPI
+
+api = NinjaAPI(
+        servers=[
+            {"url": "https://stag.example.com", "description": "Staging env"},
+            {"url": "https://prod.example.com", "description": "Production env"},
+        ]
+)
+```
+This will allow switching between enviroments when using interactive OpenAPI docs:
+![Servers](../img/servers.png)
