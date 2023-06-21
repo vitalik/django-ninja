@@ -1,9 +1,6 @@
 import uuid
 from unittest.mock import Mock
 
-import pytest
-
-from ninja.errors import ConfigError
 from ninja.signature.utils import NinjaUUIDConverter, inject_contribute_args
 
 
