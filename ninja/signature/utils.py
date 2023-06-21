@@ -81,10 +81,7 @@ def inject_contribute_args(
 
     contribution_args = (p_name, p_type, p_source)
     if hasattr(func, "_ninja_contribute_args"):
-        if isinstance(func._ninja_contribute_args, list):  # type: ignore[attr-defined]
-            func._ninja_contribute_args.append(contribution_args)  # type: ignore[attr-defined]
-        else:
-            raise ConfigError(f"{func} has an invalid _ninja_contribute_args value")
+        func._ninja_contribute_args.append(contribution_args)  # type: ignore[attr-defined]
     else:
         func._ninja_contribute_args = [contribution_args]  # type: ignore[attr-defined]
     return func
