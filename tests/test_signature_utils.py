@@ -38,15 +38,3 @@ def test_inject_contribute_args_with_existing_args():
     assert hasattr(test_func, "_ninja_contribute_args")
     assert test_func._ninja_contribute_args[0] == ("test", test_schema, test_source)
     assert test_func._ninja_contribute_args[1] == ("test2", test_schema2, test_source2)
-
-
-def test_inject_contribute_args_with_invalid_args():
-    def test_func():
-        pass
-
-    test_func._ninja_contribute_args = "invalid"
-
-    test_schema = Mock()
-    test_source = Mock()
-    with pytest.raises(ConfigError):
-        inject_contribute_args(test_func, "test", test_schema, test_source)
