@@ -7,7 +7,6 @@ from django.urls import register_converter
 from django.urls.converters import UUIDConverter
 from pydantic.typing import ForwardRef, evaluate_forwardref  # type: ignore
 
-from ninja.errors import ConfigError
 from ninja.params import Param
 from ninja.schema import Schema
 from ninja.types import DictStrAny
