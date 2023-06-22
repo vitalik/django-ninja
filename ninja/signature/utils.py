@@ -1,13 +1,16 @@
 import asyncio
 import inspect
 import re
-from typing import Any, Callable, Set
+from typing import TYPE_CHECKING, Any, Callable, Set, Union
 
 from django.urls import register_converter
 from django.urls.converters import UUIDConverter
 from pydantic.typing import ForwardRef, evaluate_forwardref  # type: ignore
 
 from ninja.types import DictStrAny
+
+if TYPE_CHECKING:
+    from ninja.operation import Operation
 
 __all__ = [
     "get_typed_signature",
@@ -54,6 +57,14 @@ def get_path_param_names(path: str) -> Set[str]:
 
 def is_async(callable: Callable) -> bool:
     return asyncio.iscoroutinefunction(callable)
+
+
+def contribute_to_operation(
+    operation: Union[Callable, "Operation"], contribution: Callable[["Operation"], None]
+) -> None:
+    if not hasattr(operation, "_ninja_contribute_to_operation"):
+        operation._ninja_contribute_to_operation = []  # type: ignore[union-attr]
+    operation._ninja_contribute_to_operation.append(contribution)  # type: ignore[union-attr]
 
 
 class NinjaUUIDConverter:
