@@ -79,8 +79,7 @@ def inject_contribute_args(
     """Injects _ninja_contribute_args to the function"""
 
     contribution_args = (p_name, p_type, p_source)
-    if hasattr(func, "_ninja_contribute_args"):
-        func._ninja_contribute_args.append(contribution_args)  # type: ignore[attr-defined]
-    else:
-        func._ninja_contribute_args = [contribution_args]  # type: ignore[attr-defined]
+    if not hasattr(func, "_ninja_contribute_args"):
+        func._ninja_contribute_args = []  # type: ignore[attr-defined]
+    func._ninja_contribute_args.append(contribution_args)  # type: ignore[attr-defined]
     return func
