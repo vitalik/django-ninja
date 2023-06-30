@@ -54,8 +54,8 @@ class DjangoGetter:
         self._schema_cls = schema_cls
 
     def __getattr__(self, key: str) -> Any:
-        if key.startswith("__pydantic"):
-            return getattr(self._obj, key)
+        # if key.startswith("__pydantic"):
+        #     return getattr(self._obj, key)
 
         resolver = self._schema_cls._ninja_resolvers.get(key)
         if resolver:
@@ -118,22 +118,23 @@ class Resolver:
     def __call__(self, getter: DjangoGetter) -> Any:
         if self._static:
             return self._func(getter._obj)
-        return self._func(self._fake_instance(getter), getter._obj)
+        assert False, "Non static resolves are not supported yet"  # pragma: no cover
+        # return self._func(self._fake_instance(getter), getter._obj)
 
-    def _fake_instance(self, getter: DjangoGetter) -> "Schema":
-        """
-        Generate a partial schema instance that can be used as the ``self``
-        attribute of resolver functions.
-        """
+    # def _fake_instance(self, getter: DjangoGetter) -> "Schema":
+    #     """
+    #     Generate a partial schema instance that can be used as the ``self``
+    #     attribute of resolver functions.
+    #     """
 
-        class PartialSchema(Schema):
-            def __getattr__(self, key: str) -> Any:
-                value = getattr(getter, key)
-                field = getter._schema_cls.model_fields[key]
-                value = field.validate(value, values={}, loc=key, cls=None)[0]
-                return value
+    #     class PartialSchema(Schema):
+    #         def __getattr__(self, key: str) -> Any:
+    #             value = getattr(getter, key)
+    #             field = getter._schema_cls.model_fields[key]
+    #             value = field.validate(value, values={}, loc=key, cls=None)[0]
+    #             return value
 
-        return PartialSchema()
+    #     return PartialSchema()
 
 
 class ResolverMetaclass(ModelMetaclass):

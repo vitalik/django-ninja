@@ -71,8 +71,8 @@ class SchemaFactory:
 
         if custom_fields:
             for fld_name, python_type, field_info in custom_fields:
-                if not isinstance(field_info, FieldInfo):
-                    field_info = Field(field_info)
+                # if not isinstance(field_info, FieldInfo):
+                #     field_info = Field(field_info)
                 definitions[fld_name] = (python_type, field_info)
 
         if name in self.schema_names:

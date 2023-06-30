@@ -312,8 +312,9 @@ def detect_collection_fields(
                     annotation_or_field, "outer_type_", annotation_or_field
                 )
 
-            if hasattr(annotation_or_field, "annotation"):
-                annotation_or_field = annotation_or_field.annotation
+            # if hasattr(annotation_or_field, "annotation"):
+            annotation_or_field = annotation_or_field.annotation
+
             if is_collection_type(annotation_or_field):
                 result.append(path[-1])
     return result

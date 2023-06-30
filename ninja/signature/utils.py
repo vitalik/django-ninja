@@ -10,7 +10,7 @@ from django.urls.converters import UUIDConverter
 # from pydantic.typing import ForwardRef, evaluate_forwardref  # type: ignore
 
 
-if sys.version_info < (3, 9):
+if sys.version_info < (3, 9):  # pragma: nocover
 
     def evaluate_forwardref(type_: ForwardRef, globalns: Any, localns: Any) -> Any:
         return type_._evaluate(globalns, localns)

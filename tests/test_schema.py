@@ -142,7 +142,10 @@ def test_with_boss_schema():
     }
 
 
-@pytest.mark.skipif(True, reason="Lets deal with this later")
+SKIP_NON_STATIC_RESOLVES = True
+
+
+@pytest.mark.skipif(SKIP_NON_STATIC_RESOLVES, reason="Lets deal with this later")
 def test_with_initials_schema():
     user = User()
     schema = UserWithInitialsSchema.from_orm(user)
