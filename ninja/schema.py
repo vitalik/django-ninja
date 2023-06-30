@@ -49,7 +49,7 @@ S = TypeVar("S", bound="Schema")
 class DjangoGetter:
     __slots__ = ("_obj", "_schema_cls")
 
-    def __init__(self, obj: Any, schema_cls: "Type[Schema]"):
+    def __init__(self, obj: Any, schema_cls: "Schema"):
         self._obj = obj
         self._schema_cls = schema_cls
 
@@ -57,7 +57,7 @@ class DjangoGetter:
         # if key.startswith("__pydantic"):
         #     return getattr(self._obj, key)
 
-        resolver = self._schema_cls._ninja_resolvers.get(key)
+        resolver = self._schema_cls._ninja_resolvers.get(key)  # type: ignore
         if resolver:
             value = resolver(getter=self)
         else:
@@ -194,7 +194,7 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
         from_attributes = True  # aka orm_mode
 
     @model_validator(mode="before")
-    def run_root_validator(cls, values, info):
+    def run_root_validator(cls, values: Any, info: Any) -> Any:
         values = DjangoGetter(values, cls)
         return values
 
@@ -202,11 +202,11 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
     def from_orm(cls: Type[S], obj: Any) -> S:
         return cls.model_validate(obj)
 
-    def dict(self, *a, **kw):
+    def dict(self, *a: Any, **kw: Any) -> DictStrAny:
         return self.model_dump(*a, **kw)
 
     @classmethod
-    def schema(cls):
+    def schema(cls) -> DictStrAny:
         return cls.model_json_schema()
 
     @classmethod
@@ -214,7 +214,7 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
         cls,
         by_alias: bool = True,
         ref_template: str = DEFAULT_REF_TEMPLATE,
-        schema_generator: type[GenerateJsonSchema] = NinjaGenerateJsonSchema,
+        schema_generator: Type[GenerateJsonSchema] = NinjaGenerateJsonSchema,
         mode: JsonSchemaMode = "validation",
     ) -> DictStrAny:
         return model_json_schema(
