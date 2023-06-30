@@ -1,15 +1,6 @@
 import datetime
 from decimal import Decimal
-from typing import (
-    Any,
-    Dict,
-    List,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-    no_type_check,
-)
+from typing import Any, Dict, List, Tuple, Type, TypeVar, Union, no_type_check
 from uuid import UUID
 
 from django.db.models import ManyToManyField
