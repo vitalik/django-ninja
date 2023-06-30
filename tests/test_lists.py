@@ -4,7 +4,7 @@ import pytest
 from django.http import QueryDict  # noqa
 from pydantic import BaseModel, Field, conlist
 
-from ninja import Form, Query, Router, Schema, Body
+from ninja import Body, Form, Query, Router, Schema
 from ninja.testing import TestClient
 
 router = Router()

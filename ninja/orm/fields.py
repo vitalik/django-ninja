@@ -2,9 +2,7 @@ import datetime
 from decimal import Decimal
 from typing import (
     Any,
-    Callable,
     Dict,
-    Generator,
     List,
     Tuple,
     Type,
@@ -102,34 +100,17 @@ def create_m2m_link_type(type_: Type[TModel]) -> Type[TModel]:
             return {"type": json_type}
 
         @classmethod
-        def _validate(cls, __input_value: Any, _):
+        def _validate(cls, v: Any, _):
             try:
-                return (
-                    __input_value.pk
-                )  # when we output queryset - we have db instances
+                return v.pk  # when we output queryset - we have db instances
             except AttributeError:
-                return type_(
-                    __input_value
-                )  # when we read payloads we have primakey keys
-
-        # @classmethod
-        # def __get_validators__(cls):
-        #     yield cls.validate
-
-        # @classmethod
-        # def validate(cls, v):
-        #     try:
-        #         return v.pk  # when we output queryset - we have db instances
-        #     except AttributeError:
-        #         return type_(v)  # when we read payloads we have primakey keys
+                return type_(v)  # when we read payloads we have primakey keys
 
     return M2MLink
 
 
 @no_type_check
-def get_schema_field(
-    field: DjangoField, *, depth: int = 0, optional: bool = False
-) -> Tuple:
+def get_schema_field(field: DjangoField, *, depth: int = 0, optional: bool = False) -> Tuple:
     "Returns pydantic field from django's model field"
     alias = None
     default = ...

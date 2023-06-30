@@ -1,7 +1,9 @@
-import pytest
 from typing import Optional
-from ninja import Schema
+
+import pytest
 from pydantic import BaseModel, ValidationError
+
+from ninja import Schema
 
 
 class OptModel(BaseModel):
