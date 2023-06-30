@@ -1,7 +1,6 @@
-from typing import Any, Callable
+from typing import Any
 
 from django.core.files.uploadedfile import UploadedFile as DjangoUploadedFile
-from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
 
 __all__ = ["UploadedFile"]

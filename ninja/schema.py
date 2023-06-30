@@ -118,7 +118,9 @@ class Resolver:
     def __call__(self, getter: DjangoGetter) -> Any:
         if self._static:
             return self._func(getter._obj)
-        assert False, "Non static resolves are not supported yet"  # pragma: no cover
+        raise NotImplementedError(
+            "Non static resolves are not supported yet"
+        )  # pragma: no cover
         # return self._func(self._fake_instance(getter), getter._obj)
 
     # def _fake_instance(self, getter: DjangoGetter) -> "Schema":

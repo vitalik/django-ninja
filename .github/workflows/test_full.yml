@@ -57,9 +57,8 @@ jobs:
         run: flit install --symlink
       - name: Black
         run: black --check ninja tests
-      - name: isort
-        run: isort --check ninja tests
+      - name: Ruff
+        run: ruff ninja
       - name: mypy
         run: mypy ninja
-      - name: Flake8
-        run: flake8 ninja tests
+

@@ -2,20 +2,7 @@ import itertools
 import re
 import warnings
 from http.client import responses
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Dict,
-    Generator,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    cast,
-)
-
-from pydantic import BaseModel
+from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Set, Tuple
 
 from ninja.constants import NOT_SET
 from ninja.operation import Operation
@@ -117,7 +104,8 @@ class OpenAPISchema(dict):
         op_id = operation.operation_id or self.api.get_openapi_operation_id(operation)
         if op_id in self.all_operation_ids:
             warnings.warn(
-                f'operation_id "{op_id}" is already used (func: {operation.view_func})'
+                f'operation_id "{op_id}" is already used (func: {operation.view_func})',
+                stacklevel=2,
             )
         self.all_operation_ids.add(op_id)
         result = {

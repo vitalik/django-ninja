@@ -27,26 +27,44 @@ class NinjaClientBase:
     def __init__(self, router_or_app: Union[NinjaAPI, Router]) -> None:
         self.router_or_app = router_or_app
 
-    def get(self, path: str, data: Dict = {}, **request_params: Any) -> "NinjaResponse":
+    def get(
+        self, path: str, data: Optional[Dict] = None, **request_params: Any
+    ) -> "NinjaResponse":
         return self.request("GET", path, data, **request_params)
 
     def post(
-        self, path: str, data: Dict = {}, json: Any = None, **request_params: Any
+        self,
+        path: str,
+        data: Optional[Dict] = None,
+        json: Any = None,
+        **request_params: Any,
     ) -> "NinjaResponse":
         return self.request("POST", path, data, json, **request_params)
 
     def patch(
-        self, path: str, data: Dict = {}, json: Any = None, **request_params: Any
+        self,
+        path: str,
+        data: Optional[Dict] = None,
+        json: Any = None,
+        **request_params: Any,
     ) -> "NinjaResponse":
         return self.request("PATCH", path, data, json, **request_params)
 
     def put(
-        self, path: str, data: Dict = {}, json: Any = None, **request_params: Any
+        self,
+        path: str,
+        data: Optional[Dict] = None,
+        json: Any = None,
+        **request_params: Any,
     ) -> "NinjaResponse":
         return self.request("PUT", path, data, json, **request_params)
 
     def delete(
-        self, path: str, data: Dict = {}, json: Any = None, **request_params: Any
+        self,
+        path: str,
+        data: Optional[Dict] = None,
+        json: Any = None,
+        **request_params: Any,
     ) -> "NinjaResponse":
         return self.request("DELETE", path, data, json, **request_params)
 
@@ -54,12 +72,14 @@ class NinjaClientBase:
         self,
         method: str,
         path: str,
-        data: Dict = {},
+        data: Optional[Dict] = None,
         json: Any = None,
         **request_params: Any,
     ) -> "NinjaResponse":
         if json is not None:
             request_params["body"] = json_dumps(json, cls=NinjaJSONEncoder)
+        if data is None:
+            data = {}
         func, request, kwargs = self._resolve(method, path, data, request_params)
         return self._call(func, request, kwargs)  # type: ignore
 
@@ -105,12 +125,10 @@ class NinjaClientBase:
         request.FILES = request_params.pop("FILES", {})
 
         request.META.update(
-            dict(
-                [
-                    (f"HTTP_{k.replace('-', '_')}", v)
-                    for k, v in request_params.pop("headers", {}).items()
-                ]
-            )
+            {
+                f"HTTP_{k.replace('-', '_')}": v
+                for k, v in request_params.pop("headers", {}).items()
+            }
         )
         if django.VERSION[:2] > (2, 1):
             from ninja.compatibility.request import HttpHeaders

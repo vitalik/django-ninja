@@ -32,12 +32,14 @@ class Command(BaseCommand):
             except AttributeError:
                 raise CommandError(
                     "No NinjaAPI instance found; please specify one with --api"
-                )
+                ) from None
 
         try:
             api = import_string(api_path)
         except ImportError:
-            raise CommandError(f"Module or attribute for {api_path} not found!")
+            raise CommandError(
+                f"Module or attribute for {api_path} not found!"
+            ) from None
 
         if not isinstance(api, NinjaAPI):
             raise CommandError(f"{api_path} is not instance of NinjaAPI!")

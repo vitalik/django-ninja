@@ -36,7 +36,7 @@ class ModelSchemaMetaclass(ResolverMetaclass):
                 except KeyError:
                     raise ConfigError(
                         f"ModelSchema class '{name}' requires a 'Config' subclass"
-                    )
+                    ) from None
 
                 assert issubclass(config.model, DjangoModel)
 

@@ -134,7 +134,7 @@ class BodyModel(ParamModel):
                 msg = "Cannot parse request body"
                 if settings.DEBUG:
                     msg += f" ({e})"
-                raise HttpError(400, msg)
+                raise HttpError(400, msg) from e
 
             varname = getattr(cls, "__read_from_single_attr", None)
             if varname:

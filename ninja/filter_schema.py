@@ -1,8 +1,7 @@
-from typing import TYPE_CHECKING, Any, ClassVar, Type, cast
+from typing import Any, cast
 
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Q, QuerySet
-from pydantic import BaseConfig
 from pydantic.fields import FieldInfo
 from typing_extensions import Literal
 
