@@ -1,7 +1,8 @@
 import itertools
 from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Type, Union, cast
 
-from django.db.models import Field as DjangoField, ManyToManyRel, ManyToOneRel, Model
+from django.db.models import Field as DjangoField
+from django.db.models import ManyToManyRel, ManyToOneRel, Model
 from pydantic import create_model as create_pydantic_model
 
 from ninja.errors import ConfigError

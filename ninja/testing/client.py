@@ -1,4 +1,5 @@
-from json import dumps as json_dumps, loads as json_loads
+from json import dumps as json_dumps
+from json import loads as json_loads
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from unittest.mock import Mock
 from urllib.parse import urljoin
@@ -7,7 +8,8 @@ import django
 from django.http import QueryDict, StreamingHttpResponse
 
 from ninja import NinjaAPI, Router
-from ninja.responses import NinjaJSONEncoder, Response as HttpResponse
+from ninja.responses import NinjaJSONEncoder
+from ninja.responses import Response as HttpResponse
 
 
 def build_absolute_uri(location: Optional[str] = None) -> str:

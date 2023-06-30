@@ -63,8 +63,6 @@ test = [
     "pytest-asyncio",
     "psycopg2-binary",
     "black",
-    "isort",
-    "flake8",
     "mypy==0.931",
     "ruff==0.0.275",
     "django-stubs",

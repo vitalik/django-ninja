@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, Any, Callable, Dict, Iterator, List, Optional, Tuple
 
-from django.urls import URLPattern, path as django_path
+from django.urls import URLPattern
+from django.urls import path as django_path
 
 from ninja.constants import NOT_SET
 from ninja.errors import ConfigError
