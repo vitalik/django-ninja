@@ -198,7 +198,7 @@ class ViewSignature:
             field_name = field.alias or attr
             name = f"{prefix}{self.FLATTEN_PATH_SEP}{field_name}"
             if is_pydantic_model(field.annotation):
-                yield from self._model_flatten_map(field.annotation, name)
+                yield from self._model_flatten_map(field.annotation, name)  # type: ignore
             else:
                 yield field_name, name
 

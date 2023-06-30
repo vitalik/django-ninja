@@ -2,7 +2,7 @@ import asyncio
 import inspect
 import re
 import sys
-from typing import Any, Callable, ForwardRef, Set, cast
+from typing import Any, Callable, ForwardRef, Set, cast  # type: ignore
 
 from django.urls import register_converter
 from django.urls.converters import UUIDConverter

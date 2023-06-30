@@ -89,15 +89,13 @@ class FilterSchema(Schema):
         for field_name, field in self.model_fields.items():
             filter_value = getattr(self, field_name)
             field_extra = field.json_schema_extra or {}
-            ignore_none = field_extra.get(
-                "ignore_none", self.model_config["ignore_none"]
-            )
+            ignore_none = field_extra.get("ignore_none", self.model_config["ignore_none"])  # type: ignore
 
             # Resolve q for a field even if we skip it due to None value
             # So that improperly configured fields are easier to detect
             field_q = self._resolve_field_expression(field_name, filter_value, field)
             if filter_value is None and ignore_none:
                 continue
-            q = q._combine(field_q, self.model_config["expression_connector"])  # type: ignore[attr-defined]
+            q = q._combine(field_q, self.model_config["expression_connector"])  # type: ignore
 
         return q

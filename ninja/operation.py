@@ -224,9 +224,9 @@ class Operation:
                         model.__ninja_param_source__,
                     ) + model.__ninja_flatten_map_reverse__.get(i["loc"], i["loc"])
                     # removing pydantic hints
-                    del i["input"]
+                    del i["input"]  # type: ignore
                     if "url" in i:
-                        del i["url"]
+                        del i["url"]  # type: ignore
                     items.append(dict(i))
                 errors.extend(items)
         if errors:

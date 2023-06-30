@@ -1,6 +1,6 @@
 import datetime
 from decimal import Decimal
-from typing import Any, Dict, List, Tuple, Type, TypeVar, Union, no_type_check
+from typing import Any, Callable, Dict, List, Tuple, Type, TypeVar, Union, no_type_check
 from uuid import UUID
 
 from django.db.models import ManyToManyField
@@ -11,6 +11,7 @@ from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined, core_schema
 
 from ninja.openapi.schema import OpenAPISchema
+from ninja.types import DictStrAny
 
 __all__ = ["create_m2m_link_type", "get_schema_field", "get_related_field_schema"]
 
@@ -24,15 +25,15 @@ def title_if_lower(s: str) -> str:
 
 class AnyObject:
     @classmethod
-    def __get_pydantic_core_schema__(cls, source, handler):
+    def __get_pydantic_core_schema__(cls, source: Any, handler: Callable) -> Any:
         return core_schema.general_plain_validator_function(cls.validate)
 
     @classmethod
-    def __get_pydantic_json_schema__(cls, schema, handler):
+    def __get_pydantic_json_schema__(cls, schema: Any, handler: Callable) -> DictStrAny:
         return {"type": "object"}
 
     @classmethod
-    def validate(cls, value: Any, _) -> Any:
+    def validate(cls, value: Any, _: Any) -> Any:
         return value
 
 
