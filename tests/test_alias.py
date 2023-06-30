@@ -19,11 +19,11 @@ def test_alias():
     assert schema == {
         "schemas": {
             "SchemaWithAlias": {
-                "title": "SchemaWithAlias",
                 "type": "object",
                 "properties": {
-                    "foo": {"title": "Bar", "default": "", "type": "string"}
+                    "foo": {"type": "string", "default": "", "title": "Foo"}
                 },
+                "title": "SchemaWithAlias",
             }
         }
     }

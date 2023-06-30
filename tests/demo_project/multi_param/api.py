@@ -51,7 +51,7 @@ class ResponseData(Schema):
 
     class Config(Schema.Config):
         alias_generator = to_kebab
-        allow_population_by_field_name = True
+        populate_by_name = True
 
 
 test_data4_extra = dict(title="Data4 Title", description="Data4 Desc")

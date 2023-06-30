@@ -57,9 +57,9 @@ client = TestClient(router)
             {
                 "detail": [
                     {
+                        "type": "missing",
                         "loc": ["header", "missing"],
-                        "msg": "field required",
-                        "type": "value_error.missing",
+                        "msg": "Field required",
                     }
                 ]
             },
@@ -75,4 +75,5 @@ def test_headers(path, expected_status, expected_response):
         COOKIES={"weapon": "shuriken"},
     )
     assert response.status_code == expected_status, response.content
+    print(response.json())
     assert response.json() == expected_response

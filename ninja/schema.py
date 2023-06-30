@@ -22,51 +22,68 @@ dotted attributes and resolver methods. For example::
 """
 from typing import Any, Callable, Dict, Type, TypeVar, Union, no_type_check
 
-import pydantic
 from django.db.models import Manager, QuerySet
 from django.db.models.fields.files import FieldFile
 from django.template import Variable, VariableDoesNotExist
-from pydantic import BaseModel, Field, validator
-from pydantic.main import ModelMetaclass
-from pydantic.utils import GetterDict
+from pydantic import BaseModel, Field, model_validator, validator
 
-pydantic_version = list(map(int, pydantic.VERSION.split(".")[:2]))
-assert pydantic_version >= [1, 6], "Pydantic 1.6+ required"
+# from pydantic.main import ModelMetaclass
+from pydantic._internal._model_construction import ModelMetaclass
+from pydantic.json_schema import (
+    DEFAULT_REF_TEMPLATE,
+    GenerateJsonSchema,
+    JsonSchemaMode,
+    JsonSchemaValue,
+    model_json_schema,
+)
+
+from ninja.types import DictStrAny
+
+# pydantic_version = list(map(int, pydantic.VERSION.split(".")[:2]))
+# assert pydantic_version >= [1, 6], "Pydantic 1.6+ required"
 
 __all__ = ["BaseModel", "Field", "validator", "DjangoGetter", "Schema"]
 
 S = TypeVar("S", bound="Schema")
 
 
-class DjangoGetter(GetterDict):
+class DjangoGetter:
     __slots__ = ("_obj", "_schema_cls")
 
     def __init__(self, obj: Any, schema_cls: "Type[Schema]"):
         self._obj = obj
         self._schema_cls = schema_cls
 
-    def __getitem__(self, key: str) -> Any:
+    def __getattr__(self, key: str) -> Any:
+        if key.startswith("__pydantic"):
+            return getattr(self._obj, key)
+
         resolver = self._schema_cls._ninja_resolvers.get(key)
         if resolver:
-            item = resolver(getter=self)
+            value = resolver(getter=self)
         else:
-            try:
-                item = getattr(self._obj, key)
-            except AttributeError:
+            if isinstance(self._obj, dict):
+                if key not in self._obj:
+                    raise AttributeError(key)
+                value = self._obj[key]
+            else:
                 try:
-                    # item = attrgetter(key)(self._obj)
-                    item = Variable(key).resolve(self._obj)
-                    # TODO: Variable(key) __init__ is actually slower than
-                    #       resolve - so it better be cached
-                except VariableDoesNotExist as e:
-                    raise KeyError(key) from e
-        return self._convert_result(item)
+                    value = getattr(self._obj, key)
+                except AttributeError:
+                    try:
+                        # value = attrgetter(key)(self._obj)
+                        value = Variable(key).resolve(self._obj)
+                        # TODO: Variable(key) __init__ is actually slower than
+                        #       resolve - so it better be cached
+                    except VariableDoesNotExist as e:
+                        raise AttributeError(key) from e
+        return self._convert_result(value)
 
-    def get(self, key: Any, default: Any = None) -> Any:
-        try:
-            return self[key]
-        except KeyError:
-            return default
+    # def get(self, key: Any, default: Any = None) -> Any:
+    #     try:
+    #         return self[key]
+    #     except KeyError:
+    #         return default
 
     def _convert_result(self, result: Any) -> Any:
         if isinstance(result, Manager):
@@ -112,8 +129,8 @@ class Resolver:
 
         class PartialSchema(Schema):
             def __getattr__(self, key: str) -> Any:
-                value = getter[key]
-                field = getter._schema_cls.__fields__[key]
+                value = getattr(getter, key)
+                field = getter._schema_cls.model_fields[key]
                 value = field.validate(value, values={}, loc=key, cls=None)[0]
                 return value
 
@@ -147,26 +164,61 @@ class ResolverMetaclass(ModelMetaclass):
         return result
 
 
+class NinjaGenerateJsonSchema(GenerateJsonSchema):
+    def default_schema(self, schema: Any) -> JsonSchemaValue:
+        # Pydantic default actually renders null's and default_factory's
+        # which really breaks swagger and django model callable defaults
+        # so here we completely override behavior
+        json_schema = self.generate_inner(schema["schema"])
+
+        default = None
+        if "default" in schema and schema["default"] is not None:
+            default = self.encode_default(schema["default"])
+
+        if "$ref" in json_schema:
+            # Since reference schemas do not support child keys, we wrap the reference schema in a single-case allOf:
+            result = {"allOf": [json_schema]}
+        else:
+            result = json_schema
+
+        if default is not None:
+            result["default"] = default
+
+        return result
+
+
 class Schema(BaseModel, metaclass=ResolverMetaclass):
     class Config:
-        orm_mode = True
-        getter_dict = DjangoGetter
+        from_attributes = True  # aka orm_mode
+
+    @model_validator(mode="before")
+    def run_root_validator(cls, values, info):
+        values = DjangoGetter(values, cls)
+        return values
 
     @classmethod
     def from_orm(cls: Type[S], obj: Any) -> S:
-        getter_dict = cls.__config__.getter_dict
-        obj = (
-            # DjangoGetter also needs the class so it can find resolver methods.
-            getter_dict(obj, cls)
-            if issubclass(getter_dict, DjangoGetter)
-            else getter_dict(obj)
-        )
-        return super().from_orm(obj)
+        return cls.model_validate(obj)
+
+    def dict(self, *a, **kw):
+        return self.model_dump(*a, **kw)
 
     @classmethod
-    def _decompose_class(cls, obj: Any) -> GetterDict:
-        # This method has backported logic from Pydantic 1.9 and is no longer
-        # needed once that is the minimum version.
-        if isinstance(obj, GetterDict):
-            return obj
-        return super()._decompose_class(obj)  # pragma: no cover
+    def schema(cls):
+        return cls.model_json_schema()
+
+    @classmethod
+    def model_json_schema(
+        cls,
+        by_alias: bool = True,
+        ref_template: str = DEFAULT_REF_TEMPLATE,
+        schema_generator: type[GenerateJsonSchema] = NinjaGenerateJsonSchema,
+        mode: JsonSchemaMode = "validation",
+    ) -> DictStrAny:
+        return model_json_schema(
+            cls,
+            by_alias=by_alias,
+            ref_template=ref_template,
+            schema_generator=schema_generator,
+            mode=mode,
+        )

@@ -21,18 +21,20 @@ def test_simple():
         def hello(self):
             return f"Hello({self.firstname})"
 
-    # print(SampleSchema.schema())
     assert SampleSchema.schema() == {
         "title": "SampleSchema",
         "type": "object",
         "properties": {
             "firstname": {"title": "Firstname", "type": "string"},
-            "lastname": {"title": "Lastname", "type": "string"},
+            "lastname": {
+                "anyOf": [{"type": "string"}, {"type": "null"}],
+                "title": "Lastname",
+            },
         },
         "required": ["firstname"],
     }
 
-    assert SampleSchema(firstname="ninja").hello() == "Hello(ninja)"
+    assert SampleSchema(firstname="ninja", lastname="Django").hello() == "Hello(ninja)"
 
     # checking exclude ----------------------------------------------
     class SampleSchema2(ModelSchema):
@@ -44,7 +46,7 @@ def test_simple():
         "title": "SampleSchema2",
         "type": "object",
         "properties": {
-            "id": {"title": "ID", "type": "integer"},
+            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
             "firstname": {"title": "Firstname", "type": "string"},
         },
         "required": ["firstname"],
@@ -62,24 +64,22 @@ def test_custom():
     class CustomSchema(ModelSchema):
         f3: int
         f4: int = 1
-        f5 = ""  # not annotated should be ignored
         _private: str = "<secret>"  # private should be ignored
 
         class Config:
             model = CustomModel
             model_fields = ["f1", "f2"]
 
-    print(CustomSchema.schema())
     assert CustomSchema.schema() == {
         "title": "CustomSchema",
         "type": "object",
         "properties": {
             "f1": {"title": "F1", "type": "string"},
-            "f2": {"title": "F2", "type": "string"},
+            "f2": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "F2"},
             "f3": {"title": "F3", "type": "integer"},
             "f4": {"title": "F4", "default": 1, "type": "integer"},
         },
-        "required": ["f1", "f3"],
+        "required": ["f3", "f1"],
     }
 
 
@@ -117,10 +117,8 @@ def test_optional():
             model_fields = "__all__"
             model_fields_optional = "__all__"
 
-    print(OptSchema.schema())
     assert OptSchema.schema().get("required") is None
 
-    print(OptSchema2.schema())
     assert OptSchema2.schema().get("required") is None
 
 
@@ -142,9 +140,12 @@ def test_model_fields_all():
         "title": "SomeSchema",
         "type": "object",
         "properties": {
-            "id": {"title": "ID", "type": "integer"},
+            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
             "field1": {"title": "Field1", "type": "string"},
-            "field2": {"title": "Field2", "type": "string"},
+            "field2": {
+                "anyOf": [{"type": "string"}, {"type": "null"}],
+                "title": "Field2",
+            },
         },
         "required": ["field1"],
     }

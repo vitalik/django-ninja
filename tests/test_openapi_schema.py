@@ -37,7 +37,7 @@ class Response(Schema):
 
     class Config(Schema.Config):
         alias_generator = to_camel
-        allow_population_by_field_name = True
+        populate_by_name = True
 
 
 @api.post("/test", response=Response)
@@ -442,13 +442,13 @@ def test_schema_form(schema):
         "content": {
             "application/x-www-form-urlencoded": {
                 "schema": {
-                    "properties": {
-                        "f": {"title": "F", "type": "number"},
-                        "i": {"title": "I", "type": "integer"},
-                    },
-                    "required": ["i", "f"],
                     "title": "FormParams",
                     "type": "object",
+                    "properties": {
+                        "i": {"title": "I", "type": "integer"},
+                        "f": {"title": "F", "type": "number"},
+                    },
+                    "required": ["i", "f"],
                 }
             }
         },
@@ -532,13 +532,13 @@ def test_schema_form_file(schema):
             "multipart/form-data": {
                 "schema": {
                     "properties": {
-                        "f": {"title": "F", "type": "number"},
                         "files": {
                             "items": {"format": "binary", "type": "string"},
                             "title": "Files",
                             "type": "array",
                         },
                         "i": {"title": "I", "type": "integer"},
+                        "f": {"title": "F", "type": "number"},
                     },
                     "required": ["files", "i", "f"],
                     "title": "MultiPartBodyParams",

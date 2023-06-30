@@ -26,7 +26,7 @@ class Settings(BaseModel):
     DOCS_VIEW: str = Field("swagger", alias="NINJA_DOCS_VIEW")
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
-settings = Settings.from_orm(django_settings)
+settings = Settings.model_validate(django_settings)

@@ -1,8 +1,9 @@
 import itertools
 from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Type, Union, cast
 
-from django.db.models import Field, ManyToManyRel, ManyToOneRel, Model
-from pydantic import create_model as create_pydantic_model
+from django.db.models import Field as DjangoField, ManyToManyRel, ManyToOneRel, Model
+from pydantic import Field, create_model as create_pydantic_model
+from pydantic.fields import FieldInfo
 
 from ninja.errors import ConfigError
 from ninja.orm.fields import get_schema_field
@@ -54,22 +55,24 @@ class SchemaFactory:
         if key in self.schemas:
             return self.schemas[key]
 
-        definitions = {}
-        for fld in self._selected_model_fields(model, fields, exclude):
-            python_type, field_info = get_schema_field(fld, depth=depth)
-            definitions[fld.name] = (python_type, field_info)
-
+        model_fields_list = self._selected_model_fields(model, fields, exclude)
         if optional_fields:
             if optional_fields == "__all__":
-                optional_fields = list(definitions.keys())
-            for fld_name in optional_fields:
-                python_type, field_info = definitions[fld_name]
+                optional_fields = [f.name for f in model_fields_list]
 
-                if field_info.default == ...:  # if field is required (... = Ellipsis)
-                    field_info.default = None
+        definitions = {}
+        for fld in model_fields_list:
+            python_type, field_info = get_schema_field(
+                fld,
+                depth=depth,
+                optional=optional_fields and (fld.name in optional_fields),
+            )
+            definitions[fld.name] = (python_type, field_info)
 
         if custom_fields:
             for fld_name, python_type, field_info in custom_fields:
+                if not isinstance(field_info, FieldInfo):
+                    field_info = Field(field_info)
                 definitions[fld_name] = (python_type, field_info)
 
         if name in self.schema_names:
@@ -83,6 +86,14 @@ class SchemaFactory:
             __validators__={},
             **definitions,
         )  # type: ignore
+        # __model_name: str,
+        # *,
+        # __config__: ConfigDict | None = None,
+        # __base__: None = None,
+        # __module__: str = __name__,
+        # __validators__: dict[str, AnyClassMethod] | None = None,
+        # __cls_kwargs__: dict[str, Any] | None = None,
+        # **field_definitions: Any,
         self.schemas[key] = schema
         self.schema_names.add(name)
         return schema
@@ -122,7 +133,7 @@ class SchemaFactory:
         model: Type[Model],
         fields: Optional[List[str]] = None,
         exclude: Optional[List[str]] = None,
-    ) -> Iterator[Field]:
+    ) -> Iterator[DjangoField]:
         "Returns iterator for model fields based on `exclude` or `fields` arguments"
         all_fields = {f.name: f for f in self._model_fields(model)}
 
@@ -132,7 +143,9 @@ class SchemaFactory:
 
         invalid_fields = (set(fields or []) | set(exclude or [])) - all_fields.keys()
         if invalid_fields:
-            raise ConfigError(f"Field(s) {invalid_fields} are not in model {model}")
+            raise ConfigError(
+                f"DjangoField(s) {invalid_fields} are not in model {model}"
+            )
 
         if fields:
             for name in fields:
@@ -142,13 +155,13 @@ class SchemaFactory:
                 if f.name not in exclude:
                     yield f
 
-    def _model_fields(self, model: Type[Model]) -> Iterator[Field]:
+    def _model_fields(self, model: Type[Model]) -> Iterator[DjangoField]:
         "returns iterator with all the fields that can be part of schema"
         for fld in model._meta.get_fields():
             if isinstance(fld, (ManyToOneRel, ManyToManyRel)):
                 # skipping relations
                 continue
-            yield cast(Field, fld)
+            yield cast(DjangoField, fld)
 
 
 factory = SchemaFactory()

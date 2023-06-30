@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Type, cast
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Q, QuerySet
 from pydantic import BaseConfig
-from pydantic.fields import ModelField
+from pydantic.fields import FieldInfo
 from typing_extensions import Literal
 
 from .schema import Schema
@@ -16,18 +16,24 @@ DEFAULT_FIELD_LEVEL_EXPRESSION_CONNECTOR = "OR"
 ExpressionConnector = Literal["AND", "OR", "XOR"]
 
 
-class FilterConfig(BaseConfig):
-    ignore_none: bool = DEFAULT_IGNORE_NONE
-    expression_connector: ExpressionConnector = cast(
-        ExpressionConnector, DEFAULT_CLASS_LEVEL_EXPRESSION_CONNECTOR
-    )
+# class FilterConfig(BaseConfig):
+#     ignore_none: bool = DEFAULT_IGNORE_NONE
+#     expression_connector: ExpressionConnector = cast(
+#         ExpressionConnector, DEFAULT_CLASS_LEVEL_EXPRESSION_CONNECTOR
+#     )
 
 
 class FilterSchema(Schema):
-    if TYPE_CHECKING:
-        __config__: ClassVar[Type[FilterConfig]] = FilterConfig  # pragma: no cover
+    # if TYPE_CHECKING:
+    #     __config__: ClassVar[Type[FilterConfig]] = FilterConfig  # pragma: no cover
 
-    Config = FilterConfig
+    # Config = FilterConfig
+
+    class Config(Schema.Config):
+        ignore_none: bool = DEFAULT_IGNORE_NONE
+        expression_connector: ExpressionConnector = cast(
+            ExpressionConnector, DEFAULT_CLASS_LEVEL_EXPRESSION_CONNECTOR
+        )
 
     def custom_expression(self) -> Q:
         """
@@ -48,19 +54,21 @@ class FilterSchema(Schema):
         return queryset.filter(self.get_filter_expression())
 
     def _resolve_field_expression(
-        self, field_name: str, field_value: Any, field: ModelField
+        self, field_name: str, field_value: Any, field: FieldInfo
     ) -> Q:
         func = getattr(self, f"filter_{field_name}", None)
         if callable(func):
             return func(field_value)  # type: ignore[no-any-return]
 
-        q_expression = field.field_info.extra.get("q", None)
+        field_extra = field.json_schema_extra or {}
+
+        q_expression = field_extra.get("q", None)
         if not q_expression:
             return Q(**{field_name: field_value})
         elif isinstance(q_expression, str):
             return Q(**{q_expression: field_value})
         elif isinstance(q_expression, list):
-            expression_connector = field.field_info.extra.get(
+            expression_connector = field_extra.get(
                 "expression_connector", DEFAULT_FIELD_LEVEL_EXPRESSION_CONNECTOR
             )
             q = Q()
@@ -79,10 +87,11 @@ class FilterSchema(Schema):
 
     def _connect_fields(self) -> Q:
         q = Q()
-        for field_name, field in self.__fields__.items():
+        for field_name, field in self.model_fields.items():
             filter_value = getattr(self, field_name)
-            ignore_none = field.field_info.extra.get(
-                "ignore_none", self.__config__.ignore_none
+            field_extra = field.json_schema_extra or {}
+            ignore_none = field_extra.get(
+                "ignore_none", self.model_config["ignore_none"]
             )
 
             # Resolve q for a field even if we skip it due to None value
@@ -90,6 +99,6 @@ class FilterSchema(Schema):
             field_q = self._resolve_field_expression(field_name, filter_value, field)
             if filter_value is None and ignore_none:
                 continue
-            q = q._combine(field_q, self.__config__.expression_connector)  # type: ignore[attr-defined]
+            q = q._combine(field_q, self.model_config["expression_connector"])  # type: ignore[attr-defined]
 
         return q

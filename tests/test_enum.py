@@ -112,7 +112,6 @@ def test_schema():
         assert room_prop == {"$ref": "#/components/schemas/RoomEnum"}
 
     assert schema["components"]["schemas"]["RoomEnum"] == {
-        "description": "An enumeration.",
         "enum": ["double", "twin", "single"],
         "title": "RoomEnum",
         "type": "string",
@@ -128,11 +127,9 @@ def test_schema():
     assert room_param == {
         "in": "query",
         "name": "room",
-        "description": "An enumeration.",
         "required": True,
         "schema": {
             "title": "RoomEnum",
-            "description": "An enumeration.",
             "enum": ["double", "twin", "single"],
             "type": "string",
         },
@@ -144,15 +141,8 @@ def test_schema():
         "in": "query",
         "name": "room",
         "schema": {
+            "anyOf": [{"$ref": "#/components/schemas/RoomEnum"}, {"type": "null"}],
             "description": "description",
-            "allOf": [
-                {
-                    "title": "RoomEnum",
-                    "description": "An enumeration.",
-                    "enum": ["double", "twin", "single"],
-                    "type": "string",
-                }
-            ],
         },
         "required": False,
         "description": "description",
@@ -165,8 +155,8 @@ def test_schema():
         "required": False,
         "schema": {
             "description": "description",
+            "title": "Q",
             "items": {
-                "description": "An enumeration.",
                 "enum": ["one", "two"],
                 "title": "QueryOnlyEnum",
                 "type": "string",

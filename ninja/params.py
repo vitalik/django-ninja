@@ -1,6 +1,6 @@
 from typing import Any, Dict, Optional
 
-from pydantic.fields import FieldInfo, ModelField
+from pydantic.fields import FieldInfo
 
 from ninja import params_models
 
@@ -33,17 +33,22 @@ class Param(FieldInfo):
         self.deprecated = deprecated
         # self.param_name: str = None
         # self.param_type: Any = None
-        self.model_field: Optional[ModelField] = None
+        self.model_field: Optional[FieldInfo] = None
+        json_schema_extra = {}
         if example:
-            extra["example"] = example
+            json_schema_extra["example"] = example
         if examples:
-            extra["examples"] = examples
+            json_schema_extra["examples"] = examples
         if deprecated:
-            extra["deprecated"] = deprecated
+            json_schema_extra["deprecated"] = deprecated
         if not include_in_schema:
-            extra["include_in_schema"] = include_in_schema
+            json_schema_extra["include_in_schema"] = include_in_schema
+        if alias and not extra.get("validation_alias"):
+            extra["validation_alias"] = alias
+        if alias and not extra.get("serialization_alias"):
+            extra["serialization_alias"] = alias
         super().__init__(
-            default,
+            default=default,
             alias=alias,
             title=title,
             description=description,
@@ -54,6 +59,7 @@ class Param(FieldInfo):
             min_length=min_length,
             max_length=max_length,
             regex=regex,
+            json_schema_extra=json_schema_extra,
             **extra,
         )
 
@@ -93,4 +99,7 @@ class File(Param):
 
 class _MultiPartBody(Param):
     _model = params_models._MultiPartBodyModel
-    _param_source = Body._param_source
+
+    @classmethod
+    def _param_source(cls) -> str:
+        return "body"

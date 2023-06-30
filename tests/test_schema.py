@@ -55,7 +55,7 @@ class User:
 
 
 class TagSchema(Schema):
-    id: str
+    id: int
     title: str
 
 
@@ -63,13 +63,13 @@ class UserSchema(Schema):
     name: str
     groups: List[int] = Field(..., alias="group_set")
     tags: List[TagSchema]
-    avatar: str = None
+    avatar: Optional[str] = None
 
 
 class UserWithBossSchema(UserSchema):
     boss: Optional[str] = Field(None, alias="boss.name")
     has_boss: bool
-    boss_title: str = Field(None, alias="get_boss_title")
+    boss_title: Optional[str] = Field(None, alias="get_boss_title")
 
     @staticmethod
     def resolve_has_boss(obj):
@@ -95,7 +95,7 @@ def test_schema():
     assert schema.dict() == {
         "name": "John Smith",
         "groups": [1, 2, 3],
-        "tags": [{"id": "1", "title": "foo"}, {"id": "2", "title": "bar"}],
+        "tags": [{"id": 1, "title": "foo"}, {"id": 2, "title": "bar"}],
         "avatar": None,
     }
 
@@ -109,7 +109,7 @@ def test_schema_with_image():
     assert schema.dict() == {
         "name": "John Smith",
         "groups": [1, 2, 3],
-        "tags": [{"id": "1", "title": "foo"}, {"id": "2", "title": "bar"}],
+        "tags": [{"id": 1, "title": "foo"}, {"id": 2, "title": "bar"}],
         "avatar": "/smile.jpg",
     }
 
@@ -122,7 +122,7 @@ def test_with_boss_schema():
         "boss": "Jane Jackson",
         "has_boss": True,
         "groups": [1, 2, 3],
-        "tags": [{"id": "1", "title": "foo"}, {"id": "2", "title": "bar"}],
+        "tags": [{"id": 1, "title": "foo"}, {"id": 2, "title": "bar"}],
         "avatar": None,
         "boss_title": "CEO",
     }
@@ -136,7 +136,7 @@ def test_with_boss_schema():
         "has_boss": False,
         "boss_title": None,
         "groups": [1, 2, 3],
-        "tags": [{"id": "1", "title": "foo"}, {"id": "2", "title": "bar"}],
+        "tags": [{"id": 1, "title": "foo"}, {"id": 2, "title": "bar"}],
         "avatar": None,
     }
 
@@ -150,7 +150,7 @@ def test_with_initials_schema():
         "boss": "Jane Jackson",
         "has_boss": True,
         "groups": [1, 2, 3],
-        "tags": [{"id": "1", "title": "foo"}, {"id": "2", "title": "bar"}],
+        "tags": [{"id": 1, "title": "foo"}, {"id": 2, "title": "bar"}],
         "avatar": None,
         "boss_title": "CEO",
     }
@@ -174,7 +174,7 @@ def test_complex_alias_resolve():
 
 def test_with_attr_that_has_resolve():
     class Obj:
-        id = 1
-        resolve_attr = 2
+        id = "1"
+        resolve_attr = "2"
 
     assert ResolveAttrSchema.from_orm(Obj()).dict() == {"id": "1", "resolve_attr": "2"}

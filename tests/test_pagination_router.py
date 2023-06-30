@@ -52,7 +52,7 @@ def test_for_list_reponse():
     ]
 
     response = client.get("/items?offset=5&limit=1").json()
-    print(response)
+    # print(response)
     assert response == {"items": [{"id": 6}], "count": 50}
 
 
@@ -60,5 +60,5 @@ def test_for_NON_list_reponse():
     parameters = api.get_openapi_schema()["paths"]["/api/items_nolist"]["get"][
         "parameters"
     ]
-    print(parameters)
+    # print(parameters)
     assert parameters == []

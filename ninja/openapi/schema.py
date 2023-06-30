@@ -16,18 +16,18 @@ from typing import (
 )
 
 from pydantic import BaseModel
-from pydantic.schema import model_schema
 
 from ninja.constants import NOT_SET
 from ninja.operation import Operation
 from ninja.params_models import TModel, TModels
+from ninja.schema import NinjaGenerateJsonSchema
 from ninja.types import DictStrAny
 from ninja.utils import normalize_path
 
 if TYPE_CHECKING:
     from ninja import NinjaAPI  # pragma: no cover
 
-REF_PREFIX: str = "#/components/schemas/"
+REF_TEMPLATE: str = "#/components/schemas/{model}"
 
 BODY_CONTENT_TYPES: Dict[str, str] = {
     "body": "application/json",
@@ -152,7 +152,7 @@ class OpenAPISchema(dict):
     def operation_parameters(self, operation: Operation) -> List[DictStrAny]:
         result = []
         for model in operation.models:
-            if model._param_source not in BODY_CONTENT_TYPES:
+            if model.__ninja_param_source__ not in BODY_CONTENT_TYPES:
                 result.extend(self._extract_parameters(model))
         return result
 
@@ -160,7 +160,10 @@ class OpenAPISchema(dict):
     def _extract_parameters(cls, model: TModel) -> List[DictStrAny]:
         result = []
 
-        schema = model_schema(cast(Type[BaseModel], model), ref_prefix=REF_PREFIX)
+        schema = model.model_json_schema(
+            ref_template=REF_TEMPLATE,
+            schema_generator=NinjaGenerateJsonSchema,
+        )
 
         required = set(schema.get("required", []))
         properties = schema["properties"]
@@ -171,13 +174,13 @@ class OpenAPISchema(dict):
             p_schema: DictStrAny
             p_required: bool
             for p_name, p_schema, p_required in flatten_properties(
-                name, details, is_required, schema.get("definitions", {})
+                name, details, is_required, schema.get("$defs", {})
             ):
                 if not p_schema.get("include_in_schema", True):
                     continue
 
                 param = {
-                    "in": model._param_source,
+                    "in": model.__ninja_param_source__,
                     "name": p_name,
                     "schema": p_schema,
                     "required": p_required,
@@ -215,16 +218,18 @@ class OpenAPISchema(dict):
         by_alias: bool = True,
         remove_level: bool = True,
     ) -> Tuple[DictStrAny, bool]:
-        if hasattr(model, "_flatten_map"):
+        if hasattr(model, "__ninja_flatten_map__"):
             schema = self._flatten_schema(model)
         else:
-            schema = model_schema(
-                cast(Type[BaseModel], model), ref_prefix=REF_PREFIX, by_alias=by_alias
-            )
+            schema = model.model_json_schema(
+                ref_template=REF_TEMPLATE,
+                by_alias=by_alias,
+                schema_generator=NinjaGenerateJsonSchema,
+            ).copy()
 
         # move Schemas from definitions
-        if schema.get("definitions"):
-            self.add_schema_definitions(schema.pop("definitions"))
+        if schema.get("$defs"):
+            self.add_schema_definitions(schema.pop("$defs"))
 
         if remove_level and len(schema["properties"]) == 1:
             name, details = list(schema["properties"].items())[0]
@@ -253,15 +258,19 @@ class OpenAPISchema(dict):
         return result, content_type
 
     def request_body(self, operation: Operation) -> DictStrAny:
-        models = [m for m in operation.models if m._param_source in BODY_CONTENT_TYPES]
+        models = [
+            m
+            for m in operation.models
+            if m.__ninja_param_source__ in BODY_CONTENT_TYPES
+        ]
         if not models:
             return {}
 
         if len(models) == 1:
             model = models[0]
-            content_type = BODY_CONTENT_TYPES[model._param_source]
+            content_type = BODY_CONTENT_TYPES[model.__ninja_param_source__]
             schema, required = self._create_schema_from_model(
-                model, remove_level=model._param_source == "body"
+                model, remove_level=model.__ninja_param_source__ == "body"
             )
         else:
             schema, content_type = self._create_multipart_schema_from_models(models)

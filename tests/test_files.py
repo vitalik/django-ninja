@@ -93,43 +93,43 @@ def test_schema():
 
     assert methods == [
         {
-            "title": "FileParams",
             "type": "object",
             "properties": {
-                "file": {"title": "File", "type": "string", "format": "binary"}
+                "file": {"type": "string", "format": "binary", "title": "File"}
             },
             "required": ["file"],
+            "title": "FileParams",
         },
         {
-            "title": "FileParams",
             "type": "object",
             "properties": {
-                "file": {"title": "File", "type": "string", "format": "binary"}
+                "file": {"type": "string", "format": "binary", "title": "File"}
             },
             "required": ["file"],
+            "title": "FileParams",
         },
         {
-            "title": "FileParams",
             "type": "object",
             "properties": {
-                "file": {"title": "File", "type": "string", "format": "binary"}
+                "file": {"type": "string", "format": "binary", "title": "File"}
             },
+            "title": "FileParams",
         },
         {
-            "title": "FileParams",
             "type": "object",
             "properties": {
                 "files": {
-                    "title": "Files",
                     "type": "array",
                     "items": {"type": "string", "format": "binary"},
+                    "title": "Files",
                 }
             },
             "required": ["files"],
+            "title": "FileParams",
         },
     ]
 
 
 def test_invalid_file():
     with pytest.raises(ValueError):
-        UploadedFile._validate("not_a_file")
+        UploadedFile._validate("not_a_file", None)

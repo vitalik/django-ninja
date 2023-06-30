@@ -100,33 +100,34 @@ def test_examples():
 
         schema = api.get_openapi_schema("")
         params = schema["paths"]["/filter"]["get"]["parameters"]
+        # print(params)
         assert params == [
             {
                 "in": "query",
                 "name": "limit",
+                "schema": {"default": 100, "title": "Limit", "type": "integer"},
                 "required": False,
-                "schema": {"title": "Limit", "default": 100, "type": "integer"},
             },
             {
                 "in": "query",
                 "name": "offset",
-                "required": False,
                 "schema": {"title": "Offset", "type": "integer"},
+                "required": False,
             },
             {
                 "in": "query",
                 "name": "query",
-                "required": False,
                 "schema": {"title": "Query", "type": "string"},
+                "required": False,
             },
             {
                 "in": "query",
                 "name": "categories",
-                "required": False,
                 "schema": {
+                    "items": {"type": "string"},
                     "title": "Categories",
                     "type": "array",
-                    "items": {"type": "string"},
                 },
+                "required": False,
             },
         ]

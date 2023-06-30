@@ -43,7 +43,7 @@ def check_no_content(request, return_code: bool):
     response={codes_2xx: int, codes_3xx: str, ...: float},
 )
 def check_multiple_codes(request, code: int):
-    return code, 1
+    return code, "1"
 
 
 class User:

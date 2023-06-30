@@ -16,8 +16,15 @@ class ModelSchemaMetaclass(ResolverMetaclass):
         name: str,
         bases: tuple,
         namespace: dict,
+        **kwargs,
     ):
-        cls = super().__new__(mcs, name, bases, namespace)
+        cls = super().__new__(
+            mcs,
+            name,
+            bases,
+            namespace,
+            **kwargs,
+        )
         for base in reversed(bases):
             if (
                 _is_modelschema_class_defined
@@ -55,8 +62,9 @@ class ModelSchemaMetaclass(ResolverMetaclass):
                     default = namespace.get(attr_name, ...)
                     custom_fields.append((attr_name, type, default))
 
-                # cls.__doc__ = namespace.get("__doc__", config.model.__doc__)
-                cls.__fields__ = {}  # forcing pydantic recreate
+                # # cls.__doc__ = namespace.get("__doc__", config.model.__doc__)
+                # cls.__fields__ = {}  # forcing pydantic recreate
+                # # assert False, "!! cls.model_fields"
 
                 # print(config.model, name, fields, exclude, "!!")
 

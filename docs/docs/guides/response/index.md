@@ -168,7 +168,7 @@ class TaskSchema(Schema):
     id: int
     title: str
     is_completed: bool
-    owner: Optional[str]
+    owner: Optional[str] = None
     lower_title: str
 
     @staticmethod

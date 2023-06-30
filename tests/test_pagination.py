@@ -155,12 +155,12 @@ def test_case2():
     assert response == {"items": ITEMS[:10], "count": 100}
 
     schema = api.get_openapi_schema()["paths"]["/api/items_2"]["get"]
-    print(schema["parameters"])
+    # print(schema["parameters"])
     assert schema["parameters"] == [
         {
             "in": "query",
             "name": "someparam",
-            "schema": {"title": "Someparam", "default": 0, "type": "integer"},
+            "schema": {"default": 0, "title": "Someparam", "type": "integer"},
             "required": False,
         },
         {
@@ -193,7 +193,7 @@ def test_case3():
     assert response == {"items": ITEMS[5:10], "count": "many", "skip": 5}
 
     schema = api.get_openapi_schema()["paths"]["/api/items_3"]["get"]
-    print(schema)
+    # print(schema)
     assert schema["parameters"] == [
         {
             "in": "query",
