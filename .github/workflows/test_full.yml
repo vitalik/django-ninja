@@ -59,7 +59,7 @@ jobs:
         run: black --check ninja tests
       - name: isort
         run: isort --check ninja tests
-      - name: Flake8
-        run: flake8 ninja tests
       - name: mypy
         run: mypy ninja
+      - name: Flake8
+        run: flake8 ninja tests
