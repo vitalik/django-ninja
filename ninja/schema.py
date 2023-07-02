@@ -20,6 +20,7 @@ dotted attributes and resolver methods. For example::
             return "".join(n[:1] for n in self.name.split())
 
 """
+import warnings
 from typing import Any, Callable, Dict, Type, TypeVar, Union, no_type_check
 
 import pydantic
