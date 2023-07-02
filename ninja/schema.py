@@ -207,6 +207,13 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
 
     @classmethod
     def schema(cls) -> DictStrAny:
+        warnings.warn(
+            ".schema() is deprecated, use .json_schema() instead", DeprecationWarning
+        )
+        return cls.model_json_schema()
+
+    @classmethod
+    def json_schema(cls) -> DictStrAny:
         return cls.model_json_schema()
 
     @classmethod

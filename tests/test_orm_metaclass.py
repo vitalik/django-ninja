@@ -21,7 +21,7 @@ def test_simple():
         def hello(self):
             return f"Hello({self.firstname})"
 
-    assert SampleSchema.schema() == {
+    assert SampleSchema.json_schema() == {
         "title": "SampleSchema",
         "type": "object",
         "properties": {
