@@ -57,7 +57,7 @@ jobs:
       - name: Black
         run: black --check ninja tests
       - name: Ruff
-        run: ruff ninja
+        run: ruff ninja tests
       - name: mypy
         run: mypy ninja
 
