@@ -2,7 +2,7 @@ import asyncio
 import inspect
 import re
 import sys
-from typing import Any, Callable, ForwardRef, Set, cast  # type: ignore
+from typing import Any, Callable, ForwardRef, List, Set, cast  # type: ignore
 
 from django.urls import register_converter
 from django.urls.converters import UUIDConverter
@@ -70,6 +70,18 @@ def get_path_param_names(path: str) -> Set[str]:
 
 def is_async(callable: Callable) -> bool:
     return asyncio.iscoroutinefunction(callable)
+
+
+def has_kwargs(func: Callable) -> bool:
+    for param in inspect.signature(func).parameters.values():
+        if param.kind == param.VAR_KEYWORD:
+            return True
+    return False
+
+
+def get_args_names(func: Callable) -> List[str]:
+    "returns list of function argument names"
+    return list(inspect.signature(func).parameters.keys())
 
 
 class NinjaUUIDConverter:

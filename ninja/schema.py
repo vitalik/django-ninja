@@ -27,7 +27,7 @@ import pydantic
 from django.db.models import Manager, QuerySet
 from django.db.models.fields.files import FieldFile
 from django.template import Variable, VariableDoesNotExist
-from pydantic import BaseModel, Field, model_validator, validator
+from pydantic import BaseModel, Field, ValidationInfo, model_validator, validator
 from pydantic._internal._model_construction import ModelMetaclass
 from pydantic.json_schema import (
     DEFAULT_REF_TEMPLATE,
@@ -37,6 +37,7 @@ from pydantic.json_schema import (
     model_json_schema,
 )
 
+from ninja.signature.utils import get_args_names, has_kwargs
 from ninja.types import DictStrAny
 
 pydantic_version = list(map(int, pydantic.VERSION.split(".")[:2]))
@@ -48,11 +49,12 @@ S = TypeVar("S", bound="Schema")
 
 
 class DjangoGetter:
-    __slots__ = ("_obj", "_schema_cls")
+    __slots__ = ("_obj", "_schema_cls", "_context")
 
-    def __init__(self, obj: Any, schema_cls: "Schema"):
+    def __init__(self, obj: Any, schema_cls: "Schema", context: Any = None):
         self._obj = obj
         self._schema_cls = schema_cls
+        self._context = context
 
     def __getattr__(self, key: str) -> Any:
         # if key.startswith("__pydantic"):
@@ -74,7 +76,7 @@ class DjangoGetter:
                         # value = attrgetter(key)(self._obj)
                         value = Variable(key).resolve(self._obj)
                         # TODO: Variable(key) __init__ is actually slower than
-                        #       resolve - so it better be cached
+                        #       Variable.resolve - so it better be cached
                     except VariableDoesNotExist as e:
                         raise AttributeError(key) from e
         return self._convert_result(value)
@@ -104,9 +106,10 @@ class DjangoGetter:
 
 
 class Resolver:
-    __slots__ = ("_func", "_static")
+    __slots__ = ("_func", "_static", "_takes_context")
     _static: bool
     _func: Any
+    _takes_context: bool
 
     def __init__(self, func: Union[Callable, staticmethod]):
         if isinstance(func, staticmethod):
@@ -116,9 +119,16 @@ class Resolver:
             self._static = False
             self._func = func
 
+        arg_names = get_args_names(self._func)
+        self._takes_context = has_kwargs(self._func) or "context" in arg_names
+
     def __call__(self, getter: DjangoGetter) -> Any:
+        kwargs = {}
+        if self._takes_context:
+            kwargs["context"] = getter._context
+
         if self._static:
-            return self._func(getter._obj)
+            return self._func(getter._obj, **kwargs)
         raise NotImplementedError(
             "Non static resolves are not supported yet"
         )  # pragma: no cover
@@ -195,8 +205,8 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
         from_attributes = True  # aka orm_mode
 
     @model_validator(mode="before")
-    def run_root_validator(cls, values: Any, info: Any) -> Any:
-        values = DjangoGetter(values, cls)
+    def run_root_validator(cls, values: Any, info: ValidationInfo) -> Any:
+        values = DjangoGetter(values, cls, info.context)
         return values
 
     @classmethod

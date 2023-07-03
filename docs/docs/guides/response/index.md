@@ -181,6 +181,29 @@ class TaskSchema(Schema):
         return self.title.lower()
 ```
 
+### Accessing extra context
+
+Pydantic v2 allows you to process an extra context that is passed to the serializer. In the following example you can have resolver that gets request object from passed `context` argument:
+
+```Python hl_lines="6"
+class Data(Schema):
+    a: int
+    path: str = ""
+
+    @staticmethod
+    def resolve_path(obj, context):
+        request = context["request"]
+        return request.path
+
+```
+
+if you use this schema for incoming requests - the `request` object will be automatically passed to context.
+
+You can as well pass your own context:
+
+```Python
+data = Data.model_validate({'some': 1}, context={'request': MyRequest()})
+```
 
 ## Returning querysets
 

@@ -54,7 +54,7 @@ class ParamModel(BaseModel, ABC):
             return cls()
 
         data = cls._map_data_paths(data)
-        return cls(**data)
+        return cls.model_validate(data, context={"request": request})
 
     @classmethod
     def _map_data_paths(cls, data: DictStrAny) -> DictStrAny:
@@ -121,7 +121,7 @@ class CookieModel(ParamModel):
 
 
 class BodyModel(ParamModel):
-    __read_from_single_attr: str
+    __read_from_single_attr__: str
 
     @classmethod
     def get_request_data(
@@ -136,7 +136,7 @@ class BodyModel(ParamModel):
                     msg += f" ({e})"
                 raise HttpError(400, msg) from e
 
-            varname = getattr(cls, "__read_from_single_attr", None)
+            varname = getattr(cls, "__read_from_single_attr__", None)
             if varname:
                 data = {varname: data}
             return data

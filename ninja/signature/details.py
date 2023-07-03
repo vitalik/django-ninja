@@ -151,7 +151,7 @@ class ViewSignature:
                     }
                 else:
                     # ::TODO:: this is still sus.  build some test cases
-                    attrs["__read_from_single_attr"] = (
+                    attrs["__read_from_single_attr__"] = (
                         args[0].name if len(args) == 1 else None
                     )
 
