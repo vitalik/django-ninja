@@ -108,6 +108,6 @@ def test_validates():
     try:
         os.environ["NINJA_SKIP_REGISTRY"] = ""
         with pytest.raises(ConfigError):
-            NinjaAPI().urls
+            _urls = NinjaAPI().urls
     finally:
         os.environ["NINJA_SKIP_REGISTRY"] = "yes"

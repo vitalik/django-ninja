@@ -88,14 +88,14 @@ async def test_raises_on_cookie_auth():
         # Check for wrong error reported
         match = "Looks like you created multiple NinjaAPIs"
         with pytest.raises(ConfigError, match=match):
-            api.urls
+            _urls = api.urls
 
         # django debug server can attempt to import the urls twice when errors exist
         # verify we get the correct error reported
         match = "Cookie Authentication must be used with CSRF"
         with pytest.raises(ConfigError, match=match):
             with mock.patch("ninja.main._imported_while_running_in_debug_server", True):
-                api.urls
+                _urls = api.urls
 
     finally:
         os.environ["NINJA_SKIP_REGISTRY"] = "yes"

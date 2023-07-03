@@ -96,3 +96,4 @@ ignore = [
 "__init__.py" = ["F401"]
 "ninja/compatibility/datastructures.py" = ["C416"]
 "ninja/utils.py" = ["B004"]
+"tests/*" = ["C408", "F401"]

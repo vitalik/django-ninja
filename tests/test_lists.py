@@ -47,7 +47,7 @@ def listview3(request, body: List[BodyModel]):
 
 
 @router.post("/list-default")
-def listviewdefault(request, body: List[int] = [1]):
+def listviewdefault(request, body: List[int] = [1]):  # noqa: B006
     # By default List[anything] is treated for body
     return {
         "body": body,

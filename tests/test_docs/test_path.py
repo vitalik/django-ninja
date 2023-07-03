@@ -18,8 +18,8 @@ def test_examples():
     api = NinjaAPI()
 
     with patch("builtins.api", api, create=True):
-        import docs.src.tutorial.path.code02  # noqa: F401
         import docs.src.tutorial.path.code010  # noqa: F401
+        import docs.src.tutorial.path.code02  # noqa: F401
 
         client = TestClient(api)
 

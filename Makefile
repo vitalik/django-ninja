@@ -11,14 +11,13 @@ install: ## Install dependencies
 .PHONY: lint
 lint: ## Run code linters
 	black --check ninja tests
-	isort --check ninja tests
-	flake8 ninja tests
+	ruff ninja tests
 	mypy ninja
 
 .PHONY: fmt format
 fmt format: ## Run code formatters
 	black ninja tests
-	isort ninja tests
+	ruff ninja tests --fix
 
 .PHONY: test
 test: ## Run tests

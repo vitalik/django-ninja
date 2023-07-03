@@ -2,6 +2,7 @@ import copy
 import uuid
 
 import pytest
+from django.http import Http404
 from pydantic import BaseModel
 
 from ninja import NinjaAPI
@@ -20,10 +21,10 @@ def test_is_pydantic_model():
 
 
 def test_client():
-    "covering evertying in testclient (includeing invalid paths)"
+    "covering everything in testclient (including invalid paths)"
     api = NinjaAPI()
     client = TestClient(api)
-    with pytest.raises(Exception):
+    with pytest.raises(Exception):  # noqa: B017
         client.get("/404")
 
 
