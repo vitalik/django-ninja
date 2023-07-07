@@ -1,4 +1,7 @@
+import sys
 from unittest.mock import patch
+
+import pytest
 
 from ninja import NinjaAPI
 from ninja.testing import TestClient
@@ -34,6 +37,11 @@ def test_examples():
                 "quantity": 10,
             },
         }
+
+
+@pytest.mark.skipif(sys.version_info[:2] < (3, 9), reason="requires py3.9+")
+def test_examples_extra():
+    api = NinjaAPI()
 
     with patch("builtins.api", api, create=True):
         import docs.src.tutorial.form.code03  # noqa: F401
