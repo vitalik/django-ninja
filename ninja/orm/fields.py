@@ -5,7 +5,6 @@ from uuid import UUID
 
 from django.db.models import ManyToManyField
 from django.db.models.fields import Field as DjangoField
-from django.utils.functional import keep_lazy_text
 from pydantic import IPvAnyAddress
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined, core_schema
@@ -16,7 +15,9 @@ from ninja.types import DictStrAny
 __all__ = ["create_m2m_link_type", "get_schema_field", "get_related_field_schema"]
 
 
-@keep_lazy_text
+# keep_lazy seems not needed as .title forces translation anyway
+# https://github.com/vitalik/django-ninja/issues/774
+# @keep_lazy_text
 def title_if_lower(s: str) -> str:
     if s == s.lower():
         return s.title()
@@ -102,9 +103,7 @@ def create_m2m_link_type(type_: Type[TModel]) -> Type[TModel]:
 
 
 @no_type_check
-def get_schema_field(
-    field: DjangoField, *, depth: int = 0, optional: bool = False
-) -> Tuple:
+def get_schema_field(field: DjangoField, *, depth: int = 0, optional: bool = False) -> Tuple:
     "Returns pydantic field from django's model field"
     alias = None
     default = ...
