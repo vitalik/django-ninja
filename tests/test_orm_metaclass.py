@@ -42,7 +42,7 @@ def test_simple():
             model = User
             model_exclude = ["lastname"]
 
-    assert SampleSchema2.schema() == {
+    assert SampleSchema2.json_schema() == {
         "title": "SampleSchema2",
         "type": "object",
         "properties": {
@@ -70,7 +70,7 @@ def test_custom():
             model = CustomModel
             model_fields = ["f1", "f2"]
 
-    assert CustomSchema.schema() == {
+    assert CustomSchema.json_schema() == {
         "title": "CustomSchema",
         "type": "object",
         "properties": {
@@ -117,9 +117,9 @@ def test_optional():
             model_fields = "__all__"
             model_fields_optional = "__all__"
 
-    assert OptSchema.schema().get("required") is None
+    assert OptSchema.json_schema().get("required") is None
 
-    assert OptSchema2.schema().get("required") is None
+    assert OptSchema2.json_schema().get("required") is None
 
 
 def test_model_fields_all():
@@ -135,8 +135,8 @@ def test_model_fields_all():
             model = SomeModel
             model_fields = "__all__"
 
-    print(SomeSchema.schema())
-    assert SomeSchema.schema() == {
+    print(SomeSchema.json_schema())
+    assert SomeSchema.json_schema() == {
         "title": "SomeSchema",
         "type": "object",
         "properties": {

@@ -26,10 +26,10 @@ def test_inheritance():
             app_label = "tests"
 
     Schema = create_schema(ChildModel)
-    # print(Schema.schema())
+    # print(Schema.json_schema())
 
     # TODO: I guess parentmodel_ptr_id must be skipped
-    assert Schema.schema() == {
+    assert Schema.json_schema() == {
         "title": "ChildModel",
         "type": "object",
         "properties": {
@@ -82,8 +82,8 @@ def test_all_fields():
             app_label = "tests"
 
     SchemaCls = create_schema(AllFields)
-    # print(SchemaCls.schema())
-    assert SchemaCls.schema() == {
+    # print(SchemaCls.json_schema())
+    assert SchemaCls.json_schema() == {
         "title": "AllFields",
         "type": "object",
         "properties": {
@@ -200,8 +200,8 @@ def test_bigautofield():
             app_label = "tests"
 
     SchemaCls = create_schema(ModelBigAuto)
-    # print(SchemaCls.schema())
-    assert SchemaCls.schema() == {
+    # print(SchemaCls.json_schema())
+    assert SchemaCls.json_schema() == {
         "type": "object",
         "properties": {
             "bigautofiled": {
@@ -225,8 +225,8 @@ def test_django_31_fields():
             app_label = "tests"
 
     Schema = create_schema(ModelNewFields)
-    # print(Schema.schema())
-    assert Schema.schema() == {
+    # print(Schema.json_schema())
+    assert Schema.json_schema() == {
         "title": "ModelNewFields",
         "type": "object",
         "properties": {
@@ -264,8 +264,8 @@ def test_relational():
             app_label = "tests"
 
     SchemaCls = create_schema(TestModel, name="TestSchema")
-    # print(SchemaCls.schema())
-    assert SchemaCls.schema() == {
+    # print(SchemaCls.json_schema())
+    assert SchemaCls.json_schema() == {
         "title": "TestSchema",
         "type": "object",
         "properties": {
@@ -285,8 +285,8 @@ def test_relational():
     }
 
     SchemaClsDeep = create_schema(TestModel, name="TestSchemaDeep", depth=1)
-    # print(SchemaClsDeep.schema())
-    assert SchemaClsDeep.schema() == {
+    # print(SchemaClsDeep.json_schema())
+    assert SchemaClsDeep.json_schema() == {
         "type": "object",
         "properties": {
             "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
@@ -335,8 +335,8 @@ def test_default():
             app_label = "tests"
 
     Schema = create_schema(MyModel)
-    # print(Schema.schema())
-    assert Schema.schema() == {
+    # print(Schema.json_schema())
+    assert Schema.json_schema() == {
         "title": "MyModel",
         "type": "object",
         "properties": {
@@ -361,8 +361,8 @@ def test_fields_exclude():
             app_label = "tests"
 
     Schema1 = create_schema(SampleModel, fields=["f1", "f2"])
-    # print(Schema1.schema())
-    assert Schema1.schema() == {
+    # print(Schema1.json_schema())
+    assert Schema1.json_schema() == {
         "title": "SampleModel",
         "type": "object",
         "properties": {
@@ -373,8 +373,8 @@ def test_fields_exclude():
     }
 
     Schema2 = create_schema(SampleModel, fields=["f3", "f2"])
-    # print(Schema2.schema())
-    assert Schema2.schema() == {
+    # print(Schema2.json_schema())
+    assert Schema2.json_schema() == {
         "title": "SampleModel2",
         "type": "object",
         "properties": {
@@ -385,8 +385,8 @@ def test_fields_exclude():
     }
 
     Schema3 = create_schema(SampleModel, exclude=["f3"])
-    # print(Schema3.schema())
-    assert Schema3.schema() == {
+    # print(Schema3.json_schema())
+    assert Schema3.json_schema() == {
         "type": "object",
         "properties": {
             "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
@@ -433,8 +433,8 @@ def test_with_relations():
     from someapp.models import Category
 
     Schema = create_schema(Category)
-    # print(Schema.schema())
-    assert Schema.schema() == {
+    # print(Schema.json_schema())
+    assert Schema.json_schema() == {
         "title": "Category",
         "type": "object",
         "properties": {
@@ -488,8 +488,8 @@ def test_custom_fields():
 
     Schema1 = create_schema(SmallModel, custom_fields=[("custom", int, ...)])
 
-    # print(Schema1.schema())
-    assert Schema1.schema() == {
+    # print(Schema1.json_schema())
+    assert Schema1.json_schema() == {
         "type": "object",
         "properties": {
             "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
@@ -502,9 +502,9 @@ def test_custom_fields():
     }
 
     Schema2 = create_schema(SmallModel, custom_fields=[("f1", int, ...)])
-    # print(Schema2.schema())
+    # print(Schema2.json_schema())
 
-    assert Schema2.schema() == {
+    assert Schema2.json_schema() == {
         "type": "object",
         "properties": {
             "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
@@ -533,9 +533,9 @@ def test_duplicate_schema_names():
         data1: create_schema(TestModelDuplicate, fields=["field1"])  # noqa: F821
         data2: create_schema(TestModelDuplicate, fields=["field2"])  # noqa: F821
 
-    # print(TestSchema.schema())
+    # print(TestSchema.json_schema())
 
-    assert TestSchema.schema() == {
+    assert TestSchema.json_schema() == {
         "type": "object",
         "properties": {
             "data1": {"$ref": "#/$defs/TestModelDuplicate"},
@@ -570,12 +570,12 @@ def test_optional_fields():
             app_label = "tests"
 
     Schema = create_schema(SomeReqFieldModel)
-    assert Schema.schema()["required"] == ["some_field", "other_field"]
+    assert Schema.json_schema()["required"] == ["some_field", "other_field"]
 
     Schema = create_schema(SomeReqFieldModel, optional_fields=["some_field"])
-    assert Schema.schema()["required"] == ["other_field"]
+    assert Schema.json_schema()["required"] == ["other_field"]
 
     Schema = create_schema(
         SomeReqFieldModel, optional_fields=["some_field", "other_field", "optional"]
     )
-    assert Schema.schema().get("required") is None
+    assert Schema.json_schema().get("required") is None

@@ -155,10 +155,6 @@ def _inject_pagination(
         ),
     ]
 
-    # def contribute_to_operation(op: Operation) -> None:
-
-    #     make_response_paginated(schema, paginator, op)
-
     if paginator.Output:
         view_with_pagination._ninja_contribute_to_operation = partial(  # type: ignore
             make_response_paginated, paginator
@@ -188,7 +184,7 @@ def make_response_paginated(paginator: PaginationBase, op: Operation) -> None:
         response=List[Some]
     will be changed to:
         response=PagedSome
-    where Paged some willbe a subclass of paginator.Output:
+    where Paged some will be a subclass of paginator.Output:
         class PagedSome:
             items: List[Some]
             count: int
@@ -216,6 +212,10 @@ def make_response_paginated(paginator: PaginationBase, op: Operation) -> None:
 
 
 def _find_collection_response(op: Operation) -> Tuple[int, Any]:
+    """
+    Walks through defined operation responses and finds the first
+    that is of a collection type (e.g. List[SomeSchema])
+    """
     for code, resp_model in op.response_models.items():
         if resp_model is None or resp_model is NOT_SET:
             continue

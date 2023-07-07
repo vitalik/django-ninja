@@ -21,7 +21,7 @@ class SelfReference(BaseModel):
     sibling: "SelfReference" = None
 
 
-SelfReference.update_forward_refs()
+SelfReference.model_rebuild()
 
 
 router = Router()

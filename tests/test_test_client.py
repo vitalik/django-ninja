@@ -76,7 +76,10 @@ def test_schema_as_data():
     with mock.patch.object(client, "_call") as call:
         client.post("/test", json=schema_instance)
         request = call.call_args[0][1]
-        assert ClientTestSchema.parse_raw(request.body).json() == schema_instance.json()
+        assert (
+            ClientTestSchema.model_validate_json(request.body).model_dump_json()
+            == schema_instance.model_dump_json()
+        )
 
 
 def test_json_as_body():
@@ -84,7 +87,12 @@ def test_json_as_body():
 
     with mock.patch.object(client, "_call") as call:
         client.post(
-            "/test", data=schema_instance.json(), content_type="application/json"
+            "/test",
+            data=schema_instance.model_dump_json(),
+            content_type="application/json",
         )
         request = call.call_args[0][1]
-        assert ClientTestSchema.parse_raw(request.body).json() == schema_instance.json()
+        assert (
+            ClientTestSchema.model_validate_json(request.body).model_dump_json()
+            == schema_instance.model_dump_json()
+        )

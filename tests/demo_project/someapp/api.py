@@ -22,7 +22,7 @@ class EventSchema(BaseModel):
 
 @router.post("/create", url_name="event-create-url-name")
 def create_event(request, event: EventSchema):
-    Event.objects.create(**event.dict())
+    Event.objects.create(**event.model_dump())
     return event
 
 

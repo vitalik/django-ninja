@@ -29,13 +29,7 @@ from django.db.models.fields.files import FieldFile
 from django.template import Variable, VariableDoesNotExist
 from pydantic import BaseModel, Field, ValidationInfo, model_validator, validator
 from pydantic._internal._model_construction import ModelMetaclass
-from pydantic.json_schema import (
-    DEFAULT_REF_TEMPLATE,
-    GenerateJsonSchema,
-    JsonSchemaMode,
-    JsonSchemaValue,
-    model_json_schema,
-)
+from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
 
 from ninja.signature.utils import get_args_names, has_kwargs
 from ninja.types import DictStrAny
@@ -205,7 +199,7 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
         from_attributes = True  # aka orm_mode
 
     @model_validator(mode="before")
-    def run_root_validator(cls, values: Any, info: ValidationInfo) -> Any:
+    def _run_root_validator(cls, values: Any, info: ValidationInfo) -> Any:
         values = DjangoGetter(values, cls, info.context)
         return values
 
@@ -214,7 +208,12 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
         return cls.model_validate(obj)
 
     def dict(self, *a: Any, **kw: Any) -> DictStrAny:
+        "Backward compatibility with pydantic 1.x"
         return self.model_dump(*a, **kw)
+
+    @classmethod
+    def json_schema(cls) -> DictStrAny:
+        return cls.model_json_schema(schema_generator=NinjaGenerateJsonSchema)
 
     @classmethod
     def schema(cls) -> DictStrAny:
@@ -223,24 +222,4 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
             DeprecationWarning,
             stacklevel=2,
         )
-        return cls.model_json_schema()
-
-    @classmethod
-    def json_schema(cls) -> DictStrAny:
-        return cls.model_json_schema()
-
-    @classmethod
-    def model_json_schema(
-        cls,
-        by_alias: bool = True,
-        ref_template: str = DEFAULT_REF_TEMPLATE,
-        schema_generator: Type[GenerateJsonSchema] = NinjaGenerateJsonSchema,
-        mode: JsonSchemaMode = "validation",
-    ) -> DictStrAny:
-        return model_json_schema(
-            cls,
-            by_alias=by_alias,
-            ref_template=ref_template,
-            schema_generator=schema_generator,
-            mode=mode,
-        )
+        return cls.json_schema()

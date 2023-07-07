@@ -22,7 +22,7 @@ def test_optional_pydantic_model():
     with pytest.raises(ValidationError):
         OptModel().dict()
 
-    assert OptModel(b=None).dict() == {"a": None, "b": None, "c": None}
+    assert OptModel(b=None).model_dump() == {"a": None, "b": None, "c": None}
 
 
 def test_optional_schema():

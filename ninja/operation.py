@@ -199,7 +199,7 @@ class Operation:
 
         resp_object = ResponseObject(result)
         # ^ we need object because getter_dict seems work only with from_orm
-        result = response_model.from_orm(resp_object).dict(
+        result = response_model.from_orm(resp_object).model_dump(
             by_alias=self.by_alias,
             exclude_unset=self.exclude_unset,
             exclude_defaults=self.exclude_defaults,
