@@ -159,7 +159,7 @@ def _inject_pagination(
         contribute_operation_callback(
             view_with_pagination,
             partial(make_response_paginated, paginator),
-        )  # type: ignore
+        )
 
     return view_with_pagination
 

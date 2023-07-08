@@ -94,7 +94,7 @@ class Operation:
             # Allow 3rd party code to contribute to the operation behaviour
             callbacks: List[Callable] = view_func._ninja_contribute_to_operation  # type: ignore
             for callback in callbacks:
-                callback(self)  # type: ignore
+                callback(self)
 
     def run(self, request: HttpRequest, **kw: Any) -> HttpResponseBase:
         error = self._run_checks(request)
