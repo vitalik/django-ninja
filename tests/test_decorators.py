@@ -1,4 +1,5 @@
 from functools import wraps
+from typing import List
 
 from ninja import NinjaAPI
 from ninja.decorators import decorate_view
@@ -47,7 +48,7 @@ def test_decorator_after():
 def test_decorator_multiple():
     api = NinjaAPI()
 
-    @api.get("/multi", response=list[int])
+    @api.get("/multi", response=List[int])
     @decorate_view(some_decorator)
     @paginate
     def dec_multi(request):
