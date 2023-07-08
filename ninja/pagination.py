@@ -13,6 +13,7 @@ from ninja.constants import NOT_SET
 from ninja.errors import ConfigError
 from ninja.operation import Operation
 from ninja.signature.details import is_collection_type
+from ninja.utils import contribute_operation_args, contribute_operation_callback
 
 
 class PaginationBase(ABC):
@@ -147,18 +148,18 @@ def _inject_pagination(
             # ^ forcing queryset evaluation #TODO: check why pydantic did not do it here
         return result
 
-    view_with_pagination._ninja_contribute_args = [  # type: ignore
-        (
-            "ninja_pagination",
-            paginator.Input,
-            paginator.InputSource,
-        ),
-    ]
+    contribute_operation_args(
+        view_with_pagination,
+        "ninja_pagination",
+        paginator.Input,
+        paginator.InputSource,
+    )
 
     if paginator.Output:
-        view_with_pagination._ninja_contribute_to_operation = partial(  # type: ignore
-            make_response_paginated, paginator
-        )
+        contribute_operation_callback(
+            view_with_pagination,
+            partial(make_response_paginated, paginator),
+        )  # type: ignore
 
     return view_with_pagination
 
