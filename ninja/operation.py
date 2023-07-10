@@ -199,12 +199,15 @@ class Operation:
 
         resp_object = ResponseObject(result)
         # ^ we need object because getter_dict seems work only with from_orm
-        result = response_model.from_orm(resp_object).dict(
+        result = self.api.renderer.pydantic_to_dict(
+            data=response_model.from_orm(resp_object),
+            request=request,
             by_alias=self.by_alias,
             exclude_unset=self.exclude_unset,
             exclude_defaults=self.exclude_defaults,
             exclude_none=self.exclude_none,
         )["response"]
+
         return self.api.create_response(
             request, result, temporal_response=temporal_response
         )
