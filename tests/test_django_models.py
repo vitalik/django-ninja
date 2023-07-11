@@ -8,7 +8,12 @@ from someapp.models import Event
 def test_with_client(client: Client):
     assert Event.objects.count() == 0
 
-    test_item = {"start_date": "2020-01-01", "end_date": "2020-01-02", "title": "test"}
+    test_item = {
+        "start_date": "2020-01-01",
+        "end_date": "2020-01-02",
+        "title": "test",
+        "category": "test_events",
+    }
 
     response = client.post("/api/events/create", **json_payload(test_item))
     assert response.status_code == 200

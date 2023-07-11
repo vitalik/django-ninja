@@ -1,29 +1,36 @@
 from datetime import date
-from typing import List
+from typing import List, Optional
 
 from django.shortcuts import get_object_or_404
-from pydantic import BaseModel
 
-from ninja import Router
+from ninja import Router, Field, Schema
 
-from .models import Event
+from .models import Event, Category
 
 router = Router()
 
 
-class EventSchema(BaseModel):
+class EventSchema(Schema):
     title: str
     start_date: date
     end_date: date
+    category: Optional[str] = Field(None, alias="category.title")
 
     class Config:
         orm_mode = True
 
 
-@router.post("/create", url_name="event-create-url-name")
+@router.post("/create", url_name="event-create-url-name", response=EventSchema)
 def create_event(request, event: EventSchema):
-    Event.objects.create(**event.dict())
-    return event
+    payload = event.dict()
+    category_title = payload.pop("category")
+
+    if category_title is not None:
+        category, created = Category.objects.get_or_create(title=category_title)
+    else:
+        category = None
+
+    return Event.objects.create(category=category, **payload)
 
 
 @router.get("", response=List[EventSchema])
