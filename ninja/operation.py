@@ -14,7 +14,6 @@ from typing import (
 
 import django
 import pydantic
-from asgiref.sync import async_to_sync
 from django.http import HttpRequest, HttpResponse, HttpResponseNotAllowed
 from django.http.response import HttpResponseBase
 
@@ -148,6 +147,8 @@ class Operation:
         return None
 
     def _run_authentication(self, request: HttpRequest) -> Optional[HttpResponse]:
+        from asgiref.sync import async_to_sync
+
         for callback in self.auth_callbacks:
             try:
                 if is_async_callable(callback) or getattr(callback, "is_async", False):
