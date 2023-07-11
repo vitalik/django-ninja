@@ -12,6 +12,8 @@ The core concept is that when you describe an API operation, you can define an a
 
 In this example, the client will only be able to call the `pets` method if it uses Django session authentication (the default is cookie based), otherwise an HTTP-401 error will be returned.
 
+If you need to authorize only a superuser, you can use `from ninja.security import django_auth_superuser` instead.
+
 ## Automatic OpenAPI schema
 
 Here's an example where the client, in order to authenticate, needs to pass a header:
