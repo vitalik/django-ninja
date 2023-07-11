@@ -6,6 +6,7 @@ from django.shortcuts import render
 from django.urls import reverse
 
 from ninja.conf import settings as ninja_settings
+from ninja.constants import NOT_SET
 from ninja.responses import Response
 from ninja.types import DictStrAny
 
@@ -42,8 +43,12 @@ def openapi_view(request: HttpRequest, api: "NinjaAPI") -> HttpResponse:
     so we automatically detect - if ninja is in INSTALLED_APPS - then we render with django.shortcuts.render
     otherwise - rendering custom html with swagger js from cdn
     """
+    add_csrf = api.csrf
+    if not add_csrf and api.auth != NOT_SET:
+        add_csrf = any(getattr(a, "csrf", False) for a in api.auth)  # type: ignore
     context = {
         "api": api,
+        "add_csrf": add_csrf,
         "openapi_json_url": reverse(f"{api.urls_namespace}:openapi-json"),
     }
     if "ninja" in settings.INSTALLED_APPS:

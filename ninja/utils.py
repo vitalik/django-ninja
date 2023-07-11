@@ -23,8 +23,12 @@ def normalize_path(path: str) -> str:
     return path
 
 
+def _no_view() -> None:
+    pass  # pragma: no cover
+
+
 def check_csrf(
-    request: HttpRequest, callback: Callable
+    request: HttpRequest, callback: Callable = _no_view
 ) -> Optional[HttpResponseForbidden]:
     mware = CsrfViewMiddleware(lambda x: HttpResponseForbidden())  # pragma: no cover
     request.csrf_processing_done = False  # type: ignore

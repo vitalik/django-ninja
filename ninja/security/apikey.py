@@ -4,7 +4,9 @@ from typing import Any, Optional
 from django.http import HttpRequest
 
 from ninja.compatibility.request import get_headers
+from ninja.errors import HttpError
 from ninja.security.base import AuthBase
+from ninja.utils import check_csrf
 
 __all__ = ["APIKeyBase", "APIKeyQuery", "APIKeyCookie", "APIKeyHeader"]
 
@@ -14,7 +16,7 @@ class APIKeyBase(AuthBase, ABC):
     param_name: str = "key"
 
     def __init__(self) -> None:
-        self.openapi_name = self.param_name
+        self.openapi_name = self.param_name  # this sets the name of the security schema
         super().__init__()
 
     def __call__(self, request: HttpRequest) -> Optional[Any]:
@@ -40,7 +42,15 @@ class APIKeyQuery(APIKeyBase, ABC):
 class APIKeyCookie(APIKeyBase, ABC):
     openapi_in: str = "cookie"
 
+    def __init__(self, csrf: bool = True) -> None:
+        self.csrf = csrf
+        super().__init__()
+
     def _get_key(self, request: HttpRequest) -> Optional[str]:
+        if self.csrf:
+            error_response = check_csrf(request)
+            if error_response:
+                raise HttpError(403, "CSRF check Failed")
         return request.COOKIES.get(self.param_name)
 
 

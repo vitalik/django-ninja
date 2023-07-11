@@ -478,9 +478,7 @@ class NinjaAPI:
         return None
 
     def _validate(self) -> None:
-        from ninja.security import APIKeyCookie
-
-        # 1) urls namespacing validation
+        # urls namespacing validation
         skip_registry = os.environ.get("NINJA_SKIP_REGISTRY", False)
         if (
             not skip_registry
@@ -496,17 +494,6 @@ Already registered: {NinjaAPI._registry}
 """
             raise ConfigError(msg.strip())
         NinjaAPI._registry.append(self.urls_namespace)
-
-        # 2) csrf
-        if self.csrf is False:
-            for _prefix, router in self._routers:
-                for path_operation in router.path_operations.values():
-                    for operation in path_operation.operations:
-                        for auth in operation.auth_callbacks:
-                            if isinstance(auth, APIKeyCookie):
-                                raise ConfigError(
-                                    "Cookie Authentication must be used with CSRF. Please use NinjaAPI(csrf=True)"
-                                )
 
 
 _imported_while_running_in_debug_server = is_debug_server()
