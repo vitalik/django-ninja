@@ -17,6 +17,7 @@ import pydantic
 from django.http import HttpRequest, HttpResponse, HttpResponseNotAllowed
 from django.http.response import HttpResponseBase
 
+from ninja.compatibility.util import async_to_sync
 from ninja.constants import NOT_SET
 from ninja.errors import AuthenticationError, ConfigError, ValidationError
 from ninja.params_models import TModels
@@ -147,8 +148,6 @@ class Operation:
         return None
 
     def _run_authentication(self, request: HttpRequest) -> Optional[HttpResponse]:
-        from asgiref.sync import async_to_sync
-
         for callback in self.auth_callbacks:
             try:
                 if is_async_callable(callback) or getattr(callback, "is_async", False):

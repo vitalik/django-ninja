@@ -1,4 +1,8 @@
-from typing import Any, Optional, Union
+from typing import Any, Callable, Optional, Union
+
+import django
+
+__all__ = ["get_origin", "get_args", "async_to_sync"]
 
 # python3.8+ get_origin, get_args
 try:
@@ -23,4 +27,11 @@ try:
 except ImportError:
     UNION_TYPES = (Union,)
 
-__all__ = ["get_origin", "get_args"]
+
+if django.VERSION < (3, 1):  # pragma: no cover
+
+    def async_to_sync(func: Callable) -> Callable:
+        raise NotImplementedError("Django<3.1 does not have async support")
+
+else:
+    from asgiref.sync import async_to_sync
