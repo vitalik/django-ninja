@@ -1,1 +1,4 @@
  - Pydnatic2
+ - CSRF changes
+ - Auth async support
+ - Schema.Meta

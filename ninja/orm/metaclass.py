@@ -1,12 +1,68 @@
-from typing import no_type_check
+import warnings
+from typing import Any, List, Optional, Union, no_type_check
 
 from django.db.models import Model as DjangoModel
+from pydantic.dataclasses import dataclass
 
 from ninja.errors import ConfigError
 from ninja.orm.factory import create_schema
 from ninja.schema import ResolverMetaclass, Schema
 
 _is_modelschema_class_defined = False
+
+
+@dataclass
+class MetaConf:
+    model: Any
+    fields: Optional[List[str]] = None
+    exclude: Union[List[str], str, None] = None
+    fields_optional: Union[List[str], str, None] = None
+
+    @staticmethod
+    def from_schema_class(name: str, namespace: dict) -> "MetaConf":
+        if "Meta" in namespace:
+            meta = namespace["Meta"]
+            model = meta.model
+            fields = getattr(meta, "fields", None)
+            exclude = getattr(meta, "exclude", None)
+            optional_fields = getattr(meta, "fields_optional", None)
+
+        elif "Config" in namespace:
+            config = namespace["Config"]
+            model = config.model
+            fields = getattr(config, "model_fields", None)
+            exclude = getattr(config, "model_exclude", None)
+            optional_fields = getattr(config, "model_fields_optional", None)
+
+            warnings.warn(
+                "The use of `Config` class is deprecated for ModelSchema, use 'Meta' instead",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
+        else:
+            raise ConfigError(
+                f"ModelSchema class '{name}' requires a 'Meta' (or a 'Config') subclass"
+            )
+
+        assert issubclass(model, DjangoModel)
+
+        if not fields and not exclude:
+            raise ConfigError(
+                "Creating a ModelSchema without either the 'fields' attribute"
+                " or the 'exclude' attribute is prohibited"
+            )
+
+        if fields == "__all__":
+            fields = None
+            # ^ when None is passed to create_schema - all fields are selected
+
+        return MetaConf(
+            model=model,
+            fields=fields,
+            exclude=exclude,
+            fields_optional=optional_fields,
+        )  # type: ignore
 
 
 class ModelSchemaMetaclass(ResolverMetaclass):
@@ -31,28 +87,7 @@ class ModelSchemaMetaclass(ResolverMetaclass):
                 and issubclass(base, ModelSchema)
                 and base == ModelSchema
             ):
-                try:
-                    config = namespace["Config"]
-                except KeyError:
-                    raise ConfigError(
-                        f"ModelSchema class '{name}' requires a 'Config' subclass"
-                    ) from None
-
-                assert issubclass(config.model, DjangoModel)
-
-                fields = getattr(config, "model_fields", None)
-                exclude = getattr(config, "model_exclude", None)
-                optional_fields = getattr(config, "model_fields_optional", None)
-
-                if not fields and not exclude:
-                    raise ConfigError(
-                        "Creating a ModelSchema without either the 'model_fields' attribute"
-                        " or the 'model_exclude' attribute is prohibited"
-                    )
-
-                if fields == "__all__":
-                    fields = None
-                    # ^ when None is passed to create_schema - all fields are selected
+                meta_conf = MetaConf.from_schema_class(name, namespace)
 
                 custom_fields = []
                 annotations = namespace.get("__annotations__", {})
@@ -69,11 +104,11 @@ class ModelSchemaMetaclass(ResolverMetaclass):
                 # print(config.model, name, fields, exclude, "!!")
 
                 model_schema = create_schema(
-                    config.model,
+                    meta_conf.model,
                     name=name,
-                    fields=fields,
-                    exclude=exclude,
-                    optional_fields=optional_fields,
+                    fields=meta_conf.fields,
+                    exclude=meta_conf.exclude,
+                    optional_fields=meta_conf.fields_optional,
                     custom_fields=custom_fields,
                     base_class=cls,
                 )

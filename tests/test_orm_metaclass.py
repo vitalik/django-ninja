@@ -14,9 +14,9 @@ def test_simple():
             app_label = "tests"
 
     class SampleSchema(ModelSchema):
-        class Config:
+        class Meta:
             model = User
-            model_fields = ["firstname", "lastname"]
+            fields = ["firstname", "lastname"]
 
         def hello(self):
             return f"Hello({self.firstname})"
@@ -38,9 +38,9 @@ def test_simple():
 
     # checking exclude ----------------------------------------------
     class SampleSchema2(ModelSchema):
-        class Config:
+        class Meta:
             model = User
-            model_exclude = ["lastname"]
+            exclude = ["lastname"]
 
     assert SampleSchema2.json_schema() == {
         "title": "SampleSchema2",
@@ -66,9 +66,9 @@ def test_custom():
         f4: int = 1
         _private: str = "<secret>"  # private should be ignored
 
-        class Config:
+        class Meta:
             model = CustomModel
-            model_fields = ["f1", "f2"]
+            fields = ["f1", "f2"]
 
     assert CustomSchema.json_schema() == {
         "title": "CustomSchema",
@@ -93,7 +93,7 @@ def test_config():
     with pytest.raises(ConfigError):
 
         class CategorySchema(ModelSchema):
-            class Config:
+            class Meta:
                 model = Category
 
 
@@ -106,23 +106,23 @@ def test_optional():
             app_label = "tests"
 
     class OptSchema(ModelSchema):
-        class Config:
+        class Meta:
             model = OptModel
-            model_fields = "__all__"
-            model_fields_optional = ["title"]
+            fields = "__all__"
+            fields_optional = ["title"]
 
     class OptSchema2(ModelSchema):
-        class Config:
+        class Meta:
             model = OptModel
-            model_fields = "__all__"
-            model_fields_optional = "__all__"
+            fields = "__all__"
+            fields_optional = "__all__"
 
     assert OptSchema.json_schema().get("required") is None
 
     assert OptSchema2.json_schema().get("required") is None
 
 
-def test_model_fields_all():
+def test_fields_all():
     class SomeModel(models.Model):
         field1 = models.CharField()
         field2 = models.CharField(blank=True, null=True)
@@ -131,9 +131,9 @@ def test_model_fields_all():
             app_label = "tests"
 
     class SomeSchema(ModelSchema):
-        class Config:
+        class Meta:
             model = SomeModel
-            model_fields = "__all__"
+            fields = "__all__"
 
     print(SomeSchema.json_schema())
     assert SomeSchema.json_schema() == {
@@ -154,8 +154,8 @@ def test_model_fields_all():
 def test_model_schema_without_config():
     with pytest.raises(
         ConfigError,
-        match="ModelSchema class 'NoConfigSchema' requires a 'Config' subclass",
+        match=r"ModelSchema class 'NoConfigSchema' requires a 'Meta' \(or a 'Config'\) subclass",
     ):
 
         class NoConfigSchema(ModelSchema):
-            pass
+            x: int
