@@ -3,11 +3,9 @@ from typing import Optional
 
 import pytest
 from django.db import models
-
-from ninja import ModelSchema
 from pydantic import BaseModel, ValidationError
 
-from ninja import Schema
+from ninja import ModelSchema, Schema
 
 
 class OptModel(BaseModel):
