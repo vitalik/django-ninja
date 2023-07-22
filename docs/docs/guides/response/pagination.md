@@ -141,6 +141,13 @@ def list_users(request):
     return User.objects.all()
 ```
 
+Tip: You can access request object from params:
+
+```Python
+def paginate_queryset(self, queryset, pagination: Input, **params):
+    request = params["request"]
+```
+
 ### Output attribute
 
 By defult page items are placed to `'items'` attribute. To override this behaviour use `items_attribute`:

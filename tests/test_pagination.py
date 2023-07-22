@@ -33,7 +33,7 @@ class CustomPagination(PaginationBase):
 
 
 class NoOutputPagination(PaginationBase):
-    # only offset param, defaults to 5 per page but without Output schema
+    # Outputs items without count attribute
     class Input(Schema):
         skip: int
 
@@ -63,6 +63,28 @@ class ResultsPaginator(PaginationBase):
             "results": items[skip : skip + 5],
             "count": self._items_count(items),
             "skip": skip,
+        }
+
+
+class NextPrevPagination(PaginationBase):
+    # only offset param, defaults to 5 per page
+    class Input(Schema):
+        skip: int
+
+    class Output(Schema):
+        items: List[Any]
+        next: str = None
+        prev: str = None
+
+    def paginate_queryset(self, items, pagination: Input, request, **params):
+        skip = pagination.skip
+        prev_skip = skip - 5
+        if prev_skip < 0:
+            prev_skip = 0
+        return {
+            "items": items[skip : skip + 5],
+            "next": request.build_absolute_uri(f"?skip={skip+5}"),
+            "prev": request.build_absolute_uri(f"?skip={prev_skip}"),
         }
 
 
@@ -106,13 +128,19 @@ def items_6(request, **kwargs):
 @api.get("/items_7", response=List[int])
 @paginate(NoOutputPagination)
 def items_7(request):
-    return [7] * 7
+    return list(range(15))
 
 
 @api.get("/items_8", response=List[int])
 @paginate(ResultsPaginator)
 def items_8(request):
     return list(range(1000))
+
+
+@api.get("/items_9", response=List[int])
+@paginate(NextPrevPagination)
+def items_9(request):
+    return list(range(100))
 
 
 client = TestClient(api)
@@ -269,8 +297,8 @@ def test_case6_pass_param_kwargs():
 
 
 def test_case7():
-    response = client.get("/items_7?skip=5").json()
-    assert response == [7, 7]
+    response = client.get("/items_7?skip=10").json()
+    assert response == [10, 11, 12, 13, 14]
 
     schema = api.get_openapi_schema()["paths"]["/api/items_7"]["get"]
     response = schema["responses"][200]["content"]["application/json"]["schema"]
@@ -285,6 +313,15 @@ def test_case7():
 def test_case8():
     response = client.get("/items_8?skip=5").json()
     assert response == {"results": [5, 6, 7, 8, 9], "count": 1000, "skip": 5}
+
+
+def test_case9():
+    response = client.get("/items_9?skip=5").json()
+    assert response == {
+        "items": [5, 6, 7, 8, 9],
+        "next": "http://testlocation/?skip=10",
+        "prev": "http://testlocation/?skip=0",
+    }
 
 
 def test_config_error_None():

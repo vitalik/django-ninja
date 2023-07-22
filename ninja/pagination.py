@@ -4,6 +4,7 @@ from functools import partial, wraps
 from typing import Any, Callable, List, Optional, Tuple, Type
 
 from django.db.models import QuerySet
+from django.http import HttpRequest
 from django.utils.module_loading import import_string
 
 from ninja import Field, Query, Router, Schema
@@ -133,15 +134,15 @@ def _inject_pagination(
     paginator: PaginationBase = paginator_class(**paginator_params)
 
     @wraps(func)
-    def view_with_pagination(*args: Tuple[Any], **kwargs: Any) -> Any:
+    def view_with_pagination(request: HttpRequest, **kwargs: Any) -> Any:
         pagination_params = kwargs.pop("ninja_pagination")
         if paginator.pass_parameter:
             kwargs[paginator.pass_parameter] = pagination_params
 
-        items = func(*args, **kwargs)
+        items = func(request, **kwargs)
 
         result = paginator.paginate_queryset(
-            items, pagination=pagination_params, **kwargs
+            items, pagination=pagination_params, request=request, **kwargs
         )
         if paginator.Output:
             result[paginator.items_attribute] = list(result[paginator.items_attribute])
