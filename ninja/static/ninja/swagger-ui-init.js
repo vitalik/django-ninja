@@ -1,6 +1,7 @@
 /**JS file for handling the SwaggerUIBundle and avoid inline script */
 const swaggerUi = document.querySelector("body")
-const extendedSettings = JSON.parse(document.getElementById('extendedSettings').textContent);
+const extendedSettingsElement = document.getElementById('extendedSettings')
+const extendedSettings = extendedSettingsElement ? JSON.parse(extendedSettingsElement.textContent) : {};
 
 SwaggerUIBundle({
     url: swaggerUi.dataset.openapiUrl,

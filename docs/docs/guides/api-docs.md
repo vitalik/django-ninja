@@ -41,9 +41,9 @@ from django.contrib.admin.views.decorators import staff_member_required
 api = NinjaAPI(docs_decorator=staff_member_required)
 ```
 
-## Extending your docs engine configuration
+## Extending your docs renderer configuration
 
-To provide some advanced configuration for your documentation engine, like setting [`persistAuthorization`](https://swagger.io/docs/open-source-tools/swagger-ui/usage/configuration/#persistAuthorization) in Swagger, use the `docs_context` argument with `swagger` and / or `redoc` key matching your `NINJA_DOCS_VIEW`:
+To provide some advanced configuration for your documentation engine, like setting [`persistAuthorization`](https://swagger.io/docs/open-source-tools/swagger-ui/usage/configuration/#persistAuthorization) in Swagger, use the `docs_context` argument with [`swagger`](https://swagger.io/docs/open-source-tools/swagger-ui/usage/configuration/) and / or [`redoc`](https://redocly.com/docs/api-reference-docs/configuration/functionality/) key matching your `NINJA_DOCS_VIEW`:
 
 ```Python
 api = NinjaAPI(docs_context={"swagger": {"persistAuthorization": True}})

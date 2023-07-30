@@ -5,7 +5,15 @@
     <title>{{ api.title }}</title>
 </head>
 <body>
-    <redoc spec-url='{{ openapi_json_url }}'></redoc>
+    {% if extended_settings %}{{ extended_settings|json_script:"extendedSettings" }}{% endif %}
+    <div id="redoc-ui"></div>
     <script src="https://cdn.jsdelivr.net/npm/redoc@2.0.0/bundles/redoc.standalone.js"></script>
+    <script>
+        const extendedSettingsElement = document.getElementById('extendedSettings')
+        const extendedSettings = extendedSettingsElement ? JSON.parse(extendedSettingsElement.textContent) : {};
+        const specUrl = "{{ openapi_json_url }}";
+        const element = document.getElementById('redoc-ui');
+        Redoc.init(specUrl, extendedSettings, element);
+    </script>
 </body>
 </html>

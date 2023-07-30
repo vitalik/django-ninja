@@ -12,7 +12,8 @@
     {% if extended_settings %}{{ extended_settings|json_script:"extendedSettings" }}{% endif %}
     <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@4.15.5/swagger-ui-bundle.js"></script>
     <script>
-        const extendedSettings = JSON.parse(document.getElementById('extendedSettings').textContent);
+        const extendedSettingsElement = document.getElementById('extendedSettings')
+        const extendedSettings = extendedSettingsElement ? JSON.parse(extendedSettingsElement.textContent) : {};
         const ui = SwaggerUIBundle({
             url: '{{ openapi_json_url }}',
             dom_id: '#swagger-ui',
