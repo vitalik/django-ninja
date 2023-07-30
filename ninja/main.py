@@ -50,8 +50,9 @@ class NinjaAPI:
         description: str = "",
         openapi_url: Optional[str] = "/openapi.json",
         docs_url: Optional[str] = "/docs",
-        servers: Optional[List[Dict[str, Union[str, Any]]]] = None,
         docs_decorator: Optional[Callable[[TCallable], TCallable]] = None,
+        docs_context: Optional[Dict[str, Dict[str, Union[str, Any]]]] = None,
+        servers: Optional[List[Dict[str, Union[str, Any]]]] = None,
         urls_namespace: Optional[str] = None,
         csrf: bool = False,
         auth: Optional[Union[Sequence[Callable], Callable, NOT_SET_TYPE]] = NOT_SET,
@@ -69,6 +70,8 @@ class NinjaAPI:
             openapi_url: The relative URL to serve the openAPI spec.
             openapi_extra: Additional attributes for the openAPI spec.
             docs_url: The relative URL to serve the API docs.
+            docs_decorator: The authentication decorator to protect the access to the API docs with.
+            docs_context: The miscellaneous options passed to respective API docs engines.
             servers: List of target hosts used in openAPI spec.
             csrf: Require a CSRF token for unsafe request types. See <a href="../csrf">CSRF</a> docs.
             auth (Callable | Sequence[Callable] | NOT_SET | None): Authentication class
@@ -80,8 +83,9 @@ class NinjaAPI:
         self.description = description
         self.openapi_url = openapi_url
         self.docs_url = docs_url
-        self.servers = servers
         self.docs_decorator = docs_decorator
+        self.docs_context = docs_context
+        self.servers = servers
         self.urls_namespace = urls_namespace or f"api-{self.version}"
         self.csrf = csrf
         self.renderer = renderer or JSONRenderer()

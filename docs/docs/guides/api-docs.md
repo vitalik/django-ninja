@@ -41,6 +41,15 @@ from django.contrib.admin.views.decorators import staff_member_required
 api = NinjaAPI(docs_decorator=staff_member_required)
 ```
 
+## Extending your docs engine configuration
+
+To provide some advanced configuration for your documentation engine, like setting [`persistAuthorization`](https://swagger.io/docs/open-source-tools/swagger-ui/usage/configuration/#persistAuthorization) in Swagger, use the `docs_context` argument with `swagger` and / or `redoc` key matching your `NINJA_DOCS_VIEW`:
+
+```Python
+api = NinjaAPI(docs_context={'swagger': {'persistAuthorization': True}}}
+```
+
+
 ## Extending OpenAPI Spec with custom attributes
 
 You can extend OpenAPI spec with custom attributes, for example to add `termsOfService`
