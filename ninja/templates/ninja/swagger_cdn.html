@@ -9,11 +9,10 @@
     <div id="swagger-ui">
     </div>
 
+    {% if extended_settings %}{{ extended_settings|json_script:"extendedSettings" }}{% endif %}
     <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@4.15.5/swagger-ui-bundle.js"></script>
     <script>
-        {% if extended_settings %}
-        const extendedSettings = {{ extended_settings }}
-        {% endif %}
+        const extendedSettings = JSON.parse(document.getElementById('extendedSettings').textContent);
         const ui = SwaggerUIBundle({
             url: '{{ openapi_json_url }}',
             dom_id: '#swagger-ui',
@@ -29,9 +28,7 @@
 			},
         {% endif %}
             deepLinking: true,
-        {% if extended_settings %}
             ...extendedSettings
-        {% endif %}
         })
     </script>
 </body>

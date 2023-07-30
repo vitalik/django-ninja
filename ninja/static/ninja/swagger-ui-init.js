@@ -1,7 +1,6 @@
 /**JS file for handling the SwaggerUIBundle and avoid inline script */
 const swaggerUi = document.querySelector("body")
-
-console.log(swaggerUi)
+const extendedSettings = JSON.parse(document.getElementById('extendedSettings').textContent);
 
 SwaggerUIBundle({
     url: swaggerUi.dataset.openapiUrl,
@@ -18,5 +17,5 @@ SwaggerUIBundle({
         return req;
     },
     deepLinking: true,
-    ...swaggerUi.dataset.extendedSettings
+    ...extendedSettings
 })

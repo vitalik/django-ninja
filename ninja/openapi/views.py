@@ -53,10 +53,11 @@ def openapi_view(request: HttpRequest, api: "NinjaAPI") -> HttpResponse:
     }
 
     docs_context = api.docs_context
-    docs_renderer = ninja_settings.DOCS_VIEW
-    applicable_docs_context = getattr(docs_context, docs_renderer, None)
-    if applicable_docs_context:
-        context.update({"extended_settings": applicable_docs_context})
+    if docs_context:
+        docs_renderer = ninja_settings.DOCS_VIEW
+        applicable_docs_context = docs_context.get(docs_renderer)
+        if applicable_docs_context:
+            context.update({"extended_settings": applicable_docs_context})
 
     if "ninja" in settings.INSTALLED_APPS:
         return render(request, view_tpl, context)
