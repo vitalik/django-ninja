@@ -9,7 +9,9 @@
 <body
     data-openapi-url="{{ openapi_json_url }}"
     data-csrf-token="{% if add_csrf %}{{ csrf_token }}{% endif %}"
-    data-api-csrf="{% if add_csrf %}true{% endif %}">
+    data-api-csrf="{% if add_csrf %}true{% endif %}"
+    data-extended-settings="{% if extended_settings %}{{ extended_settings }}{% endif %}"
+    >
     
     <div id="swagger-ui"></div>
 

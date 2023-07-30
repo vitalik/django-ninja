@@ -11,6 +11,9 @@
 
     <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@4.15.5/swagger-ui-bundle.js"></script>
     <script>
+        {% if extended_settings %}
+        const extendedSettings = {{ extended_settings }}
+        {% endif %}
         const ui = SwaggerUIBundle({
             url: '{{ openapi_json_url }}',
             dom_id: '#swagger-ui',
@@ -25,7 +28,10 @@
 				return req;
 			},
         {% endif %}
-            deepLinking: true
+            deepLinking: true,
+        {% if extended_settings %}
+            ...extendedSettings
+        {% endif %}
         })
     </script>
 </body>
