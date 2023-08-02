@@ -16,13 +16,8 @@ repos:
     hooks:
       - id: black
         exclude: docs/src/
-  - repo: https://github.com/PyCQA/flake8
-    rev: "4.0.1"
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.0.282
     hooks:
-      - id: flake8
-        exclude: (docs/src|tests/demo_project)/
-  - repo: https://github.com/PyCQA/isort
-    rev: "5.11.5"
-    hooks:
-      - id: isort
-        exclude: docs/src
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
