@@ -61,15 +61,13 @@ class FilterSchema(Schema):
 
         field_extra = field.json_schema_extra or {}
 
-        q_expression = field_extra.get("q", None)
+        q_expression = field_extra.get("q", None)  # type: ignore
         if not q_expression:
             return Q(**{field_name: field_value})
         elif isinstance(q_expression, str):
             return Q(**{q_expression: field_value})
         elif isinstance(q_expression, list):
-            expression_connector = field_extra.get(
-                "expression_connector", DEFAULT_FIELD_LEVEL_EXPRESSION_CONNECTOR
-            )
+            expression_connector = field_extra.get("expression_connector", DEFAULT_FIELD_LEVEL_EXPRESSION_CONNECTOR)  # type: ignore
             q = Q()
             for q_expression_part in q_expression:
                 q = q._combine(Q(**{q_expression_part: field_value}), expression_connector)  # type: ignore[attr-defined]
