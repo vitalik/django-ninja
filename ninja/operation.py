@@ -225,14 +225,18 @@ class Operation:
                 values.update(data)
             except pydantic.ValidationError as e:
                 items = []
-                for i in e.errors():
+                for i in e.errors(include_url=False):
                     i["loc"] = (
                         model.__ninja_param_source__,
                     ) + model.__ninja_flatten_map_reverse__.get(i["loc"], i["loc"])
                     # removing pydantic hints
                     del i["input"]  # type: ignore
-                    if "url" in i:
-                        del i["url"]  # type: ignore
+                    if (
+                        "ctx" in i
+                        and "error" in i["ctx"]
+                        and isinstance(i["ctx"]["error"], Exception)
+                    ):
+                        i["ctx"]["error"] = str(i["ctx"]["error"])
                     items.append(dict(i))
                 errors.extend(items)
         if errors:
