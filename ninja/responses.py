@@ -1,6 +1,6 @@
+from enum import Enum
 from ipaddress import IPv4Address, IPv6Address
 from typing import Any, FrozenSet
-from enum import Enum
 
 from django.core.serializers.json import DjangoJSONEncoder
 from django.http import JsonResponse
