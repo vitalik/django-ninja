@@ -1,4 +1,5 @@
 import os
+import warnings
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -18,6 +19,7 @@ from django.urls import URLPattern, URLResolver, reverse
 from ninja.constants import NOT_SET, NOT_SET_TYPE
 from ninja.errors import ConfigError, set_default_exc_handlers
 from ninja.openapi import get_schema
+from ninja.openapi.docs import DocsBase, Swagger
 from ninja.openapi.schema import OpenAPISchema
 from ninja.openapi.urls import get_openapi_urls, get_root_url
 from ninja.parser import Parser
@@ -49,9 +51,10 @@ class NinjaAPI:
         version: str = "1.0.0",
         description: str = "",
         openapi_url: Optional[str] = "/openapi.json",
+        docs: DocsBase = Swagger(),
         docs_url: Optional[str] = "/docs",
-        servers: Optional[List[Dict[str, Union[str, Any]]]] = None,
         docs_decorator: Optional[Callable[[TCallable], TCallable]] = None,
+        servers: Optional[List[Dict[str, Union[str, Any]]]] = None,
         urls_namespace: Optional[str] = None,
         csrf: bool = False,
         auth: Optional[Union[Sequence[Callable], Callable, NOT_SET_TYPE]] = NOT_SET,
@@ -79,11 +82,18 @@ class NinjaAPI:
         self.version = version
         self.description = description
         self.openapi_url = openapi_url
+        self.docs = docs
         self.docs_url = docs_url
-        self.servers = servers
         self.docs_decorator = docs_decorator
+        self.servers = servers
         self.urls_namespace = urls_namespace or f"api-{self.version}"
-        self.csrf = csrf
+        self.csrf = csrf  # TODO: Check if used or at least throw Deprecation warning
+        if self.csrf:
+            warnings.warn(
+                "csrf argument is deprecated, auth is handling csrf automatically now",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         self.renderer = renderer or JSONRenderer()
         self.parser = parser or Parser()
         self.openapi_extra = openapi_extra or {}

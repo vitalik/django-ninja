@@ -13,20 +13,20 @@ class Settings(BaseModel):
             `ninja.pagination.Pagination`.
         NINJA_PAGINATION_PAGE_SIZE (int):
             The default page size. Defaults to `100`.
-        NINJA_DOCS_VIEW ("swagger"|"redoc"):
-            The view to use for the documentation. Defaults to `swagger`, but
-            change to `redoc` to use alternative
-            [Redoc](https://github.com/Redocly/redoc) automatic documentation.
     """
 
     PAGINATION_CLASS: str = Field(
         "ninja.pagination.LimitOffsetPagination", alias="NINJA_PAGINATION_CLASS"
     )
     PAGINATION_PER_PAGE: int = Field(100, alias="NINJA_PAGINATION_PER_PAGE")
-    DOCS_VIEW: str = Field("swagger", alias="NINJA_DOCS_VIEW")
 
     class Config:
         from_attributes = True
 
 
 settings = Settings.model_validate(django_settings)
+
+if hasattr(django_settings, "NINJA_DOCS_VIEW"):
+    raise Exception(
+        "NINJA_DOCS_VIEW is removed. Use NinjaAPI(docs=...) instead"
+    )  # pragma: no cover

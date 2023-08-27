@@ -10,23 +10,28 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@4.15.5/swagger-ui-bundle.js"></script>
+    <script type="application/json" id="swagger-settings">
+        {{ swagger_settings | safe }}
+    </script>
     <script>
-        const ui = SwaggerUIBundle({
-            url: '{{ openapi_json_url }}',
-            dom_id: '#swagger-ui',
-            presets: [
+
+        const configJson = document.getElementById("swagger-settings").textContent;
+        const configObject = JSON.parse(configJson);
+
+        configObject.dom_id = "#swagger-ui";
+        configObject.presets = [
             SwaggerUIBundle.presets.apis,
             SwaggerUIBundle.SwaggerUIStandalonePreset
-            ],
-            layout: "BaseLayout",
-        {% if add_csrf %}
-            requestInterceptor: (req) => {
-				req.headers['X-CSRFToken'] = "{{csrf_token}}"
-				return req;
-			},
-        {% endif %}
-            deepLinking: true
-        })
+        ];
+    {% if add_csrf %}
+        configObject.requestInterceptor = (req) => {
+            req.headers['X-CSRFToken'] = "{{csrf_token}}";
+            return req;
+        };
+    {% endif %}
+
+        const ui = SwaggerUIBundle(configObject);
+
     </script>
 </body>
 </html>

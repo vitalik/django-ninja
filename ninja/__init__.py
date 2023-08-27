@@ -8,6 +8,7 @@ from pydantic import Field
 from ninja.files import UploadedFile
 from ninja.filter_schema import FilterSchema
 from ninja.main import NinjaAPI
+from ninja.openapi.docs import Redoc, Swagger
 from ninja.orm import ModelSchema
 from ninja.params_functions import Body, Cookie, File, Form, Header, Path, Query
 from ninja.router import Router
@@ -28,4 +29,6 @@ __all__ = [
     "Schema",
     "ModelSchema",
     "FilterSchema",
+    "Swagger",
+    "Redoc",
 ]

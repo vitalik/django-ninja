@@ -172,7 +172,6 @@ class TestAsyncClient(NinjaClientBase):
 
 class NinjaResponse:
     def __init__(self, http_response: Union[HttpResponse, StreamingHttpResponse]):
-        # TODO: what's the type here ?
         self._response = http_response
         self.status_code = http_response.status_code
         self.streaming = http_response.streaming

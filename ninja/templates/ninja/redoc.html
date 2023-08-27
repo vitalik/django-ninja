@@ -6,7 +6,17 @@
     <title>{{ api.title }}</title>
 </head>
 <body>
-    <redoc spec-url='{{ openapi_json_url }}'></redoc>
+    <div id="redoc-ui"></div>
+
     <script src="{% static 'ninja/redoc.standalone.js' %}"></script>
+    <script type="application/json" id="redoc-settings">
+        {{ redoc_settings | safe }}
+    </script>
+    <script>
+        const configJson = document.getElementById("redoc-settings").textContent;
+        const configObject = JSON.parse(configJson);
+        const element = document.getElementById('redoc-ui');
+        Redoc.init('{{ openapi_json_url }}', configObject, element);
+    </script>
 </body>
 </html>
