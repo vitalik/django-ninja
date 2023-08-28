@@ -25,7 +25,7 @@ from ninja.openapi.urls import get_openapi_urls, get_root_url
 from ninja.parser import Parser
 from ninja.renderers import BaseRenderer, JSONRenderer
 from ninja.router import Router
-from ninja.types import TCallable
+from ninja.types import DictStrAny, TCallable
 from ninja.utils import is_debug_server, normalize_path
 
 if TYPE_CHECKING:
@@ -54,7 +54,7 @@ class NinjaAPI:
         docs: DocsBase = Swagger(),
         docs_url: Optional[str] = "/docs",
         docs_decorator: Optional[Callable[[TCallable], TCallable]] = None,
-        servers: Optional[List[Dict[str, Union[str, Any]]]] = None,
+        servers: Optional[List[DictStrAny]] = None,
         urls_namespace: Optional[str] = None,
         csrf: bool = False,
         auth: Optional[Union[Sequence[Callable], Callable, NOT_SET_TYPE]] = NOT_SET,
@@ -85,7 +85,7 @@ class NinjaAPI:
         self.docs = docs
         self.docs_url = docs_url
         self.docs_decorator = docs_decorator
-        self.servers = servers
+        self.servers = servers or []
         self.urls_namespace = urls_namespace or f"api-{self.version}"
         self.csrf = csrf  # TODO: Check if used or at least throw Deprecation warning
         if self.csrf:

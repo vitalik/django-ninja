@@ -41,7 +41,7 @@ def test_openapi_extra():
         "info": {"title": "NinjaAPI", "version": "1.0.0", "description": ""},
         "paths": {},
         "components": {"schemas": {}},
-        "servers": None,
+        "servers": [],
         "externalDocs": {
             "description": "Find more info here",
             "url": "https://example.com",
