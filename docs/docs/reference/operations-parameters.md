@@ -181,10 +181,10 @@ def some_operation(request):
     "/tasks",
     openapi_extra={
         "responses": {
-            "400": {
+            400: {
                 "description": "Error Response",
             },
-            "404": {
+            404: {
                 "description": "Not Found Response",
             },
         },
