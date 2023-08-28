@@ -1,4 +1,5 @@
 import json
+from enum import Enum
 from ipaddress import IPv4Address, IPv6Address
 from typing import List, Union
 
@@ -28,6 +29,11 @@ class User:
         self.id = id
         self.user_name = user_name
         self.password = password
+
+
+class MyEnum(Enum):
+    first = "first"
+    second = "second"
 
 
 def to_camel(string: str) -> str:
@@ -157,3 +163,10 @@ def test_ipv6address_encoding():
     response = Response(data)
     response_data = json.loads(response.content)
     assert response_data["ipv6"] == str(data["ipv6"])
+
+
+def test_enum_encoding():
+    data = {"enum": MyEnum.first}
+    response = Response(data)
+    response_data = json.loads(response.content)
+    assert response_data["enum"] == str(data["enum"])
