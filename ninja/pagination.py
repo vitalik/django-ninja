@@ -10,6 +10,7 @@ from django.db.models import QuerySet
 from django.http import HttpRequest
 from django.utils.module_loading import import_string
 from django.utils.translation import gettext as _
+from pydantic import field_validator
 
 from ninja import Field, Query, Router, Schema
 from ninja.compatibility.util import get_args as get_collection_args
@@ -19,7 +20,6 @@ from ninja.errors import ConfigError
 from ninja.operation import Operation
 from ninja.signature.details import is_collection_type
 from ninja.utils import contribute_operation_args, contribute_operation_callback
-from pydantic import field_validator
 
 
 class PaginationBase(ABC):
@@ -241,7 +241,7 @@ def _find_collection_response(op: Operation) -> Tuple[int, Any]:
 class Cursor:
     offset: int = 0
     reverse: bool = False
-    position: str | None = None
+    position: Optional[str] = None
 
 
 def _clamp(val: int, min_: int, max_: int) -> int:
@@ -272,14 +272,16 @@ def _replace_query_param(url: str, key: str, val: str):
 
 class CursorPagination(PaginationBase):
     class Input(Schema):
-        limit: int | None = Field(None, description=_("Number of results to return per page."))
-        cursor: str | None = Field(
+        limit: Optional[int] = Field(
+            None, description=_("Number of results to return per page.")
+        )
+        cursor: Optional[str] = Field(
             None, description=_("The pagination cursor value."), validate_default=True
         )
 
         @field_validator("cursor")
         @classmethod
-        def decode_cursor(cls, encoded_cursor: str | None) -> Cursor:
+        def decode_cursor(cls, encoded_cursor: Optional[str]) -> Cursor:
             if encoded_cursor is None:
                 return Cursor()
 
@@ -295,15 +297,19 @@ class CursorPagination(PaginationBase):
 
                 position = tokens.get("p", [None])[0]
             except (TypeError, ValueError):
-                raise ValueError(_("Invalid cursor."))
+                raise ValueError(_("Invalid cursor.")) from None
 
             return Cursor(offset=offset, reverse=reverse, position=position)
 
     class Output(Schema):
-        results: list[Any] = Field(description=_("The page of objects."))
-        count: int = Field(description=_("The total number of results across all pages."))
-        next: str | None = Field(description=_("URL of next page of results if there is one."))
-        previous: str | None = Field(
+        results: List[Any] = Field(description=_("The page of objects."))
+        count: int = Field(
+            description=_("The total number of results across all pages.")
+        )
+        next: Optional[str] = Field(
+            description=_("URL of next page of results if there is one.")
+        )
+        previous: Optional[str] = Field(
             description=_("URL of previous page of results if there is one.")
         )
 
@@ -371,12 +377,26 @@ class CursorPagination(PaginationBase):
             "results": page,
             "count": total_count,
             "next": self.next_link(
-                base_url, page, cursor, order, has_previous, limit, next_position, previous_position
+                base_url,
+                page,
+                cursor,
+                order,
+                has_previous,
+                limit,
+                next_position,
+                previous_position,
             )
             if has_next
             else None,
             "previous": self.previous_link(
-                base_url, page, cursor, order, has_next, limit, next_position, previous_position
+                base_url,
+                page,
+                cursor,
+                order,
+                has_next,
+                limit,
+                next_position,
+                previous_position,
             )
             if has_previous
             else None,
