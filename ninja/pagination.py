@@ -248,7 +248,7 @@ def _clamp(val: int, min_: int, max_: int) -> int:
     return max(min_, min(val, max_))
 
 
-def _reverse_order(order: tuple):
+def _reverse_order(order: tuple) -> tuple:
     """
     Reverse the ordering specification for a Django ORM query.
 
@@ -256,13 +256,13 @@ def _reverse_order(order: tuple):
     ordering and return a new tuple, eg. `('created', '-uuid')`.
     """
 
-    def invert(x):
+    def invert(x: str) -> str:
         return x[1:] if x.startswith("-") else f"-{x}"
 
     return tuple(invert(item) for item in order)
 
 
-def _replace_query_param(url: str, key: str, val: str):
+def _replace_query_param(url: str, key: str, val: str) -> str:
     scheme, netloc, path, query, fragment = parse.urlsplit(url)
     query_dict = parse.parse_qs(query, keep_blank_values=True)
     query_dict[key] = [val]
@@ -296,8 +296,8 @@ class CursorPagination(PaginationBase):
                 reverse = bool(int(reverse))
 
                 position = tokens.get("p", [None])[0]
-            except (TypeError, ValueError):
-                raise ValueError(_("Invalid cursor.")) from None
+            except (TypeError, ValueError) as e:
+                raise ValueError(_("Invalid cursor.")) from e
 
             return Cursor(offset=offset, reverse=reverse, position=position)
 
@@ -535,7 +535,7 @@ class CursorPagination(PaginationBase):
         cursor = Cursor(offset=offset, reverse=True, position=position)
         return self._encode_cursor(cursor, base_url)
 
-    def _get_position_from_instance(self, instance, ordering):
+    def _get_position_from_instance(self, instance, ordering) -> str:
         field_name = ordering[0].lstrip("-")
         if isinstance(instance, dict):
             attr = instance[field_name]
