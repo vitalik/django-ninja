@@ -39,14 +39,18 @@ class ValidationError(Exception):
     """
 
     def __init__(self, errors: List[DictStrAny]) -> None:
-        super().__init__()
         self.errors = errors
+        super().__init__(errors)
 
 
 class HttpError(Exception):
     def __init__(self, status_code: int, message: str) -> None:
         self.status_code = status_code
-        super().__init__(message)
+        self.message = message
+        super().__init__(status_code, message)
+
+    def __str__(self) -> str:
+        return self.message
 
 
 def set_default_exc_handlers(api: "NinjaAPI") -> None:
