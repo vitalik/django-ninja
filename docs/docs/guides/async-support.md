@@ -66,7 +66,7 @@ uvicorn your_project.asgi:application --reload
 
 ### Test
 
-Go to your browser and open <a href="<<<<<<<http://127.0.0.1:8000/api/say-after?delay=3&word=hello>>>>>>>" target="_blank">http://127.0.0.1:8000/api/say-after?delay=3&word=hello</a> (**delay=3**)
+Go to your browser and open <a href="http://127.0.0.1:8000/api/say-after?delay=3&word=hello" target="_blank">http://127.0.0.1:8000/api/say-after?delay=3&word=hello</a> (**delay=3**)
 After a 3-second wait you should see the "hello" message.
 
 Now let's flood this operation with **100 parallel requests**:
