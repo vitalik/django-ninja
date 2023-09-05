@@ -1,7 +1,7 @@
 import json
 import os
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from django.conf import settings
 from django.http import HttpRequest, HttpResponse
@@ -20,11 +20,13 @@ ABS_TPL_PATH = os.path.join(os.path.dirname(__file__), "../templates/")
 
 class DocsBase(ABC):
     @abstractmethod
-    def render_page(self, request: HttpRequest, api: "NinjaAPI") -> HttpResponse:
+    def render_page(
+        self, request: HttpRequest, api: "NinjaAPI", **kwargs: Any
+    ) -> HttpResponse:
         pass  # pragma: no cover
 
-    def get_openapi_url(self, api: "NinjaAPI") -> str:
-        return reverse(f"{api.urls_namespace}:openapi-json")
+    def get_openapi_url(self, api: "NinjaAPI", path_params: DictStrAny) -> str:
+        return reverse(f"{api.urls_namespace}:openapi-json", kwargs=path_params)
 
 
 class Swagger(DocsBase):
@@ -41,8 +43,10 @@ class Swagger(DocsBase):
         if settings:
             self.settings.update(settings)
 
-    def render_page(self, request: HttpRequest, api: "NinjaAPI") -> HttpResponse:
-        self.settings["url"] = self.get_openapi_url(api)
+    def render_page(
+        self, request: HttpRequest, api: "NinjaAPI", **kwargs: Any
+    ) -> HttpResponse:
+        self.settings["url"] = self.get_openapi_url(api, kwargs)
         context = {
             "swagger_settings": json.dumps(self.settings, indent=1),
             "api": api,
@@ -62,10 +66,12 @@ class Redoc(DocsBase):
         if settings:
             self.settings.update(settings)
 
-    def render_page(self, request: HttpRequest, api: "NinjaAPI") -> HttpResponse:
+    def render_page(
+        self, request: HttpRequest, api: "NinjaAPI", **kwargs: Any
+    ) -> HttpResponse:
         context = {
             "redoc_settings": json.dumps(self.settings, indent=1),
-            "openapi_json_url": self.get_openapi_url(api),
+            "openapi_json_url": self.get_openapi_url(api, kwargs),
             "api": api,
         }
         return render_template(request, self.template, self.template_cdn, context)

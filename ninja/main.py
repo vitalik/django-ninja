@@ -406,10 +406,9 @@ class NinjaAPI:
         result.append(get_root_url(self))
         return result
 
-    @property
-    def root_path(self) -> str:
+    def get_root_path(self, path_params: DictStrAny) -> str:
         name = f"{self.urls_namespace}:api-root"
-        return reverse(name)
+        return reverse(name, kwargs=path_params)
 
     def create_response(
         self,
@@ -441,9 +440,14 @@ class NinjaAPI:
     def get_content_type(self) -> str:
         return "{}; charset={}".format(self.renderer.media_type, self.renderer.charset)
 
-    def get_openapi_schema(self, path_prefix: Optional[str] = None) -> OpenAPISchema:
+    def get_openapi_schema(
+        self,
+        *,
+        path_prefix: Optional[str] = None,
+        path_params: Optional[DictStrAny] = None,
+    ) -> OpenAPISchema:
         if path_prefix is None:
-            path_prefix = self.root_path
+            path_prefix = self.get_root_path(path_params or {})
         return get_schema(api=self, path_prefix=path_prefix)
 
     def get_openapi_operation_id(self, operation: "Operation") -> str:
