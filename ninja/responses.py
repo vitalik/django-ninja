@@ -1,3 +1,4 @@
+from enum import Enum
 from ipaddress import IPv4Address, IPv6Address
 from typing import Any, FrozenSet
 
@@ -21,6 +22,8 @@ class NinjaJSONEncoder(DjangoJSONEncoder):
         if isinstance(o, BaseModel):
             return o.model_dump()
         if isinstance(o, (IPv4Address, IPv6Address)):
+            return str(o)
+        if isinstance(o, Enum):
             return str(o)
         return super().default(o)
 
