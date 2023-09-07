@@ -198,7 +198,7 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
     class Config:
         from_attributes = True  # aka orm_mode
 
-    @model_validator(mode="before")
+    @model_validator(mode="after")
     def _run_root_validator(cls, values: Any, info: ValidationInfo) -> Any:
         values = DjangoGetter(values, cls, info.context)
         return values
