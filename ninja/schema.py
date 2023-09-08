@@ -201,11 +201,11 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
 
     @model_validator(mode="wrap")
     def _run_root_validator2(cls, values: Any, handler: Callable, info: ValidationInfo) -> Any:
-        values_clone = copy.deepcopy(values)
+        # we skip pydantic before validation if it is an orm object
         if not (info and info.context and info.context.get("from_orm", False)):
             handler(values)
-        values_final = DjangoGetter(values_clone, cls, info.context)
-        return handler(values_final)
+        values = DjangoGetter(values, cls, info.context)
+        return handler(values)
 
     @classmethod
     def from_orm(cls: Type[S], obj: Any) -> S:
