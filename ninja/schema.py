@@ -204,14 +204,16 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
     def _run_root_validator(
         cls, values: Any, handler: Callable, info: ValidationInfo
     ) -> Any:
-        print(info)
-        # we perform 'before' validations only if
-        is_dict = bool(
-            info and info.context and info.context.get("is_dict", False)
-        )
-        if not is_dict :
+
+        # We dont perform 'before' validations if an validating through 'model_validate'
+        through_model_validate = info and info.context and info.context.get("through_model_validate", False)
+        if not through_model_validate:
             handler(values)
+
+        # We add our DjangoGetter for the Schema
         values = DjangoGetter(values, cls, info.context)
+
+        # To update the schema with our DjangoGetter
         return handler(values)
 
     @classmethod
@@ -228,8 +230,7 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
         context: dict[str, Any] | None = None,
     ) -> BaseModel:
         context = context or {}
-        if not isinstance(obj, dict):
-            context = {"is_dict": True}
+        context["through_model_validate"] = True
         return super().model_validate(
             obj, *args, strict=strict, from_attributes=from_attributes, context=context
         )
