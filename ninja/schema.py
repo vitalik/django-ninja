@@ -24,12 +24,10 @@ import warnings
 from typing import Any, Callable, Dict, Type, TypeVar, Union, no_type_check
 
 import pydantic
-from django.db import models
 from django.db.models import Manager, QuerySet
 from django.db.models.fields.files import FieldFile
 from django.template import Variable, VariableDoesNotExist
-from pydantic import (BaseModel, Field, ValidationInfo, model_validator,
-                      validator)
+from pydantic import BaseModel, Field, ValidationInfo, model_validator, validator
 from pydantic._internal._model_construction import ModelMetaclass
 from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
 
@@ -204,9 +202,10 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
     def _run_root_validator(
         cls, values: Any, handler: Callable, info: ValidationInfo
     ) -> Any:
-
         # We dont perform 'before' validations if an validating through 'model_validate'
-        through_model_validate = info and info.context and info.context.get("through_model_validate", False)
+        through_model_validate = (
+            info and info.context and info.context.get("through_model_validate", False)
+        )
         if not through_model_validate:
             handler(values)
 

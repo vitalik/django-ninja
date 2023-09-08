@@ -1,5 +1,16 @@
-from typing import (TYPE_CHECKING, Any, Callable, Dict, Iterable, List,
-                    Optional, Sequence, Type, Union, cast)
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Type,
+    Union,
+    cast,
+)
 
 import django
 import pydantic
@@ -194,16 +205,12 @@ class Operation:
 
         resp_object = ResponseObject(result)
         # ^ we need object because getter_dict seems work only with model_validate
-        result = response_model.model_validate(
-            resp_object
-        ).model_dump(
+        result = response_model.model_validate(resp_object).model_dump(
             by_alias=self.by_alias,
             exclude_unset=self.exclude_unset,
             exclude_defaults=self.exclude_defaults,
             exclude_none=self.exclude_none,
-        )[
-            "response"
-        ]
+        )["response"]
         return self.api.create_response(
             request, result, temporal_response=temporal_response
         )
