@@ -15,6 +15,7 @@ from typing import (
 
 from django.http import HttpRequest, HttpResponse
 from django.urls import URLPattern, URLResolver, reverse
+from django.utils.module_loading import import_string
 
 from ninja.constants import NOT_SET, NOT_SET_TYPE
 from ninja.errors import ConfigError, set_default_exc_handlers
@@ -359,12 +360,16 @@ class NinjaAPI:
     def add_router(
         self,
         prefix: str,
-        router: Router,
+        router: Union[Router, str],
         *,
         auth: Any = NOT_SET,
         tags: Optional[List[str]] = None,
         parent_router: Router = None,
     ) -> None:
+        if isinstance(router, str):
+            router = import_string(router)
+            assert isinstance(router, Router)
+
         if auth is not NOT_SET:
             router.auth = auth
         if tags is not None:

@@ -1,12 +1,10 @@
 from django.contrib import admin
 from django.urls import path
-from multi_param.api import router as multi_param
-from someapp.api import router
 
 from ninja import NinjaAPI
 
 api_v1 = NinjaAPI()
-api_v1.add_router("events", router)
+api_v1.add_router("events", "someapp.api.router")
 # TODO: check ^ for possible mistakes like `/events` `events/``
 
 
@@ -42,7 +40,7 @@ def put_foobar(request):
 
 
 api_multi_param = NinjaAPI(version="1.0.1")
-api_multi_param.add_router("", multi_param)
+api_multi_param.add_router("", "multi_param.api.router")
 
 urlpatterns = [
     path("admin/", admin.site.urls),

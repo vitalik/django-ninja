@@ -109,17 +109,15 @@ api = NinjaAPI()
 
 Now we import all the routers from the various apps, and include them into the main API instance:
 
-```Python hl_lines="2 3 4 8 9 10"
+```Python hl_lines="2 6 7 8"
 from ninja import NinjaAPI
 from events.api import router as events_router
-from news.api import router as news_router
-from blogs.api import router as blogs_router
 
 api = NinjaAPI()
 
-api.add_router("/events/", events_router)
-api.add_router("/news/", news_router)
-api.add_router("/blogs/", blogs_router)
+api.add_router("/events/", events_router)    # You can add router object
+api.add_router("/news/", "news.api.router")  #   or well add router by python path
+api.add_router("/blogs/", "blogs.api.router")
 ```
 
 Now, include `api` to your urls as usual and open your browser at `/api/docs`, and you should see all your routers combined into a single API:
