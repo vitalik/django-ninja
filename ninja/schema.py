@@ -20,6 +20,7 @@ dotted attributes and resolver methods. For example::
             return "".join(n[:1] for n in self.name.split())
 
 """
+import copy
 import warnings
 from typing import Any, Callable, Dict, Type, TypeVar, Union, no_type_check
 
@@ -198,14 +199,17 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
     class Config:
         from_attributes = True  # aka orm_mode
 
-    @model_validator(mode="after")
-    def _run_root_validator(cls, values: Any, info: ValidationInfo) -> Any:
-        values = DjangoGetter(values, cls, info.context)
-        return values
+    @model_validator(mode="wrap")
+    def _run_root_validator2(cls, values: Any, handler: Callable, info: ValidationInfo) -> Any:
+        values_clone = copy.deepcopy(values)
+        if not (info and info.context and info.context.get("from_orm", False)):
+            handler(values)
+        values_final = DjangoGetter(values_clone, cls, info.context)
+        return handler(values_final)
 
     @classmethod
     def from_orm(cls: Type[S], obj: Any) -> S:
-        return cls.model_validate(obj)
+        return cls.model_validate(obj, context={"from_orm":True})
 
     def dict(self, *a: Any, **kw: Any) -> DictStrAny:
         "Backward compatibility with pydantic 1.x"
