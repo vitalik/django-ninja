@@ -78,3 +78,12 @@ this will expect from client side to send data as multipart/form-data with 2 fie
   
   - details: Json as string
   - file: file
+
+
+### List of files with extra info
+
+```Python
+@api.post('/user')
+def create_user(request, details: UserDetails = Form(...), files: list[UploadedFile] = File(...)):
+    return [details.dict(), [f.name for f in files]]
+```
