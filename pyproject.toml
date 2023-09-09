@@ -97,3 +97,14 @@ ignore = [
 "ninja/compatibility/datastructures.py" = ["C416"]
 "ninja/utils.py" = ["B004"]
 "tests/*" = ["C408", "F401"]
+
+
+
+[tool.coverage.run]
+omit = ["ninja/compatibility/*"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 100
+skip_covered = true
+show_missing = true
