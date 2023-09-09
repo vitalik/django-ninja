@@ -1,3 +1,5 @@
+from typing import List
+
 from typing_extensions import Annotated
 
 from ninja import Body, Cookie, Form, Header, NinjaAPI, Path, Query, Schema
@@ -30,7 +32,7 @@ def multi_op(
 @api.post("/query_list")
 def query_list(
     request,
-    q: Annotated[list[str], Query(description="User ID")],
+    q: Annotated[List[str], Query(description="User ID")],
 ):
     return {"q": q}
 
