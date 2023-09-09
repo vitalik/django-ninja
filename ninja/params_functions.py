@@ -9,7 +9,7 @@ from ninja import params
 
 
 def Path(  # noqa: N802
-    default: Any,
+    default: Any = ...,
     *,
     alias: Optional[str] = None,
     title: Optional[str] = None,
@@ -48,7 +48,7 @@ def Path(  # noqa: N802
 
 
 def Query(  # noqa: N802
-    default: Any,
+    default: Any = ...,
     *,
     alias: Optional[str] = None,
     title: Optional[str] = None,
@@ -87,7 +87,7 @@ def Query(  # noqa: N802
 
 
 def Header(  # noqa: N802
-    default: Any,
+    default: Any = ...,
     *,
     alias: Optional[str] = None,
     title: Optional[str] = None,
@@ -126,7 +126,7 @@ def Header(  # noqa: N802
 
 
 def Cookie(  # noqa: N802
-    default: Any,
+    default: Any = ...,
     *,
     alias: Optional[str] = None,
     title: Optional[str] = None,
@@ -165,7 +165,7 @@ def Cookie(  # noqa: N802
 
 
 def Body(  # noqa: N802
-    default: Any,
+    default: Any = ...,
     *,
     alias: Optional[str] = None,
     title: Optional[str] = None,
@@ -204,7 +204,7 @@ def Body(  # noqa: N802
 
 
 def Form(  # noqa: N802
-    default: Any,
+    default: Any = ...,
     *,
     alias: Optional[str] = None,
     title: Optional[str] = None,
@@ -243,7 +243,7 @@ def Form(  # noqa: N802
 
 
 def File(  # noqa: N802
-    default: Any,
+    default: Any = ...,
     *,
     alias: Optional[str] = None,
     title: Optional[str] = None,
