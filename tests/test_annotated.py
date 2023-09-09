@@ -1,7 +1,7 @@
 from typing_extensions import Annotated
-from ninja import NinjaAPI, Schema, Form, Query, Path, Header, Body, Cookie
-from ninja.testing import TestClient
 
+from ninja import Body, Cookie, Form, Header, NinjaAPI, Path, Query, Schema
+from ninja.testing import TestClient
 
 api = NinjaAPI()
 
