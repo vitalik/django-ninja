@@ -21,7 +21,7 @@ dotted attributes and resolver methods. For example::
 
 """
 import warnings
-from typing import Any, Callable, Dict, Type, TypeVar, Union, no_type_check
+from typing import Any, Callable, Dict, TypeVar, Union, no_type_check
 
 import pydantic
 from django.db.models import Manager, QuerySet
@@ -29,6 +29,7 @@ from django.db.models.fields.files import FieldFile
 from django.template import Variable, VariableDoesNotExist
 from pydantic import BaseModel, Field, ValidationInfo, model_validator, validator
 from pydantic._internal._model_construction import ModelMetaclass
+from pydantic.functional_validators import ModelWrapValidatorHandler
 from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
 
 from ninja.signature.utils import get_args_names, has_kwargs
@@ -45,7 +46,7 @@ S = TypeVar("S", bound="Schema")
 class DjangoGetter:
     __slots__ = ("_obj", "_schema_cls", "_context")
 
-    def __init__(self, obj: Any, schema_cls: "Schema", context: Any = None):
+    def __init__(self, obj: Any, schema_cls: type[S], context: Any = None):
         self._obj = obj
         self._schema_cls = schema_cls
         self._context = context
@@ -199,9 +200,10 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
         from_attributes = True  # aka orm_mode
 
     @model_validator(mode="wrap")
+    @classmethod
     def _run_root_validator(
-        cls, values: Any, handler: Callable, info: ValidationInfo
-    ) -> Any:
+        cls, values: Any, handler: ModelWrapValidatorHandler[S], info: ValidationInfo
+    ) -> S:
         # We dont perform 'before' validations if an validating through 'model_validate'
         through_model_validate = (
             info and info.context and info.context.get("through_model_validate", False)
@@ -216,22 +218,22 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
         return handler(values)
 
     @classmethod
-    def from_orm(cls: Type[S], obj: Any) -> S:
+    def from_orm(cls: type[S], obj: Any) -> S:
         return cls.model_validate(obj)
 
     @classmethod
     def model_validate(
-        cls: type[BaseModel],
+        cls: type[S],
         obj: Any,
-        *args,
+        *,
         strict: bool | None = None,
         from_attributes: bool | None = None,
         context: dict[str, Any] | None = None,
-    ) -> BaseModel:
+    ) -> S:
         context = context or {}
         context["through_model_validate"] = True
         return super().model_validate(
-            obj, *args, strict=strict, from_attributes=from_attributes, context=context
+            obj, strict=strict, from_attributes=from_attributes, context=context
         )
 
     def dict(self, *a: Any, **kw: Any) -> DictStrAny:
