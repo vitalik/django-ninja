@@ -55,7 +55,7 @@ class DjangoGetter:
         # if key.startswith("__pydantic"):
         #     return getattr(self._obj, key)
 
-        resolver = self._schema_cls._ninja_resolvers.get(key)  # type: ignore
+        resolver = self._schema_cls._ninja_resolvers.get(key)
         if resolver:
             value = resolver(getter=self)
         else:
