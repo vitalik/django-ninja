@@ -1,14 +1,9 @@
-import sys
 from typing import List
 
-import pytest
 from typing_extensions import Annotated
 
 from ninja import Body, Cookie, Form, Header, NinjaAPI, Path, Query, Schema
 from ninja.testing import TestClient
-
-if sys.version_info < (3, 9):
-    pytestmark = pytest.mark.skip(reason="Requires Python >= 3.9")
 
 api = NinjaAPI()
 

@@ -7,10 +7,10 @@ import pydantic
 from django.http import HttpResponse
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
-from typing_extensions import Annotated
+from typing_extensions import Annotated, get_args, get_origin
 
 from ninja import UploadedFile, params
-from ninja.compatibility.util import UNION_TYPES, get_args, get_origin
+from ninja.compatibility.util import UNION_TYPES
 from ninja.errors import ConfigError
 from ninja.params import Body, File, Form, _MultiPartBody
 from ninja.params_models import TModel, TModels
