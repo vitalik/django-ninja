@@ -6,7 +6,7 @@ from typing import Any, Callable, List, Optional, Tuple, Type
 from django.db.models import QuerySet
 from django.http import HttpRequest
 from django.utils.module_loading import import_string
-from typing_extensions import get_args as get_collection_args
+from typing_extensions import get_args as get_collection_args  # type: ignore
 
 from ninja import Field, Query, Router, Schema
 from ninja.conf import settings
