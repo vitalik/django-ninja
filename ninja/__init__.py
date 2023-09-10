@@ -1,6 +1,6 @@
 """Django Ninja - Fast Django REST framework"""
 
-__version__ = "1.0a3"
+__version__ = "1.0b1"
 
 
 from pydantic import Field
