@@ -21,7 +21,7 @@ dotted attributes and resolver methods. For example::
 
 """
 import warnings
-from typing import Any, Callable, Dict, Type, TypeVar, Union, no_type_check
+from typing import Any, Callable, Dict, Optional, Type, TypeVar, Union, no_type_check
 
 import pydantic
 from django.db.models import Manager, QuerySet
@@ -226,9 +226,9 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
         cls: Type[S],
         obj: Any,
         *,
-        strict: bool | None = None,
-        from_attributes: bool | None = None,
-        context: dict[str, Any] | None = None,
+        strict: Optional[bool] = None,
+        from_attributes: Optional[bool] = None,
+        context: Optional[Dict[str, Any]] = None,
     ) -> S:
         context = context or {}
         context["through_model_validate"] = True
