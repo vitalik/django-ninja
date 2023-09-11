@@ -20,15 +20,16 @@ dotted attributes and resolver methods. For example::
             return "".join(n[:1] for n in self.name.split())
 
 """
-import copy
 import warnings
 from typing import Any, Callable, Dict, Type, TypeVar, Union, no_type_check
 
 import pydantic
+from django.db import models
 from django.db.models import Manager, QuerySet
 from django.db.models.fields.files import FieldFile
 from django.template import Variable, VariableDoesNotExist
-from pydantic import BaseModel, Field, ValidationInfo, model_validator, validator
+from pydantic import (BaseModel, Field, ValidationInfo, model_validator,
+                      validator)
 from pydantic._internal._model_construction import ModelMetaclass
 from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
 
@@ -200,16 +201,38 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
         from_attributes = True  # aka orm_mode
 
     @model_validator(mode="wrap")
-    def _run_root_validator2(cls, values: Any, handler: Callable, info: ValidationInfo) -> Any:
-        # we skip pydantic before validation if it is an orm object
-        if not (info and info.context and info.context.get("from_orm", False)):
+    def _run_root_validator(
+        cls, values: Any, handler: Callable, info: ValidationInfo
+    ) -> Any:
+        print(info)
+        # we perform 'before' validations only if
+        is_dict = bool(
+            info and info.context and info.context.get("is_dict", False)
+        )
+        if not is_dict :
             handler(values)
         values = DjangoGetter(values, cls, info.context)
         return handler(values)
 
     @classmethod
     def from_orm(cls: Type[S], obj: Any) -> S:
-        return cls.model_validate(obj, context={"from_orm":True})
+        return cls.model_validate(obj)
+
+    @classmethod
+    def model_validate(
+        cls: type[BaseModel],
+        obj: Any,
+        *args,
+        strict: bool | None = None,
+        from_attributes: bool | None = None,
+        context: dict[str, Any] | None = None,
+    ) -> BaseModel:
+        context = context or {}
+        if not isinstance(obj, dict):
+            context = {"is_dict": True}
+        return super().model_validate(
+            obj, *args, strict=strict, from_attributes=from_attributes, context=context
+        )
 
     def dict(self, *a: Any, **kw: Any) -> DictStrAny:
         "Backward compatibility with pydantic 1.x"

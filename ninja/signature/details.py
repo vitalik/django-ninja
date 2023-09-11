@@ -159,6 +159,7 @@ class ViewSignature:
             )
 
             base_cls = param_cls._model
+            base_cls.model_config["from_attributes"] = True
             model_cls = type(cls_name, (base_cls,), attrs)
             # TODO: https://pydantic-docs.helpmanual.io/usage/models/#dynamic-model-creation - check if anything special in create_model method that I did not use
             result.append(model_cls)
