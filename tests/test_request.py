@@ -151,8 +151,3 @@ def test_pydantic_config(path, json, expected_status, expected_response):
     response = client.post(path, json=json)
     assert response.json() == expected_response
     assert response.status_code == expected_status
-
-    # test extra forbid on nested schema
-    response = client.post(
-        path, json={"name": "test", "metadata": {"extra_name": "xxx"}}
-    )
