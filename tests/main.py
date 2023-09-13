@@ -1,4 +1,5 @@
 from uuid import UUID
+from typing import List
 
 from django.urls import register_converter
 
@@ -209,7 +210,7 @@ def get_query_type_optional_10(request, query: int = 10):
 
 
 @router.get("/query/list")
-def get_query_list(request, query: list[str] = Query(...)):
+def get_query_list(request, query: List[str] = Query(...)):
     return ",".join(query)
 
 
