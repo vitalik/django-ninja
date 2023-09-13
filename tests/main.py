@@ -1,5 +1,5 @@
-from uuid import UUID
 from typing import List
+from uuid import UUID
 
 from django.urls import register_converter
 

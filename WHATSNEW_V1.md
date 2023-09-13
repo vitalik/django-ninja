@@ -9,6 +9,10 @@
  - add_router supports strings
 
 TODO:
+ - extra=forbid
+ - Shorter annotations
+ - Router@'auth' has already been attached to API NinjaAPI:1.0.0
+ - https://github.com/vitalik/django-ninja/issues/428
  - async pagination
 
 Backwards incompatible stuff
