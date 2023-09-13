@@ -208,6 +208,11 @@ def get_query_type_optional_10(request, query: int = 10):
     return f"foo bar {query}"
 
 
+@router.get("/query/list")
+def get_query_list(request, query: list[str] = Query(...)):
+    return ",".join(query)
+
+
 @router.get("/query/param")
 def get_query_param(request, query=Query(None)):
     if query is None:
