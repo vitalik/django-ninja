@@ -21,7 +21,8 @@ The same benefits that apply to path parameters also apply to query parameters:
 - Automatic documentation
 
 
-Note: if you do not annotate your arguments, they will be treated as `str` types:
+!!! Note
+    if you do not annotate your arguments, they will be treated as `str` types
 
 ```Python hl_lines="2"
 @api.get("/weapons")
