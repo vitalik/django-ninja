@@ -87,7 +87,7 @@ Django's `path` converter allows you to handle path-like parameters:
 def someview(request, value: str):
        return value
 ```
-you can quiery this operation with `/dir/some/path/with-slashes` and your `value` will be equal to `some/path/with-slashes`
+you can query this operation with `/dir/some/path/with-slashes` and your `value` will be equal to `some/path/with-slashes`
 
 ### Multiple parameters
 
