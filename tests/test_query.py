@@ -59,6 +59,7 @@ client = TestClient(router)
         ("/query/int/default?query=foo", 422, response_not_valid_int),
         ("/query/list?query=a&query=b&query=c", 200, "a,b,c"),
         ("/query/list-optional?query=a&query=b&query=c", 200, "a,b,c"),
+        ("/query/list-optional?query=a", 200, "a"),
         ("/query/list-optional", 200, None),
         ("/query/param", 200, "foo bar"),
         ("/query/param?query=50", 200, "foo bar 50"),
