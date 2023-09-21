@@ -277,6 +277,13 @@ def is_pydantic_model(cls: Any) -> bool:
 
 def is_collection_type(annotation: Any) -> bool:
     origin = get_origin(annotation)
+
+    if origin in UNION_TYPES:
+        for arg in get_args(annotation):
+            if is_collection_type(arg):
+                return True
+        return False
+
     collection_types = (List, list, set, tuple)
     if origin is None:
         return (
