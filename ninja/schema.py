@@ -204,37 +204,17 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
     def _run_root_validator(
         cls, values: Any, handler: ModelWrapValidatorHandler[S], info: ValidationInfo
     ) -> S:
-        # We dont perform 'before' validations if an validating through 'model_validate'
-        through_model_validate = (
-            info and info.context and info.context.get("through_model_validate", False)
-        )
-        if not through_model_validate:
+        # when extra is "forbid" we need to perform default pydantic valudation
+        # as DjangoGetter does not act as dict and pydantic will not be able to validate it
+        if cls.model_config.get("extra") == "forbid":
             handler(values)
 
-        # We add our DjangoGetter for the Schema
         values = DjangoGetter(values, cls, info.context)
-
-        # To update the schema with our DjangoGetter
         return handler(values)
 
     @classmethod
     def from_orm(cls: Type[S], obj: Any) -> S:
         return cls.model_validate(obj)
-
-    @classmethod
-    def model_validate(
-        cls: Type[S],
-        obj: Any,
-        *,
-        strict: Optional[bool] = None,
-        from_attributes: Optional[bool] = None,
-        context: Optional[Dict[str, Any]] = None,
-    ) -> S:
-        context = context or {}
-        context["through_model_validate"] = True
-        return super().model_validate(
-            obj, strict=strict, from_attributes=from_attributes, context=context
-        )
 
     def dict(self, *a: Any, **kw: Any) -> DictStrAny:
         "Backward compatibility with pydantic 1.x"
