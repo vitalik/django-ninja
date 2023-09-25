@@ -21,7 +21,7 @@ dotted attributes and resolver methods. For example::
 
 """
 import warnings
-from typing import Any, Callable, Dict, Optional, Type, TypeVar, Union, no_type_check
+from typing import Any, Callable, Dict, Type, TypeVar, Union, no_type_check
 
 import pydantic
 from django.db.models import Manager, QuerySet
