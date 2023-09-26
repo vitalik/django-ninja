@@ -1,11 +1,11 @@
 # Yeah, this is a bit strange
 # but the whole point of this module is to make mypy and typehints happy
-# what it basically does makes function XXX that create instance of params.XXX
+# what it basically does makes function XXX that create instance of models.XXX
 # and annotates function with result = Any
 # idea from https://github.com/tiangolo/fastapi/blob/master/fastapi/param_functions.py
 from typing import Any, Dict, Optional
 
-from ninja import params
+from ninja.params import models
 
 
 def Path(  # noqa: N802
@@ -27,7 +27,7 @@ def Path(  # noqa: N802
     include_in_schema: bool = True,
     **extra: Any,
 ) -> Any:
-    return params.Path(
+    return models.Path(
         default=default,
         alias=alias,
         title=title,
@@ -66,7 +66,7 @@ def Query(  # noqa: N802
     include_in_schema: bool = True,
     **extra: Any,
 ) -> Any:
-    return params.Query(
+    return models.Query(
         default=default,
         alias=alias,
         title=title,
@@ -105,7 +105,7 @@ def Header(  # noqa: N802
     include_in_schema: bool = True,
     **extra: Any,
 ) -> Any:
-    return params.Header(
+    return models.Header(
         default,
         alias=alias,
         title=title,
@@ -144,7 +144,7 @@ def Cookie(  # noqa: N802
     include_in_schema: bool = True,
     **extra: Any,
 ) -> Any:
-    return params.Cookie(
+    return models.Cookie(
         default,
         alias=alias,
         title=title,
@@ -183,7 +183,7 @@ def Body(  # noqa: N802
     include_in_schema: bool = True,
     **extra: Any,
 ) -> Any:
-    return params.Body(
+    return models.Body(
         default,
         alias=alias,
         title=title,
@@ -222,7 +222,7 @@ def Form(  # noqa: N802
     include_in_schema: bool = True,
     **extra: Any,
 ) -> Any:
-    return params.Form(
+    return models.Form(
         default,
         alias=alias,
         title=title,
@@ -261,7 +261,7 @@ def File(  # noqa: N802
     include_in_schema: bool = True,
     **extra: Any,
 ) -> Any:
-    return params.File(
+    return models.File(
         default,
         alias=alias,
         title=title,
