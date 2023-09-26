@@ -204,8 +204,8 @@ class Operation:
             return temporal_response
 
         resp_object = ResponseObject(result)
-        # ^ we need object because getter_dict seems work only with from_orm
-        result = response_model.from_orm(resp_object).model_dump(
+        # ^ we need object because getter_dict seems work only with model_validate
+        result = response_model.model_validate(resp_object).model_dump(
             by_alias=self.by_alias,
             exclude_unset=self.exclude_unset,
             exclude_defaults=self.exclude_defaults,
@@ -419,7 +419,7 @@ class PathView:
 
 
 class ResponseObject:
-    "Basically this is just a helper to be able to pass response to pydantic's from_orm"
+    "Basically this is just a helper to be able to pass response to pydantic's model_validate"
 
     def __init__(self, response: HttpResponse) -> None:
         self.response = response

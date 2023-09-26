@@ -1,7 +1,22 @@
-import pytest
+from typing import Optional
 
-from ninja import Cookie, Header, Router
+import pytest
+from pydantic import ConfigDict
+
+from ninja import Body, Cookie, Header, Router, Schema
 from ninja.testing import TestClient
+
+
+class OptionalEmptySchema(Schema):
+    model_config = ConfigDict(extra="forbid")
+    name: Optional[str] = None
+
+
+class ExtraForbidSchema(Schema):
+    model_config = ConfigDict(extra="forbid")
+    name: str
+    metadata: Optional[OptionalEmptySchema] = None
+
 
 router = Router()
 
@@ -41,6 +56,11 @@ def cookies2(request, wpn: str = Cookie(..., alias="weapon")):
     return wpn
 
 
+@router.post("/test-schema")
+def test_schema(request, payload: ExtraForbidSchema = Body(...)):
+    return "ok"
+
+
 client = TestClient(router)
 
 
@@ -77,3 +97,57 @@ def test_headers(path, expected_status, expected_response):
     assert response.status_code == expected_status, response.content
     print(response.json())
     assert response.json() == expected_response
+
+
+@pytest.mark.parametrize(
+    "path,json,expected_status,expected_response",
+    [
+        (
+            "/test-schema",
+            {"name": "test", "extra_name": "test2"},
+            422,
+            {
+                "detail": [
+                    {
+                        "type": "extra_forbidden",
+                        "loc": ["body", "payload", "extra_name"],
+                        "msg": "Extra inputs are not permitted",
+                    }
+                ]
+            },
+        ),
+        (
+            "/test-schema",
+            {"name": "test", "metadata": {"extra_name": "xxx"}},
+            422,
+            {
+                "detail": [
+                    {
+                        "loc": ["body", "payload", "metadata", "extra_name"],
+                        "msg": "Extra inputs are not permitted",
+                        "type": "extra_forbidden",
+                    }
+                ]
+            },
+        ),
+        (
+            "/test-schema",
+            {"name": "test", "metadata": "test2"},
+            422,
+            {
+                "detail": [
+                    {
+                        "type": "model_attributes_type",
+                        "loc": ["body", "payload", "metadata"],
+                        "msg": "Input should be a valid dictionary or object to extract fields from",
+                    }
+                ]
+            },
+        ),
+    ],
+)
+def test_pydantic_config(path, json, expected_status, expected_response):
+    # test extra forbid
+    response = client.post(path, json=json)
+    assert response.json() == expected_response
+    assert response.status_code == expected_status

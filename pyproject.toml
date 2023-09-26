@@ -77,6 +77,15 @@ dev = [
     "pre-commit",
 ]
 
+
+# BLACK ==========================================================
+
+[tool.black]
+line-length = 88
+skip-string-normalization = false
+target-version = ['py311']
+
+
 [tool.ruff]
 select = [
     "E",  # pycodestyle errors
