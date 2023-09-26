@@ -6,6 +6,7 @@ from django.urls import path as django_path
 from ninja.constants import NOT_SET
 from ninja.errors import ConfigError
 from ninja.operation import PathView
+from ninja.renderers import BaseRenderer
 from ninja.types import TCallable
 from ninja.utils import normalize_path, replace_path_param_notation
 
@@ -44,6 +45,7 @@ class Router:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
+        renderer: Optional[BaseRenderer] = None,
     ) -> Callable[[TCallable], TCallable]:
         return self.api_operation(
             ["GET"],
@@ -62,6 +64,7 @@ class Router:
             url_name=url_name,
             include_in_schema=include_in_schema,
             openapi_extra=openapi_extra,
+            renderer=renderer,
         )
 
     def post(
@@ -235,6 +238,7 @@ class Router:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
+        renderer: Optional[BaseRenderer] = None,
     ) -> Callable[[TCallable], TCallable]:
         def decorator(view_func: TCallable) -> TCallable:
             self.add_api_operation(
@@ -255,6 +259,7 @@ class Router:
                 url_name=url_name,
                 include_in_schema=include_in_schema,
                 openapi_extra=openapi_extra,
+                renderer=renderer,
             )
             return view_func
 
@@ -280,6 +285,7 @@ class Router:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
+        renderer: Optional[BaseRenderer] = None,
     ) -> None:
         if path not in self.path_operations:
             path_view = PathView()
@@ -304,6 +310,7 @@ class Router:
             url_name=url_name,
             include_in_schema=include_in_schema,
             openapi_extra=openapi_extra,
+            renderer=renderer,
         )
         if self.api:
             path_view.set_api_instance(self.api, self)

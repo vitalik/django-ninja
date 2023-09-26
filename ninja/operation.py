@@ -21,6 +21,7 @@ from ninja.compatibility.util import async_to_sync
 from ninja.constants import NOT_SET
 from ninja.errors import AuthenticationError, ConfigError, ValidationError
 from ninja.params_models import TModels
+from ninja.renderers import BaseRenderer
 from ninja.schema import Schema
 from ninja.signature import ViewSignature, is_async
 from ninja.types import DictStrAny
@@ -53,6 +54,7 @@ class Operation:
         include_in_schema: bool = True,
         url_name: str = None,
         openapi_extra: Optional[Dict[str, Any]] = None,
+        renderer: Optional[BaseRenderer] = None,
     ) -> None:
         self.is_async = False
         self.path: str = path
@@ -90,6 +92,7 @@ class Operation:
         self.exclude_unset = exclude_unset
         self.exclude_defaults = exclude_defaults
         self.exclude_none = exclude_none
+        self.renderer = renderer
 
         if hasattr(view_func, "_ninja_contribute_to_operation"):
             # Allow 3rd party code to contribute to the operation behaviour
@@ -102,7 +105,7 @@ class Operation:
         if error:
             return error
         try:
-            temporal_response = self.api.create_temporal_response(request)
+            temporal_response = self.api.create_temporal_response(request, self.renderer)
             values = self._get_values(request, kw, temporal_response)
             result = self.view_func(request, **values)
             return self._result_to_response(request, result, temporal_response)
@@ -196,7 +199,7 @@ class Operation:
 
         if response_model is NOT_SET:
             return self.api.create_response(
-                request, result, temporal_response=temporal_response
+                request, result, temporal_response=temporal_response, renderer=self.renderer,
             )
 
         if response_model is None:
@@ -212,7 +215,7 @@ class Operation:
             exclude_none=self.exclude_none,
         )["response"]
         return self.api.create_response(
-            request, result, temporal_response=temporal_response
+            request, result, temporal_response=temporal_response, renderer=self.renderer
         )
 
     def _get_values(
@@ -274,7 +277,7 @@ class AsyncOperation(Operation):
         if error:
             return error
         try:
-            temporal_response = self.api.create_temporal_response(request)
+            temporal_response = self.api.create_temporal_response(request, self.renderer)
             values = self._get_values(request, kw, temporal_response)
             result = await self.view_func(request, **values)
             return self._result_to_response(request, result, temporal_response)
@@ -339,6 +342,7 @@ class PathView:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
+        renderer: Optional[BaseRenderer] = None,
     ) -> Operation:
         if url_name:
             self.url_name = url_name
@@ -366,6 +370,7 @@ class PathView:
             include_in_schema=include_in_schema,
             url_name=url_name,
             openapi_extra=openapi_extra,
+            renderer=renderer,
         )
 
         self.operations.append(operation)
