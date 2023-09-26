@@ -16,9 +16,6 @@ dotted attributes and resolver methods. For example::
         def resolve_name(obj):
             return f"{obj.first_name} {obj.last_name}"
 
-        def resolve_initials(self, obj):
-            return "".join(n[:1] for n in self.name.split())
-
 """
 import warnings
 from typing import Any, Callable, Dict, Type, TypeVar, Union, no_type_check
