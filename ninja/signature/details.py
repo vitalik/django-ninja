@@ -16,12 +16,12 @@ from ninja.params.models import (
     Body,
     File,
     Form,
-    _MultiPartBody,
+    Param,
+    Path,
+    Query,
     TModel,
     TModels,
-    Query,
-    Path,
-    Param,
+    _MultiPartBody,
 )
 from ninja.signature.utils import get_path_param_names, get_typed_signature
 

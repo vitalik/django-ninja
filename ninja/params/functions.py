@@ -28,7 +28,7 @@ def Path(  # noqa: N802
     **extra: Any,
 ) -> Any:
     return models.Path(
-        default=default,
+        default,
         alias=alias,
         title=title,
         description=description,
@@ -67,7 +67,7 @@ def Query(  # noqa: N802
     **extra: Any,
 ) -> Any:
     return models.Query(
-        default=default,
+        default,
         alias=alias,
         title=title,
         description=description,

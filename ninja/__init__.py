@@ -1,6 +1,6 @@
 """Django Ninja - Fast Django REST framework"""
 
-__version__ = "1.0rc1"
+__version__ = "1.0b2"
 
 
 from pydantic import Field
@@ -10,7 +10,7 @@ from ninja.filter_schema import FilterSchema
 from ninja.main import NinjaAPI
 from ninja.openapi.docs import Redoc, Swagger
 from ninja.orm import ModelSchema
-from ninja.params.functions import Body, Cookie, File, Form, Header, Path, Query
+from ninja.params import Body, Cookie, File, Form, Header, Path, Query
 from ninja.router import Router
 from ninja.schema import Schema
 
