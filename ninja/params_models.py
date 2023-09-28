@@ -69,6 +69,12 @@ class ParamModel(BaseModel, ABC):
             else:
                 cls._map_data_path(mapped_data, None, flatten_map[k])
 
+            # add any query parameters that have not been mapped
+            for k in mapped_data:
+                if isinstance(mapped_data[k], dict):
+                    for d in data:
+                        if d not in mapped_data[k]:
+                            mapped_data[k][d] = data[d]
         return mapped_data
 
     @classmethod
