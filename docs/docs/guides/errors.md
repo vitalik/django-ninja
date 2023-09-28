@@ -67,6 +67,10 @@ Raised when request data does not validate
 
 Used to throw http error with status code from any place of the code
 
+#### `ninja.errors.MethodNotAllowedError`
+
+Raised when request method not allowed
+
 #### `django.http.Http404`
  
  Django's default 404 exception (can be returned f.e. with `get_object_or_404`)

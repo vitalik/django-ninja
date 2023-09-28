@@ -14,12 +14,17 @@ from typing import (
 
 import django
 import pydantic
-from django.http import HttpRequest, HttpResponse, HttpResponseNotAllowed
+from django.http import HttpRequest, HttpResponse
 from django.http.response import HttpResponseBase
 
 from ninja.compatibility.util import async_to_sync
 from ninja.constants import NOT_SET
-from ninja.errors import AuthenticationError, ConfigError, ValidationError
+from ninja.errors import (
+    AuthenticationError,
+    ConfigError,
+    MethodNotAllowedError,
+    ValidationError,
+)
 from ninja.params_models import TModels
 from ninja.schema import Schema
 from ninja.signature import ViewSignature, is_async
@@ -390,7 +395,7 @@ class PathView:
     def _sync_view(self, request: HttpRequest, *a: Any, **kw: Any) -> HttpResponseBase:
         operation = self._find_operation(request)
         if operation is None:
-            return self._not_allowed()
+            return self._not_allowed(request)
         return operation.run(request, *a, **kw)
 
     async def _async_view(
@@ -400,7 +405,7 @@ class PathView:
 
         operation = self._find_operation(request)
         if operation is None:
-            return self._not_allowed()
+            return self._not_allowed(request)
         if operation.is_async:
             return await cast(AsyncOperation, operation).run(request, *a, **kw)
         return await sync_to_async(operation.run)(request, *a, **kw)
@@ -411,11 +416,11 @@ class PathView:
                 return op
         return None
 
-    def _not_allowed(self) -> HttpResponse:
+    def _not_allowed(self, request: HttpRequest) -> HttpResponse:
         allowed_methods = set()
         for op in self.operations:
             allowed_methods.update(op.methods)
-        return HttpResponseNotAllowed(allowed_methods, content=b"Method not allowed")
+        return self.api.on_exception(request, MethodNotAllowedError(allowed_methods))
 
 
 class ResponseObject:

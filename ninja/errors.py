@@ -1,7 +1,7 @@
 import logging
 import traceback
 from functools import partial
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Set
 
 from django.conf import settings
 from django.http import Http404, HttpRequest, HttpResponse
@@ -12,10 +12,11 @@ if TYPE_CHECKING:
     from ninja import NinjaAPI  # pragma: no cover
 
 __all__ = [
-    "ConfigError",
     "AuthenticationError",
-    "ValidationError",
+    "ConfigError",
     "HttpError",
+    "MethodNotAllowedError",
+    "ValidationError",
     "set_default_exc_handlers",
 ]
 
@@ -53,6 +54,12 @@ class HttpError(Exception):
         return self.message
 
 
+class MethodNotAllowedError(Exception):
+    def __init__(self, allowed_methods: Set[str]) -> None:
+        self.allowed_methods = allowed_methods
+        super().__init__()
+
+
 def set_default_exc_handlers(api: "NinjaAPI") -> None:
     api.add_exception_handler(
         Exception,
@@ -73,6 +80,10 @@ def set_default_exc_handlers(api: "NinjaAPI") -> None:
     api.add_exception_handler(
         AuthenticationError,
         partial(_default_authentication_error, api=api),
+    )
+    api.add_exception_handler(
+        MethodNotAllowedError,
+        partial(_default_method_not_allowed, api=api),
     )
 
 
@@ -99,6 +110,15 @@ def _default_authentication_error(
     request: HttpRequest, exc: AuthenticationError, api: "NinjaAPI"
 ) -> HttpResponse:
     return api.create_response(request, {"detail": "Unauthorized"}, status=401)
+
+
+def _default_method_not_allowed(
+    request: HttpRequest, exc: MethodNotAllowedError, api: "NinjaAPI"
+) -> HttpResponse:
+    msg = "Method not allowed"
+    if settings.DEBUG:
+        msg += f". Allowed Methods: {', '.join(exc.allowed_methods)}"
+    return api.create_response(request, {"detail": msg}, status=405)
 
 
 def _default_exception(

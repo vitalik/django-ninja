@@ -51,9 +51,13 @@ def test_default_handler(settings):
         "detail": "Cannot parse request body (Expecting value: line 1 column 1 (char 0))",
     }
 
+    response = client.put("/error/custom")
+    assert response.status_code == 405
+    assert response.json() == {"detail": "Method not allowed. Allowed Methods: POST"}
+
     settings.DEBUG = False
     with pytest.raises(RuntimeError):
-        response = client.post("/error/base")
+        client.post("/error/base")
 
     response = client.post("/error/custom", body="invalid_json")
     assert response.status_code == 400
