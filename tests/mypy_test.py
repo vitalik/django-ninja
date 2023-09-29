@@ -32,5 +32,5 @@ def new_way(request: HttpRequest, data: Body[Payload]) -> Any:
 
 
 @api.post("/new_way_ex")
-def new_way(request: HttpRequest, data: BodyEx[Payload, P(title="A title")]) -> Any:
+def new_way_ex(request: HttpRequest, data: BodyEx[Payload, P(title="A title")]) -> Any:
     data.s.find("", "")
