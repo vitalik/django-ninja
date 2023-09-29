@@ -4,7 +4,7 @@ from typing import Any
 from django.http import HttpRequest
 from typing_extensions import Annotated
 
-from ninja import Body, NinjaAPI, Schema, BodyEx, P
+from ninja import Body, BodyEx, NinjaAPI, P, Schema
 
 
 class Payload(Schema):
