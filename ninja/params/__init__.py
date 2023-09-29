@@ -1,6 +1,6 @@
-from typing import TYPE_CHECKING, Any, Callable, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, TypeVar
 
-from typing_extensions import Annotated
+from typing_extensions import Annotated, TypedDict
 
 from ninja.params import functions as param_functions
 
@@ -54,3 +54,41 @@ else:
     HeaderEx = Header
     PathEx = Path
     QueryEx = Query
+
+
+def P(
+    *,
+    alias: Optional[str] = None,
+    title: Optional[str] = None,
+    description: Optional[str] = None,
+    gt: Optional[float] = None,
+    ge: Optional[float] = None,
+    lt: Optional[float] = None,
+    le: Optional[float] = None,
+    min_length: Optional[int] = None,
+    max_length: Optional[int] = None,
+    regex: Optional[str] = None,
+    example: Any = None,
+    examples: Optional[Dict[str, Any]] = None,
+    deprecated: Optional[bool] = None,
+    include_in_schema: bool = True,
+    **extra: Any,
+) -> Dict[str, Any]:
+    "Arguments for BodyEx, QueryEx, etc."
+    return dict(
+        alias=alias,
+        title=title,
+        description=description,
+        gt=gt,
+        ge=ge,
+        lt=lt,
+        le=le,
+        min_length=min_length,
+        max_length=max_length,
+        regex=regex,
+        example=example,
+        examples=examples,
+        deprecated=deprecated,
+        include_in_schema=include_in_schema,
+        **extra,
+    )

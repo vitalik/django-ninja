@@ -4,7 +4,7 @@ from typing import Any
 from django.http import HttpRequest
 from typing_extensions import Annotated
 
-from ninja import Body, NinjaAPI, Schema
+from ninja import Body, NinjaAPI, Schema, BodyEx, P
 
 
 class Payload(Schema):
@@ -24,10 +24,13 @@ def old_way(request: HttpRequest, data: Payload = Body()) -> Any:
 @api.post("/annotated_way")
 def annotated_way(request: HttpRequest, data: Annotated[Payload, Body()]) -> Any:
     data.s.capitalize()
-    pass
 
 
 @api.post("/new_way")
 def new_way(request: HttpRequest, data: Body[Payload]) -> Any:
     data.s.capitalize()
-    pass
+
+
+@api.post("/new_way_ex")
+def new_way(request: HttpRequest, data: BodyEx[Payload, P(title="A title")]) -> Any:
+    data.s.find("", "")
