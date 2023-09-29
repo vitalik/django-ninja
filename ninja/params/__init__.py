@@ -4,7 +4,6 @@ from typing_extensions import Annotated
 
 from ninja.params import functions as param_functions
 
-
 __all__ = [
     "Body",
     "Cookie",
