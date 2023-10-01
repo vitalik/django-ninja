@@ -20,7 +20,7 @@ from django.http.response import HttpResponseBase
 from ninja.compatibility.util import async_to_sync
 from ninja.constants import NOT_SET
 from ninja.errors import AuthenticationError, ConfigError, ValidationError
-from ninja.params_models import TModels
+from ninja.params.models import TModels
 from ninja.schema import Schema
 from ninja.signature import ViewSignature, is_async
 from ninja.types import DictStrAny

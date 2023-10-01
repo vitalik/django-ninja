@@ -9,11 +9,20 @@ from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 from typing_extensions import Annotated, get_args, get_origin  # type: ignore
 
-from ninja import UploadedFile, params
+from ninja import UploadedFile
 from ninja.compatibility.util import UNION_TYPES
 from ninja.errors import ConfigError
-from ninja.params import Body, File, Form, _MultiPartBody
-from ninja.params_models import TModel, TModels
+from ninja.params.models import (
+    Body,
+    File,
+    Form,
+    Param,
+    Path,
+    Query,
+    TModel,
+    TModels,
+    _MultiPartBody,
+)
 from ninja.signature.utils import get_path_param_names, get_typed_signature
 
 __all__ = [
@@ -204,7 +213,7 @@ class ViewSignature:
 
         if get_origin(annotation) is Annotated:
             args = get_args(annotation)
-            if isinstance(args[1], params.Param):
+            if isinstance(args[1], Param):
                 prev_default = default
                 annotation, default = args
                 if prev_default != self.signature.empty:
@@ -214,7 +223,7 @@ class ViewSignature:
             if default == self.signature.empty:
                 annotation = str
             else:
-                if isinstance(default, params.Param):
+                if isinstance(default, Param):
                     annotation = type(default.default)
                 else:
                     annotation = type(default)
@@ -237,7 +246,7 @@ class ViewSignature:
                 return FuncParam(name, name, File(default), annotation, is_collection)
 
         # 1) if type of the param is defined as one of the Param's subclasses - we just use that definition
-        if isinstance(default, params.Param):
+        if isinstance(default, Param):
             param_source = default
 
         # 2) if param name is a part of the path parameter
@@ -245,21 +254,21 @@ class ViewSignature:
             assert (
                 default == self.signature.empty
             ), f"'{name}' is a path param, default not allowed"
-            param_source = params.Path(...)
+            param_source = Path(...)
 
         # 3) if param is a collection, or annotation is part of pydantic model:
         elif is_collection or is_pydantic_model(annotation):
             if default == self.signature.empty:
-                param_source = params.Body(...)
+                param_source = Body(...)
             else:
-                param_source = params.Body(default)
+                param_source = Body(default)
 
         # 4) the last case is query param
         else:
             if default == self.signature.empty:
-                param_source = params.Query(...)
+                param_source = Query(...)
             else:
-                param_source = params.Query(default)
+                param_source = Query(default)
 
         return FuncParam(
             name, param_source.alias or name, param_source, annotation, is_collection

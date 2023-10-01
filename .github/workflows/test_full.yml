@@ -59,5 +59,4 @@ jobs:
       - name: Ruff
         run: ruff ninja tests
       - name: mypy
-        run: mypy ninja
-
+        run: mypy ninja tests/mypy_test.py

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Set, Tup
 
 from ninja.constants import NOT_SET
 from ninja.operation import Operation
-from ninja.params_models import TModel, TModels
+from ninja.params.models import TModel, TModels
 from ninja.schema import NinjaGenerateJsonSchema
 from ninja.types import DictStrAny
 from ninja.utils import normalize_path
