@@ -205,6 +205,28 @@ You can as well pass your own context:
 data = Data.model_validate({'some': 1}, context={'request': MyRequest()})
 ```
 
+### Skipping Resolvers
+
+By default, resolvers are called regardless of how the data is passed to the schema.
+
+If you only want to run the resolvers when the schema is passed an object (e.g. a Django model), but not when it is passed a dictionary (e.g. a request body), you can add `always_resolve = False` to the Schema config.
+
+Note that the data passed to a resolver is always in object form, regardless of the input format.
+
+```Python hl_lines="4-5"
+class Data(Schema):
+    a: int
+    path: str = ""
+
+    class Config:
+        always_resolve = False
+
+    @staticmethod
+    def resolve_path(obj, context):
+        request = context["request"]
+        return request.path
+```
+
 ## Returning querysets
 
 In the previous example we specifically converted a queryset into a list (and executed the SQL query during evaluation).
