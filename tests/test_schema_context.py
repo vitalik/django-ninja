@@ -7,7 +7,7 @@ class ResolveWithKWargs(Schema):
     @staticmethod
     def resolve_value(obj, **kwargs):
         context = kwargs["context"]
-        return obj["value"] + context["extra"]
+        return obj.value + context["extra"]
 
 
 class ResolveWithContext(Schema):
@@ -15,7 +15,7 @@ class ResolveWithContext(Schema):
 
     @staticmethod
     def resolve_value(obj, context):
-        return obj["value"] + context["extra"]
+        return obj.value + context["extra"]
 
 
 def test_schema_with_context():

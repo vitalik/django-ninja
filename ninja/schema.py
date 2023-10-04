@@ -40,6 +40,17 @@ __all__ = ["BaseModel", "Field", "validator", "DjangoGetter", "Schema"]
 S = TypeVar("S", bound="Schema")
 
 
+class _DictToObjectWrapper:
+    def __init__(self, wrapped_dict: dict):
+        self._dict = wrapped_dict
+
+    def __getattr__(self, key: str) -> Any:
+        try:
+            return self._dict[key]
+        except KeyError as e:
+            raise AttributeError(key) from e
+
+
 class DjangoGetter:
     __slots__ = ("_obj", "_schema_cls", "_context")
 
@@ -120,7 +131,10 @@ class Resolver:
             kwargs["context"] = getter._context
 
         if self._static:
-            return self._func(getter._obj, **kwargs)
+            obj = getter._obj
+            if isinstance(obj, dict):
+                obj = _DictToObjectWrapper(obj)
+            return self._func(obj, **kwargs)
         raise NotImplementedError(
             "Non static resolves are not supported yet"
         )  # pragma: no cover

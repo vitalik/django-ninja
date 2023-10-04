@@ -6,7 +6,7 @@ from django.db.models import Manager, QuerySet
 from django.db.models.fields.files import ImageFieldFile
 
 from ninja import Schema
-from ninja.schema import Field
+from ninja.schema import Field, _DictToObjectWrapper
 
 
 class FakeManager(Manager):
@@ -183,3 +183,12 @@ def test_with_attr_that_has_resolve():
         resolve_attr = "2"
 
     assert ResolveAttrSchema.from_orm(Obj()).dict() == {"id": "1", "resolve_attr": "2"}
+
+
+def test_dict_to_obj_wrapper():
+    data = {"a": 1, "b": 2}
+    wrapper = _DictToObjectWrapper(data)
+    assert wrapper.a == 1
+    assert wrapper.b == 2
+    with pytest.raises(AttributeError):
+        assert wrapper.c
