@@ -64,24 +64,26 @@ class DjangoGetter:
         #     return getattr(self._obj, key)
 
         resolver = self._schema_cls._ninja_resolvers.get(key)
-        if resolver:
+        always_resolve = self._schema_cls.model_config.get("always_resolve", True)
+        if always_resolve and resolver:
+            value = resolver(getter=self)
+        elif isinstance(self._obj, dict):
+            if key not in self._obj:
+                raise AttributeError(key)
+            value = self._obj[key]
+        elif resolver:
             value = resolver(getter=self)
         else:
-            if isinstance(self._obj, dict):
-                if key not in self._obj:
-                    raise AttributeError(key)
-                value = self._obj[key]
-            else:
+            try:
+                value = getattr(self._obj, key)
+            except AttributeError:
                 try:
-                    value = getattr(self._obj, key)
-                except AttributeError:
-                    try:
-                        # value = attrgetter(key)(self._obj)
-                        value = Variable(key).resolve(self._obj)
-                        # TODO: Variable(key) __init__ is actually slower than
-                        #       Variable.resolve - so it better be cached
-                    except VariableDoesNotExist as e:
-                        raise AttributeError(key) from e
+                    # value = attrgetter(key)(self._obj)
+                    value = Variable(key).resolve(self._obj)
+                    # TODO: Variable(key) __init__ is actually slower than
+                    #       Variable.resolve - so it better be cached
+                except VariableDoesNotExist as e:
+                    raise AttributeError(key) from e
         return self._convert_result(value)
 
     # def get(self, key: Any, default: Any = None) -> Any:

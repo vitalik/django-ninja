@@ -192,3 +192,35 @@ def test_dict_to_obj_wrapper():
     assert wrapper.b == 2
     with pytest.raises(AttributeError):
         assert wrapper.c
+
+
+def test_resolver_called_with_always_resolve_false_and_object():
+    class TestSchema(Schema):
+        name: str
+
+        class Config:
+            always_resolve = False
+
+        @staticmethod
+        def resolve_name(obj):
+            return "test"
+
+    class TestObject:
+        def __init__(self, name):
+            self.name = name
+
+    assert TestSchema.from_orm(TestObject(name="bob")).dict() == {"name": "test"}
+
+
+def test_resolver_skipped_with_always_resolve_false_and_dict():
+    class TestSchema(Schema):
+        name: str
+
+        class Config:
+            always_resolve = False
+
+        @staticmethod
+        def resolve_name(obj):
+            return "test"
+
+    assert TestSchema.from_orm({"name": "bob"}).dict() == {"name": "bob"}
