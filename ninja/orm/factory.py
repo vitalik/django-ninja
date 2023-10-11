@@ -60,8 +60,12 @@ class SchemaFactory:
             if optional_fields == "__all__":
                 optional_fields = [f.name for f in model_fields_list]
 
+        custom_field_names = {name for name, *_ in (custom_fields or [])}
+
         definitions = {}
         for fld in model_fields_list:
+            if fld.name in custom_field_names:
+                continue
             python_type, field_info = get_schema_field(
                 fld,
                 depth=depth,

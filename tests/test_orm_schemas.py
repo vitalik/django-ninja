@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, TypeVar
 from unittest.mock import Mock
 
 import django
@@ -488,7 +488,6 @@ def test_custom_fields():
 
     Schema1 = create_schema(SmallModel, custom_fields=[("custom", int, ...)])
 
-    # print(Schema1.json_schema())
     assert Schema1.json_schema() == {
         "type": "object",
         "properties": {
@@ -502,7 +501,6 @@ def test_custom_fields():
     }
 
     Schema2 = create_schema(SmallModel, custom_fields=[("f1", int, ...)])
-    # print(Schema2.json_schema())
 
     assert Schema2.json_schema() == {
         "type": "object",
@@ -511,8 +509,32 @@ def test_custom_fields():
             "f1": {"type": "integer", "title": "F1"},
             "f2": {"type": "string", "title": "F2"},
         },
-        "required": ["f1", "f2"],
+        "required": ["f2", "f1"],
         "title": "SmallModel2",
+    }
+
+
+def test_custom_fields_with_custom_types():
+    class CustomField(models.fields.Field):
+        pass
+
+    class TestModel(models.Model):
+        custom = CustomField()
+
+        class Meta:
+            app_label = "tests"
+
+    CustomType = TypeVar("CustomType")
+    Schema1 = create_schema(TestModel, custom_fields=[("custom", CustomType, ...)])
+
+    assert Schema1.json_schema() == {
+        "type": "object",
+        "properties": {
+            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+            "custom": {"title": "Custom"},
+        },
+        "required": ["custom"],
+        "title": "TestModel",
     }
 
 
