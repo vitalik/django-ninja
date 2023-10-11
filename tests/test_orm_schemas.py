@@ -9,6 +9,7 @@ from django.db.models import Manager
 
 from ninja.errors import ConfigError
 from ninja.orm import create_schema
+from ninja.orm.fields import TYPES
 from ninja.orm.shortcuts import L, S
 
 
@@ -536,6 +537,24 @@ def test_custom_fields_with_custom_types():
         "required": ["custom"],
         "title": "TestModel",
     }
+
+
+def test_custom_exception_when_missing_custom_fields():
+    class CustomField(models.fields.Field):
+        pass
+
+    class TestModel(models.Model):
+        custom = CustomField()
+
+        class Meta:
+            app_label = "tests"
+
+    with pytest.raises(KeyError) as error:
+        create_schema(TestModel)
+
+    assert (
+        error.value.args[0] == "'CustomField', you may need to provide a custom field."
+    )
 
 
 def test_duplicate_schema_names():

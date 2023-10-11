@@ -66,12 +66,15 @@ class SchemaFactory:
         for fld in model_fields_list:
             if fld.name in custom_field_names:
                 continue
-            python_type, field_info = get_schema_field(
-                fld,
-                depth=depth,
-                optional=optional_fields and (fld.name in optional_fields),
-            )
-            definitions[fld.name] = (python_type, field_info)
+            try:
+                python_type, field_info = get_schema_field(
+                    fld,
+                    depth=depth,
+                    optional=optional_fields and (fld.name in optional_fields),
+                )
+                definitions[fld.name] = (python_type, field_info)
+            except KeyError as e:
+                raise KeyError("%s, you may need to provide a custom field." % e) from e
 
         if custom_fields:
             for fld_name, python_type, field_info in custom_fields:
