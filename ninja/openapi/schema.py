@@ -144,8 +144,7 @@ class OpenAPISchema(dict):
                 result.extend(self._extract_parameters(model))
         return result
 
-    @classmethod
-    def _extract_parameters(cls, model: TModel) -> List[DictStrAny]:
+    def _extract_parameters(self, model: TModel) -> List[DictStrAny]:
         result = []
 
         schema = model.model_json_schema(
@@ -155,6 +154,9 @@ class OpenAPISchema(dict):
 
         required = set(schema.get("required", []))
         properties = schema["properties"]
+
+        if "$defs" in schema:
+            self.add_schema_definitions(schema["$defs"])
 
         for name, details in properties.items():
             is_required = name in required
