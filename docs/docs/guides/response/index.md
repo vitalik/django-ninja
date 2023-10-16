@@ -402,14 +402,14 @@ the `.from_orm()` method on the schema object.
 
 Consider the following model:
 
-```
+```Python
 class Person(models.Model):
     name = models.CharField(max_length=50)
 ```
 
 Which can be accessed using this schema:
 
-```
+```Python
 class PersonSchema(Schema):
     name: str
 ```
@@ -419,7 +419,7 @@ schema. Once you have an instance of the schema object, the `.dict()` and
 `.json()` methods allow you to get at both dictionary output and string JSON
 versions.
 
-```
+```Python
 >>> person = Person.objects.get(id=1)
 >>> data = PersonSchema.from_orm(person)
 >>> data
@@ -432,7 +432,7 @@ PersonSchema(id=1, name='Mr. Smith')
 
 Multiple Items: or a queryset (or list)
 
-```
+```Python
 >>> persons = Person.objects.all()
 >>> data = [PersonSchema.from_orm(i).dict() for i in persons]
 [{'id':1, 'name':'Mr. Smith'},{'id': 2, 'name': 'Mrs. Smith'}...]
