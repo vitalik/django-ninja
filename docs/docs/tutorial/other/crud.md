@@ -170,6 +170,21 @@ employee.department_id = payload.department_id
 employee.birthdate = payload.birthdate
 ```
 
+**Partial updates**
+
+To allow the user to make partial updates, use `payload.dict(exclude_unset=True).items()`. This ensures that only the specified fields get updated.
+
+**Enforcing strict field validation**
+
+By default, any provided fields that don't exist in the schema will be silently ignored. To raise an error for these invalid fields, you can set `extra = "forbid"` in the schema's Config class. For example:
+
+```Python hl_lines="4 5"
+class EmployeeIn(Schema):
+    # your fields here...
+
+    class Config:
+        extra = "forbid"
+```
 
 ## Delete
 
