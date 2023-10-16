@@ -103,6 +103,6 @@ class PatchGroupSchema(ModelSchema):
 
 also you can define just a few optional fields instead of all:
 
-```
+```Python
      model_fields_optional = ['description']
 ```
