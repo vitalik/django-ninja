@@ -2,7 +2,7 @@
 
 Handling files are no different from other parameters.
 
-```Python hl_lines="1 2 5"
+```python hl_lines="1 2 5"
 from ninja import NinjaAPI, File
 from ninja.files import UploadedFile
 
@@ -28,7 +28,7 @@ def upload(request, file: UploadedFile = File(...)):
 To **upload several files** at the same time, just declare a `List` of `UploadFile`:
 
 
-```Python hl_lines="1 6"
+```python hl_lines="1 6"
 from typing import List
 from ninja import NinjaAPI, File
 from ninja.files import UploadedFile
@@ -44,7 +44,7 @@ Note: HTTP protocol does not allow you to send files in application/json format 
 
 To send files along with some extra attributes you need to send bodies in multipart/form-data encoding. You can do it by simply marking fields with `Form`:
 
-```Python hl_lines="14"
+```python hl_lines="14"
 from ninja import NinjaAPI, Schema, UploadedFile, Form, File
 from datetime import date
 
@@ -67,7 +67,7 @@ Note: in this case all fields should be send as form fields
 
 You can as well send payload in single field as JSON - just remove the Form mark from:
 
-```Python
+```python
 @api.post('/user')
 def create_user(request, details: UserDetails, file: UploadedFile = File(...)):
     return [details.dict(), file.name]
@@ -82,7 +82,7 @@ this will expect from client side to send data as multipart/form-data with 2 fie
 
 ### List of files with extra info
 
-```Python
+```python
 @api.post('/user')
 def create_user(request, details: UserDetails = Form(...), files: list[UploadedFile] = File(...)):
     return [details.dict(), [f.name for f in files]]

@@ -10,7 +10,7 @@ Schemas are very useful to define your validation rules and responses, but somet
 All you need is to set `model` and `model_fields` attributes on your schema `Config`:
 
 
-```Python hl_lines="2 5 6 7"
+```python hl_lines="2 5 6 7"
 from django.contrib.auth.models import User
 from ninja import ModelSchema
 
@@ -32,7 +32,7 @@ class UserSchema(ModelSchema):
 
 To use all fields from a model - you can pass `__all__` to `model_fields`:
 
-```Python hl_lines="4"
+```python hl_lines="4"
 class UserSchema(ModelSchema):
     class Config:
         model = User
@@ -49,7 +49,7 @@ class UserSchema(ModelSchema):
 
 To use all fields **except** a few, you can use `model_exclude` configuration:
 
-```Python hl_lines="4"
+```python hl_lines="4"
 class UserSchema(ModelSchema):
     class Config:
         model = User
@@ -72,7 +72,7 @@ class UserSchema(ModelSchema):
 
 To change default annotation for some field, or to add a new field, just use annotated attributes as usual. 
 
-```Python hl_lines="1 2 3 4 8"
+```python hl_lines="1 2 3 4 8"
 class GroupSchema(ModelSchema):
     class Config:
         model = Group
@@ -93,7 +93,7 @@ class UserSchema(ModelSchema):
 
 Pretty often for PATCH API operations you need to make all fields of your schema optional. To do that you can use config model_fields_optional
 
-```Python hl_lines="5"
+```python hl_lines="5"
 class PatchGroupSchema(ModelSchema):
     class Config:
         model = Group
@@ -103,6 +103,6 @@ class PatchGroupSchema(ModelSchema):
 
 also you can define just a few optional fields instead of all:
 
-```Python
+```python
      model_fields_optional = ['description']
 ```

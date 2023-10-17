@@ -5,7 +5,7 @@
 
 To apply pagination to a function - just apply `paginate` decorator:
 
-```Python hl_lines="1 4"
+```python hl_lines="1 4"
 from ninja.pagination import paginate
 
 @api.get('/users', response=List[UserSchema])
@@ -32,7 +32,7 @@ by default limit is set to `100` (you can change it in your settings.py using `N
 
 This is the default pagination class (You can change it in your settings.py using `NINJA_PAGINATION_CLASS` path to a class)
 
-```Python hl_lines="1 4"
+```python hl_lines="1 4"
 from ninja.pagination import paginate, LimitOffsetPagination
 
 @api.get('/users', response=List[UserSchema])
@@ -53,7 +53,7 @@ this class has two input parameters:
 
 
 ### PageNumberPagination
-```Python hl_lines="1 4"
+```python hl_lines="1 4"
 from ninja.pagination import paginate, PageNumberPagination
 
 @api.get('/users', response=List[UserSchema])
@@ -73,7 +73,7 @@ Page numbering start with 1
 
 you can also set custom page_size value individually per view:
 
-```Python hl_lines="2"
+```python hl_lines="2"
 @api.get("/users")
 @paginate(PageNumberPagination, page_size=50)
 def list_users(...
@@ -87,7 +87,7 @@ If you need access to `Input` parameters used for pagination in your view functi
 
 In that case input data will be available in `**kwargs`:
 
-```Python hl_lines="2 4"
+```python hl_lines="2 4"
 @api.get("/someview")
 @paginate(pass_parameter="pagination_info")
 def someview(request, **kwargs):
@@ -110,7 +110,7 @@ To create a custom pagination class you should subclass `ninja.pagination.Pagina
 
 Example:
 
-```Python hl_lines="7 11 16 26"
+```python hl_lines="7 11 16 26"
 from ninja.pagination import paginate, PaginationBase
 from ninja import Schema
 
@@ -143,7 +143,7 @@ def list_users(request):
 
 Tip: You can access request object from params:
 
-```Python
+```python
 def paginate_queryset(self, queryset, pagination: Input, **params):
     request = params["request"]
 ```
@@ -152,7 +152,7 @@ def paginate_queryset(self, queryset, pagination: Input, **params):
 
 By defult page items are placed to `'items'` attribute. To override this behaviour use `items_attribute`:
 
-```Python hl_lines="4 8"
+```python hl_lines="4 8"
 class CustomPagination(PaginationBase):
     ...
     class Output(Schema):
@@ -171,7 +171,7 @@ There is often a case when you need to add pagination to all views that returns 
 
 You can use a builtin router class (`RouterPaginated`) that automatically injects pagination to all operations that defined `response=List[SomeSchema]`:
 
-```Python hl_lines="1 3 6 10"
+```python hl_lines="1 3 6 10"
 from ninja.pagination import RouterPaginated
 
 router = RouterPaginated()
@@ -192,7 +192,7 @@ In this example both operations will have pagination enabled
 to apply pagination to main `api` instance use `default_router` argument:
 
 
-```Python
+```python
 api = NinjaAPI(default_router=RouterPaginated())
 
 @api.get(...

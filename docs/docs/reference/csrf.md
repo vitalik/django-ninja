@@ -6,7 +6,7 @@ To turn it on you need to use the `csrf` argument of the NinjaAPI class:
 
 
 
-```Python hl_lines="3"
+```python hl_lines="3"
 from ninja import NinjaAPI
 
 api = NinjaAPI(csrf=True)
@@ -18,7 +18,7 @@ api = NinjaAPI(csrf=True)
 **Django Ninja** will automatically enable csrf for Cookie based authentication
 
 
-```Python hl_lines="8"
+```python hl_lines="8"
 from ninja import NinjaAPI
 from ninja.security import APIKeyCookie
 
@@ -33,7 +33,7 @@ api = NinjaAPI(auth=CookieAuth())
 
 or django-auth based (which is inherited from cookie based auth):
 
-```Python hl_lines="4"
+```python hl_lines="4"
 from ninja import NinjaAPI
 from ninja.security import django_auth
 

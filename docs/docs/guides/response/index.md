@@ -6,7 +6,7 @@ Imagine you need to create an API operation that creates a user. The **input** p
 
 Let's create the input schema:
 
-```Python hl_lines="3 5"
+```python hl_lines="3 5"
 from ninja import Schema
 
 class UserIn(Schema):
@@ -25,7 +25,7 @@ def create_user(request, data: UserIn):
 
 Now let's define the output schema, and pass it as a `response` argument to the `@api.post` decorator:
 
-```Python hl_lines="8 9 10 13 18"
+```python hl_lines="8 9 10 13 18"
 from ninja import Schema
 
 class UserIn(Schema):
@@ -61,7 +61,7 @@ There is also often a need to return responses with some nested/child objects.
 
 Imagine we have a `Task` Django model with a `User` ForeignKey:
 
-```Python  hl_lines="6"
+```python  hl_lines="6"
 from django.db import models
 
 class Task(models.Model):
@@ -72,7 +72,7 @@ class Task(models.Model):
 
 Now let's output all tasks, and for each task, output some fields about the user.
 
-```Python  hl_lines="13 16"
+```python  hl_lines="13 16"
 from typing import List
 from ninja import Schema
 
@@ -127,7 +127,7 @@ work with dotted responses.
 Using the models from above, let's make a schema that just includes the task
 owner's first name inline, and also uses `completed` rather than `is_completed`:
 
-```Python hl_lines="1 7-9"
+```python hl_lines="1 7-9"
 from ninja import Field, Schema
 
 
@@ -141,12 +141,12 @@ class TaskSchema(Schema):
 
 Aliases also support django template syntax variables access:
 
-```Python hl_lines="2"
+```python hl_lines="2"
 class TaskSchema(Schema):
     last_message: str = Field(None, alias="message_set.0.text")
 ```
 
-```Python hl_lines="3"
+```python hl_lines="3"
 class TaskSchema(Schema):
     type: str = Field(None)
     type_display: str = Field(None, alias="get_type_display") # callable will be executed
@@ -163,7 +163,7 @@ is resolving against.
 When creating a resolver as a standard method, `self` gives you access to other
 validated and formatted attributes in the schema.
 
-```Python hl_lines="5 7-11"
+```python hl_lines="5 7-11"
 class TaskSchema(Schema):
     id: int
     title: str
@@ -185,7 +185,7 @@ class TaskSchema(Schema):
 
 Pydantic v2 allows you to process an extra context that is passed to the serializer. In the following example you can have resolver that gets request object from passed `context` argument:
 
-```Python hl_lines="6"
+```python hl_lines="6"
 class Data(Schema):
     a: int
     path: str = ""
@@ -201,7 +201,7 @@ if you use this schema for incoming requests - the `request` object will be auto
 
 You can as well pass your own context:
 
-```Python
+```python
 data = Data.model_validate({'some': 1}, context={'request': MyRequest()})
 ```
 
@@ -211,7 +211,7 @@ In the previous example we specifically converted a queryset into a list (and ex
 
 You can avoid that and return a queryset as a result, and it will be automatically evaluated to List:
 
-```Python hl_lines="3"
+```python hl_lines="3"
 @api.get("/tasks", response=List[TaskSchema])
 def tasks(request):
     return Task.objects.all()
@@ -221,7 +221,7 @@ def tasks(request):
 
     If your operation is async, this example will not work because the ORM query needs to be called safely.
 
-    ```Python hl_lines="2"
+    ```python hl_lines="2"
     @api.get("/tasks", response=List[TaskSchema])
     async def tasks(request):
         return Task.objects.all()
@@ -236,14 +236,14 @@ def tasks(request):
 
 An example:
 
-```Python hl_lines="3"
+```python hl_lines="3"
 class Picture(models.Model):
     title = models.CharField(max_length=100)
     image = models.ImageField(upload_to='images')
 ```
 
 If you need to output to response image field, declare a schema for it as follows:
-```Python hl_lines="3"
+```python hl_lines="3"
 class PictureSchema(Schema):
     title: str
     image: str
@@ -281,7 +281,7 @@ Also, when you return the result - you have to also pass a status code to tell *
 
 An example:
 
-```Python hl_lines="9 12 14 16"
+```python hl_lines="9 12 14 16"
 class Token(Schema):
     token: str
     expires: date
@@ -309,7 +309,7 @@ In the previous example you saw that we basically repeated the `Message` schema 
 
 To avoid this duplication you can use multiple response codes for a schema:
 
-```Python hl_lines="2 5 8 10"
+```python hl_lines="2 5 8 10"
 ...
 from ninja.responses import codes_4xx
 
@@ -325,7 +325,7 @@ def login(request, payload: Auth):
 
 **Django Ninja** comes with the following HTTP codes:
 
-```Python
+```python
 from ninja.responses import codes_1xx
 from ninja.responses import codes_2xx
 from ninja.responses import codes_3xx
@@ -335,7 +335,7 @@ from ninja.responses import codes_5xx
 
 You can also create your own range using a `frozenset`:
 
-```Python
+```python
 my_codes = frozenset({416, 418, 425, 429, 451})
 ...
 @api.post('/login', response={200: Token, my_codes: Message})
@@ -347,7 +347,7 @@ my_codes = frozenset({416, 418, 425, 429, 451})
 
 Some responses, such as `204 No Content`, have no body. To indicate the response body is empty mark `response` argument with `None` instead of Schema:
 
-```Python hl_lines="1 3"
+```python hl_lines="1 3"
 @api.post("/no_content", response={204: None})
 def no_content(request):
     return 204, None
@@ -363,7 +363,7 @@ To do that you need:
  - set a type of your schema in quotes
  - use `update_forward_refs` method to apply self referencing types
 
-```Python hl_lines="3 6"
+```python hl_lines="3 6"
 class Organization(Schema):
     title: str
     part_of: 'Organization' = None     #!! note the type in quotes here !!
@@ -383,7 +383,7 @@ To be able to use the method `update_forward_refs()` from a schema generated via
 the "name" of the class needs to be in our namespace.  In this case it is very important to pass
 the `name` parameter to `create_schema()`
 
-```Python hl_lines="3"
+```python hl_lines="3"
 UserSchema = create_schema(
     User,
     name='UserSchema',  # !!! this is important for update_forward_refs()  
@@ -402,14 +402,14 @@ the `.from_orm()` method on the schema object.
 
 Consider the following model:
 
-```Python
+```python
 class Person(models.Model):
     name = models.CharField(max_length=50)
 ```
 
 Which can be accessed using this schema:
 
-```Python
+```python
 class PersonSchema(Schema):
     name: str
 ```
@@ -419,7 +419,7 @@ schema. Once you have an instance of the schema object, the `.dict()` and
 `.json()` methods allow you to get at both dictionary output and string JSON
 versions.
 
-```Python
+```python
 >>> person = Person.objects.get(id=1)
 >>> data = PersonSchema.from_orm(person)
 >>> data
@@ -432,7 +432,7 @@ PersonSchema(id=1, name='Mr. Smith')
 
 Multiple Items: or a queryset (or list)
 
-```Python
+```python
 >>> persons = Person.objects.all()
 >>> data = [PersonSchema.from_orm(i).dict() for i in persons]
 [{'id':1, 'name':'Mr. Smith'},{'id': 2, 'name': 'Mrs. Smith'}...]
@@ -442,7 +442,7 @@ Multiple Items: or a queryset (or list)
 
 It is also possible to return regular django http responses:
 
-```Python
+```python
 from django.http import HttpResponse
 from django.shortcuts import redirect
 

@@ -4,7 +4,7 @@ Sometimes you'll want to change the response just before it gets served, for exa
 
 To do this, simply declare a function parameter with a type of `HttpResponse`:
 
-```Python
+```python
 from django.http import HttpRequest, HttpResponse
 
 @api.get("/cookie/")
@@ -30,7 +30,7 @@ The `status_code` will get overridden depending on the return value (200 by defa
 
 You can alter this temporal response object by overriding the `NinjaAPI.create_temporal_response` method.
 
-```Python
+```python
     def create_temporal_response(self, request: HttpRequest) -> HttpResponse:
         response = super().create_temporal_response(request)
         # Do your magic here...

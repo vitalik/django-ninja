@@ -7,7 +7,7 @@ The most common response type for a REST API is usually JSON.
 
 To create your own renderer, you need to inherit `ninja.renderers.BaseRenderer` and override the `render` method. Then you can pass an instance of your class to `NinjaAPI` as the `renderer` argument:
 
-```Python hl_lines="5 8 9"
+```python hl_lines="5 8 9"
 from ninja import NinjaAPI
 from ninja.renderers import BaseRenderer
 
@@ -37,7 +37,7 @@ You need also define the `media_type` attribute on the class to set the content-
 Here's an example renderer class that uses `orjson`:
 
 
-```Python hl_lines="9 10"
+```python hl_lines="9 10"
 import orjson
 from ninja import NinjaAPI
 from ninja.renderers import BaseRenderer
@@ -60,7 +60,7 @@ api = NinjaAPI(renderer=ORJSONRenderer())
 This is how you create a renderer that outputs all responses as XML:
 
 
-```Python hl_lines="8 11"
+```python hl_lines="8 11"
 from io import StringIO
 from django.utils.encoding import force_str
 from django.utils.xmlutils import SimplerXMLGenerator
