@@ -27,7 +27,7 @@ django-admin startproject myproject
 
 Let's create a module for our API. Create an `api.py` file in the same directory location as your Django project's root `urls.py`:
 
-```Python
+```python
 from ninja import NinjaAPI
 
 api = NinjaAPI()
@@ -35,7 +35,7 @@ api = NinjaAPI()
 
 Now go to `urls.py` and add the following:
 
-```Python hl_lines="3 7"
+```python hl_lines="3 7"
 from django.contrib import admin
 from django.urls import path
 from .api import api
@@ -52,7 +52,7 @@ urlpatterns = [
 `PUT`, etc). In our `api.py` file, let's add in a simple "hello world"
 operation.
 
-```Python hl_lines="5-7"
+```python hl_lines="5-7"
 from ninja import NinjaAPI
 
 api = NinjaAPI()

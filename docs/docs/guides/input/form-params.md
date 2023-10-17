@@ -5,7 +5,7 @@
 
 ## Form Data as params 
 
-```Python hl_lines="1 4"
+```python hl_lines="1 4"
 from ninja import NinjaAPI, Form
 
 @api.post("/login")
@@ -16,12 +16,12 @@ def login(request, username: str = Form(...), password: str = Form(...)):
 Note the following:
 
 1) You need to import the `Form` class from `ninja`
-```Python
+```python
 from ninja import Form
 ```
 
 2) Use `Form` as default value for your parameter:
-```Python
+```python
 username: str = Form(...)
 ```
 
@@ -30,7 +30,7 @@ username: str = Form(...)
 In a similar manner to [Body](../body/#declare-it-as-a-parameter), you can use
 a Schema to organize your parameters.
 
-```Python hl_lines="12"
+```python hl_lines="12"
 {!./src/tutorial/form/code01.py!}
 ```
 
@@ -45,7 +45,7 @@ You can declare query **and** path **and** form field, **and** etc... parameters
 parameters should be **taken from the path**, and that function parameters that
 are declared with `Form(...)` should be **taken from the request form fields**, etc.
 
-```Python hl_lines="12"
+```python hl_lines="12"
 {!./src/tutorial/form/code02.py!}
 ```
 ## Mapping Empty Form Field to Default
@@ -56,6 +56,6 @@ interpreted as an empty string, and thus may fail validation for fields such as 
 This can be fixed, as described in the Pydantic docs, by using
 [Generic Classes as Types](https://pydantic-docs.helpmanual.io/usage/types/#generic-classes-as-types).
 
-```Python hl_lines="15 16 23-25"
+```python hl_lines="15 16 23-25"
 {!./src/tutorial/form/code03.py!}
 ```

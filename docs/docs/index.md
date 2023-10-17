@@ -37,7 +37,7 @@ django-admin startproject apidemo
 
 in `urls.py`
 
-```Python hl_lines="3 5 8 9 10 15"
+```python hl_lines="3 5 8 9 10 15"
 {!./src/index001.py!}
 ```
 
@@ -84,13 +84,13 @@ Just standard **Python 3.6+**.
 
 For example, for an `int`:
 
-```Python
+```python
 a: int
 ```
 
 or, for a more complex `Item` model:
 
-```Python
+```python
 class Item(Schema):
     foo: str
     bar: float

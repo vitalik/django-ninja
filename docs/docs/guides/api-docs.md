@@ -49,7 +49,7 @@ Settings reference:
 
 In case you do not need to display interactive documentation - set `docs_url` argument to `None`
 
-```Python
+```python
 api = NinjaAPI(docs_url=None)
 ```
 
@@ -57,7 +57,7 @@ api = NinjaAPI(docs_url=None)
 
 To protect docs with authentication (or decorate for some other use case) use `docs_decorator` argument:
 
-```Python
+```python
 from django.contrib.admin.views.decorators import staff_member_required
 
 api = NinjaAPI(docs_decorator=staff_member_required)
@@ -67,7 +67,7 @@ api = NinjaAPI(docs_decorator=staff_member_required)
 
 You can extend OpenAPI spec with custom attributes, for example to add `termsOfService`
 
-```Python
+```python
 api = NinjaAPI(
    openapi_extra={
        "info": {
@@ -84,7 +84,7 @@ api = NinjaAPI(
 The url for the api's documentation view can be reversed by referencing the view's name `openapi-view`.
 
 In Python code, for example:
-```Python
+```python
 from django.urls import reverse
 
 reverse('api-1.0.0:openapi-view')

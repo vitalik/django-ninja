@@ -11,7 +11,7 @@ That said, there are few issues when it comes to getting FastAPI and Django to w
 
 2) The dependency injection with arguments makes your code too verbose when you rely on authentication and database sessions in your operations (which for some projects is about 99% of all operations).
 
-```Python hl_lines="25 26"
+```python hl_lines="25 26"
 ...
 
 app = FastAPI()
@@ -58,7 +58,7 @@ Some companies are already looking for developers with django ninja experience.
 
 1) Since you can have multiple Django Ninja API instances - you can run [multiple API versions](/tutorial/versioning) inside one Django project.
 
-```Python
+```python
 api_v1 = NinjaAPI(version='1.0', auth=token_auth)
 ...
 api_v2 = NinjaAPI(version='2.0', auth=token_auth)
@@ -77,7 +77,7 @@ urlpatterns = [
 
 2) The Django Ninja 'Schema' class is integrated with the ORM, so you can [serialize querysets](/tutorial/response-schema/#returning-querysets) or ORM objects:
 
-```Python
+```python
 @api.get("/tasks", response=List[TaskSchema])
 def tasks(request):
     return Task.objects.all()

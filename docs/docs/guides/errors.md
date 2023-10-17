@@ -15,7 +15,7 @@ To achieve that you need:
 Example:
 
 
-```Python hl_lines="9 10"
+```python hl_lines="9 10"
 api = NinjaAPI()
 
 class ServiceUnavailableError(Exception):
@@ -86,7 +86,7 @@ Default behavior
 If you need to change default output for validation errors - override ValidationError exception handler:
 
 
-```Python hl_lines="1 4"
+```python hl_lines="1 4"
 from ninja.errors import ValidationError
 ...
 
@@ -101,7 +101,7 @@ def validation_errors(request, exc):
 As an alternative to custom exceptions and writing handlers for it - you can as well throw http exception that will lead to returning a http response with desired code
 
 
-```Python
+```python
 from ninja.errors import HttpError
 
 @api.get("/some/resource")

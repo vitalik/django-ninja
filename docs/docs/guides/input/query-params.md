@@ -2,7 +2,7 @@
 
 When you declare other function parameters that are not part of the path parameters, they are automatically interpreted as "query" parameters.
 
-```Python hl_lines="5"
+```python hl_lines="5"
 {!./src/tutorial/query/code01.py!}
 ```
 
@@ -24,7 +24,7 @@ The same benefits that apply to path parameters also apply to query parameters:
 !!! Note
     if you do not annotate your arguments, they will be treated as `str` types
 
-```Python hl_lines="2"
+```python hl_lines="2"
 @api.get("/weapons")
 def list_weapons(request, limit, offset):
     # type(limit) == str
@@ -35,7 +35,7 @@ def list_weapons(request, limit, offset):
 
 As query parameters are not a fixed part of a path, they are optional and can have default values:
 
-```Python hl_lines="2"
+```python hl_lines="2"
 @api.get("/weapons")
 def list_weapons(request, limit: int = 10, offset: int = 0):
     return weapons[offset : offset + limit]
@@ -66,7 +66,7 @@ the parameter values in your function will be:
 
 You can declare required or optional GET parameters in the same way as declaring Python function arguments:
 
-```Python hl_lines="5"
+```python hl_lines="5"
 {!./src/tutorial/query/code02.py!}
 ```
 
@@ -75,7 +75,7 @@ In this case, **Django Ninja** will always validate that you pass the `q` param 
 ### GET parameters type conversion
 
 Let's declare multiple type arguments:
-```Python hl_lines="5"
+```python hl_lines="5"
 {!./src/tutorial/query/code03.py!}
 ```
 The `str` type is passed as is.
@@ -103,7 +103,7 @@ http://localhost:8000/api/example?d=<strong>2020-01-01</strong>
 
 You can also use Schema to encapsulate GET parameters:
 
-```Python hl_lines="1 2  5 6 7 8"
+```python hl_lines="1 2  5 6 7 8"
 {!./src/tutorial/query/code010.py!}
 ```
 
