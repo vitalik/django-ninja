@@ -205,7 +205,11 @@ class Operation:
 
         resp_object = ResponseObject(result)
         # ^ we need object because getter_dict seems work only with model_validate
-        result = response_model.model_validate(resp_object).model_dump(
+        validated_object = response_model.model_validate(
+            resp_object, context={"request": request, "response_status": status}
+        )
+
+        result = validated_object.model_dump(
             by_alias=self.by_alias,
             exclude_unset=self.exclude_unset,
             exclude_defaults=self.exclude_defaults,
