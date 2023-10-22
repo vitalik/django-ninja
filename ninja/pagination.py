@@ -141,6 +141,14 @@ def _inject_pagination(
 
         items = func(request, **kwargs)
 
+        # check if response is tuple and if the last item is a QuerySet
+        # if False then return it to get operation deal with the response
+        if isinstance(items, tuple):
+            status = items[0]
+            items = items[1]
+            if not isinstance(items, QuerySet):
+                return (status, items)
+
         result = paginator.paginate_queryset(
             items, pagination=pagination_params, request=request, **kwargs
         )
