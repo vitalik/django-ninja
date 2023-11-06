@@ -5,7 +5,7 @@ Cross-site request forgery is a type of vulnerabilities where a user's web brows
 
 Your backend must be able to differentiate between legitimate and malicious requests. This can be done in several ways.
 
-If you are not familiar with CSRF attacks it is recommended to at leat read:
+If you are not familiar with CSRF attacks it is recommended to at least read:
 - the [Wikipedia article about CSRF](https://en.wikipedia.org/wiki/Cross-site_request_forgery)
 For a more complete understanding of different mitigations and their implications, you may also read:
 - the [Owasp Community Page about CSRF](https://owasp.org/www-community/attacks/csrf)
