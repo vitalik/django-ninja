@@ -1,7 +1,7 @@
 # CSRF
 
 ## What is the CSRF protection and why is it needed?
-Cross-site request forgery is a type of vulnerabilities where a user's web browser connects to a malicious page, which triggers request to your backend (using hidden forms, JavaScript `fetch` or `XMLHttpRequest`, or other methods), that could interpret those as legitimate as some credentials saved on the user's web browser (like cookies) may be automatically embedded.
+Cross-site request forgery is a type of vulnerability where a user's web browser connects to a malicious page, which triggers request to your backend (using hidden forms, JavaScript `fetch` or `XMLHttpRequest`, or other methods), that could interpret those as legitimate as some credentials saved on the user's web browser (like cookies) may be automatically embedded.
 
 Your backend must be able to differentiate between legitimate and malicious requests. This can be done in several ways.
 
