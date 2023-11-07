@@ -48,7 +48,7 @@ class PaginationBase(ABC):
         """
         try:
             # forcing to find queryset.count instead of list.count:
-            return queryset.all().count()
+            return queryset.all().count()  # type: ignore
         except AttributeError:
             return len(queryset)
 
