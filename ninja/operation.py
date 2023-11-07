@@ -305,7 +305,9 @@ class AsyncOperation(Operation):
         for callback in self.auth_callbacks:
             try:
                 if is_async_callable(callback) or getattr(callback, "is_async", False):
-                    result = await callback(request)
+                    result = callback(request)
+                    if result is not None:
+                        result = await callback(request)
                 else:
                     result = callback(request)
             except Exception as exc:
