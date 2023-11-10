@@ -65,11 +65,15 @@ class LimitOffsetPagination(PaginationBase):
         **params: Any,
     ) -> Any:
         offset = pagination.offset
-        limit: int = pagination.limit
+        limit: int = min(pagination.limit,
+                         settings.PAGINATION_MAX_LIMIT)
         return {
-            "items": queryset[offset : offset + limit],
+            "items": queryset[offset: offset + limit],
             "count": self._items_count(queryset),
         }  # noqa: E203
+
+
+settings.is_define()
 
 
 class PageNumberPagination(PaginationBase):
@@ -90,7 +94,7 @@ class PageNumberPagination(PaginationBase):
     ) -> Any:
         offset = (pagination.page - 1) * self.page_size
         return {
-            "items": queryset[offset : offset + self.page_size],
+            "items": queryset[offset: offset + self.page_size],
             "count": self._items_count(queryset),
         }  # noqa: E203
 
@@ -112,7 +116,8 @@ def paginate(func_or_pgn_class: Any = NOT_SET, **paginator_params: Any) -> Calla
     isfunction = inspect.isfunction(func_or_pgn_class)
     isnotset = func_or_pgn_class == NOT_SET
 
-    pagination_class: Type[PaginationBase] = import_string(settings.PAGINATION_CLASS)
+    pagination_class: Type[PaginationBase] = import_string(
+        settings.PAGINATION_CLASS)
 
     if isfunction:
         return _inject_pagination(func_or_pgn_class, pagination_class)
@@ -145,7 +150,8 @@ def _inject_pagination(
             items, pagination=pagination_params, request=request, **kwargs
         )
         if paginator.Output:
-            result[paginator.items_attribute] = list(result[paginator.items_attribute])
+            result[paginator.items_attribute] = list(
+                result[paginator.items_attribute])
             # ^ forcing queryset evaluation #TODO: check why pydantic did not do it here
         return result
 
@@ -197,13 +203,15 @@ def make_response_paginated(paginator: PaginationBase, op: Operation) -> None:
     try:
         new_name = f"Paged{item_schema.__name__}"
     except AttributeError:
-        new_name = f"Paged{str(item_schema).replace('.', '_')}"  # typing.Any case
+        # typing.Any case
+        new_name = f"Paged{str(item_schema).replace('.', '_')}"
 
     new_schema = type(
         new_name,
         (paginator.Output,),
         {
-            "__annotations__": {paginator.items_attribute: List[item_schema]},  # type: ignore
+            # type: ignore
+            "__annotations__": {paginator.items_attribute: List[item_schema]},
         },
     )  # typing: ignore
 
