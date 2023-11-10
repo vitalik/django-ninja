@@ -2,6 +2,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    Coroutine,
     Dict,
     Iterable,
     List,
@@ -305,9 +306,11 @@ class AsyncOperation(Operation):
         for callback in self.auth_callbacks:
             try:
                 if is_async_callable(callback) or getattr(callback, "is_async", False):
-                    result = callback(request)
-                    if result is not None:
-                        result = await callback(request)
+                    cor: Optional[Coroutine] = callback(request)
+                    if cor is None:
+                        result = None
+                    else:
+                        result = await cor
                 else:
                     result = callback(request)
             except Exception as exc:
