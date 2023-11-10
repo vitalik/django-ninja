@@ -65,7 +65,7 @@ class LimitOffsetPagination(PaginationBase):
         **params: Any,
     ) -> Any:
         offset = pagination.offset
-        limit: int = pagination.limit
+        limit: int = min(pagination.limit, settings.PAGINATION_MAX_LIMIT)
         return {
             "items": queryset[offset : offset + limit],
             "count": self._items_count(queryset),

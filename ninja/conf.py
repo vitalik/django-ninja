@@ -1,5 +1,6 @@
 from django.conf import settings as django_settings
 from pydantic import BaseModel, Field
+from math import inf
 
 
 class Settings(BaseModel):
@@ -19,6 +20,7 @@ class Settings(BaseModel):
         "ninja.pagination.LimitOffsetPagination", alias="NINJA_PAGINATION_CLASS"
     )
     PAGINATION_PER_PAGE: int = Field(100, alias="NINJA_PAGINATION_PER_PAGE")
+    PAGINATION_MAX_LIMIT:int = Field(inf, alias="NINJA_PAGINATION_MAX_LIMIT")
 
     class Config:
         from_attributes = True
