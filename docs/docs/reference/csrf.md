@@ -1,13 +1,13 @@
 # CSRF
 
 ## What is CSRF?
-> [Cross Site Request Forgery](https://en.wikipedia.org/wiki/Cross-site_request_forgery) occurs when a malicious website contains a link, a form button or some JavaScript that is intended to perform some action on your website, using the credentials of a logged-in user who visits the malicious site in their browser.
+> [Cross Site Request Forgery](https://en.wikipedia.org/wiki/Cross-site_request_forgery) occurs when a malicious website contains a link, a form button or some JavaScript that is intended to perform some action on your website, using the credentials (or location on the network, not covered by this documentation) of a logged-in user who visits the malicious site in their browser.
 
 
 ## How to protect against CSRF with Django Ninja
-### Use a non-cookie-based authentication method
-CSRF attacks rely on cookies that are automatically included in requests started from another site.
-Using an authentication method that does not rely on cookies, such as the `Authorization: Bearer` header for exemple, mitigates this attack.
+### Use an authentication method not automatically embedded in the request
+CSRF attacks rely on authentication methods that are automatically included in requests started from another site, like [cookies](https://en.wikipedia.org/wiki/HTTP_cookie) or [Basic access authentication](https://en.wikipedia.org/wiki/Basic_access_authentication).
+Using an authentication method that does not automatically gets embedded, such as the `Authorization: Bearer` header for exemple, mitigates this attack.
 
 
 ### Use Django's built-in CSRF protection
@@ -76,5 +76,5 @@ You may use the [Using CSRF protection with AJAX](https://docs.djangoproject.com
 
 ## A word about CORS
 You may want to set-up your frontend and API on different sites (in that case, you may check [django-cors-headers](https://github.com/adamchainz/django-cors-headers)).
-While not directly related to CSRF, CORS (Cross-Origin Resource Sharing) may cause problems in case you are defining the CSRF cookie on another site than the frontend consuming it.
+While not directly related to CSRF, CORS (Cross-Origin Resource Sharing) may help in case you are defining the CSRF cookie on another site than the frontend consuming it, as this is not allowed by default by the [Same-origin policy](https://developer.mozilla.org/en-US/docs/Web/Security/Same-origin_policy).
 You may check the [django-cors-headers README](https://github.com/adamchainz/django-cors-headers#readme) then.
