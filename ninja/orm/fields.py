@@ -27,7 +27,7 @@ def title_if_lower(s: str) -> str:
 class AnyObject:
     @classmethod
     def __get_pydantic_core_schema__(cls, source: Any, handler: Callable) -> Any:
-        return core_schema.general_plain_validator_function(cls.validate)
+        return core_schema.with_info_plain_validator_function(cls.validate)
 
     @classmethod
     def __get_pydantic_json_schema__(cls, schema: Any, handler: Callable) -> DictStrAny:
@@ -81,7 +81,7 @@ def create_m2m_link_type(type_: Type[TModel]) -> Type[TModel]:
     class M2MLink(type_):  # type: ignore
         @classmethod
         def __get_pydantic_core_schema__(cls, source, handler):
-            return core_schema.general_plain_validator_function(cls._validate)
+            return core_schema.with_info_plain_validator_function(cls._validate)
 
         @classmethod
         def __get_pydantic_json_schema__(cls, schema, handler):

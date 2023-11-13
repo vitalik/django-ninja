@@ -22,4 +22,4 @@ class UploadedFile(DjangoUploadedFile):
 
     @classmethod
     def __get_pydantic_core_schema__(cls, source: Any, handler: Callable) -> Any:
-        return core_schema.general_plain_validator_function(cls._validate)
+        return core_schema.with_info_plain_validator_function(cls._validate)
