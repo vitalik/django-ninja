@@ -38,7 +38,7 @@ class OpenAPISchema(dict):
         extra_info = api.openapi_extra.get("info", {})
         super().__init__(
             [
-                ("openapi", "3.0.2"),
+                ("openapi", "3.1.0"),
                 (
                     "info",
                     {

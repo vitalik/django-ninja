@@ -37,7 +37,7 @@ def test_openapi_extra():
     schema = api.get_openapi_schema()
 
     assert schema == {
-        "openapi": "3.0.2",
+        "openapi": "3.1.0",
         "info": {"title": "NinjaAPI", "version": "1.0.0", "description": ""},
         "paths": {},
         "components": {"schemas": {}},
