@@ -181,7 +181,7 @@ api.add_router('/app5', 'myproject.app5.router')
 
 When django ninja decorates a view with .get/.post etc - it wraps the result of the function (which in most cases are not HttpResponse - but some serializable object) so it's not really possible to use some built-in or 3rd-party decorators like:
 
-```python hl="4"
+```python hl_lines="4"
 from django.views.decorators.cache import cache_page
 
 @api.get("/test")
@@ -193,7 +193,7 @@ This example do not work.
 
 Now django ninja introduces a decorator decorate_view that allows inject decorators that work with http response:
 
-```python hl="1 4"
+```python hl_lines="1 4"
 from ninja.decorators import decorate_view
 
 @api.get("/test")
