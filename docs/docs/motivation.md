@@ -56,7 +56,7 @@ Some companies are already looking for developers with django ninja experience.
 
 #### Main Features
 
-1) Since you can have multiple Django Ninja API instances - you can run [multiple API versions](/tutorial/versioning) inside one Django project.
+1) Since you can have multiple Django Ninja API instances - you can run [multiple API versions](/guides/versioning/) inside one Django project.
 
 ```python
 api_v1 = NinjaAPI(version='1.0', auth=token_auth)
@@ -75,7 +75,7 @@ urlpatterns = [
 ]
 ```
 
-2) The Django Ninja 'Schema' class is integrated with the ORM, so you can [serialize querysets](/tutorial/response-schema/#returning-querysets) or ORM objects:
+2) The Django Ninja 'Schema' class is integrated with the ORM, so you can [serialize querysets](/guides/response/#returning-querysets) or ORM objects:
 
 ```python
 @api.get("/tasks", response=List[TaskSchema])
