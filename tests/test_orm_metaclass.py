@@ -14,9 +14,9 @@ def test_simple():
             app_label = "tests"
 
     class SampleSchema(ModelSchema):
-        class Meta:
+        class Config:
             model = User
-            fields = ["firstname", "lastname"]
+            model_fields = ["firstname", "lastname"]
 
         def hello(self):
             return f"Hello({self.firstname})"
