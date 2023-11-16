@@ -9,5 +9,5 @@ class Item(Schema):
 
 
 @api.post("/items")
-def create(request, item: Item = Form(...)):
+def create(request, item: Form[Item]):
     return item

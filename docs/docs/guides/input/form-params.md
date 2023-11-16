@@ -9,7 +9,7 @@
 from ninja import NinjaAPI, Form
 
 @api.post("/login")
-def login(request, username: str = Form(...), password: str = Form(...)):
+def login(request, username: Form[str], password: Form[str]):
     return {'username': username, 'password': '*****'}
 ```
 
@@ -22,7 +22,7 @@ from ninja import Form
 
 2) Use `Form` as default value for your parameter:
 ```python
-username: str = Form(...)
+username: Form[str]
 ```
 
 ## Using a Schema

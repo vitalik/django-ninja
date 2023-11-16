@@ -58,7 +58,7 @@ class UserDetails(Schema):
 
 
 @api.post('/user')
-def create_user(request, details: UserDetails = Form(...), file: UploadedFile = File(...)):
+def create_user(request, details: Form[UserDetails], file: File[UploadedFile]):
     return [details.dict(), file.name]
 
 ```
@@ -69,7 +69,7 @@ You can as well send payload in single field as JSON - just remove the Form mark
 
 ```python
 @api.post('/user')
-def create_user(request, details: UserDetails, file: UploadedFile = File(...)):
+def create_user(request, details: UserDetails, file: File[UploadedFile]):
     return [details.dict(), file.name]
 
 ```
@@ -84,6 +84,6 @@ this will expect from client side to send data as multipart/form-data with 2 fie
 
 ```python
 @api.post('/user')
-def create_user(request, details: UserDetails = Form(...), files: list[UploadedFile] = File(...)):
+def create_user(request, details: Form[UserDetails], files: File[list[UploadedFile]]):
     return [details.dict(), [f.name for f in files]]
 ```

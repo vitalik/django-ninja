@@ -7,7 +7,7 @@ Schemas are very useful to define your validation rules and responses, but somet
 
 `ModelSchema` is a special base class that can automatically generate schemas from your models.
 
-All you need is to set `model` and `model_fields` attributes on your schema `Config`:
+All you need is to set `model` and `fields` attributes on your schema `Meta`:
 
 
 ```python hl_lines="2 5 6 7"
@@ -15,9 +15,9 @@ from django.contrib.auth.models import User
 from ninja import ModelSchema
 
 class UserSchema(ModelSchema):
-    class Config:
+    class Meta:
         model = User
-        model_fields = ['id', 'username', 'first_name', 'last_name']
+        fields = ['id', 'username', 'first_name', 'last_name']
 
 # Will create schema like this:
 # 
@@ -30,30 +30,30 @@ class UserSchema(ModelSchema):
 
 ### Using ALL model fields
 
-To use all fields from a model - you can pass `__all__` to `model_fields`:
+To use all fields from a model - you can pass `__all__` to `fields`:
 
 ```python hl_lines="4"
 class UserSchema(ModelSchema):
-    class Config:
+    class Meta:
         model = User
-        model_fields = "__all__"
+        fields = "__all__"
 ```
 !!! Warning
     Using __all__ is not recommended.
     <br>
     This can lead to accidental unwanted data exposure (like hashed password, in the above example).
     <br>
-    General advice - use `model_fields` to explicitly define list of fields that you want to be visible in API.
+    General advice - use `fields` to explicitly define list of fields that you want to be visible in API.
 
 ### Excluding model fields
 
-To use all fields **except** a few, you can use `model_exclude` configuration:
+To use all fields **except** a few, you can use `exclude` configuration:
 
 ```python hl_lines="4"
 class UserSchema(ModelSchema):
-    class Config:
+    class Meta:
         model = User
-        model_exclude = ['password', 'last_login', 'user_permissions']
+        exclude = ['password', 'last_login', 'user_permissions']
 
 # Will create schema like this:
 # 
@@ -74,35 +74,35 @@ To change default annotation for some field, or to add a new field, just use ann
 
 ```python hl_lines="1 2 3 4 8"
 class GroupSchema(ModelSchema):
-    class Config:
+    class Meta:
         model = Group
-        model_fields = ['id', 'name']
+        fields = ['id', 'name']
 
 
 class UserSchema(ModelSchema):
     groups: List[GroupSchema] = []
 
-    class Config:
+    class Meta:
         model = User
-        model_fields = ['id', 'username', 'first_name', 'last_name']
+        fields = ['id', 'username', 'first_name', 'last_name']
 
 ```
 
 
 ### Making fields optional
 
-Pretty often for PATCH API operations you need to make all fields of your schema optional. To do that you can use config model_fields_optional
+Pretty often for PATCH API operations you need to make all fields of your schema optional. To do that you can use config fields_optional
 
 ```python hl_lines="5"
 class PatchGroupSchema(ModelSchema):
-    class Config:
+    class Meta:
         model = Group
-        model_fields = ['id', 'name', 'description'] # Note: all these fields are required on model level
-        model_fields_optional = '__all__'
+        fields = ['id', 'name', 'description'] # Note: all these fields are required on model level
+        fields_optional = '__all__'
 ```
 
 also you can define just a few optional fields instead of all:
 
 ```python
-     model_fields_optional = ['description']
+     fields_optional = ['description']
 ```

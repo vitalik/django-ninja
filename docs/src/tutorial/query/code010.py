@@ -14,5 +14,5 @@ class Filters(Schema):
 
 
 @api.get("/filter")
-def events(request, filters: Filters = Query(...)):
+def events(request, filters: Query[Filters]):
     return {"filters": filters.dict()}
