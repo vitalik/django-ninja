@@ -134,7 +134,7 @@ class Auth(HttpBearer):
 ## Changed CSRF Behavior
 
 
-`async=True` requirement is no longer required if you use cookie based authentication. Instead CSRF protection is enabled automatically. This also allow you to  mix csrf-protected authenticators and other methods that does not requrie cookies:
+`csrf=True` requirement is no longer required if you use cookie based authentication. Instead CSRF protection is enabled automatically. This also allow you to  mix csrf-protected authenticators and other methods that does not requrie cookies:
 
 ```Python
 api = NinjaAPI(auth=[django_auth, Auth()])
