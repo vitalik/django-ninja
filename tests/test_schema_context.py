@@ -49,6 +49,9 @@ def test_schema_with_context():
     obj = ResolveWithContext.model_validate({"value": 2}, context={"extra": 2})
     assert obj.value == 4
 
+    obj = ResolveWithContext.from_orm({"value": 2}, context={"extra": 2})
+    assert obj.value == 4
+
 
 def test_request_context():
     resp = client.post("/resolve_ctx", json={})

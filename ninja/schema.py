@@ -201,7 +201,7 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
     def _run_root_validator(
         cls, values: Any, handler: ModelWrapValidatorHandler[S], info: ValidationInfo
     ) -> Any:
-        # when extra is "forbid" we need to perform default pydantic valudation
+        # when extra is "forbid" we need to perform default pydantic validation
         # as DjangoGetter does not act as dict and pydantic will not be able to validate it
         if cls.model_config.get("extra") == "forbid":
             handler(values)
@@ -210,8 +210,8 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
         return handler(values)
 
     @classmethod
-    def from_orm(cls: Type[S], obj: Any) -> S:
-        return cls.model_validate(obj)
+    def from_orm(cls: Type[S], obj: Any, **kw: Any) -> S:
+        return cls.model_validate(obj, **kw)
 
     def dict(self, *a: Any, **kw: Any) -> DictStrAny:
         "Backward compatibility with pydantic 1.x"
