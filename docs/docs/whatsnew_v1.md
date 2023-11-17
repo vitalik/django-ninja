@@ -189,7 +189,7 @@ from django.views.decorators.cache import cache_page
 def test_view(request):
     return {"some": "Complex data"}
 ```
-This example do not work.
+This example does not work.
 
 Now django ninja introduces a decorator decorate_view that allows inject decorators that work with http response:
 
