@@ -1,38 +1,30 @@
-from typing import Any, cast
+from typing import Any
 
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Q, QuerySet
+from pydantic import ConfigDict
 from pydantic.fields import FieldInfo
 from typing_extensions import Literal
 
 from .schema import Schema
 
-DEFAULT_IGNORE_NONE = True
-DEFAULT_CLASS_LEVEL_EXPRESSION_CONNECTOR = "AND"
-DEFAULT_FIELD_LEVEL_EXPRESSION_CONNECTOR = "OR"
-
 # XOR is available only in Django 4.1+: https://docs.djangoproject.com/en/4.1/ref/models/querysets/#xor
 ExpressionConnector = Literal["AND", "OR", "XOR"]
 
-
-# class FilterConfig(BaseConfig):
-#     ignore_none: bool = DEFAULT_IGNORE_NONE
-#     expression_connector: ExpressionConnector = cast(
-#         ExpressionConnector, DEFAULT_CLASS_LEVEL_EXPRESSION_CONNECTOR
-#     )
+DEFAULT_IGNORE_NONE = True
+DEFAULT_CLASS_LEVEL_EXPRESSION_CONNECTOR: ExpressionConnector = "AND"
+DEFAULT_FIELD_LEVEL_EXPRESSION_CONNECTOR: ExpressionConnector = "OR"
 
 
 class FilterSchema(Schema):
     # if TYPE_CHECKING:
     #     __config__: ClassVar[Type[FilterConfig]] = FilterConfig  # pragma: no cover
 
-    # Config = FilterConfig
-
-    class Config(Schema.Config):
-        ignore_none: bool = DEFAULT_IGNORE_NONE
-        expression_connector: ExpressionConnector = cast(
-            ExpressionConnector, DEFAULT_CLASS_LEVEL_EXPRESSION_CONNECTOR
-        )
+    model_config = ConfigDict(
+        **Schema.model_config,
+        ignore_none=DEFAULT_IGNORE_NONE,
+        expression_connector=DEFAULT_CLASS_LEVEL_EXPRESSION_CONNECTOR,
+    )
 
     def custom_expression(self) -> Q:
         """

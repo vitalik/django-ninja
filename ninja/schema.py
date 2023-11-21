@@ -24,7 +24,7 @@ import pydantic
 from django.db.models import Manager, QuerySet
 from django.db.models.fields.files import FieldFile
 from django.template import Variable, VariableDoesNotExist
-from pydantic import BaseModel, Field, ValidationInfo, model_validator, validator
+from pydantic import ConfigDict, BaseModel, Field, ValidationInfo, model_validator, validator
 from pydantic._internal._model_construction import ModelMetaclass
 from pydantic.functional_validators import ModelWrapValidatorHandler
 from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
@@ -193,8 +193,7 @@ class NinjaGenerateJsonSchema(GenerateJsonSchema):
 
 
 class Schema(BaseModel, metaclass=ResolverMetaclass):
-    class Config:
-        from_attributes = True  # aka orm_mode
+    model_config = ConfigDict(from_attributes=True)
 
     @model_validator(mode="wrap")
     @classmethod
