@@ -5,7 +5,8 @@ from unittest.mock import Mock
 from urllib.parse import urljoin
 
 import django
-from django.http import QueryDict, StreamingHttpResponse
+from django.contrib.auth.models import AnonymousUser
+from django.http import HttpRequest, QueryDict, StreamingHttpResponse
 
 from ninja import NinjaAPI, Router
 from ninja.responses import NinjaJSONEncoder
@@ -111,7 +112,7 @@ class NinjaClientBase:
     def _build_request(
         self, method: str, path: str, data: Dict, request_params: Any
     ) -> Mock:
-        request = Mock()
+        request = Mock(spec=HttpRequest)
         request.method = method
         request.path = path
         request.body = ""
@@ -121,7 +122,7 @@ class NinjaClientBase:
         request.build_absolute_uri = build_absolute_uri
 
         if "user" not in request_params:
-            request.user.is_authenticated = False
+            request_params["user"] = AnonymousUser()
 
         request.META = request_params.pop("META", {})
         request.FILES = request_params.pop("FILES", {})

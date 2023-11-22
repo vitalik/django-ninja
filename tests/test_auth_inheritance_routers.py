@@ -15,17 +15,22 @@ class Auth(APIKeyQuery):
             return key
 
 
-api = NinjaAPI()
+api = NinjaAPI(auth=Auth("api_auth"))
 
 r1 = Router()
 r2 = Router()
 r3 = Router()
 r4 = Router()
 
+o3 = Router(auth=None)
+o4 = Router()
+
 api.add_router("/r1", r1, auth=Auth("r1_auth"))
 r1.add_router("/r2", r2)
 r2.add_router("/r3", r3)
 r3.add_router("/r4", r4, auth=Auth("r4_auth"))
+r2.add_router("/o3", o3)
+o3.add_router("/o4", o4)
 
 client = TestClient(api)
 
@@ -55,6 +60,18 @@ def op5(request):
     return request.auth
 
 
+@o3.get("/")
+def op_o3(request):
+    assert not hasattr(request, "auth")
+    return "ok"
+
+
+@o4.get("/")
+def op_o4(request):
+    assert not hasattr(request, "auth")
+    return "ok"
+
+
 @pytest.mark.parametrize(
     "route, status_code",
     [
@@ -70,6 +87,8 @@ def op5(request):
         ("/r1/r2/r3/op5?key=op5_auth", 200),
         ("/r1/r2/r3/r4/?key=r1_auth", 401),
         ("/r1/r2/r3/op5?key=r1_auth", 401),
+        ("/r1/r2/o3/", 200),
+        ("/r1/r2/o3/o4/", 200),
     ],
 )
 def test_router_inheritance_auth(route, status_code):

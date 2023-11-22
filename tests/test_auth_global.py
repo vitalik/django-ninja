@@ -50,6 +50,17 @@ def router_operation_auth(request):
 
 api.add_router("", router)
 
+
+router_noauth = Router(auth=None)
+
+
+@router_noauth.get("/router-no-auth")
+def router_operation_no_auth(request):
+    return {"has_auth": hasattr(request, "auth")}
+
+
+api.add_router("/no-auth/", router_noauth)
+
 # ---- end router --------------------
 
 client = TestClient(api)
@@ -78,3 +89,7 @@ def test_router_auth():
 
     assert client.get("/router-operation-auth?key=k1").status_code == 401
     assert client.get("/router-operation-auth?key=k2").json() == {"auth": "k2"}
+
+
+def test_router_no_auth():
+    assert client.get("/no-auth/router-no-auth").json() == {"has_auth": False}
