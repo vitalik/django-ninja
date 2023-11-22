@@ -4,8 +4,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from unittest.mock import Mock
 from urllib.parse import urljoin
 
-import django
 from django.http import QueryDict, StreamingHttpResponse
+from django.http.request import HttpHeaders
 
 from ninja import NinjaAPI, Router
 from ninja.responses import NinjaJSONEncoder
@@ -132,10 +132,8 @@ class NinjaClientBase:
                 for k, v in request_params.pop("headers", {}).items()
             }
         )
-        if django.VERSION[:2] > (2, 1):
-            from ninja.compatibility.request import HttpHeaders
 
-            request.headers = HttpHeaders(request.META)  # type: ignore
+        request.headers = HttpHeaders(request.META)  # type: ignore
 
         if isinstance(data, QueryDict):
             request.POST = data

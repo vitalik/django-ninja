@@ -7,7 +7,6 @@ from django.http import HttpRequest
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 
-from ninja.compatibility import get_headers
 from ninja.errors import HttpError
 from ninja.types import DictStrAny
 
@@ -106,7 +105,7 @@ class HeaderModel(ParamModel):
         cls, request: HttpRequest, api: "NinjaAPI", path_params: DictStrAny
     ) -> Optional[DictStrAny]:
         data = {}
-        headers = get_headers(request)
+        headers = request.headers
         for name in cls.__ninja_flatten_map__:
             if name in headers:
                 data[name] = headers[name]

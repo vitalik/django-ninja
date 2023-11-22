@@ -31,11 +31,8 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3 :: Only",
     "Framework :: Django",
-    "Framework :: Django :: 2.2",
-    "Framework :: Django :: 3.0",
     "Framework :: Django :: 3.1",
     "Framework :: Django :: 3.2",
-    "Framework :: Django :: 4.0",
     "Framework :: Django :: 4.1",
     "Framework :: Django :: 4.2",
     "Framework :: AsyncIO",
@@ -43,7 +40,7 @@ classifiers = [
     "Topic :: Internet :: WWW/HTTP",
 ]
 
-requires = ["Django >=2.2", "pydantic >=2.0,<3.0.0"]
+requires = ["Django >=3.1", "pydantic >=2.0,<3.0.0"]
 description-file = "README.md"
 requires-python = ">=3.7"
 

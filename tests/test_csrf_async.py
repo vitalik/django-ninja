@@ -21,7 +21,6 @@ TOKEN = "1bcdefghij2bcdefghij3bcdefghij4bcdefghij5bcdefghij6bcdefghijABCD"
 COOKIES = {settings.CSRF_COOKIE_NAME: TOKEN}
 
 
-@pytest.mark.skipif(django.VERSION < (3, 1), reason="requires django 3.1 or higher")
 @pytest.mark.asyncio
 async def test_csrf_off():
     csrf_OFF = NinjaAPI(urls_namespace="csrf_OFF")
@@ -35,7 +34,6 @@ async def test_csrf_off():
     assert response.status_code == 200
 
 
-@pytest.mark.skipif(django.VERSION < (3, 1), reason="requires django 3.1 or higher")
 @pytest.mark.asyncio
 async def test_csrf_on():
     csrf_ON = NinjaAPI(urls_namespace="csrf_ON", csrf=True)

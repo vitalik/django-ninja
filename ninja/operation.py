@@ -13,12 +13,11 @@ from typing import (
     cast,
 )
 
-import django
 import pydantic
+from asgiref.sync import async_to_sync
 from django.http import HttpRequest, HttpResponse, HttpResponseNotAllowed
 from django.http.response import HttpResponseBase
 
-from ninja.compatibility.util import async_to_sync
 from ninja.constants import NOT_SET
 from ninja.errors import AuthenticationError, ConfigError, ValidationError
 from ninja.params.models import TModels
@@ -269,8 +268,6 @@ class Operation:
 
 class AsyncOperation(Operation):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        if django.VERSION < (3, 1):  # pragma: no cover
-            raise Exception("Async operations are supported only with Django 3.1+")
         super().__init__(*args, **kwargs)
         self.is_async = True
 
