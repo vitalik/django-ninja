@@ -140,7 +140,6 @@ async def test_sync_authenticate_method():
 
 
 @pytest.mark.skipif(django.VERSION < (3, 1), reason="requires django 3.1 or higher")
-@pytest.mark.asyncio
 def test_async_authenticate_method_in_sync_context():
     class KeyAuth(APIKeyQuery):
         async def authenticate(self, request, key):
