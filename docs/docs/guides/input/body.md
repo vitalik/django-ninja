@@ -13,7 +13,7 @@ To declare a **request body**, you need to use **Django Ninja `Schema`**.
 
 First, you need to import `Schema` from `ninja`:
 
-```python hl_lines="1"
+```python hl_lines="2"
 {!./src/tutorial/body/code01.py!}
 ```
 
@@ -23,7 +23,7 @@ Then you declare your data model as a class that inherits from `Schema`.
 
 Use standard Python types for all the attributes:
 
-```python hl_lines="4 5 6 7 8"
+```python hl_lines="5 6 7 8 9"
 {!./src/tutorial/body/code01.py!}
 ```
 
@@ -53,7 +53,7 @@ For example, this model above declares a JSON "`object`" (or Python `dict`) like
 
 To add it to your *path operation*, declare it the same way you declared the path and query parameters:
 
-```python hl_lines="12"
+```python hl_lines="13"
 {!./src/tutorial/body/code01.py!}
 ```
 
