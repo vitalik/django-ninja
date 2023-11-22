@@ -57,7 +57,7 @@ def cookies2(request, wpn: str = Cookie(..., alias="weapon")):
 
 
 @router.post("/test-schema")
-def test_schema(request, payload: ExtraForbidSchema = Body(...)):
+def schema(request, payload: ExtraForbidSchema = Body(...)):
     return "ok"
 
 
