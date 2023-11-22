@@ -10,13 +10,13 @@ install: ## Install dependencies
 
 .PHONY: lint
 lint: ## Run code linters
-	black --check ninja tests
+	ruff format --check ninja tests
 	ruff ninja tests
 	mypy ninja
 
 .PHONY: fmt format
 fmt format: ## Run code formatters
-	black ninja tests
+	ruff format ninja tests
 	ruff ninja tests --fix
 
 .PHONY: test

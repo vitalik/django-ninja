@@ -86,6 +86,7 @@ class UserWithInitialsSchema(UserWithBossSchema):
 
 class ResolveAttrSchema(Schema):
     "The goal is to test that the resolve_xxx is not callable it should be a regular attribute"
+
     id: str
     resolve_attr: str
 

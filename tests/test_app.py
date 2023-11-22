@@ -74,8 +74,8 @@ def file_response(request):
             pass
 
 
+# fmt: off
 @pytest.mark.parametrize(
-    # fmt: off
     "method,path,expected_status,expected_data,expected_streaming",
     [
         ("get",    "/",       200, "/", False),
@@ -90,8 +90,8 @@ def file_response(request):
         ("get",    "/html",   200, b"html", False),
         ("get",    "/file",   200, b"this is a file", True),
     ],
-    # fmt: on
 )
+# fmt: on
 def test_method(method, path, expected_status, expected_data, expected_streaming):
     func = getattr(client, method)
     response = func(path)

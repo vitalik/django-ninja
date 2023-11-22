@@ -154,7 +154,7 @@ client = TestClient(router)
             {},
             {"query": [1, 2]},
         ),
-    ]
+    ],
     # fmt: on
 )
 def test_list(path, kwargs, expected_response):

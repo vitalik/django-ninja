@@ -63,9 +63,9 @@ jobs:
         run: pip install flit
       - name: Install Dependencies
         run: flit install --symlink
-      - name: Black
-        run: black --check ninja tests
-      - name: Ruff
+      - name: Ruff format
+        run: ruff format --check ninja tests
+      - name: Ruff lint
         run: ruff ninja tests
       - name: mypy
         run: mypy ninja tests/mypy_test.py

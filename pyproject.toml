@@ -28,6 +28,7 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3 :: Only",
     "Framework :: Django",
     "Framework :: Django :: 2.2",
@@ -42,10 +43,7 @@ classifiers = [
     "Topic :: Internet :: WWW/HTTP",
 ]
 
-requires = [
-    "Django >=2.2",
-    "pydantic >=2.0,<3.0.0"
-]
+requires = ["Django >=2.2", "pydantic >=2.0,<3.0.0"]
 description-file = "README.md"
 requires-python = ">=3.7"
 
@@ -64,41 +62,26 @@ test = [
     "psycopg2-binary",
     "black",
     "mypy==0.931",
-    "ruff==0.0.275",
+    "ruff==0.1.6",
     "django-stubs",
 ]
-doc = [
-    "mkdocs",
-    "mkdocs-material",
-    "markdown-include",
-    "mkdocstrings",
-]
-dev = [
-    "pre-commit",
-]
-
-
-# BLACK ==========================================================
-
-[tool.black]
-line-length = 88
-skip-string-normalization = false
-target-version = ['py311']
+doc = ["mkdocs", "mkdocs-material", "markdown-include", "mkdocstrings"]
+dev = ["pre-commit"]
 
 
 [tool.ruff]
 select = [
-    "E",  # pycodestyle errors
-    "W",  # pycodestyle warnings
-    "F",  # pyflakes
-    "I",  # isort
-    "C",  # flake8-comprehensions
-    "B",  # flake8-bugbear
+    "E", # pycodestyle errors
+    "W", # pycodestyle warnings
+    "F", # pyflakes
+    "I", # isort
+    "C", # flake8-comprehensions
+    "B", # flake8-bugbear
 ]
 ignore = [
-    "E501",  # line too long, handled by black
-    "B008",  # do not perform function calls in argument defaults
-    "C901",  # too complex
+    "E501", # line too long, handled by black
+    "B008", # do not perform function calls in argument defaults
+    "C901", # too complex
 ]
 
 [tool.ruff.per-file-ignores]
@@ -106,7 +89,6 @@ ignore = [
 "ninja/compatibility/datastructures.py" = ["C416"]
 "ninja/utils.py" = ["B004"]
 "tests/*" = ["C408", "F401"]
-
 
 
 [tool.coverage.run]
