@@ -67,10 +67,14 @@ class FilterSchema(Schema):
         elif isinstance(q_expression, str):
             return Q(**{q_expression: field_value})
         elif isinstance(q_expression, list):
-            expression_connector = field_extra.get("expression_connector", DEFAULT_FIELD_LEVEL_EXPRESSION_CONNECTOR)  # type: ignore
+            expression_connector = field_extra.get(
+                "expression_connector", DEFAULT_FIELD_LEVEL_EXPRESSION_CONNECTOR
+            )  # type: ignore
             q = Q()
             for q_expression_part in q_expression:
-                q = q._combine(Q(**{q_expression_part: field_value}), expression_connector)  # type: ignore[attr-defined]
+                q = q._combine(
+                    Q(**{q_expression_part: field_value}), expression_connector
+                )  # type: ignore[attr-defined]
             return q
         else:
             raise ImproperlyConfigured(
@@ -87,7 +91,9 @@ class FilterSchema(Schema):
         for field_name, field in self.model_fields.items():
             filter_value = getattr(self, field_name)
             field_extra = field.json_schema_extra or {}
-            ignore_none = field_extra.get("ignore_none", self.model_config["ignore_none"])  # type: ignore
+            ignore_none = field_extra.get(
+                "ignore_none", self.model_config["ignore_none"]
+            )  # type: ignore
 
             # Resolve q for a field even if we skip it due to None value
             # So that improperly configured fields are easier to detect

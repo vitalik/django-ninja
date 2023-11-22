@@ -48,14 +48,14 @@ make test-cov
  
 ## Code style
 
-Django Ninja uses `black`, `ruff`, and `mypy` for style checks.
+Django Ninja uses `ruff`, and `mypy` for style checks.
 
 Run `pre-commit install` to create a git hook to fix your styles before you commit.
 
 Alternatively, manually check your code with:
 
 ```
-black --check ninja tests
+ruff format --check ninja tests
 ruff ninja tests
 mypy ninja
 ```
@@ -69,7 +69,7 @@ make lint
 Or reformat your code with:
 
 ```
-black ninja tests
+ruff format ninja tests
 ruff ninja tests --fix
 ```
 
