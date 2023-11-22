@@ -4,6 +4,7 @@
 .mypy_cache
 .coverage
 htmlcov
+/coverage.xml
 
 dist
 test.py
