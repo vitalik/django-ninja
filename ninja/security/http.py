@@ -7,7 +7,6 @@ from urllib.parse import unquote
 from django.conf import settings
 from django.http import HttpRequest
 
-from ninja.compatibility import get_headers
 from ninja.security.base import AuthBase
 
 __all__ = ["HttpAuthBase", "HttpBearer", "DecodeError", "HttpBasicAuth"]
@@ -25,7 +24,7 @@ class HttpBearer(HttpAuthBase, ABC):
     header: str = "Authorization"
 
     def __call__(self, request: HttpRequest) -> Optional[Any]:
-        headers = get_headers(request)
+        headers = request.headers
         auth_value = headers.get(self.header)
         if not auth_value:
             return None
@@ -52,7 +51,7 @@ class HttpBasicAuth(HttpAuthBase, ABC):  # TODO: maybe HttpBasicAuthBase
     header = "Authorization"
 
     def __call__(self, request: HttpRequest) -> Optional[Any]:
-        headers = get_headers(request)
+        headers = request.headers
         auth_value = headers.get(self.header)
         if not auth_value:
             return None

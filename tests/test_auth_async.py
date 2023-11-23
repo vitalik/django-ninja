@@ -8,7 +8,6 @@ from ninja.security import APIKeyQuery, HttpBearer
 from ninja.testing import TestAsyncClient, TestClient
 
 
-@pytest.mark.skipif(django.VERSION < (3, 1), reason="requires django 3.1 or higher")
 @pytest.mark.asyncio
 async def test_async_view_handles_async_auth_func():
     api = NinjaAPI()
@@ -36,7 +35,6 @@ async def test_async_view_handles_async_auth_func():
     assert res.json() == {"key": "secret"}
 
 
-@pytest.mark.skipif(django.VERSION < (3, 1), reason="requires django 3.1 or higher")
 @pytest.mark.asyncio
 async def test_async_view_handles_async_auth_cls():
     api = NinjaAPI()
@@ -65,7 +63,6 @@ async def test_async_view_handles_async_auth_cls():
     assert res.json() == {"key": "secret"}
 
 
-@pytest.mark.skipif(django.VERSION < (3, 1), reason="requires django 3.1 or higher")
 @pytest.mark.asyncio
 async def test_async_view_handles_multi_auth():
     api = NinjaAPI()
@@ -92,7 +89,6 @@ async def test_async_view_handles_multi_auth():
     assert res.json() == {"key": "secret"}
 
 
-@pytest.mark.skipif(django.VERSION < (3, 1), reason="requires django 3.1 or higher")
 @pytest.mark.asyncio
 async def test_async_view_handles_auth_errors():
     api = NinjaAPI()
@@ -115,7 +111,6 @@ async def test_async_view_handles_auth_errors():
     assert res.json() == {"custom": True}
 
 
-@pytest.mark.skipif(django.VERSION < (3, 1), reason="requires django 3.1 or higher")
 @pytest.mark.asyncio
 async def test_sync_authenticate_method():
     class KeyAuth(APIKeyQuery):
@@ -139,7 +134,6 @@ async def test_sync_authenticate_method():
     assert res.json() == {"auth": "secret"}
 
 
-@pytest.mark.skipif(django.VERSION < (3, 1), reason="requires django 3.1 or higher")
 def test_async_authenticate_method_in_sync_context():
     class KeyAuth(APIKeyQuery):
         async def authenticate(self, request, key):
@@ -162,7 +156,6 @@ def test_async_authenticate_method_in_sync_context():
     assert res.json() == {"auth": "secret"}
 
 
-@pytest.mark.skipif(django.VERSION < (3, 1), reason="requires django 3.1 or higher")
 @pytest.mark.asyncio
 async def test_async_with_bearer():
     class BearerAuth(HttpBearer):

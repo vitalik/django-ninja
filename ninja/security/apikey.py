@@ -3,7 +3,6 @@ from typing import Any, Optional
 
 from django.http import HttpRequest
 
-from ninja.compatibility.request import get_headers
 from ninja.errors import HttpError
 from ninja.security.base import AuthBase
 from ninja.utils import check_csrf
@@ -58,5 +57,5 @@ class APIKeyHeader(APIKeyBase, ABC):
     openapi_in: str = "header"
 
     def _get_key(self, request: HttpRequest) -> Optional[str]:
-        headers = get_headers(request)
+        headers = request.headers
         return headers.get(self.param_name)
