@@ -11,8 +11,14 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12']
-        django-version: ['<3.2', '<3.3', '<4.2', '<4.3']
+        django-version: ['<3.2', '<3.3', '<4.2', '<4.3', '<5.1']
         exclude:
+          - python-version: '3.7'
+            django-version: '<5.1'
+          - python-version: '3.8'
+            django-version: '<5.1'
+          - python-version: '3.9'
+            django-version: '<5.1'
           - python-version: '3.12'
             django-version: '<3.2'
           - python-version: '3.12'
@@ -25,7 +31,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install core
-        run: pip install "Django${{ matrix.django-version }}" "pydantic<3"
+        run: pip install --pre "Django${{ matrix.django-version }}" "pydantic<3"
       - name: Install tests
         run: pip install pytest pytest-asyncio pytest-django psycopg2-binary
       - name: Test
