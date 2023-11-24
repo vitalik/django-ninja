@@ -133,7 +133,7 @@ class NinjaClientBase:
             }
         )
 
-        request.headers = HttpHeaders(request.META)  # type: ignore
+        request.headers = HttpHeaders(request.META)
 
         if isinstance(data, QueryDict):
             request.POST = data

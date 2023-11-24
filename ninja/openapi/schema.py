@@ -302,7 +302,7 @@ class OpenAPISchema(dict):
                 scopes: List[DictStrAny] = []  # TODO: scopes
                 name = auth.__class__.__name__
                 result.append({name: scopes})  # TODO: check if unique
-                self.securitySchemes[name] = auth.openapi_security_schema  # type: ignore
+                self.securitySchemes[name] = auth.openapi_security_schema
         return result
 
     def get_components(self) -> DictStrAny:

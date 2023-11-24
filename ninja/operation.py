@@ -51,7 +51,7 @@ class Operation:
         exclude_defaults: bool = False,
         exclude_none: bool = False,
         include_in_schema: bool = True,
-        url_name: str = None,
+        url_name: Optional[str] = None,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> None:
         self.is_async = False
@@ -93,7 +93,7 @@ class Operation:
 
         if hasattr(view_func, "_ninja_contribute_to_operation"):
             # Allow 3rd party code to contribute to the operation behaviour
-            callbacks: List[Callable] = view_func._ninja_contribute_to_operation  # type: ignore
+            callbacks: List[Callable] = view_func._ninja_contribute_to_operation
             for callback in callbacks:
                 callback(self)
 

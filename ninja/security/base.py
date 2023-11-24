@@ -28,7 +28,7 @@ class AuthBase(ABC):
 
         self.is_async = False
         if hasattr(self, "authenticate"):  # pragma: no branch
-            self.is_async = is_async_callable(self.authenticate)  # type: ignore
+            self.is_async = is_async_callable(self.authenticate)
 
     @abstractmethod
     def __call__(self, request: HttpRequest) -> Optional[Any]:

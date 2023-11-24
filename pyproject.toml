@@ -59,7 +59,7 @@ test = [
     "pytest-asyncio",
     "psycopg2-binary",
     "black",
-    "mypy==0.931",
+    "mypy==1.7.1",
     "ruff==0.1.6",
     "django-stubs",
 ]

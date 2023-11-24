@@ -191,20 +191,19 @@ class Param(FieldInfo):
         self,
         default: Any,
         *,
-        alias: str = None,
-        title: str = None,
-        description: str = None,
-        gt: float = None,
-        ge: float = None,
-        lt: float = None,
-        le: float = None,
-        min_length: int = None,
-        max_length: int = None,
-        regex: str = None,
-        example: Any = None,
+        alias: Optional[str] = None,
+        title: Optional[str] = None,
+        description: Optional[str] = None,
+        gt: Optional[float] = None,
+        ge: Optional[float] = None,
+        lt: Optional[float] = None,
+        le: Optional[float] = None,
+        min_length: Optional[int] = None,
+        max_length: Optional[int] = None,
+        example: Optional[Any] = None,
         examples: Optional[Dict[str, Any]] = None,
-        deprecated: bool = None,
-        include_in_schema: bool = True,
+        deprecated: Optional[bool] = None,
+        include_in_schema: Optional[bool] = True,
         # param_name: str = None,
         # param_type: Any = None,
         **extra: Any,
@@ -226,6 +225,7 @@ class Param(FieldInfo):
             extra["validation_alias"] = alias
         if alias and not extra.get("serialization_alias"):
             extra["serialization_alias"] = alias
+
         super().__init__(
             default=default,
             alias=alias,
@@ -237,7 +237,6 @@ class Param(FieldInfo):
             le=le,
             min_length=min_length,
             max_length=max_length,
-            regex=regex,
             json_schema_extra=json_schema_extra,
             **extra,
         )

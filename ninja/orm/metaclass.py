@@ -62,7 +62,7 @@ class MetaConf:
             fields=fields,
             exclude=exclude,
             fields_optional=optional_fields,
-        )  # type: ignore
+        )
 
 
 class ModelSchemaMetaclass(ResolverMetaclass):
