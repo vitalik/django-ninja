@@ -1,3 +1,4 @@
+import contextlib
 import os
 from tempfile import NamedTemporaryFile
 
@@ -68,30 +69,26 @@ def file_response(request):
             f.write(b"this is a file")
         return FileResponse(open(tmp.name, "rb"))
     finally:
-        try:
+        with contextlib.suppress(PermissionError):
             os.remove(tmp.name)
-        except PermissionError:
-            pass
 
 
-# fmt: off
 @pytest.mark.parametrize(
     "method,path,expected_status,expected_data,expected_streaming",
     [
-        ("get",    "/",       200, "/", False),
-        ("get",    "/get",    200, "this is GET", False),
-        ("post",   "/post",   200, "this is POST", False),
-        ("put",    "/put",    200, "this is PUT", False),
-        ("patch",  "/patch",  200, "this is PATCH", False),
+        ("get", "/", 200, "/", False),
+        ("get", "/get", 200, "this is GET", False),
+        ("post", "/post", 200, "this is POST", False),
+        ("put", "/put", 200, "this is PUT", False),
+        ("patch", "/patch", 200, "this is PATCH", False),
         ("delete", "/delete", 200, "this is DELETE", False),
-        ("get",    "/multi",  200, "this is GET", False),
-        ("post",   "/multi",  200, "this is POST", False),
-        ("patch",  "/multi",  405, b"Method not allowed", False),
-        ("get",    "/html",   200, b"html", False),
-        ("get",    "/file",   200, b"this is a file", True),
+        ("get", "/multi", 200, "this is GET", False),
+        ("post", "/multi", 200, "this is POST", False),
+        ("patch", "/multi", 405, b"Method not allowed", False),
+        ("get", "/html", 200, b"html", False),
+        ("get", "/file", 200, b"this is a file", True),
     ],
 )
-# fmt: on
 def test_method(method, path, expected_status, expected_data, expected_streaming):
     func = getattr(client, method)
     response = func(path)

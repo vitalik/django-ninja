@@ -1,6 +1,7 @@
 import json
 import os
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
 
 from django.conf import settings
@@ -97,8 +98,7 @@ def _render_cdn_template(
     "this is helper to find and render html template when ninja is not in INSTALLED_APPS"
     from django.template import RequestContext, Template
 
-    with open(template_path) as f:
-        tpl = Template(f.read())
+    tpl = Template(Path(template_path).read_text())
     html = tpl.render(RequestContext(request, context))
     return HttpResponse(html)
 
