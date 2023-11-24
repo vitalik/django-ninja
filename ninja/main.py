@@ -443,7 +443,7 @@ class NinjaAPI:
         return HttpResponse("", content_type=self.get_content_type())
 
     def get_content_type(self) -> str:
-        return "{}; charset={}".format(self.renderer.media_type, self.renderer.charset)
+        return f"{self.renderer.media_type}; charset={self.renderer.charset}"
 
     def get_openapi_schema(
         self,
