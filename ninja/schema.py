@@ -17,6 +17,7 @@ dotted attributes and resolver methods. For example::
             return f"{obj.first_name} {obj.last_name}"
 
 """
+
 import warnings
 from typing import Any, Callable, Dict, Type, TypeVar, Union, no_type_check
 

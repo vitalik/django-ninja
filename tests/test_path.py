@@ -305,7 +305,7 @@ def test_get_path(path, expected_status, expected_response):
     ],
 )
 def test_get_path_django(path, expected_status, expected_response):
-    if expected_response == Exception:
+    if expected_response is Exception:
         with pytest.raises(Exception, match=expected_status):
             client.get(path)
     else:

@@ -83,7 +83,7 @@ class NextPrevPagination(PaginationBase):
             prev_skip = 0
         return {
             "items": items[skip : skip + 5],
-            "next": request.build_absolute_uri(f"?skip={skip+5}"),
+            "next": request.build_absolute_uri(f"?skip={skip + 5}"),
             "prev": request.build_absolute_uri(f"?skip={prev_skip}"),
         }
 
