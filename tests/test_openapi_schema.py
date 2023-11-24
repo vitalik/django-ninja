@@ -875,7 +875,7 @@ def test_all_paths_rendered():
     schema = api.get_openapi_schema()
 
     expected_result = {"/api/1": ["post", "get"], "/api/1/{param}": ["get", "delete"]}
-    result = {p: list(schema["paths"][p].keys()) for p in schema["paths"].keys()}
+    result = {p: list(schema["paths"][p].keys()) for p in schema["paths"]}
     assert expected_result == result
 
 
@@ -905,7 +905,7 @@ def test_all_paths_typed_params_rendered():
     schema = api.get_openapi_schema()
 
     expected_result = {"/api/1": ["post", "get"], "/api/1/{param}": ["get", "delete"]}
-    result = {p: list(schema["paths"][p].keys()) for p in schema["paths"].keys()}
+    result = {p: list(schema["paths"][p].keys()) for p in schema["paths"]}
     assert expected_result == result
 
 

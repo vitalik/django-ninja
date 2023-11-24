@@ -181,11 +181,7 @@ class NinjaGenerateJsonSchema(GenerateJsonSchema):
         if "default" in schema and schema["default"] is not None:
             default = self.encode_default(schema["default"])
 
-        if "$ref" in json_schema:
-            # Since reference schemas do not support child keys, we wrap the reference schema in a single-case allOf:
-            result = {"allOf": [json_schema]}
-        else:
-            result = json_schema
+        result = {"allOf": [json_schema]} if "$ref" in json_schema else json_schema
 
         if default is not None:
             result["default"] = default

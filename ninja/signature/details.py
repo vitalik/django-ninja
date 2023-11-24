@@ -237,7 +237,7 @@ class ViewSignature:
 
         is_collection = is_collection_type(annotation)
 
-        if annotation == UploadedFile or (
+        if annotation == UploadedFile or (  # noqa
             is_collection and annotation.__args__[0] == UploadedFile
         ):
             # People often forgot to mark UploadedFile as a File, so we better assign it automatically
@@ -288,10 +288,7 @@ def is_collection_type(annotation: Any) -> bool:
     origin = get_origin(annotation)
 
     if origin in UNION_TYPES:
-        for arg in get_args(annotation):
-            if is_collection_type(arg):
-                return True
-        return False
+        return any(is_collection_type(arg) for arg in get_args(annotation))
 
     collection_types = (List, list, set, tuple)
     if origin is None:

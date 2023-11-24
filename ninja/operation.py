@@ -121,9 +121,8 @@ class Operation:
             if router.auth != NOT_SET:
                 self._set_auth(router.auth)
 
-        if self.tags is None:
-            if router.tags is not None:
-                self.tags = router.tags
+        if self.tags is None and router.tags is not None:
+            self.tags = router.tags
 
     def _set_auth(
         self, auth: Optional[Union[Sequence[Callable], Callable, object]]
@@ -384,12 +383,7 @@ class PathView:
             op.set_api_instance(api, router)
 
     def get_view(self) -> Callable:
-        view: Callable
-        if self.is_async:
-            view = self._async_view
-        else:
-            view = self._sync_view
-
+        view: Callable = self._async_view if self.is_async else self._sync_view
         view.__func__.csrf_exempt = True  # type: ignore
         return view
 

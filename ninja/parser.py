@@ -19,7 +19,7 @@ class Parser:
         self, data: MultiValueDict, list_fields: List[str], request: HttpRequest
     ) -> DictStrAny:
         result: DictStrAny = {}
-        for key in data.keys():
+        for key in data:
             if key in list_fields:
                 result[key] = data.getlist(key)
             else:

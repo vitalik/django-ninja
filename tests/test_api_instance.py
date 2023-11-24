@@ -38,9 +38,11 @@ def test_reuse_router_error():
     # django debug server can attempt to import the urls twice when errors exist
     # verify we get the correct error reported
     match = "Router@'/another-path' has already been attached to API NinjaAPI:1.0.0"
-    with pytest.raises(ConfigError, match=match):
-        with mock.patch("ninja.main._imported_while_running_in_debug_server", False):
-            test_api.add_router("/another-path", test_router)
+    with (
+        pytest.raises(ConfigError, match=match),
+        mock.patch("ninja.main._imported_while_running_in_debug_server", False),
+    ):
+        test_api.add_router("/another-path", test_router)
 
     # The error should be ignored under debug server to allow other errors to be reported
     with mock.patch("ninja.main._imported_while_running_in_debug_server", True):

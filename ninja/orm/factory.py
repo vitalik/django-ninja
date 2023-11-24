@@ -56,9 +56,8 @@ class SchemaFactory:
             return self.schemas[key]
 
         model_fields_list = self._selected_model_fields(model, fields, exclude)
-        if optional_fields:
-            if optional_fields == "__all__":
-                optional_fields = [f.name for f in model_fields_list]
+        if optional_fields == "__all__":
+            optional_fields = [f.name for f in model_fields_list]
 
         definitions = {}
         for fld in model_fields_list:

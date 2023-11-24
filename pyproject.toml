@@ -78,6 +78,7 @@ select = [
     "B",    # flake8-bugbear
     "UP",   # pyupgrade
     "FURB", # refurb
+    "SIM",  # flake8-simplify
 ]
 ignore = [
     "E501", # line too long, handled by black

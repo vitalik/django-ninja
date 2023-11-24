@@ -1,5 +1,6 @@
 import contextlib
 import os
+from pathlib import Path
 from tempfile import NamedTemporaryFile
 
 import pytest
@@ -65,9 +66,8 @@ def html(request):
 def file_response(request):
     tmp = NamedTemporaryFile(delete=False)
     try:
-        with open(tmp.name, "wb") as f:
-            f.write(b"this is a file")
-        return FileResponse(open(tmp.name, "rb"))
+        Path(tmp.name).write_text("this is a file")
+        return FileResponse(Path(tmp.name).read_text())
     finally:
         with contextlib.suppress(PermissionError):
             os.remove(tmp.name)
