@@ -2,13 +2,10 @@ import asyncio
 import inspect
 import re
 import sys
-from typing import Any, Callable, ForwardRef, List, Set, cast  # type: ignore
+from typing import Any, Callable, ForwardRef, List, Set, cast
 
 from django.urls import register_converter
 from django.urls.converters import UUIDConverter
-
-# from pydantic.typing import ForwardRef, evaluate_forwardref  # type: ignore
-
 
 if sys.version_info < (3, 9):  # pragma: nocover
 

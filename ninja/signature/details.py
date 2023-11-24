@@ -7,7 +7,7 @@ import pydantic
 from django.http import HttpResponse
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
-from typing_extensions import Annotated, get_args, get_origin  # type: ignore
+from typing_extensions import Annotated, get_args, get_origin
 
 from ninja import UploadedFile
 from ninja.compatibility.util import UNION_TYPES
@@ -79,7 +79,7 @@ class ViewSignature:
             # _ninja_contribute_args is a special attribute
             # which allows developers to create custom function params
             # inside decorators or other functions
-            for p_name, p_type, p_source in view_func._ninja_contribute_args:  # type: ignore
+            for p_name, p_type, p_source in view_func._ninja_contribute_args:
                 self.params.append(
                     FuncParam(p_name, p_source.alias or p_name, p_source, p_type, False)
                 )

@@ -222,7 +222,7 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
         return cls.model_json_schema(schema_generator=NinjaGenerateJsonSchema)
 
     @classmethod
-    def schema(cls) -> DictStrAny:
+    def schema(cls) -> DictStrAny:  # type: ignore
         warnings.warn(
             ".schema() is deprecated, use .json_schema() instead",
             DeprecationWarning,
