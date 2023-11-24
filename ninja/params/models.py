@@ -174,7 +174,7 @@ class _MultiPartBodyModel(BodyModel):
         cls, request: HttpRequest, api: "NinjaAPI", path_params: DictStrAny
     ) -> Optional[DictStrAny]:
         req = _HttpRequest()
-        get_request_data = super(_MultiPartBodyModel, cls).get_request_data
+        get_request_data = super().get_request_data
         results: DictStrAny = {}
         for name, annotation in cls.__ninja_body_params__.items():
             if name in request.POST:

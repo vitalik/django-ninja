@@ -28,7 +28,7 @@ def test_export_to_file():
     with tempfile.TemporaryDirectory() as tmp:
         output_file = os.path.join(tmp, "result.json")
         call_command(ExportCmd(), output=output_file)
-        with open(output_file, "r") as f:
+        with open(output_file) as f:
             json.loads(f.read())
 
 
