@@ -4,11 +4,10 @@ import django
 import pytest
 
 from ninja import NinjaAPI
-from ninja.security import APIKeyQuery
+from ninja.security import APIKeyQuery, HttpBearer
 from ninja.testing import TestAsyncClient, TestClient
 
 
-@pytest.mark.skipif(django.VERSION < (3, 1), reason="requires django 3.1 or higher")
 @pytest.mark.asyncio
 async def test_async_view_handles_async_auth_func():
     api = NinjaAPI()
@@ -36,7 +35,6 @@ async def test_async_view_handles_async_auth_func():
     assert res.json() == {"key": "secret"}
 
 
-@pytest.mark.skipif(django.VERSION < (3, 1), reason="requires django 3.1 or higher")
 @pytest.mark.asyncio
 async def test_async_view_handles_async_auth_cls():
     api = NinjaAPI()
@@ -65,7 +63,6 @@ async def test_async_view_handles_async_auth_cls():
     assert res.json() == {"key": "secret"}
 
 
-@pytest.mark.skipif(django.VERSION < (3, 1), reason="requires django 3.1 or higher")
 @pytest.mark.asyncio
 async def test_async_view_handles_multi_auth():
     api = NinjaAPI()
@@ -92,7 +89,6 @@ async def test_async_view_handles_multi_auth():
     assert res.json() == {"key": "secret"}
 
 
-@pytest.mark.skipif(django.VERSION < (3, 1), reason="requires django 3.1 or higher")
 @pytest.mark.asyncio
 async def test_async_view_handles_auth_errors():
     api = NinjaAPI()
@@ -115,7 +111,6 @@ async def test_async_view_handles_auth_errors():
     assert res.json() == {"custom": True}
 
 
-@pytest.mark.skipif(django.VERSION < (3, 1), reason="requires django 3.1 or higher")
 @pytest.mark.asyncio
 async def test_sync_authenticate_method():
     class KeyAuth(APIKeyQuery):
@@ -132,12 +127,13 @@ async def test_sync_authenticate_method():
 
     client = TestAsyncClient(api)
 
+    res = await client.get("/async")  # NO key
+    assert res.json() == {"detail": "Unauthorized"}
+
     res = await client.get("/async?key=secret")
     assert res.json() == {"auth": "secret"}
 
 
-@pytest.mark.skipif(django.VERSION < (3, 1), reason="requires django 3.1 or higher")
-@pytest.mark.asyncio
 def test_async_authenticate_method_in_sync_context():
     class KeyAuth(APIKeyQuery):
         async def authenticate(self, request, key):
@@ -153,5 +149,31 @@ def test_async_authenticate_method_in_sync_context():
 
     client = TestClient(api)
 
+    res = client.get("/sync")  # NO key
+    assert res.json() == {"detail": "Unauthorized"}
+
     res = client.get("/sync?key=secret")
+    assert res.json() == {"auth": "secret"}
+
+
+@pytest.mark.asyncio
+async def test_async_with_bearer():
+    class BearerAuth(HttpBearer):
+        async def authenticate(self, request, key):
+            await asyncio.sleep(0)
+            if key == "secret":
+                return key
+
+    api = NinjaAPI(auth=BearerAuth())
+
+    @api.get("/async")
+    async def async_view(request):
+        return {"auth": request.auth}
+
+    client = TestAsyncClient(api)
+
+    res = await client.get("/async")  # NO key
+    assert res.json() == {"detail": "Unauthorized"}
+
+    res = await client.get("/async", headers={"Authorization": "Bearer secret"})
     assert res.json() == {"auth": "secret"}

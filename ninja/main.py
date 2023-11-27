@@ -15,6 +15,7 @@ from typing import (
 
 from django.http import HttpRequest, HttpResponse
 from django.urls import URLPattern, URLResolver, reverse
+from django.utils.module_loading import import_string
 
 from ninja.constants import NOT_SET, NOT_SET_TYPE
 from ninja.errors import ConfigError, set_default_exc_handlers
@@ -359,12 +360,16 @@ class NinjaAPI:
     def add_router(
         self,
         prefix: str,
-        router: Router,
+        router: Union[Router, str],
         *,
         auth: Any = NOT_SET,
         tags: Optional[List[str]] = None,
-        parent_router: Router = None,
+        parent_router: Optional[Router] = None,
     ) -> None:
+        if isinstance(router, str):
+            router = import_string(router)
+            assert isinstance(router, Router)
+
         if auth is not NOT_SET:
             router.auth = auth
         if tags is not None:
@@ -406,18 +411,17 @@ class NinjaAPI:
         result.append(get_root_url(self))
         return result
 
-    @property
-    def root_path(self) -> str:
+    def get_root_path(self, path_params: DictStrAny) -> str:
         name = f"{self.urls_namespace}:api-root"
-        return reverse(name)
+        return reverse(name, kwargs=path_params)
 
     def create_response(
         self,
         request: HttpRequest,
         data: Any,
         *,
-        status: int = None,
-        temporal_response: HttpResponse = None,
+        status: Optional[int] = None,
+        temporal_response: Optional[HttpResponse] = None,
     ) -> HttpResponse:
         if temporal_response:
             status = temporal_response.status_code
@@ -439,11 +443,16 @@ class NinjaAPI:
         return HttpResponse("", content_type=self.get_content_type())
 
     def get_content_type(self) -> str:
-        return "{}; charset={}".format(self.renderer.media_type, self.renderer.charset)
+        return f"{self.renderer.media_type}; charset={self.renderer.charset}"
 
-    def get_openapi_schema(self, path_prefix: Optional[str] = None) -> OpenAPISchema:
+    def get_openapi_schema(
+        self,
+        *,
+        path_prefix: Optional[str] = None,
+        path_params: Optional[DictStrAny] = None,
+    ) -> OpenAPISchema:
         if path_prefix is None:
-            path_prefix = self.root_path
+            path_prefix = self.get_root_path(path_params or {})
         return get_schema(api=self, path_prefix=path_prefix)
 
     def get_openapi_operation_id(self, operation: "Operation") -> str:

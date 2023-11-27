@@ -1,3 +1,4 @@
+from typing import List, Optional
 from uuid import UUID
 
 from django.urls import register_converter
@@ -206,6 +207,18 @@ def get_query_type_optional(request, query: int = None):
 @router.get("/query/int/default")
 def get_query_type_optional_10(request, query: int = 10):
     return f"foo bar {query}"
+
+
+@router.get("/query/list")
+def get_query_list(request, query: List[str] = Query(...)):
+    return ",".join(query)
+
+
+@router.get("/query/list-optional")
+def get_query_optional_list(request, query: Optional[List[str]] = Query(None)):
+    if query:
+        return ",".join(query)
+    return query
 
 
 @router.get("/query/param")

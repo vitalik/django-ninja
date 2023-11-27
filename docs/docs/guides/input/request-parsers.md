@@ -3,7 +3,7 @@
 In most cases, the default content type for REST API's is JSON, but in case you need to work with
 other content types (like YAML, XML, CSV) or use faster JSON parsers, **Django Ninja** provides a `parser` configuration.
 
-```Python
+```python
 api = NinjaAPI(parser=MyYamlParser())
 ```
 
@@ -14,7 +14,7 @@ To create your own parser, you need to extend the `ninja.parser.Parser` class, a
 
 Let's create our custom YAML parser:
 
-```Python hl_lines="4 8 9"
+```python hl_lines="4 8 9"
 import yaml
 from typing import List
 from ninja import NinjaAPI
@@ -77,7 +77,7 @@ pip install orjson
 
 Parser code:
 
-```Python hl_lines="1 8 9"
+```python hl_lines="1 8 9"
 import orjson
 from ninja import NinjaAPI
 from ninja.parser import Parser

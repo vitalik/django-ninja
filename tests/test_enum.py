@@ -14,6 +14,11 @@ class RoomEnum(str, Enum):
     single = "single"
 
 
+class ExtraEnum(str, Enum):
+    a = "a"
+    b = "b"
+
+
 class Booking(BaseModel):
     start: date
     end: date
@@ -38,6 +43,11 @@ def enum_optional(
     request, room: Optional[RoomEnum] = Query(None, description="description")
 ):
     return {"room": room}
+
+
+@api.get("/optional2")
+def enum_optional2(request, extra: Optional[ExtraEnum] = None):
+    return {"extra": extra}
 
 
 @api.get("/list")
@@ -89,6 +99,13 @@ def test_enums():
     response = client.get("/optional")
     assert response.status_code == 200
     assert response.json() == {"room": None}
+
+    response = client.get("/optional2?extra=a")
+    assert response.status_code == 200
+    assert response.json() == {"extra": "a"}
+
+    response = client.get("/optional2")
+    assert response.json() == {"extra": None}
 
     response = client.get("/list?rooms=twin&rooms=single")
     assert response.status_code == 200
@@ -164,3 +181,19 @@ def test_schema():
             "type": "array",
         },
     }
+
+
+def test_optional_get_schema():
+    "This tests that enum that is only used in GET operation puts a that enum into schema.components"
+    schema = api.get_openapi_schema()
+
+    op = schema["paths"]["/api/optional2"]["get"]
+    print(op)
+    assert op["parameters"][0]["schema"]["anyOf"] == [
+        {"$ref": "#/components/schemas/ExtraEnum"},
+        {"type": "null"},
+    ]
+
+    components = schema["components"]["schemas"]
+    print(components)
+    assert "ExtraEnum" in components

@@ -12,5 +12,5 @@ class PathDate(Schema):
 
 
 @api.get("/events/{year}/{month}/{day}")
-def events(request, date: PathDate = Path(...)):
+def events(request, date: Path[PathDate]):
     return {"date": date.value()}

@@ -7,7 +7,7 @@ This is a more advanced (and less safe) method - please use it carefully.
 
 **Django Ninja** comes with a helper function `create_schema`:
 
-```Python
+```python
 def create_schema(
     model, # django model
     name = "", # name for the generated class, if empty model names is used
@@ -22,7 +22,7 @@ def create_schema(
 
 Take this example:
 
-```Python hl_lines="2 4"
+```python hl_lines="2 4"
 from django.contrib.auth.models import User
 from ninja.orm import create_schema
 
@@ -51,7 +51,7 @@ UserSchema = create_schema(User)
 
 ### Using `fields`
 
-```Python hl_lines="1"
+```python hl_lines="1"
 UserSchema = create_schema(User, fields=['id', 'username'])
 
 # Will create schema like this:
@@ -64,7 +64,7 @@ UserSchema = create_schema(User, fields=['id', 'username'])
 
 ### Using `exclude`
 
-```Python hl_lines="1 2"
+```python hl_lines="1 2"
 UserSchema = create_schema(User, exclude=[
     'password', 'last_login', 'is_superuser', 'is_staff', 'groups', 'user_permissions']
 )
@@ -85,7 +85,7 @@ UserSchema = create_schema(User, exclude=[
 
 The `depth` argument allows you to introspect the Django model into the Related fields(ForeignKey, OneToOne, ManyToMany).
 
-```Python hl_lines="1 7"
+```python hl_lines="1 7"
 UserSchema = create_schema(User, depth=1, fields=['username', 'groups'])
 
 # Will create the following schema:
@@ -97,7 +97,7 @@ UserSchema = create_schema(User, depth=1, fields=['username', 'groups'])
 
 Note here that groups became a `List[Group]` - many2many field introspected 1 level deeper and created schema as well for group:
 
-```Python
+```python
 class Group(Schema):
     id: int
     name: str

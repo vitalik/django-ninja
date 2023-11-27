@@ -98,7 +98,7 @@ def test_examples():
             }
         }
 
-        schema = api.get_openapi_schema("")
+        schema = api.get_openapi_schema(path_prefix="")
         params = schema["paths"]["/filter"]["get"]["parameters"]
         # print(params)
         assert params == [

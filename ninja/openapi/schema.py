@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Set, Tup
 
 from ninja.constants import NOT_SET
 from ninja.operation import Operation
-from ninja.params_models import TModel, TModels
+from ninja.params.models import TModel, TModels
 from ninja.schema import NinjaGenerateJsonSchema
 from ninja.types import DictStrAny
 from ninja.utils import normalize_path
@@ -38,7 +38,7 @@ class OpenAPISchema(dict):
         extra_info = api.openapi_extra.get("info", {})
         super().__init__(
             [
-                ("openapi", "3.0.2"),
+                ("openapi", "3.1.0"),
                 (
                     "info",
                     {
@@ -144,8 +144,7 @@ class OpenAPISchema(dict):
                 result.extend(self._extract_parameters(model))
         return result
 
-    @classmethod
-    def _extract_parameters(cls, model: TModel) -> List[DictStrAny]:
+    def _extract_parameters(self, model: TModel) -> List[DictStrAny]:
         result = []
 
         schema = model.model_json_schema(
@@ -155,6 +154,9 @@ class OpenAPISchema(dict):
 
         required = set(schema.get("required", []))
         properties = schema["properties"]
+
+        if "$defs" in schema:
+            self.add_schema_definitions(schema["$defs"])
 
         for name, details in properties.items():
             is_required = name in required
@@ -300,7 +302,7 @@ class OpenAPISchema(dict):
                 scopes: List[DictStrAny] = []  # TODO: scopes
                 name = auth.__class__.__name__
                 result.append({name: scopes})  # TODO: check if unique
-                self.securitySchemes[name] = auth.openapi_security_schema  # type: ignore
+                self.securitySchemes[name] = auth.openapi_security_schema
         return result
 
     def get_components(self) -> DictStrAny:

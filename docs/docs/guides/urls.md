@@ -8,7 +8,7 @@ The URLs are all contained within a namespace, which defaults to `"api-1.0.0"`, 
 
 For example:
 
-```Python
+```python
 api = NinjaAPI()
 
 @api.get("/")
@@ -24,7 +24,7 @@ This implicit URL name will only be set for the first operation for each API pat
 
 Rather than using the default URL name, you can specify it explicitly as a property on the method decorator.
 
-```Python
+```python
 @api.get("/users", url_name="user_list")
 def users(request):
     ...
@@ -39,7 +39,7 @@ This will override any implicit URL name to this API path.
 
 You can also override implicit url naming by overwriting the `get_operation_url_name` method:
 
-```Python
+```python
 class MyAPI(NinjaAPI):
     def get_operation_url_name(self, operation, router):
         return operation.view_func.__name__ + '_my_extra_suffix'
@@ -51,7 +51,7 @@ api = MyAPI()
 
 The default URL namespace is built by prepending the Schema's version with `"api-"`, however you can explicitly specify the namespace by overriding the `urls_namespace` attribute of the `NinjaAPI` Schema class.
 
-```Python
+```python
 
 api = NinjaAPI(auth=token_auth, version='2')
 api_private = NinjaAPI(auth=session_auth, urls_namespace='private_api')

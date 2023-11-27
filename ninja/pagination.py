@@ -11,9 +11,9 @@ from django.http import HttpRequest
 from django.utils.module_loading import import_string
 from django.utils.translation import gettext as _
 from pydantic import field_validator
+from typing_extensions import get_args as get_collection_args
 
 from ninja import Field, Query, Router, Schema
-from ninja.compatibility.util import get_args as get_collection_args
 from ninja.conf import settings
 from ninja.constants import NOT_SET
 from ninja.errors import ConfigError
@@ -149,7 +149,7 @@ def _inject_pagination(
         result = paginator.paginate_queryset(
             items, pagination=pagination_params, request=request, **kwargs
         )
-        if paginator.Output:
+        if paginator.Output:  # type: ignore
             result[paginator.items_attribute] = list(result[paginator.items_attribute])
             # ^ forcing queryset evaluation #TODO: check why pydantic did not do it here
         return result
@@ -161,7 +161,7 @@ def _inject_pagination(
         paginator.InputSource,
     )
 
-    if paginator.Output:
+    if paginator.Output:  # type: ignore
         contribute_operation_callback(
             view_with_pagination,
             partial(make_response_paginated, paginator),

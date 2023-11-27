@@ -7,18 +7,22 @@ import pydantic
 from django.http import HttpResponse
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
+from typing_extensions import Annotated, get_args, get_origin
 
-from ninja import UploadedFile, params
-from ninja.compatibility.util import (
-    UNION_TYPES,
-    get_args,
-)
-from ninja.compatibility.util import (
-    get_origin as get_collection_origin,
-)
+from ninja import UploadedFile
+from ninja.compatibility.util import UNION_TYPES
 from ninja.errors import ConfigError
-from ninja.params import Body, File, Form, _MultiPartBody
-from ninja.params_models import TModel, TModels
+from ninja.params.models import (
+    Body,
+    File,
+    Form,
+    Param,
+    Path,
+    Query,
+    TModel,
+    TModels,
+    _MultiPartBody,
+)
 from ninja.signature.utils import get_path_param_names, get_typed_signature
 
 __all__ = [
@@ -75,7 +79,7 @@ class ViewSignature:
             # _ninja_contribute_args is a special attribute
             # which allows developers to create custom function params
             # inside decorators or other functions
-            for p_name, p_type, p_source in view_func._ninja_contribute_args:  # type: ignore
+            for p_name, p_type, p_source in view_func._ninja_contribute_args:
                 self.params.append(
                     FuncParam(p_name, p_source.alias or p_name, p_source, p_type, False)
                 )
@@ -205,15 +209,24 @@ class ViewSignature:
     def _get_param_type(self, name: str, arg: inspect.Parameter) -> FuncParam:
         # _EMPTY = self.signature.empty
         annotation = arg.annotation
+        default = arg.default
+
+        if get_origin(annotation) is Annotated:
+            args = get_args(annotation)
+            if isinstance(args[1], Param):
+                prev_default = default
+                annotation, default = args
+                if prev_default != self.signature.empty:
+                    default.default = prev_default
 
         if annotation == self.signature.empty:
-            if arg.default == self.signature.empty:
+            if default == self.signature.empty:
                 annotation = str
             else:
-                if isinstance(arg.default, params.Param):
-                    annotation = type(arg.default.default)
+                if isinstance(default, Param):
+                    annotation = type(default.default)
                 else:
-                    annotation = type(arg.default)
+                    annotation = type(default)
 
             if annotation == PydanticUndefined.__class__:
                 # TODO: ^ check why is that so
@@ -228,34 +241,34 @@ class ViewSignature:
             is_collection and annotation.__args__[0] == UploadedFile
         ):
             # People often forgot to mark UploadedFile as a File, so we better assign it automatically
-            if arg.default == self.signature.empty or arg.default is None:
-                default = arg.default == self.signature.empty and ... or arg.default
+            if default == self.signature.empty or default is None:
+                default = default == self.signature.empty and ... or default
                 return FuncParam(name, name, File(default), annotation, is_collection)
 
         # 1) if type of the param is defined as one of the Param's subclasses - we just use that definition
-        if isinstance(arg.default, params.Param):
-            param_source = arg.default
+        if isinstance(default, Param):
+            param_source = default
 
         # 2) if param name is a part of the path parameter
         elif name in self.path_params_names:
             assert (
-                arg.default == self.signature.empty
+                default == self.signature.empty
             ), f"'{name}' is a path param, default not allowed"
-            param_source = params.Path(...)
+            param_source = Path(...)
 
         # 3) if param is a collection, or annotation is part of pydantic model:
         elif is_collection or is_pydantic_model(annotation):
-            if arg.default == self.signature.empty:
-                param_source = params.Body(...)
+            if default == self.signature.empty:
+                param_source = Body(...)
             else:
-                param_source = params.Body(arg.default)
+                param_source = Body(default)
 
         # 4) the last case is query param
         else:
-            if arg.default == self.signature.empty:
-                param_source = params.Query(...)
+            if default == self.signature.empty:
+                param_source = Query(...)
             else:
-                param_source = params.Query(arg.default)
+                param_source = Query(default)
 
         return FuncParam(
             name, param_source.alias or name, param_source, annotation, is_collection
@@ -264,7 +277,7 @@ class ViewSignature:
 
 def is_pydantic_model(cls: Any) -> bool:
     try:
-        if get_collection_origin(cls) in UNION_TYPES:
+        if get_origin(cls) in UNION_TYPES:
             return any(issubclass(arg, pydantic.BaseModel) for arg in get_args(cls))
         return issubclass(cls, pydantic.BaseModel)
     except TypeError:
@@ -272,7 +285,14 @@ def is_pydantic_model(cls: Any) -> bool:
 
 
 def is_collection_type(annotation: Any) -> bool:
-    origin = get_collection_origin(annotation)
+    origin = get_origin(annotation)
+
+    if origin in UNION_TYPES:
+        for arg in get_args(annotation):
+            if is_collection_type(arg):
+                return True
+        return False
+
     collection_types = (List, list, set, tuple)
     if origin is None:
         return (

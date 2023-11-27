@@ -1,9 +1,10 @@
+from typing import Optional
 from ninja import Schema
 
 
 class Item(Schema):
     name: str
-    description: str = None
+    description: Optional[str] = None
     price: float
     quantity: int
 

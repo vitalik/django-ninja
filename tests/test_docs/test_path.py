@@ -28,7 +28,7 @@ def test_examples():
 
         response = client.get("/events/2020/1/1")
         assert response.json() == {"date": "2020-01-01"}
-        schema = api.get_openapi_schema("")
+        schema = api.get_openapi_schema(path_prefix="")
         events_params = schema["paths"]["/events/{year}/{month}/{day}"]["get"][
             "parameters"
         ]

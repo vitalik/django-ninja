@@ -23,5 +23,5 @@ class Item(Schema):
 
 
 @api.post("/items-blank-default")
-def update(request, item: Item = Form(...)):
+def update(request, item: Form[Item]):
     return item.dict()

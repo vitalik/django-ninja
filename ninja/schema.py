@@ -16,10 +16,8 @@ dotted attributes and resolver methods. For example::
         def resolve_name(obj):
             return f"{obj.first_name} {obj.last_name}"
 
-        def resolve_initials(self, obj):
-            return "".join(n[:1] for n in self.name.split())
-
 """
+
 import warnings
 from typing import Any, Callable, Dict, Type, TypeVar, Union, no_type_check
 
@@ -29,6 +27,7 @@ from django.db.models.fields.files import FieldFile
 from django.template import Variable, VariableDoesNotExist
 from pydantic import BaseModel, Field, ValidationInfo, model_validator, validator
 from pydantic._internal._model_construction import ModelMetaclass
+from pydantic.functional_validators import ModelWrapValidatorHandler
 from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
 
 from ninja.signature.utils import get_args_names, has_kwargs
@@ -45,7 +44,7 @@ S = TypeVar("S", bound="Schema")
 class DjangoGetter:
     __slots__ = ("_obj", "_schema_cls", "_context")
 
-    def __init__(self, obj: Any, schema_cls: "Schema", context: Any = None):
+    def __init__(self, obj: Any, schema_cls: Type[S], context: Any = None):
         self._obj = obj
         self._schema_cls = schema_cls
         self._context = context
@@ -54,7 +53,7 @@ class DjangoGetter:
         # if key.startswith("__pydantic"):
         #     return getattr(self._obj, key)
 
-        resolver = self._schema_cls._ninja_resolvers.get(key)  # type: ignore
+        resolver = self._schema_cls._ninja_resolvers.get(key)
         if resolver:
             value = resolver(getter=self)
         else:
@@ -198,14 +197,22 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
     class Config:
         from_attributes = True  # aka orm_mode
 
-    @model_validator(mode="before")
-    def _run_root_validator(cls, values: Any, info: ValidationInfo) -> Any:
+    @model_validator(mode="wrap")
+    @classmethod
+    def _run_root_validator(
+        cls, values: Any, handler: ModelWrapValidatorHandler[S], info: ValidationInfo
+    ) -> Any:
+        # when extra is "forbid" we need to perform default pydantic validation
+        # as DjangoGetter does not act as dict and pydantic will not be able to validate it
+        if cls.model_config.get("extra") == "forbid":
+            handler(values)
+
         values = DjangoGetter(values, cls, info.context)
-        return values
+        return handler(values)
 
     @classmethod
-    def from_orm(cls: Type[S], obj: Any) -> S:
-        return cls.model_validate(obj)
+    def from_orm(cls: Type[S], obj: Any, **kw: Any) -> S:
+        return cls.model_validate(obj, **kw)
 
     def dict(self, *a: Any, **kw: Any) -> DictStrAny:
         "Backward compatibility with pydantic 1.x"
@@ -216,7 +223,7 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
         return cls.model_json_schema(schema_generator=NinjaGenerateJsonSchema)
 
     @classmethod
-    def schema(cls) -> DictStrAny:
+    def schema(cls) -> DictStrAny:  # type: ignore
         warnings.warn(
             ".schema() is deprecated, use .json_schema() instead",
             DeprecationWarning,

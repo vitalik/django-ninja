@@ -53,9 +53,9 @@ def test_orm_config():
         f4: int = 1
         _private: str = "<secret>"  # private should be ignored
 
-        class Config:
+        class Meta:
             model = SomeCustomModel
-            model_fields = ["f1", "f2"]
+            fields = ["f1", "f2"]
 
     assert SomeCustomSchema.json_schema() == {
         "title": "SomeCustomSchema",

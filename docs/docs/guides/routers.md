@@ -100,7 +100,7 @@ In your top level project folder (next to `urls.py`), create another `api.py` fi
 
 It should look like this:
 
-```Python
+```python
 from ninja import NinjaAPI
 
 api = NinjaAPI()
@@ -109,17 +109,15 @@ api = NinjaAPI()
 
 Now we import all the routers from the various apps, and include them into the main API instance:
 
-```Python hl_lines="2 3 4 8 9 10"
+```python hl_lines="2 6 7 8"
 from ninja import NinjaAPI
 from events.api import router as events_router
-from news.api import router as news_router
-from blogs.api import router as blogs_router
 
 api = NinjaAPI()
 
-api.add_router("/events/", events_router)
-api.add_router("/news/", news_router)
-api.add_router("/blogs/", blogs_router)
+api.add_router("/events/", events_router)    # You can add router object
+api.add_router("/news/", "news.api.router")  #   or well add router by python path
+api.add_router("/blogs/", "blogs.api.router")
 ```
 
 Now, include `api` to your urls as usual and open your browser at `/api/docs`, and you should see all your routers combined into a single API:
@@ -132,12 +130,12 @@ Now, include `api` to your urls as usual and open your browser at `/api/docs`, a
 
 Use `auth` argument to apply authenticator to all operations declared by router:
 
-```Python
+```python
 api.add_router("/events/", events_router, auth=BasicAuth())
 ```
 
 or using router constructor
-```Python
+```python
 router = Router(auth=BasicAuth())
 ```
 
@@ -145,12 +143,12 @@ router = Router(auth=BasicAuth())
 
 You can use `tags` argument to apply tags to all operations declared by router:
 
-```Python
+```python
 api.add_router("/events/", events_router, tags=["events"])
 ```
 
 or using router constructor
-```Python
+```python
 router = Router(tags=["events"])
 ```
 
@@ -165,7 +163,7 @@ Basically, what that means is that you have `add_router` both on the `api` insta
 
 
 
-```Python hl_lines="7 8 9 32 33 34"
+```python hl_lines="7 8 9 32 33 34"
 from django.contrib import admin
 from django.urls import path
 from ninja import NinjaAPI, Router

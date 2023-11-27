@@ -8,7 +8,7 @@
 
 
 <p align="center">
-  <a href="https://django-ninja.rest-framework.com/"><img src="https://django-ninja.rest-framework.com/img/logo-big.png"></a>
+  <a href="https://django-ninja.dev/"><img src="https://django-ninja.dev/img/logo-big.png"></a>
 </p>
 <p align="center">
     <em>Fast to learn, fast to code, fast to run</em>
@@ -21,6 +21,16 @@
 [![Downloads](https://static.pepy.tech/personalized-badge/django-ninja?period=month&units=international_system&left_color=black&right_color=brightgreen&left_text=downloads/month)](https://pepy.tech/project/django-ninja)
 
 # Django Ninja - Fast Django REST Framework
+
+# v1.0 What's new
+Read more details here - https://django-ninja.dev/whatsnew_v1/ 
+
+Or Watch here:
+
+
+<a href="https://youtu.be/GrIpDXPG41o"><img width="500" alt="SCR-20231116-qmoj" src="https://github.com/vitalik/django-ninja/assets/95222/06958fbf-6d3a-4f33-aa76-7a29279c9959"></a>
+
+
 
 **Django Ninja** is a web framework for building APIs with **Django** and Python 3.6+ **type hints**.
 
@@ -38,7 +48,7 @@
 
 ![Django Ninja REST Framework](docs/docs/img/benchmark.png)
 
-**Documentation**: https://django-ninja.rest-framework.com
+**Documentation**: https://django-ninja.dev
 
 ---
 
@@ -100,7 +110,7 @@ You will see the automatic interactive API documentation (provided by <a href="h
 
 ## What next?
 
- - Read the full documentation here - https://django-ninja.rest-framework.com
+ - Read the full documentation here - https://django-ninja.dev
  - To support this project, please give star it on Github. ![github star](docs/docs/img/github-star.png)
- - Share it [via Twitter](https://twitter.com/intent/tweet?text=Check%20out%20Django%20Ninja%20-%20Fast%20Django%20REST%20Framework%20-%20https%3A%2F%2Fdjango-ninja.rest-framework.com)
+ - Share it [via Twitter](https://twitter.com/intent/tweet?text=Check%20out%20Django%20Ninja%20-%20Fast%20Django%20REST%20Framework%20-%20https%3A%2F%2Fdjango-ninja.dev)
  - If you already using django-ninja, please share your feedback to ppr.vitaly@gmail.com

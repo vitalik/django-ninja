@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Type, TypeVar
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, TypeVar
 
 from django.conf import settings
 from django.http import HttpRequest
 from pydantic import BaseModel
+from pydantic.fields import FieldInfo
 
-from ninja.compatibility import get_headers
 from ninja.errors import HttpError
 from ninja.types import DictStrAny
 
@@ -105,7 +105,7 @@ class HeaderModel(ParamModel):
         cls, request: HttpRequest, api: "NinjaAPI", path_params: DictStrAny
     ) -> Optional[DictStrAny]:
         data = {}
-        headers = get_headers(request)
+        headers = request.headers
         for name in cls.__ninja_flatten_map__:
             if name in headers:
                 data[name] = headers[name]
@@ -174,13 +174,110 @@ class _MultiPartBodyModel(BodyModel):
         cls, request: HttpRequest, api: "NinjaAPI", path_params: DictStrAny
     ) -> Optional[DictStrAny]:
         req = _HttpRequest()
-        get_request_data = super(_MultiPartBodyModel, cls).get_request_data
+        get_request_data = super().get_request_data
         results: DictStrAny = {}
         for name, annotation in cls.__ninja_body_params__.items():
             if name in request.POST:
                 data = request.POST[name]
-                if annotation == str and data[0] != '"' and data[-1] != '"':
+                if annotation is str and data[0] != '"' and data[-1] != '"':
                     data = f'"{data}"'
                 req.body = data.encode()
                 results[name] = get_request_data(req, api, path_params)
         return results
+
+
+class Param(FieldInfo):
+    def __init__(
+        self,
+        default: Any,
+        *,
+        alias: Optional[str] = None,
+        title: Optional[str] = None,
+        description: Optional[str] = None,
+        gt: Optional[float] = None,
+        ge: Optional[float] = None,
+        lt: Optional[float] = None,
+        le: Optional[float] = None,
+        min_length: Optional[int] = None,
+        max_length: Optional[int] = None,
+        example: Optional[Any] = None,
+        examples: Optional[Dict[str, Any]] = None,
+        deprecated: Optional[bool] = None,
+        include_in_schema: Optional[bool] = True,
+        # param_name: str = None,
+        # param_type: Any = None,
+        **extra: Any,
+    ):
+        self.deprecated = deprecated
+        # self.param_name: str = None
+        # self.param_type: Any = None
+        self.model_field: Optional[FieldInfo] = None
+        json_schema_extra = {}
+        if example:
+            json_schema_extra["example"] = example
+        if examples:
+            json_schema_extra["examples"] = examples
+        if deprecated:
+            json_schema_extra["deprecated"] = deprecated
+        if not include_in_schema:
+            json_schema_extra["include_in_schema"] = include_in_schema
+        if alias and not extra.get("validation_alias"):
+            extra["validation_alias"] = alias
+        if alias and not extra.get("serialization_alias"):
+            extra["serialization_alias"] = alias
+
+        super().__init__(
+            default=default,
+            alias=alias,
+            title=title,
+            description=description,
+            gt=gt,
+            ge=ge,
+            lt=lt,
+            le=le,
+            min_length=min_length,
+            max_length=max_length,
+            json_schema_extra=json_schema_extra,
+            **extra,
+        )
+
+    @classmethod
+    def _param_source(cls) -> str:
+        "Openapi param.in value or body type"
+        return cls.__name__.lower()
+
+
+class Path(Param):
+    _model = PathModel
+
+
+class Query(Param):
+    _model = QueryModel
+
+
+class Header(Param):
+    _model = HeaderModel
+
+
+class Cookie(Param):
+    _model = CookieModel
+
+
+class Body(Param):
+    _model = BodyModel
+
+
+class Form(Param):
+    _model = FormModel
+
+
+class File(Param):
+    _model = FileModel
+
+
+class _MultiPartBody(Param):
+    _model = _MultiPartBodyModel
+
+    @classmethod
+    def _param_source(cls) -> str:
+        return "body"

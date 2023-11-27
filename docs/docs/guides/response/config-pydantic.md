@@ -72,7 +72,7 @@ results:
 When using [`create_schema`](../django-pydantic-create-schema/#create_schema), the resulting
 schema can be used to build another class with a custom config like:
 
-```Python hl_lines="10"
+```python hl_lines="10"
 from django.contrib.auth.models import User
 from ninja.orm import create_schema
 

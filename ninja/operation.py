@@ -2,6 +2,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    Coroutine,
     Dict,
     Iterable,
     List,
@@ -12,15 +13,14 @@ from typing import (
     cast,
 )
 
-import django
 import pydantic
+from asgiref.sync import async_to_sync
 from django.http import HttpRequest, HttpResponse, HttpResponseNotAllowed
 from django.http.response import HttpResponseBase
 
-from ninja.compatibility.util import async_to_sync
 from ninja.constants import NOT_SET
 from ninja.errors import AuthenticationError, ConfigError, ValidationError
-from ninja.params_models import TModels
+from ninja.params.models import TModels
 from ninja.schema import Schema
 from ninja.signature import ViewSignature, is_async
 from ninja.types import DictStrAny
@@ -51,7 +51,7 @@ class Operation:
         exclude_defaults: bool = False,
         exclude_none: bool = False,
         include_in_schema: bool = True,
-        url_name: str = None,
+        url_name: Optional[str] = None,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> None:
         self.is_async = False
@@ -93,7 +93,7 @@ class Operation:
 
         if hasattr(view_func, "_ninja_contribute_to_operation"):
             # Allow 3rd party code to contribute to the operation behaviour
-            callbacks: List[Callable] = view_func._ninja_contribute_to_operation  # type: ignore
+            callbacks: List[Callable] = view_func._ninja_contribute_to_operation
             for callback in callbacks:
                 callback(self)
 
@@ -204,8 +204,12 @@ class Operation:
             return temporal_response
 
         resp_object = ResponseObject(result)
-        # ^ we need object because getter_dict seems work only with from_orm
-        result = response_model.from_orm(resp_object).model_dump(
+        # ^ we need object because getter_dict seems work only with model_validate
+        validated_object = response_model.model_validate(
+            resp_object, context={"request": request, "response_status": status}
+        )
+
+        result = validated_object.model_dump(
             by_alias=self.by_alias,
             exclude_unset=self.exclude_unset,
             exclude_defaults=self.exclude_defaults,
@@ -264,8 +268,6 @@ class Operation:
 
 class AsyncOperation(Operation):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        if django.VERSION < (3, 1):  # pragma: no cover
-            raise Exception("Async operations are supported only with Django 3.1+")
         super().__init__(*args, **kwargs)
         self.is_async = True
 
@@ -301,7 +303,11 @@ class AsyncOperation(Operation):
         for callback in self.auth_callbacks:
             try:
                 if is_async_callable(callback) or getattr(callback, "is_async", False):
-                    result = await callback(request)
+                    cor: Optional[Coroutine] = callback(request)
+                    if cor is None:
+                        result = None
+                    else:
+                        result = await cor
                 else:
                     result = callback(request)
             except Exception as exc:
@@ -419,7 +425,7 @@ class PathView:
 
 
 class ResponseObject:
-    "Basically this is just a helper to be able to pass response to pydantic's from_orm"
+    "Basically this is just a helper to be able to pass response to pydantic's model_validate"
 
     def __init__(self, response: HttpResponse) -> None:
         self.response = response
