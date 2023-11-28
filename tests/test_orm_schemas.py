@@ -1,7 +1,6 @@
 from typing import List
 from unittest.mock import Mock
 
-import django
 import pytest
 from django.contrib.postgres import fields as ps_fields
 from django.db import models

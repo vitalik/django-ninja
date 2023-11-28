@@ -86,10 +86,9 @@ ignore = [
 ]
 
 [tool.ruff.per-file-ignores]
-"__init__.py" = ["F401"]
 "ninja/compatibility/datastructures.py" = ["C416"]
 "ninja/utils.py" = ["B004"]
-"tests/*" = ["C408", "F401"]
+"tests/*" = ["C408"]
 
 
 [tool.coverage.run]

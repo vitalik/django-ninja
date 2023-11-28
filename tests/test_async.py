@@ -1,6 +1,5 @@
 import asyncio
 
-import django
 import pytest
 
 from ninja import NinjaAPI
