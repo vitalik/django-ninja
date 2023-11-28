@@ -101,9 +101,9 @@ def test_validate_test_data():
         if 0:  # pragma: nocover
             # if test cases or schema generation changes,
             #   use this block of code to regenerate the fixtures
-            with open(filename, "w") as f:
+            with Path(filename).open("w") as f:
                 json.dump(schema["paths"][path], f, indent=2)
-        with open(filename) as f:
+        with Path(filename).open() as f:
             data = json.load(f)
             assert json.loads(json.dumps(schema["paths"][path])) == data
 

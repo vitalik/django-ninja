@@ -58,7 +58,6 @@ test = [
     "pytest-django",
     "pytest-asyncio",
     "psycopg2-binary",
-    "black",
     "mypy==1.7.1",
     "ruff==0.1.6",
     "django-stubs",
@@ -70,14 +69,15 @@ dev = ["pre-commit"]
 [tool.ruff]
 target-version = "py37"
 select = [
-    "E",    # pycodestyle errors
-    "W",    # pycodestyle warnings
-    "F",    # pyflakes
-    "I",    # isort
-    "C",    # flake8-comprehensions
     "B",    # flake8-bugbear
-    "UP",   # pyupgrade
+    "C",    # flake8-comprehensions
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
     "FURB", # refurb
+    "I",    # isort
+    "PTH",  # flake8-use-pathlib
+    "UP",   # pyupgrade
+    "W",    # pycodestyle warnings
 ]
 ignore = [
     "E501", # line too long, handled by black

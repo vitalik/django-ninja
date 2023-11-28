@@ -1,5 +1,4 @@
 import json
-import os
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
@@ -16,7 +15,7 @@ if TYPE_CHECKING:
     # if anyone knows a cleaner way to make mypy happy - welcome
     from ninja import NinjaAPI  # pragma: no cover
 
-ABS_TPL_PATH = os.path.join(os.path.dirname(__file__), "../templates/")
+ABS_TPL_PATH = Path(__file__).parent.parent / "templates/ninja/"
 
 
 class DocsBase(ABC):
@@ -32,7 +31,7 @@ class DocsBase(ABC):
 
 class Swagger(DocsBase):
     template = "ninja/swagger.html"
-    template_cdn = os.path.join(ABS_TPL_PATH, "ninja/swagger_cdn.html")
+    template_cdn = str(ABS_TPL_PATH / "swagger_cdn.html")
     default_settings = {
         "layout": "BaseLayout",
         "deepLinking": True,
@@ -58,7 +57,7 @@ class Swagger(DocsBase):
 
 class Redoc(DocsBase):
     template = "ninja/redoc.html"
-    template_cdn = os.path.join(ABS_TPL_PATH, "ninja/redoc_cdn.html")
+    template_cdn = str(ABS_TPL_PATH / "redoc_cdn.html")
     default_settings: DictStrAny = {}
 
     def __init__(self, settings: Optional[DictStrAny] = None):
