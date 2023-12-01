@@ -13,10 +13,10 @@ class Settings(BaseModel):
         NINJA_PAGINATION_CLASS (str):
             The pagination class to use. Defaults to
             `ninja.pagination.Pagination`.
-        NINJA_PAGINATION_PAGE_SIZE (int):
+        NINJA_PAGINATION_PER_PAGE (int):
             The default page size. Defaults to `100`.
         NINJA_PAGINATION_MAX_LIMIT (int):
-            The default number of response per page. Defaults to `inf`.
+            The maximum number of results per page. Defaults to `inf`.
     """
 
     PAGINATION_CLASS: str = Field(
