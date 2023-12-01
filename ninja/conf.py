@@ -1,6 +1,7 @@
+from math import inf
+
 from django.conf import settings as django_settings
 from pydantic import BaseModel, Field
-from math import inf
 
 
 class Settings(BaseModel):
