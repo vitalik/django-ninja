@@ -1,12 +1,7 @@
-from unittest import mock
-
-import django
 import pytest
 from django.conf import settings
 
 from ninja import NinjaAPI
-from ninja.errors import ConfigError
-from ninja.security import APIKeyCookie
 from ninja.testing import TestAsyncClient as BaseTestAsyncClient
 
 

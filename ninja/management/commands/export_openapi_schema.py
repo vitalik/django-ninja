@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from typing import Any, Optional
 
 from django.core.management.base import BaseCommand, CommandError, CommandParser
@@ -83,7 +84,7 @@ class Command(BaseCommand):
         )
 
         if options["output"]:
-            with open(options["output"], "wb") as f:
+            with Path(options["output"]).open("wb") as f:
                 f.write(result.encode())
         else:
             self.stdout.write(result)

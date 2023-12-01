@@ -4,7 +4,6 @@ from enum import IntEnum
 from pydantic import Field
 
 from ninja import NinjaAPI, Query, Schema
-from ninja.testing import TestClient
 
 
 class Range(IntEnum):

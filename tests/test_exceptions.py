@@ -1,4 +1,3 @@
-import django
 import pytest
 from django.http import Http404
 

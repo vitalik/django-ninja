@@ -1,12 +1,9 @@
 import re
-from unittest import mock
 
-import pytest
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 
 from ninja import NinjaAPI
-from ninja.errors import ConfigError
 from ninja.security import APIKeyCookie, APIKeyHeader
 from ninja.testing import TestClient as BaseTestClient
 

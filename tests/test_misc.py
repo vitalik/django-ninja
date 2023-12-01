@@ -2,7 +2,6 @@ import copy
 import uuid
 
 import pytest
-from django.http import Http404
 from pydantic import BaseModel
 
 from ninja import NinjaAPI
