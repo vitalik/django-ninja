@@ -1,3 +1,4 @@
+import inspect
 import itertools
 from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Type, Union, cast
 
@@ -6,7 +7,7 @@ from django.db.models import ManyToManyRel, ManyToOneRel, Model
 from pydantic import create_model as create_pydantic_model
 
 from ninja.errors import ConfigError
-from ninja.orm.fields import get_schema_field
+from ninja.orm.fields import ModelField, get_schema_field
 from ninja.schema import Schema
 
 # MAYBE:
@@ -71,8 +72,6 @@ class SchemaFactory:
 
         if custom_fields:
             for fld_name, python_type, field_info in custom_fields:
-                # if not isinstance(field_info, FieldInfo):
-                #     field_info = Field(field_info)
                 definitions[fld_name] = (python_type, field_info)
 
         if name in self.schema_names:
@@ -133,7 +132,7 @@ class SchemaFactory:
         model: Type[Model],
         fields: Optional[List[str]] = None,
         exclude: Optional[List[str]] = None,
-    ) -> Iterator[DjangoField]:
+    ) -> Iterator[ModelField]:
         "Returns iterator for model fields based on `exclude` or `fields` arguments"
         all_fields = {f.name: f for f in self._model_fields(model)}
 
@@ -155,13 +154,15 @@ class SchemaFactory:
                 if f.name not in exclude:
                     yield f
 
-    def _model_fields(self, model: Type[Model]) -> Iterator[DjangoField]:
+    def _model_fields(self, model: Type[Model]) -> Iterator[ModelField]:
         "returns iterator with all the fields that can be part of schema"
+        type_annotations = inspect.get_annotations(model)
         for fld in model._meta.get_fields():
             if isinstance(fld, (ManyToOneRel, ManyToManyRel)):
                 # skipping relations
                 continue
-            yield cast(DjangoField, fld)
+            field = cast(DjangoField, fld)
+            yield ModelField(field, type_annotations.get(field.name))
 
 
 factory = SchemaFactory()

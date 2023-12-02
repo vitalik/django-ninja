@@ -1,4 +1,5 @@
-from typing import List
+from typing import List, Literal
+from typing_extensions import TypedDict
 from unittest.mock import Mock
 
 import pytest
@@ -575,3 +576,47 @@ def test_optional_fields():
         SomeReqFieldModel, optional_fields=["some_field", "other_field", "optional"]
     )
     assert Schema.json_schema().get("required") is None
+
+
+def test_type_annotations():
+    class TestModelConfiguration(TypedDict):
+        region: Literal[0, 1]
+        index: int
+
+    class TestModel(models.Model):
+        status_field: Literal["todo", "done"] = models.CharField()  # type: ignore
+        configuration: TestModelConfiguration = models.JSONField()  # type: ignore
+
+        class Meta:
+            app_label = "tests"
+
+    Schema = create_schema(TestModel)
+
+    assert Schema.json_schema() == {
+        "$defs": {
+            "TestModelConfiguration": {
+                "properties": {
+                    "region": {"enum": [0, 1], "title": "Region", "type": "integer"},
+                    "index": {"title": "Index", "type": "integer"},
+                },
+                "required": ["region", "index"],
+                "title": "TestModelConfiguration",
+                "type": "object",
+            }
+        },
+        "properties": {
+            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+            "status_field": {
+                "enum": ["todo", "done"],
+                "title": "Status Field",
+                "type": "string",
+            },
+            "configuration": {
+                "allOf": [{"$ref": "#/$defs/TestModelConfiguration"}],
+                "title": "Configuration",
+            },
+        },
+        "required": ["status_field", "configuration"],
+        "title": "TestModel",
+        "type": "object",
+    }
