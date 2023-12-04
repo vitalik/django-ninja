@@ -106,3 +106,23 @@ also you can define just a few optional fields instead of all:
 ```python
      fields_optional = ['description']
 ```
+
+### Using type annotations in models
+
+If you defined type annotations on your model, they will be taken into account in the generated schema:
+
+```python hl_lines="2 13"
+class Task(models.Model):
+    status: Literal['todo', 'done'] = models.CharField(max_length=10)
+
+class TaskSchema(ModelSchema):
+    class Meta:
+        model = Task
+        fields = "__all__"
+
+# Will create schema like this:
+#
+# class TaskSchema(Schema):
+#     id: int
+#     status: Literal['todo', 'done']
+```
