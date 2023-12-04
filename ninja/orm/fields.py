@@ -185,12 +185,10 @@ def get_schema_field(
 
     if default_factory:
         default = PydanticUndefined
-
-    if optional:
+    elif optional:
         default = None
 
     if default is None:
-        default = None
         python_type = Union[python_type, None]  # aka Optional in 3.7+
 
     description = field.django_field.help_text or None

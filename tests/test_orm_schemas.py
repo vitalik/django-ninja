@@ -1,5 +1,5 @@
-from typing import List, Literal
-from typing_extensions import TypedDict
+from typing import List
+from typing_extensions import Literal, TypedDict
 from unittest.mock import Mock
 
 import pytest
@@ -584,7 +584,7 @@ def test_type_annotations():
         index: int
 
     class TestModel(models.Model):
-        status_field: Literal["todo", "done"] = models.CharField()  # type: ignore
+        status: Literal["todo", "done"] = models.CharField()  # type: ignore
         configuration: TestModelConfiguration = models.JSONField()  # type: ignore
 
         class Meta:
@@ -606,17 +606,42 @@ def test_type_annotations():
         },
         "properties": {
             "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
-            "status_field": {
-                "enum": ["todo", "done"],
-                "title": "Status Field",
-                "type": "string",
-            },
+            "status": {"enum": ["todo", "done"], "title": "Status", "type": "string"},
             "configuration": {
                 "allOf": [{"$ref": "#/$defs/TestModelConfiguration"}],
                 "title": "Configuration",
             },
         },
-        "required": ["status_field", "configuration"],
+        "required": ["status", "configuration"],
         "title": "TestModel",
+        "type": "object",
+    }
+
+
+def test_type_annotations_inherited():
+    class AParentModel(models.Model):
+        rank: Literal[0, 1] = models.PositiveIntegerField()  # type: ignore
+        status: Literal["todo", "wip", "done"] = models.CharField()  # type: ignore
+
+        class Meta:
+            app_label = "tests"
+
+    class AChildModel(AParentModel):
+        status: Literal["todo", "done"]  # Narrow type of parent field
+
+        class Meta:
+            app_label = "tests"
+
+    Schema = create_schema(AChildModel)
+
+    assert Schema.json_schema() == {
+        "properties": {
+            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+            "rank": {"enum": [0, 1], "title": "Rank", "type": "integer"},
+            "status": {"enum": ["todo", "done"], "title": "Status", "type": "string"},
+            "aparentmodel_ptr_id": {"title": "Aparentmodel Ptr", "type": "integer"},
+        },
+        "required": ["rank", "status", "aparentmodel_ptr_id"],
+        "title": "AChildModel",
         "type": "object",
     }

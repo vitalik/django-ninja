@@ -1,4 +1,3 @@
-import inspect
 import itertools
 from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Type, Union, cast
 
@@ -56,7 +55,7 @@ class SchemaFactory:
         if key in self.schemas:
             return self.schemas[key]
 
-        model_fields_list = self._selected_model_fields(model, fields, exclude)
+        model_fields_list = list(self._selected_model_fields(model, fields, exclude))
         if optional_fields:
             if optional_fields == "__all__":
                 optional_fields = [f.name for f in model_fields_list]
@@ -156,13 +155,25 @@ class SchemaFactory:
 
     def _model_fields(self, model: Type[Model]) -> Iterator[ModelField]:
         "returns iterator with all the fields that can be part of schema"
-        type_annotations = inspect.get_annotations(model)
+        type_annotations = self._get_type_annotations(model)
         for fld in model._meta.get_fields():
             if isinstance(fld, (ManyToOneRel, ManyToManyRel)):
                 # skipping relations
                 continue
             field = cast(DjangoField, fld)
             yield ModelField(field, type_annotations.get(field.name))
+
+    def _get_type_annotations(self, model_class: Any) -> Dict[str, Any]:
+        # Take inherited classes annotations into account
+        classes: List[Any] = model_class.mro()
+        # Reverse the list so child classes annotations have precedence
+        classes.reverse()
+
+        annotations = {}
+        for cls in classes:
+            cls_annotations = getattr(cls, "__annotations__", {})
+            annotations.update(cls_annotations)
+        return annotations
 
 
 factory = SchemaFactory()
