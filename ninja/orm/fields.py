@@ -89,6 +89,7 @@ def create_m2m_link_type(type_: Type[TModel]) -> Type[TModel]:
                 int: "integer",
                 str: "string",
                 float: "number",
+                UUID: "string",
             }[type_]
             return {"type": json_type}
 
