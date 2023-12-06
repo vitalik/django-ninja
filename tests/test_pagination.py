@@ -1,11 +1,13 @@
+import asyncio
 from typing import Any, List
 
 import pytest
+from django.db.models import QuerySet
 
 from ninja import NinjaAPI, Schema
 from ninja.errors import ConfigError
 from ninja.pagination import PageNumberPagination, PaginationBase, paginate
-from ninja.testing import TestClient
+from ninja.testing import TestAsyncClient, TestClient
 
 api = NinjaAPI()
 
@@ -42,6 +44,23 @@ class NoOutputPagination(PaginationBase):
     def paginate_queryset(self, items, pagination: Input, **params):
         skip = pagination.skip
         return items[skip : skip + 5]
+
+
+class AsyncNoOutputPagination(NoOutputPagination):
+    async def apaginate_queryset(
+        self, items, pagination: NoOutputPagination.Input, **params
+    ):
+        await asyncio.sleep(0)
+        skip = pagination.skip
+        return items[skip : skip + 5]
+
+    def _items_count(self, queryset: QuerySet) -> int:
+        try:
+            # forcing to find queryset.count instead of list.count:
+            return queryset.all().count()
+        except AttributeError:
+            asyncio.sleep(0)
+            return len(queryset)
 
 
 class ResultsPaginator(PaginationBase):
@@ -340,3 +359,34 @@ def test_config_error_NOT_SET():
         @paginate
         def invalid2(request):
             pass
+
+
+@pytest.mark.asyncio
+async def test_async_pagination():
+    api = NinjaAPI()
+
+    @api.get("/items_async", response=List[int])
+    @paginate(AsyncNoOutputPagination)
+    async def items_async(request):
+        return ITEMS
+
+    @api.get("/items_default", response=List[int])
+    @paginate  # WITHOUT brackets (should use default pagination)
+    async def items_default(request, **kwargs):
+        return ITEMS
+
+    @api.get("/items_page_number", response=List[int])
+    @paginate(PageNumberPagination, page_size=10)
+    async def items_page_number(request):
+        return ITEMS
+
+    client = TestAsyncClient(api)
+
+    response = await client.get("/items_async?skip=10")
+    assert response.json() == [10, 11, 12, 13, 14]
+
+    response = await client.get("/items_default?limit=10")
+    assert response.json() == {"items": ITEMS[:10], "count": 100}
+
+    response = await client.get("/items_page_number?page=2")
+    assert response.json() == {"items": ITEMS[10:20], "count": 100}
