@@ -365,6 +365,15 @@ def test_config_error_NOT_SET():
 async def test_async_pagination():
     api = NinjaAPI()
 
+    with pytest.raises(
+        ConfigError, match="Pagination class not configured for async requests"
+    ):
+
+        @api.get("/items_async_undefined", response=List[int])
+        @paginate(CustomPagination)
+        async def items_3(request, **kwargs):
+            return ITEMS
+
     @api.get("/items_async", response=List[int])
     @paginate(AsyncNoOutputPagination)
     async def items_async(request):
