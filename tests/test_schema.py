@@ -6,7 +6,7 @@ from django.db.models import Manager, QuerySet
 from django.db.models.fields.files import ImageFieldFile
 
 from ninja import Schema
-from ninja.schema import Field, DjangoGetter
+from ninja.schema import DjangoGetter, Field
 
 
 class FakeManager(Manager):
