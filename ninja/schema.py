@@ -97,6 +97,9 @@ class DjangoGetter:
 
         return result
 
+    def __repr__(self) -> str:
+        return f"<DjangoGetter: {repr(self._obj)}>"
+
 
 class Resolver:
     __slots__ = ("_func", "_static", "_takes_context")
