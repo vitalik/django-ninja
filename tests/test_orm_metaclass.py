@@ -101,6 +101,7 @@ def test_optional():
     class OptModel(models.Model):
         title = models.CharField()
         other = models.CharField(null=True)
+        extra = models.IntegerField()
 
         class Meta:
             app_label = "tests"
@@ -117,9 +118,21 @@ def test_optional():
             fields = "__all__"
             fields_optional = "__all__"
 
-    assert OptSchema.json_schema().get("required") is None
+    assert OptSchema.json_schema().get("required") == ['extra']
+    assert OptSchema.json_schema()["properties"] == {
+        'id': {'anyOf': [{'type': 'integer'}, {'type': 'null'}], 'title': 'ID'},
+        'title': {'anyOf': [{'type': 'string'}, {'type': 'null'}], 'title': 'Title'},
+        'other': {'anyOf': [{'type': 'string'}, {'type': 'null'}], 'title': 'Other'},
+        'extra': {'title': 'Extra', 'type': 'integer'},
+    }
 
     assert OptSchema2.json_schema().get("required") is None
+    assert OptSchema2.json_schema()["properties"] == {
+        'id': {'anyOf': [{'type': 'integer'}, {'type': 'null'}], 'title': 'ID'},
+        'title': {'anyOf': [{'type': 'string'}, {'type': 'null'}], 'title': 'Title'},
+        'other': {'anyOf': [{'type': 'string'}, {'type': 'null'}], 'title': 'Other'},
+        'extra': {'anyOf': [{'type': 'integer'}, {'type': 'null'}], 'title': 'Extra'},
+    }
 
 
 def test_fields_all():
