@@ -118,20 +118,20 @@ def test_optional():
             fields = "__all__"
             fields_optional = "__all__"
 
-    assert OptSchema.json_schema().get("required") == ['extra']
+    assert OptSchema.json_schema().get("required") == ["extra"]
     assert OptSchema.json_schema()["properties"] == {
-        'id': {'anyOf': [{'type': 'integer'}, {'type': 'null'}], 'title': 'ID'},
-        'title': {'anyOf': [{'type': 'string'}, {'type': 'null'}], 'title': 'Title'},
-        'other': {'anyOf': [{'type': 'string'}, {'type': 'null'}], 'title': 'Other'},
-        'extra': {'title': 'Extra', 'type': 'integer'},
+        "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+        "title": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Title"},
+        "other": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Other"},
+        "extra": {"title": "Extra", "type": "integer"},
     }
 
     assert OptSchema2.json_schema().get("required") is None
     assert OptSchema2.json_schema()["properties"] == {
-        'id': {'anyOf': [{'type': 'integer'}, {'type': 'null'}], 'title': 'ID'},
-        'title': {'anyOf': [{'type': 'string'}, {'type': 'null'}], 'title': 'Title'},
-        'other': {'anyOf': [{'type': 'string'}, {'type': 'null'}], 'title': 'Other'},
-        'extra': {'anyOf': [{'type': 'integer'}, {'type': 'null'}], 'title': 'Extra'},
+        "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+        "title": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Title"},
+        "other": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Other"},
+        "extra": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "Extra"},
     }
 
 
