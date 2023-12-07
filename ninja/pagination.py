@@ -3,7 +3,6 @@ from abc import ABC, abstractmethod
 from functools import partial, wraps
 from typing import Any, Callable, List, Optional, Tuple, Type, Union
 
-from asgiref.sync import sync_to_async
 from django.db.models import QuerySet
 from django.http import HttpRequest
 from django.utils.module_loading import import_string
@@ -68,9 +67,11 @@ class AsyncPaginationBase(PaginationBase):
     ) -> Any:
         pass  # pragma: no cover
 
-    @sync_to_async
-    def _aitems_count(self, queryset: QuerySet) -> int:
-        return super()._items_count(queryset)
+    async def _aitems_count(self, queryset: QuerySet) -> int:
+        try:
+            return queryset.all().acount()
+        except AttributeError:
+            return len(queryset)
 
 
 class LimitOffsetPagination(AsyncPaginationBase):
