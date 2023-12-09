@@ -11,6 +11,7 @@ __all__ = [
     "SessionAuth",
     "SessionAuthSuperUser",
     "django_auth",
+    "django_auth_superuser",
 ]
 
 django_auth = SessionAuth()
