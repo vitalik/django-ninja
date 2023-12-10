@@ -62,7 +62,7 @@ By default, the filters will behave the following way:
 * `None` values will be ignored and not filtered against;
 * Every non-`None` field will be converted into a `Q`-expression based on the `Field` definition of each field;
 * All `Q`-expressions will be merged into one using `AND` logical operator;
-* The resulting `Q`-expression is used to filter the queryset and return you a qeryset with a `.filter` clause applied.
+* The resulting `Q`-expression is used to filter the queryset and return you a queryset with a `.filter` clause applied.
 
 ## Customizing Fields
 By default, `FilterSet` will use the field names to generate Q expressions:
