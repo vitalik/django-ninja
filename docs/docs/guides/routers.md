@@ -115,8 +115,8 @@ from events.api import router as events_router
 
 api = NinjaAPI()
 
-api.add_router("/events/", events_router)    # You can add router object
-api.add_router("/news/", "news.api.router")  #   or well add router by python path
+api.add_router("/events/", events_router)    # You can add a router as an object
+api.add_router("/news/", "news.api.router")  #   or by Python path
 api.add_router("/blogs/", "blogs.api.router")
 ```
 
@@ -156,7 +156,7 @@ router = Router(tags=["events"])
 ## Nested routers
 
 There are also times when you need to split your logic up even more.
-**Django Ninja** makes it possible to include a router into another router as many times as you like, and finally include the top level router into the main api instance.
+**Django Ninja** makes it possible to include a router into another router as many times as you like, and finally include the top level router into the main `api` instance.
 
 
 Basically, what that means is that you have `add_router` both on the `api` instance and on the `router` instance:
