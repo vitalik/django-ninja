@@ -74,7 +74,10 @@ class SchemaFactory:
                 )
                 definitions[fld.name] = (python_type, field_info)
             except KeyError as e:
-                raise KeyError("%s, you may need to provide a custom field." % e) from e
+                raise KeyError(
+                    "%s, you may need to provide a custom field. "
+                    "Use ninja.orm.fields.register_field_type to register it." % e
+                ) from e
 
         if custom_fields:
             for fld_name, python_type, field_info in custom_fields:

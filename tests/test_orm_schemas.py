@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import List, TypeVar
 from unittest.mock import Mock
 
@@ -8,9 +9,23 @@ from django.db import models
 from django.db.models import Manager
 
 from ninja.errors import ConfigError
-from ninja.orm import create_schema
-from ninja.orm.fields import TYPES
+from ninja.orm import create_schema, fields
 from ninja.orm.shortcuts import L, S
+
+
+@pytest.fixture
+def types():
+    old_types = deepcopy(fields.TYPES)
+    yield fields.TYPES
+    fields.TYPES = old_types
+
+
+def test_register_field_type(types):
+    CustomType = TypeVar("CustomType")
+
+    fields.register_field_type("CustomField", CustomType)
+
+    assert types["CustomField"] == CustomType
 
 
 def test_inheritance():
@@ -552,8 +567,9 @@ def test_custom_exception_when_missing_custom_fields():
     with pytest.raises(KeyError) as error:
         create_schema(TestModel)
 
-    assert (
-        error.value.args[0] == "'CustomField', you may need to provide a custom field."
+    assert error.value.args[0] == (
+        "'CustomField', you may need to provide a custom field. "
+        "Use ninja.orm.fields.register_field_type to register it."
     )
 
 

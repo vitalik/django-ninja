@@ -7,7 +7,7 @@ import pydantic
 from django.http import HttpResponse
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
-from typing_extensions import Annotated, get_args, get_origin  # type: ignore
+from typing_extensions import Annotated, get_args, get_origin
 
 from ninja import UploadedFile
 from ninja.compatibility.util import UNION_TYPES

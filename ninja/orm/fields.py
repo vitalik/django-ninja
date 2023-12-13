@@ -76,6 +76,10 @@ TYPES = {
 TModel = TypeVar("TModel")
 
 
+def register_field_type(field_name: str, type: Type) -> None:
+    TYPES[field_name] = type
+
+
 @no_type_check
 def create_m2m_link_type(type_: Type[TModel]) -> Type[TModel]:
     class M2MLink(type_):  # type: ignore
