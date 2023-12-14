@@ -39,9 +39,9 @@ def test_examples():
 
         client = TestClient(api)
 
-        response = client.get("/ipwhiltelist", META={"REMOTE_ADDR": "127.0.0.1"})
+        response = client.get("/ipwhitelist", META={"REMOTE_ADDR": "127.0.0.1"})
         assert response.status_code == 401
-        response = client.get("/ipwhiltelist", META={"REMOTE_ADDR": "8.8.8.8"})
+        response = client.get("/ipwhitelist", META={"REMOTE_ADDR": "8.8.8.8"})
         assert response.status_code == 200
 
         # Api key --------------------------------
