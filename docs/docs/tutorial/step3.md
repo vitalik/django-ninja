@@ -7,6 +7,8 @@
 We'll create a third operation that will return information about the current Django user.
 
 ```python
+from ninja import Schema
+
 class UserSchema(Schema):
     username: str
     is_authenticated: bool
