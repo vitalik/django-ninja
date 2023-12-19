@@ -15,7 +15,7 @@
 </p>
 
 
-![Test](https://github.com/vitalik/django-ninja/workflows/Test/badge.svg)
+![Test](https://github.com/vitalik/django-ninja/actions/workflows/test_full.yml/badge.svg)
 ![Coverage](https://img.shields.io/codecov/c/github/vitalik/django-ninja)
 [![PyPI version](https://badge.fury.io/py/django-ninja.svg)](https://badge.fury.io/py/django-ninja)
 [![Downloads](https://static.pepy.tech/personalized-badge/django-ninja?period=month&units=international_system&left_color=black&right_color=brightgreen&left_text=downloads/month)](https://pepy.tech/project/django-ninja)
