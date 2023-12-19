@@ -227,7 +227,7 @@ def tasks(request):
         return Task.objects.all()
     ```
 
-    See the [async support](../async-support#using-orm) guide for more information.
+    See the [async support](../async-support.md#using-orm) guide for more information.
 
 
 ## FileField and ImageField

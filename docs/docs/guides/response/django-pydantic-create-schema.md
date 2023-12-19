@@ -1,6 +1,6 @@
 # Using create_schema
 
-Under the hood, [`ModelSchema`](../django-pydantic/#modelschema) uses the `create_schema` function.
+Under the hood, [`ModelSchema`](django-pydantic.md#modelschema) uses the `create_schema` function.
 This is a more advanced (and less safe) method - please use it carefully.
 
 ## `create_schema`

@@ -27,7 +27,7 @@ username: Form[str]
 
 ## Using a Schema
 
-In a similar manner to [Body](../body/#declare-it-as-a-parameter), you can use
+In a similar manner to [Body](body.md#declare-it-as-a-parameter), you can use
 a Schema to organize your parameters.
 
 ```python hl_lines="12"
@@ -36,7 +36,7 @@ a Schema to organize your parameters.
 
 ## Request form + path + query parameters
 
-In a similar manner to [Body](../body/#request-body-path-query-parameters), you can use
+In a similar manner to [Body](body.md#request-body-path-query-parameters), you can use
 Form data in combination with other parameter sources.
 
 You can declare query **and** path **and** form field, **and** etc... parameters at the same time.

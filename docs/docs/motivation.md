@@ -56,7 +56,7 @@ Some companies are already looking for developers with django ninja experience.
 
 #### Main Features
 
-1) Since you can have multiple Django Ninja API instances - you can run [multiple API versions](/guides/versioning/) inside one Django project.
+1) Since you can have multiple Django Ninja API instances - you can run [multiple API versions](guides/versioning.md) inside one Django project.
 
 ```python
 api_v1 = NinjaAPI(version='1.0', auth=token_auth)
@@ -75,7 +75,7 @@ urlpatterns = [
 ]
 ```
 
-2) The Django Ninja 'Schema' class is integrated with the ORM, so you can [serialize querysets](/guides/response/#returning-querysets) or ORM objects:
+2) The Django Ninja 'Schema' class is integrated with the ORM, so you can [serialize querysets](guides/response/index.md#returning-querysets) or ORM objects:
 
 ```python
 @api.get("/tasks", response=List[TaskSchema])
@@ -88,6 +88,6 @@ def tasks_details(request):
     task = Task.objects.first()
     return task
 ```
-3) [Create Schema's from Django Models](/guides/response/django-pydantic/).
+3) [Create Schema's from Django Models](guides/response/django-pydantic.md).
 
-4) Instead of dependency arguments, **Django Ninja** uses `request` instance attributes (in the same way as regular Django views) - more detail at [Authentication](/guides/authentication/).
+4) Instead of dependency arguments, **Django Ninja** uses `request` instance attributes (in the same way as regular Django views) - more detail at [Authentication](guides/authentication.md).
