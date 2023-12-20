@@ -104,9 +104,9 @@ In a Django template, for example:
 To create your own view for OpenaAPI - create a class inherited from DocsBase and overwrite `render_page`` method:
 
 ```python
-form ninja.openapi.docs import DocsBase
+from ninja.openapi.docs import DocsBase
 
-class MyDocsViewer(DocsBase)
+class MyDocsViewer(DocsBase):
     def render_page(self, request, api):
         ... # return http response
 
