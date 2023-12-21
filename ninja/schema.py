@@ -42,7 +42,7 @@ S = TypeVar("S", bound="Schema")
 
 
 class DjangoGetter:
-    __slots__ = ("_obj", "_schema_cls", "_context")
+    __slots__ = ("_obj", "_schema_cls", "_context", "__dict__")
 
     def __init__(self, obj: Any, schema_cls: Type[S], context: Any = None):
         self._obj = obj

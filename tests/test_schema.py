@@ -8,6 +8,8 @@ from django.db.models.fields.files import ImageFieldFile
 from ninja import Schema
 from ninja.schema import DjangoGetter, Field
 
+from pydantic_core import ValidationError
+
 
 class FakeManager(Manager):
     def __init__(self, items):
@@ -194,3 +196,26 @@ def test_django_getter():
 
     dg = DjangoGetter({"i": 1}, Somechema)
     assert repr(dg) == "<DjangoGetter: {'i': 1}>"
+
+
+def test_django_getter_validates_assignment():
+    class ValidateAssignmentSchema(Schema):
+        str_var: str
+
+        model_config = {
+            "validate_assignment": True
+        }
+    
+    schema_inst = ValidateAssignmentSchema(
+        str_var="test_value"
+    )
+
+    # Validate we can re-assign the value, this is a test for
+    # a bug where validate_assignment would cause an AttributeError
+    # for __dict__ on the target schema.
+    schema_inst.str_var = "reassigned_value"
+    try:
+        schema_inst.str_var = 5
+        assert False
+    except ValidationError:
+        assert True
