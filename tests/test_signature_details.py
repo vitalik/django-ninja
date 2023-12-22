@@ -2,8 +2,9 @@ import typing
 from sys import version_info
 
 import pytest
+from django.http import HttpRequest
 
-from ninja.signature.details import is_collection_type
+from ninja.signature.details import ViewSignature, is_collection_type
 
 
 @pytest.mark.parametrize(
@@ -49,3 +50,19 @@ from ninja.signature.details import is_collection_type
 )
 def test_is_collection_type_returns(annotation: typing.Any, expected: bool):
     assert is_collection_type(annotation) is expected
+
+
+def test_finds_request_param_by_name():
+    def view(request):
+        pass
+
+    signature = ViewSignature("", view)
+    assert signature.models == []
+
+
+def test_finds_request_param_by_type():
+    def view(_: HttpRequest):
+        pass
+
+    signature = ViewSignature("", view)
+    assert signature.models == []
