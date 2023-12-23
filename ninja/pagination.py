@@ -1,7 +1,7 @@
 import inspect
 from abc import ABC, abstractmethod
 from functools import partial, wraps
-from typing import Any, Callable, List, Optional, Tuple, Type
+from typing import Any, Callable, Iterable, List, Optional, Tuple, Type
 
 from django.db.models import QuerySet
 from django.http import HttpRequest
@@ -141,12 +141,26 @@ def _inject_pagination(
 
         items = func(request, **kwargs)
 
+        # Check if function returns status code + iterable
+        code = None
+        is_two_tuple = isinstance(items, tuple) and len(items) == 2
+        if (
+            is_two_tuple
+            and isinstance(items[0], int)
+            and isinstance(items[1], Iterable)
+        ):
+            code = items[0]
+            items = items[1]
+
         result = paginator.paginate_queryset(
             items, pagination=pagination_params, request=request, **kwargs
         )
         if paginator.Output:  # type: ignore
             result[paginator.items_attribute] = list(result[paginator.items_attribute])
             # ^ forcing queryset evaluation #TODO: check why pydantic did not do it here
+
+        if code:
+            return code, result
         return result
 
     contribute_operation_args(

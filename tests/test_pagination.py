@@ -143,6 +143,36 @@ def items_9(request):
     return list(range(100))
 
 
+@api.get("/items_10", response=List[int])
+@paginate
+def items_10(request):
+    return 200, ITEMS
+
+
+@api.get("/items_11", response=List[int])
+@paginate(CustomPagination)
+def items_11(request):
+    return 200, ITEMS
+
+
+@api.get("/items_12", response=List[int])
+@paginate(PageNumberPagination, page_size=10)
+def items_12(request, **kwargs):
+    return 200, ITEMS
+
+
+@api.get("/items_13", response={101: int, 200: List[Any]})
+@paginate(PageNumberPagination, page_size=10, pass_parameter="page_info")
+def items_13(request, **kwargs):
+    return 200, ITEMS + [kwargs["page_info"]]
+
+
+@api.get("/items_14", response=List[int])
+@paginate(NoOutputPagination)
+def items_14(request):
+    return 200, list(range(15))
+
+
 client = TestClient(api)
 
 
@@ -340,3 +370,29 @@ def test_config_error_NOT_SET():
         @paginate
         def invalid2(request):
             pass
+
+
+def test_explicit_code_1():
+    response = client.get("/items_10?limit=10").json()
+    assert response == {"items": ITEMS[:10], "count": 100}
+
+
+def test_explicit_code_2():
+    response = client.get("/items_11?skip=5").json()
+    assert response == {"items": ITEMS[5:10], "count": "many", "skip": 5}
+
+
+def test_explicit_code_3():
+    response = client.get("/items_12?page=2").json()
+    assert response == {"items": ITEMS[10:20], "count": 100}
+
+
+def test_explict_code_4():
+    page = 11
+    response = client.get(f"/items_13?page={page}").json()
+    assert response == {"items": [{"page": 11}], "count": 101}
+
+
+def test_explicit_code_5():
+    response = client.get("/items_14?skip=10").json()
+    assert response == [10, 11, 12, 13, 14]
