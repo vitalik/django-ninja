@@ -1,7 +1,7 @@
 import inspect
 from abc import ABC, abstractmethod
 from functools import partial, wraps
-from typing import Any, Callable, AsyncGenerator, List, Optional, Tuple, Type, Union
+from typing import Any, AsyncGenerator, Callable, List, Optional, Tuple, Type, Union
 
 from django.db.models import QuerySet
 from django.http import HttpRequest
