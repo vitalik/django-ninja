@@ -8,6 +8,7 @@ from django.db.models import Manager
 
 from ninja.errors import ConfigError
 from ninja.orm import create_schema
+from ninja.orm.factory import SchemaFactory
 from ninja.orm.shortcuts import L, S
 
 
@@ -581,6 +582,8 @@ def test_optional_fields():
 
 
 def test_choices():
+    from ninja import ModelSchema
+
     class ModelWithChoices(models.Model):
         class ThemeChoices(models.TextChoices):
             SYS = "system", "System"
@@ -613,5 +616,46 @@ def test_choices():
         },
         "required": ["theme", "score"],
         "title": "ModelWithChoices",
+        "type": "object",
+    }
+    # Avoid cache inside schemafactory instance
+    ChoiceExcludeScore = SchemaFactory().create_schema(
+        ModelWithChoices, choices_exclude=["score"]
+    )
+    assert ChoiceExcludeScore.json_schema() == {
+        "properties": {
+            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+            "score": {"title": "Score", "type": "integer"},
+            "theme": {
+                "enum": ["system", "dark", "light"],
+                "maxLength": 32,
+                "title": "Theme",
+                "type": "string",
+            },
+        },
+        "required": ["theme", "score"],
+        "title": "ModelWithChoices",
+        "type": "object",
+    }
+
+    class ModelWithChoicesSchema(ModelSchema):
+        class Meta:
+            model = ModelWithChoices
+            fields = "__all__"
+            choices_exclude = ["score"]
+
+    assert ModelWithChoicesSchema.json_schema() == {
+        "properties": {
+            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+            "score": {"title": "Score", "type": "integer"},
+            "theme": {
+                "enum": ["system", "dark", "light"],
+                "maxLength": 32,
+                "title": "Theme",
+                "type": "string",
+            },
+        },
+        "required": ["theme", "score"],
+        "title": "ModelWithChoicesSchema",
         "type": "object",
     }
