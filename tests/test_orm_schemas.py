@@ -578,3 +578,40 @@ def test_optional_fields():
         SomeReqFieldModel, optional_fields=["some_field", "other_field", "optional"]
     )
     assert Schema.json_schema().get("required") is None
+
+
+def test_choices():
+    class ModelWithChoices(models.Model):
+        class ThemeChoices(models.TextChoices):
+            SYS = "system", "System"
+            DARK = "dark", "Dark"
+            LIGHT = "light", "Light"
+
+        class ScoreChoices(models.IntegerChoices):
+            GOOD = 10, "Good"
+            AVERAGE = 5, "Average"
+            BAD = 1, "Bad"
+
+        theme = models.CharField(max_length=32, choices=ThemeChoices.choices)
+        score = models.PositiveSmallIntegerField(choices=ScoreChoices.choices)
+
+        class Meta:
+            app_label = "tests"
+
+    OrmSchema = create_schema(ModelWithChoices)
+
+    assert OrmSchema.json_schema() == {
+        "properties": {
+            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+            "score": {"enum": [10, 5, 1], "title": "Score", "type": "integer"},
+            "theme": {
+                "enum": ["system", "dark", "light"],
+                "maxLength": 32,
+                "title": "Theme",
+                "type": "string",
+            },
+        },
+        "required": ["theme", "score"],
+        "title": "ModelWithChoices",
+        "type": "object",
+    }

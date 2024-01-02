@@ -3,11 +3,12 @@ from decimal import Decimal
 from typing import Any, Callable, Dict, List, Tuple, Type, TypeVar, Union, no_type_check
 from uuid import UUID
 
-from django.db.models import ManyToManyField
+from django.db.models import Choices, ManyToManyField
 from django.db.models.fields import Field as DjangoField
 from pydantic import IPvAnyAddress
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined, core_schema
+from typing_extensions import Literal
 
 from ninja.openapi.schema import OpenAPISchema
 from ninja.types import DictStrAny
@@ -146,9 +147,18 @@ def get_schema_field(
         blank = field_options.get("blank", False)
         null = field_options.get("null", False)
         max_length = field_options.get("max_length")
+        choices = field_options.get("choices")
 
-        internal_type = field.get_internal_type()
-        python_type = TYPES[internal_type]
+        if not choices:
+            internal_type = field.get_internal_type()
+            python_type = TYPES[internal_type]
+        else:
+            # Django 5.x compat: choices can be an enum
+            if isinstance(choices, type) and issubclass(choices, Choices):
+                choices = choices.choices
+            # Python 3.8 compat: can't unpack inline
+            choice_list = [c[0] for c in choices]
+            python_type = Literal[tuple(choice_list)]
 
         if field.primary_key or blank or null or optional:
             default = None
