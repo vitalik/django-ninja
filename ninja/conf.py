@@ -12,7 +12,7 @@ class Settings(BaseModel):
     Attributes:
         NINJA_PAGINATION_CLASS (str):
             The pagination class to use. Defaults to
-            `ninja.pagination.Pagination`.
+            `ninja.pagination.LimitOffsetPagination`.
         NINJA_PAGINATION_PER_PAGE (int):
             The default page size. Defaults to `100`.
         NINJA_PAGINATION_MAX_LIMIT (int):
