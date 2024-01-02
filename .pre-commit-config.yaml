@@ -5,12 +5,12 @@ repos:
       - id: check-yaml
       # - id: end-of-file-fixer
       # - id: trailing-whitespace
-#  - repo: https://github.com/pre-commit/mirrors-mypy
-#    rev: v1.7.1
-#    hooks:
-#      - id: mypy
-#        additional_dependencies: ["django-stubs", "pydantic"]
-#        exclude: (tests|docs)/
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.7.1
+    hooks:
+      - id: mypy
+        additional_dependencies: ["django-stubs", "pydantic"]
+        exclude: (tests|docs)/
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.4.2
     hooks:
