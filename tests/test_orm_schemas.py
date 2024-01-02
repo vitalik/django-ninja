@@ -472,6 +472,7 @@ def test_manytomany():
     bar = Mock()
     bar.id = 1
     bar.m2m = m2m
+    bar._meta = None
 
     data = Schema.from_orm(bar).dict()
 
@@ -659,3 +660,9 @@ def test_choices():
         "title": "ModelWithChoicesSchema",
         "type": "object",
     }
+    obj = ModelWithChoices(
+        theme=ModelWithChoices.ThemeChoices.SYS,
+        score=ModelWithChoices.ScoreChoices.GOOD,
+    )
+    schema = ModelWithChoicesSchema.from_orm(obj)
+    assert schema.dict() == {"id": None, "score": 10, "theme": "system"}

@@ -23,6 +23,7 @@ from typing import (
     Any,
     Callable,
     Dict,
+    Optional,
     Type,
     TypeVar,
     Union,
@@ -30,8 +31,9 @@ from typing import (
 )
 
 import pydantic
-from django.db.models import Manager, QuerySet
+from django.db.models import Choices, Manager, QuerySet
 from django.db.models.fields.files import FieldFile
+from django.db.models.options import Options
 from django.template import Variable, VariableDoesNotExist
 from pydantic import BaseModel, Field, ValidationInfo, model_validator, validator
 from pydantic._internal._model_construction import ModelMetaclass
@@ -225,6 +227,15 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
 
     @classmethod
     def from_orm(cls: Type[S], obj: Any, **kw: Any) -> S:
+        opts: Optional[Options] = getattr(obj, "_meta", None)
+        if opts:
+            fields = opts.get_fields()
+            for field in iter(fields):
+                if getattr(field, "choices", None):
+                    choice_value = getattr(obj, field.name)
+                    if isinstance(choice_value, Choices):
+                        setattr(obj, field.name, choice_value.value)
+
         return cls.model_validate(obj, **kw)
 
     def dict(self, *a: Any, **kw: Any) -> DictStrAny:
