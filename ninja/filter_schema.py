@@ -1,4 +1,4 @@
-from typing import Any, cast
+from typing import Any, TypeVar, cast
 
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Q, QuerySet
@@ -20,6 +20,9 @@ ExpressionConnector = Literal["AND", "OR", "XOR"]
 #     expression_connector: ExpressionConnector = cast(
 #         ExpressionConnector, DEFAULT_CLASS_LEVEL_EXPRESSION_CONNECTOR
 #     )
+
+
+T = TypeVar("T", bound=QuerySet)
 
 
 class FilterSchema(Schema):
@@ -49,7 +52,7 @@ class FilterSchema(Schema):
         except NotImplementedError:
             return self._connect_fields()
 
-    def filter(self, queryset: QuerySet) -> QuerySet:
+    def filter(self, queryset: T) -> T:
         return queryset.filter(self.get_filter_expression())
 
     def _resolve_field_expression(
