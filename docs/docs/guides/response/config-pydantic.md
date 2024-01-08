@@ -69,7 +69,7 @@ results:
 
 ## Custom Config from Django Model
 
-When using [`create_schema`](../django-pydantic-create-schema/#create_schema), the resulting
+When using [`create_schema`](django-pydantic-create-schema.md#create_schema), the resulting
 schema can be used to build another class with a custom config like:
 
 ```python hl_lines="10"

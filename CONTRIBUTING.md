@@ -30,11 +30,8 @@ make test
 Now you are ready to make your contribution
 
 
-When you done:
-
-Please make sure you made tests to cover your functionality 
-
-and finally check the resulting coverage of your contribution did not suffer
+When you're done please make sure you to test your functionality 
+and check the coverage of your contribution.
 
 ```
 pytest --cov=ninja --cov-report term-missing tests

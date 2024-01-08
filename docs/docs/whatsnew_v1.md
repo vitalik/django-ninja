@@ -208,17 +208,9 @@ def test_view(request):
 `paginate_queryset` method now takes `request` object
 
 
-
-
 #### Backwards incompatible stuff
  - resolve_xxx(self, ...) - support resolve with (self) is dropped in favor of pydantic build-in functionality
  - pydantic v1 is no longer supported
  - python 3.6 is no longer supported
 
 BTW - if you like this project and still did not give it a github start - please do so ![github star](img/github-star.png)
-
-[button]
-
-
-
-
