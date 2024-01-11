@@ -11,7 +11,7 @@ This is a more advanced (and less safe) method - please use it carefully.
 def create_schema(
     model, # django model
     name = "", # name for the generated class, if empty model names is used
-    depth = 0, # if > 0 schema will be also created for the nested ForeignKeys and Many2Many (with the provided depth of lookup)
+    depth = 0, # if > 0 schema will also be created for the nested ForeignKeys and Many2Many (with the provided depth of lookup)
     fields: list[str] = None, # if passed - ONLY these fields will added to schema
     exclude: list[str] = None, # if passed - these fields will be excluded from schema
     optional_fields: list[str] | str = None, # if passed - these fields will not be required on schema (use '__all__' to mark ALL fields required)
