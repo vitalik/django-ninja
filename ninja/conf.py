@@ -25,6 +25,10 @@ class Settings(BaseModel):
     PAGINATION_PER_PAGE: int = Field(100, alias="NINJA_PAGINATION_PER_PAGE")
     PAGINATION_MAX_LIMIT: int = Field(inf, alias="NINJA_PAGINATION_MAX_LIMIT")
 
+    SCHEMA_GENERATION_CLASS: str = Field(
+        "ninja.schema.NinjaGenerateJsonSchema", alias="NINJA_SCHEMA_GENERATION_CLASS"
+    )
+
     class Config:
         from_attributes = True
 
