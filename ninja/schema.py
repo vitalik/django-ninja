@@ -233,7 +233,7 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
     @classmethod
     def json_schema(cls) -> DictStrAny:
         return cls.model_json_schema(
-            schema_generator=import_string(settings.SCHEMA_GENERATION_CLASS)
+            schema_generator=import_string(settings.SCHEMA_GENERATOR_CLASS)
         )
 
     @classmethod

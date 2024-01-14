@@ -151,7 +151,7 @@ class OpenAPISchema(dict):
 
         schema = model.model_json_schema(
             ref_template=REF_TEMPLATE,
-            schema_generator=import_string(settings.SCHEMA_GENERATION_CLASS),
+            schema_generator=import_string(settings.SCHEMA_GENERATOR_CLASS),
         )
 
         required = set(schema.get("required", []))
@@ -216,7 +216,7 @@ class OpenAPISchema(dict):
             schema = model.model_json_schema(
                 ref_template=REF_TEMPLATE,
                 by_alias=by_alias,
-                schema_generator=import_string(settings.SCHEMA_GENERATION_CLASS),
+                schema_generator=import_string(settings.SCHEMA_GENERATOR_CLASS),
             ).copy()
 
         # move Schemas from definitions
