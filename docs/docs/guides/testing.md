@@ -1,6 +1,6 @@
 # Testing
 
-**Django Ninja** provides a test client to make it easy to test your API.
+**Django Ninja** is fully compatible with standrad [django test client](https://docs.djangoproject.com/en/dev/topics/testing/tools/) , but also provides a test client to make it easy to test just APIs without middleware/url-resolver layer making tests run faster.
 
 To test the following API:
 ```python
