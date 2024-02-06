@@ -219,7 +219,11 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
         return cls.model_validate(obj, **kw)
 
     def dict(self, *a: Any, **kw: Any) -> DictStrAny:
-        warnings.warn('The `dict` method is deprecated; use `model_dump` instead.', category=PydanticDeprecatedSince20)
+        warnings.warn(
+            "The `dict` method is deprecated; use `model_dump` instead.",
+            category=PydanticDeprecatedSince20,
+            stacklevel=2,
+        )
         return self.model_dump(*a, **kw)
 
     @classmethod
