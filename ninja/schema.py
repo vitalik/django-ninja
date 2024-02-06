@@ -29,6 +29,7 @@ from pydantic import BaseModel, Field, ValidationInfo, model_validator, validato
 from pydantic._internal._model_construction import ModelMetaclass
 from pydantic.functional_validators import ModelWrapValidatorHandler
 from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
+from pydantic.warnings import PydanticDeprecatedSince20
 
 from ninja.signature.utils import get_args_names, has_kwargs
 from ninja.types import DictStrAny
