@@ -281,11 +281,11 @@ class Router:
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> None:
-        if path not in self.path_operations:
+        path_view: Optional[PathView] = self.path_operations.get(path)
+        if not path_view:
             path_view = PathView()
             self.path_operations[path] = path_view
-        else:
-            path_view = self.path_operations[path]
+
         path_view.add_operation(
             path=path,
             methods=methods,
