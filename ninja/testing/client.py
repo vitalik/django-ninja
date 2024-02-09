@@ -104,12 +104,17 @@ class NinjaClientBase:
         for url in self.urls:
             match = url.resolve(url_path)
             if match:
-                request = self._build_request(method, path, data, request_params)
+                request = self._build_request(method, path, data, request_params, match)
                 return match.func, request, match.kwargs
         raise Exception(f'Cannot resolve "{path}"')
 
     def _build_request(
-        self, method: str, path: str, data: Dict, request_params: Any
+        self,
+        method: str,
+        path: str,
+        data: Dict,
+        request_params: Any,
+        resolver_match: Any,
     ) -> Mock:
         request = Mock()
         request.method = method
@@ -119,6 +124,7 @@ class NinjaClientBase:
         request._dont_enforce_csrf_checks = True
         request.is_secure.return_value = False
         request.build_absolute_uri = build_absolute_uri
+        request.resolver_match = resolver_match
 
         if "user" not in request_params:
             request.user.is_authenticated = False
