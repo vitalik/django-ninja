@@ -5,6 +5,7 @@ import pytest
 from django.contrib.postgres import fields as ps_fields
 from django.db import models
 from django.db.models import Manager
+from typing_extensions import Literal, TypedDict
 
 from ninja.errors import ConfigError
 from ninja.orm import create_schema
@@ -575,3 +576,72 @@ def test_optional_fields():
         SomeReqFieldModel, optional_fields=["some_field", "other_field", "optional"]
     )
     assert Schema.json_schema().get("required") is None
+
+
+def test_type_annotations():
+    class TestModelConfiguration(TypedDict):
+        region: Literal[0, 1]
+        index: int
+
+    class TestModel(models.Model):
+        status: Literal["todo", "done"] = models.CharField()  # type: ignore
+        configuration: TestModelConfiguration = models.JSONField()  # type: ignore
+
+        class Meta:
+            app_label = "tests"
+
+    Schema = create_schema(TestModel)
+
+    assert Schema.json_schema() == {
+        "$defs": {
+            "TestModelConfiguration": {
+                "properties": {
+                    "region": {"enum": [0, 1], "title": "Region", "type": "integer"},
+                    "index": {"title": "Index", "type": "integer"},
+                },
+                "required": ["region", "index"],
+                "title": "TestModelConfiguration",
+                "type": "object",
+            }
+        },
+        "properties": {
+            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+            "status": {"enum": ["todo", "done"], "title": "Status", "type": "string"},
+            "configuration": {
+                "allOf": [{"$ref": "#/$defs/TestModelConfiguration"}],
+                "title": "Configuration",
+            },
+        },
+        "required": ["status", "configuration"],
+        "title": "TestModel",
+        "type": "object",
+    }
+
+
+def test_type_annotations_inherited():
+    class AParentModel(models.Model):
+        rank: Literal[0, 1] = models.PositiveIntegerField()  # type: ignore
+        status: Literal["todo", "wip", "done"] = models.CharField()  # type: ignore
+
+        class Meta:
+            app_label = "tests"
+
+    class AChildModel(AParentModel):
+        status: Literal["todo", "done"]  # Narrow type of parent field
+
+        class Meta:
+            app_label = "tests"
+
+    Schema = create_schema(AChildModel)
+
+    assert Schema.json_schema() == {
+        "properties": {
+            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+            "rank": {"enum": [0, 1], "title": "Rank", "type": "integer"},
+            "status": {"enum": ["todo", "done"], "title": "Status", "type": "string"},
+            "aparentmodel_ptr_id": {"title": "Aparentmodel Ptr", "type": "integer"},
+        },
+        "required": ["rank", "status", "aparentmodel_ptr_id"],
+        "title": "AChildModel",
+        "type": "object",
+    }
