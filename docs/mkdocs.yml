@@ -55,6 +55,7 @@ nav:
       - guides/authentication.md
       - guides/testing.md
       - guides/api-docs.md
+      - guides/caching.md
       - guides/errors.md
       - guides/urls.md
       - guides/async-support.md
