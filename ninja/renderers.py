@@ -23,3 +23,11 @@ class JSONRenderer(BaseRenderer):
 
     def render(self, request: HttpRequest, data: Any, *, response_status: int) -> Any:
         return json.dumps(data, cls=self.encoder_class, **self.json_dumps_params)
+
+
+class PlainTextRenderer(BaseRenderer):
+    media_type: str = "text/plain"
+    charset: str = "utf-8"
+
+    def render(self, request: HttpRequest, data: Any, *, response_status: int) -> Any:
+        return str(data)
