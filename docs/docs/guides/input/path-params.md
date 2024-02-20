@@ -85,7 +85,7 @@ Django's `path` converter allows you to handle path-like parameters:
 ```python hl_lines="1"
 @api.get('/dir/{path:value}')
 def someview(request, value: str):
-       return value
+    return value
 ```
 you can query this operation with `/dir/some/path/with-slashes` and your `value` will be equal to `some/path/with-slashes`
 
