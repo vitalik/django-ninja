@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING, Any, Callable, Dict, Iterator, List, Optional, Tuple
 
+from django.http import HttpRequest, HttpResponse
 from django.urls import URLPattern
 from django.urls import path as django_path
 
@@ -374,3 +375,33 @@ class Router:
             internal_routes.extend(inter_router.build_routers(_route))
 
         return [(prefix, self), *internal_routes]
+
+    def create_response(  # create_response is used to return data that is more expansive, like a status code.
+        self,
+        request: HttpRequest,
+        data: Any,
+        *,
+        status: Optional[
+            int
+        ] = 200,  # use a default value for status to prevent errors during "assert"
+        temporal_response: Optional[HttpResponse] = None,
+    ) -> HttpResponse:
+        # This should never happen, but just in case
+        if self.api is None:
+            raise NameError("Router is not attached to an API")
+
+        if temporal_response:
+            status = temporal_response.status_code
+        assert status
+
+        content = self.api.renderer.render(request, data, response_status=status)
+
+        if temporal_response:
+            response = temporal_response
+            response.content = content
+        else:
+            response = HttpResponse(
+                content, status=status, content_type=self.api.get_content_type()
+            )
+
+        return response

@@ -125,6 +125,26 @@ Now, include `api` to your urls as usual and open your browser at `/api/docs`, a
 
 ![Swagger UI Simple Routers](../img/simple-routers-swagger.png)
 
+## Router response
+Routers can output response like the main `NinjaAPI` class using `return` statements:
+```python
+@router.get('/')
+def users_only(request):
+    if not request.auth.is_authenticated():
+        return "YOU SHALL NOT PASS!"
+    ...
+```
+If a scenario where more advanced responses must be crafted, or responses with a different HTTP code must be returned, 
+the `create_response` method can be used.
+```python
+@router.get('/')
+def users_only(request):
+    if not request.auth.is_authenticated():
+        return router.create_response(request, "YOU SHALL NOT PASS!", status=401)
+    ...
+```
+If a status code is not provided, it will default to 200. Note this is different from previous behavior, where the code would not function without the definition of status.
+
 
 ## Router authentication
 

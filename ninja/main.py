@@ -420,7 +420,7 @@ class NinjaAPI:
         request: HttpRequest,
         data: Any,
         *,
-        status: Optional[int] = None,
+        status: Optional[int] = 200,
         temporal_response: Optional[HttpResponse] = None,
     ) -> HttpResponse:
         if temporal_response:
