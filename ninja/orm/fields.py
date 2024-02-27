@@ -71,6 +71,7 @@ TYPES = {
     "CIEmailField": str,
     "CITextField": str,
     "HStoreField": Dict,
+    "VectorField": List,
 }
 
 TModel = TypeVar("TModel")
