@@ -101,8 +101,6 @@ class ModelSchemaMetaclass(ResolverMetaclass):
                 # cls.__fields__ = {}  # forcing pydantic recreate
                 # # assert False, "!! cls.model_fields"
 
-                # print(config.model, name, fields, exclude, "!!")
-
                 model_schema = create_schema(
                     meta_conf.model,
                     name=name,

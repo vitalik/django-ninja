@@ -210,6 +210,10 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
         if cls.model_config.get("extra") == "forbid":
             handler(values)
 
+        if cls.model_config.get("extra") == "allow" and isinstance(values, (dict, list)):
+            # Extra values only work with python dictionary or list, DjangoGetter applies more strict validation
+            return handler(values)
+
         values = DjangoGetter(values, cls, info.context)
         return handler(values)
 

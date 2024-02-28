@@ -91,7 +91,6 @@ def test_inheritance_responses(path, expected_status, expected_response):
 
 def test_tags():
     schema = api.get_openapi_schema()
-    # print(schema)
     glob = schema["paths"]["/api/first/endpoint_1"]["get"]
     assert glob["tags"] == ["global"]
 
