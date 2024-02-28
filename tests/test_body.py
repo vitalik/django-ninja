@@ -1,4 +1,4 @@
-from pydantic import field_validator
+from pydantic import ConfigDict, field_validator
 
 from ninja import Body, Form, NinjaAPI, Schema
 from ninja.testing import TestClient
@@ -35,6 +35,22 @@ def create_user(request, payload: UserIn):
     return payload.dict()
 
 
+# Test extra post body keys
+class ExtraIn(Schema):
+    name: str
+
+    class Config(Schema.Config):
+        extra = "allow"
+
+
+@api.post("/extra")
+def extra_params(request, payload: ExtraIn):
+    """
+    Test that a Schema with model_config.extra = "allow" will allow keys not defined in schema
+    """
+    return payload
+
+
 client = TestClient(api)
 
 
@@ -46,8 +62,6 @@ def test_body():
 
 
 def test_body_form():
-    data = client.post("/task2", POST={"start": "1", "end": "2"}).json()
-    print(data)
     assert client.post("/task2", POST={"start": "1", "end": "2"}).json() == [1, 2]
     assert client.post("/task2").json() == [2, 1]
 
@@ -66,3 +80,12 @@ def test_body_validation_error():
             "ctx": {"error": "invalid email"},
         }
     ]
+
+
+def test_body_post_extra():
+    """
+    Payload will contain extra value "age"
+    The Schema only defines one key of "name"
+    Since we used model_config.extra = "allow", there will be a response with "age"
+    """
+    assert client.post("/extra", json={"name": "test", "age": 100}).json() == {"name": "test", "age": 100}
