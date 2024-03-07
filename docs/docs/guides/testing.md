@@ -26,7 +26,7 @@ from ninja.testing import TestClient
 
 class HelloTest(TestCase):
     def test_hello(self):
-        client = NinjaTestClient(router)
+        client = TestClient(router)
         response = client.get("/hello")
         
         self.assertEqual(response.status_code, 200)
@@ -37,7 +37,7 @@ Arbitrary attributes can be added to the request object by passing keyword argum
 ```python
 class HelloTest(TestCase):
     def test_hello(self):
-        client = NinjaTestClient(router)
+        client = TestClient(router)
         # request.company_id will now be set within the view
         response = client.get("/hello", company_id=1)
 ```
