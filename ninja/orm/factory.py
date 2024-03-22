@@ -6,7 +6,7 @@ from django.db.models import ManyToManyRel, ManyToOneRel, Model
 from pydantic import create_model as create_pydantic_model
 
 from ninja.errors import ConfigError
-from ninja.orm.fields import get_schema_field
+from ninja.orm.fields import get_schema_field, get_field_property_accessors
 from ninja.schema import Schema
 
 # MAYBE:
@@ -62,12 +62,12 @@ class SchemaFactory:
 
         definitions = {}
         for fld in model_fields_list:
-            python_type, field_info = get_schema_field(
+            field_name, python_type, field_info = get_schema_field(
                 fld,
                 depth=depth,
                 optional=optional_fields and (fld.name in optional_fields),
             )
-            definitions[fld.name] = (python_type, field_info)
+            definitions[field_name] = (python_type, field_info)
 
         if custom_fields:
             for fld_name, python_type, field_info in custom_fields:
@@ -96,6 +96,12 @@ class SchemaFactory:
         # **field_definitions: Any,
         self.schemas[key] = schema
         self.schema_names.add(name)
+
+        for fld in model_fields_list:
+            if fld.is_relation:
+                field_name, prop = get_field_property_accessors(fld)
+                setattr(schema, field_name, prop)
+
         return schema
 
     def get_key(
