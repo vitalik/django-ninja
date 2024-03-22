@@ -97,10 +97,11 @@ class SchemaFactory:
         self.schemas[key] = schema
         self.schema_names.add(name)
 
-        for fld in model_fields_list:
-            if fld.is_relation:
-                field_name, prop = get_field_property_accessors(fld)
-                setattr(schema, field_name, prop)
+        if depth == 0:
+            for fld in model_fields_list:
+                if fld.is_relation:
+                    field_name, prop = get_field_property_accessors(fld)
+                    setattr(schema, field_name, prop)
 
         return schema
 
