@@ -1,11 +1,22 @@
 import datetime
 from decimal import Decimal
-from typing import Any, Callable, Dict, List, Tuple, Type, TypeVar, Union, no_type_check
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+    no_type_check,
+)
 from uuid import UUID
 
 from django.db.models import ManyToManyField
 from django.db.models.fields import Field as DjangoField
-from pydantic import IPvAnyAddress
+from pydantic import BaseModel, IPvAnyAddress
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined, core_schema
 
@@ -115,8 +126,8 @@ def create_m2m_link_type(type_: Type[TModel]) -> Type[TModel]:
 
 @no_type_check
 def get_schema_field(
-        field: DjangoField, *, depth: int = 0, optional: bool = False
-) -> Tuple:
+    field: DjangoField, *, depth: int = 0, optional: bool = False
+) -> Tuple[str, Type, FieldInfo]:
     "Returns pydantic field from django's model field"
     name = field.name
     alias = None
@@ -201,7 +212,9 @@ def get_schema_field(
 
 
 @no_type_check
-def get_related_field_schema(field: DjangoField, *, depth: int) -> Tuple[OpenAPISchema, FieldInfo]:
+def get_related_field_schema(
+    field: DjangoField, *, depth: int
+) -> Tuple[OpenAPISchema, FieldInfo]:
     from ninja.orm import create_schema
 
     model = field.related_model
@@ -222,15 +235,16 @@ def get_related_field_schema(field: DjangoField, *, depth: int) -> Tuple[OpenAPI
     )
 
 
-@no_type_check
-def get_field_property_accessors(field: DjangoField):
-    attribute_name = getattr(field, "get_attname", None) and field.get_attname()
-    property_name = field.name
+def get_field_property_accessors(field: DjangoField) -> Tuple[str, property]:
+    attribute_name = cast(
+        str, getattr(field, "get_attname", None) and field.get_attname()
+    )
+    property_name: str = field.name
 
-    def getter(self):
-        getattr(self, attribute_name)
+    def getter(self: BaseModel) -> Any:
+        return getattr(self, attribute_name)
 
-    def setter(self, value):
+    def setter(self: BaseModel, value: Any) -> None:
         setattr(self, attribute_name, value)
 
     return property_name, property(getter, setter)
