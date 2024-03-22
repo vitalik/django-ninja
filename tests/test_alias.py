@@ -103,7 +103,9 @@ def test_alias_foreignkey_property():
             app_label = "tests"
 
     class BookSchema(ModelSchema):
-        model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+        class Config(Schema.Config):
+            alias_generator = to_camel
+            populate_by_name = True
 
         class Meta:
             model = Book
@@ -115,3 +117,4 @@ def test_alias_foreignkey_property():
 
     schema_test.author = 2
     assert schema_test.author == 2
+    assert schema_test.author_id == 2
