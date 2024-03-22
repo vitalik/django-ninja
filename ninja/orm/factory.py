@@ -6,7 +6,7 @@ from django.db.models import ManyToManyRel, ManyToOneRel, Model
 from pydantic import create_model as create_pydantic_model
 
 from ninja.errors import ConfigError
-from ninja.orm.fields import get_schema_field, get_field_property_accessors
+from ninja.orm.fields import get_field_property_accessors, get_schema_field
 from ninja.schema import Schema
 
 # MAYBE:

@@ -115,7 +115,7 @@ def create_m2m_link_type(type_: Type[TModel]) -> Type[TModel]:
 
 @no_type_check
 def get_schema_field(
-    field: DjangoField, *, depth: int = 0, optional: bool = False
+        field: DjangoField, *, depth: int = 0, optional: bool = False
 ) -> Tuple:
     "Returns pydantic field from django's model field"
     name = field.name
@@ -226,6 +226,11 @@ def get_related_field_schema(field: DjangoField, *, depth: int) -> Tuple[OpenAPI
 def get_field_property_accessors(field: DjangoField):
     attribute_name = getattr(field, "get_attname", None) and field.get_attname()
     property_name = field.name
-    fget = lambda self: getattr(self, attribute_name)
-    fset = lambda self, value: setattr(self, attribute_name, value)
-    return property_name, property(fget, fset)
+
+    def getter(self):
+        getattr(self, attribute_name)
+
+    def setter(self, value):
+        setattr(self, attribute_name, value)
+
+    return property_name, property(getter, setter)
