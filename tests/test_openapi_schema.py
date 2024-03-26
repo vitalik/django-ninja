@@ -5,6 +5,7 @@ from unittest.mock import Mock
 import pytest
 from django.contrib.admin.views.decorators import staff_member_required
 from django.test import Client, override_settings
+from pydantic import ConfigDict
 
 from ninja import Body, Field, File, Form, NinjaAPI, Query, Schema, UploadedFile
 from ninja.openapi.urls import get_openapi_urls
@@ -35,9 +36,7 @@ class Response(Schema):
     i: int
     f: float = Field(..., title="f title", description="f desc")
 
-    class Config(Schema.Config):
-        alias_generator = to_camel
-        populate_by_name = True
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
 @api.post("/test", response=Response)

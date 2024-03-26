@@ -2,6 +2,7 @@ from typing import Any, TypeVar, cast
 
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Q, QuerySet
+from pydantic import ConfigDict
 from pydantic.fields import FieldInfo
 from typing_extensions import Literal
 
@@ -31,11 +32,12 @@ class FilterSchema(Schema):
 
     # Config = FilterConfig
 
-    class Config(Schema.Config):
-        ignore_none: bool = DEFAULT_IGNORE_NONE
-        expression_connector: ExpressionConnector = cast(
+    model_config = ConfigDict(
+        ignore_none=DEFAULT_IGNORE_NONE,
+        expression_connector=cast(
             ExpressionConnector, DEFAULT_CLASS_LEVEL_EXPRESSION_CONNECTOR
-        )
+        ),
+    )
 
     def custom_expression(self) -> Q:
         """

@@ -1,5 +1,6 @@
 import pytest
 from django.db import models
+from pydantic import ConfigDict
 
 from ninja import ModelSchema
 from ninja.errors import ConfigError
@@ -14,9 +15,7 @@ def test_simple():
             app_label = "tests"
 
     class SampleSchema(ModelSchema):
-        class Config:
-            model = User
-            model_fields = ["firstname", "lastname"]
+        model_config = ConfigDict(model=User, model_fields=["firstname", "lastname"])
 
         def hello(self):
             return f"Hello({self.firstname})"

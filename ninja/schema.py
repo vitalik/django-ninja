@@ -197,8 +197,7 @@ class NinjaGenerateJsonSchema(GenerateJsonSchema):
 
 
 class Schema(BaseModel, metaclass=ResolverMetaclass):
-    class Config:
-        from_attributes = True  # aka orm_mode
+    model_config = pydantic.ConfigDict(from_attributes=True)
 
     @model_validator(mode="wrap")
     @classmethod
