@@ -53,7 +53,7 @@ Alternatively, manually check your code with:
 
 ```
 ruff format --check ninja tests
-ruff ninja tests
+ruff check ninja tests
 mypy ninja
 ```
 
@@ -67,7 +67,7 @@ Or reformat your code with:
 
 ```
 ruff format ninja tests
-ruff ninja tests --fix
+ruff check ninja tests --fix
 ```
 
 or using Makefile:
