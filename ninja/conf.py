@@ -2,6 +2,7 @@ from math import inf
 
 from django.conf import settings as django_settings
 from pydantic import BaseModel, Field
+from pydantic.json_schema import JsonSchemaMode
 
 
 class Settings(BaseModel):
@@ -20,6 +21,8 @@ class Settings(BaseModel):
         NINJA_SCHEMA_GENERATOR_CLASS (str):
             The schema generation class to use. Defaults to
             `ninja.schema.NinjaGenerateJsonSchema`.
+        NINJA_SCHEMA_MODE (str):
+            The schema mode to use. Defaults to `serialization`.
     """
 
     PAGINATION_CLASS: str = Field(
@@ -30,6 +33,9 @@ class Settings(BaseModel):
 
     SCHEMA_GENERATOR_CLASS: str = Field(
         "ninja.schema.NinjaGenerateJsonSchema", alias="NINJA_SCHEMA_GENERATOR_CLASS"
+    )
+    SCHEMA_MODE: JsonSchemaMode = Field(
+        "serialization", alias="NINJA_SCHEMA_MODE"
     )
 
     class Config:
