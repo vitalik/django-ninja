@@ -26,11 +26,15 @@ def title_if_lower(s: str) -> str:
 
 class AnyObject:
     @classmethod
-    def __get_pydantic_core_schema__(cls, source: Any, handler: Callable) -> Any:
+    def __get_pydantic_core_schema__(
+        cls, source: Any, handler: Callable[..., Any]
+    ) -> Any:
         return core_schema.with_info_plain_validator_function(cls.validate)
 
     @classmethod
-    def __get_pydantic_json_schema__(cls, schema: Any, handler: Callable) -> DictStrAny:
+    def __get_pydantic_json_schema__(
+        cls, schema: Any, handler: Callable[..., Any]
+    ) -> DictStrAny:
         return {"type": "object"}
 
     @classmethod

@@ -44,20 +44,22 @@ def is_debug_server() -> bool:
     )
 
 
-def is_async_callable(f: Callable) -> bool:
+def is_async_callable(f: Callable[..., Any]) -> bool:
     return inspect.iscoroutinefunction(f) or inspect.iscoroutinefunction(
         getattr(f, "__call__", None)
     )
 
 
-def contribute_operation_callback(func: Callable, callback: Callable) -> None:
+def contribute_operation_callback(
+    func: Callable[..., Any], callback: Callable[..., Any]
+) -> None:
     if not hasattr(func, "_ninja_contribute_to_operation"):
         func._ninja_contribute_to_operation = []  # type: ignore
     func._ninja_contribute_to_operation.append(callback)  # type: ignore
 
 
 def contribute_operation_args(
-    func: Callable, arg_name: str, arg_type: Type, arg_source: Any
+    func: Callable[..., Any], arg_name: str, arg_type: Type, arg_source: Any
 ) -> None:
     if not hasattr(func, "_ninja_contribute_args"):
         func._ninja_contribute_args = []  # type: ignore

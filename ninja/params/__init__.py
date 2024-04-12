@@ -25,7 +25,7 @@ __all__ = [
 
 
 class ParamShortcut:
-    def __init__(self, base_func: Callable) -> None:
+    def __init__(self, base_func: Callable[..., Any]) -> None:
         self._base_func = base_func
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:

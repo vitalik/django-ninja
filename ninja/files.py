@@ -8,7 +8,9 @@ __all__ = ["UploadedFile"]
 
 class UploadedFile(DjangoUploadedFile):
     @classmethod
-    def __get_pydantic_json_schema__(cls, core_schema: Any, handler: Callable) -> Dict:
+    def __get_pydantic_json_schema__(
+        cls, core_schema: Any, handler: Callable[..., Any]
+    ) -> Dict:
         # calling handler(core_schema) here raises an exception
         json_schema: Dict[str, str] = {}
         json_schema.update(type="string", format="binary")
@@ -21,5 +23,7 @@ class UploadedFile(DjangoUploadedFile):
         return v
 
     @classmethod
-    def __get_pydantic_core_schema__(cls, source: Any, handler: Callable) -> Any:
+    def __get_pydantic_core_schema__(
+        cls, source: Any, handler: Callable[..., Any]
+    ) -> Any:
         return core_schema.with_info_plain_validator_function(cls._validate)
