@@ -99,3 +99,6 @@ branch = true
 fail_under = 100
 skip_covered = true
 show_missing = true
+exclude_also = [
+    "@(typing\\.)?overload",
+]
