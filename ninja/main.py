@@ -11,6 +11,7 @@ from typing import (
     Tuple,
     Type,
     Union,
+    TypeVar,
 )
 
 from django.http import HttpRequest, HttpResponse
@@ -34,8 +35,9 @@ if TYPE_CHECKING:
 
 __all__ = ["NinjaAPI"]
 
-Exc = Union[Exception, Type[Exception]]
-ExcHandler = Callable[[HttpRequest, Exc], HttpResponse]
+_E = TypeVar("_E", bound=Exception)
+Exc = Union[_E, Type[_E]]
+ExcHandler = Callable[[HttpRequest, _E], HttpResponse]
 
 
 class NinjaAPI:
@@ -468,7 +470,7 @@ class NinjaAPI:
         return operation.view_func.__name__
 
     def add_exception_handler(
-        self, exc_class: Type[Exception], handler: ExcHandler
+        self, exc_class: Type[_E], handler: ExcHandler[_E]
     ) -> None:
         assert issubclass(exc_class, Exception)
         self._exception_handlers[exc_class] = handler
@@ -483,13 +485,13 @@ class NinjaAPI:
     def set_default_exception_handlers(self) -> None:
         set_default_exc_handlers(self)
 
-    def on_exception(self, request: HttpRequest, exc: Exc) -> HttpResponse:
+    def on_exception(self, request: HttpRequest, exc: Exc[_E]) -> HttpResponse:
         handler = self._lookup_exception_handler(exc)
         if handler is None:
             raise exc
         return handler(request, exc)
 
-    def _lookup_exception_handler(self, exc: Exc) -> Optional[ExcHandler]:
+    def _lookup_exception_handler(self, exc: Exc[_E]) -> Optional[ExcHandler[_E]]:
         for cls in type(exc).__mro__:
             if cls in self._exception_handlers:
                 return self._exception_handlers[cls]
