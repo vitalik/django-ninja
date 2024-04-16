@@ -37,7 +37,7 @@ __all__ = ["NinjaAPI"]
 
 _E = TypeVar("_E", bound=Exception)
 Exc = Union[_E, Type[_E]]
-ExcHandler = Callable[[HttpRequest, _E], HttpResponse]
+ExcHandler = Callable[[HttpRequest, Exc[_E]], HttpResponse]
 
 
 class NinjaAPI:
