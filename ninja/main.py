@@ -10,8 +10,8 @@ from typing import (
     Sequence,
     Tuple,
     Type,
-    Union,
     TypeVar,
+    Union,
 )
 
 from django.http import HttpRequest, HttpResponse
