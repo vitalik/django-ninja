@@ -1,6 +1,7 @@
 import inspect
 from abc import ABC, abstractmethod
 from functools import partial, wraps
+from math import inf
 from typing import Any, Callable, List, Optional, Tuple, Type
 
 from django.db.models import QuerySet
@@ -55,7 +56,13 @@ class PaginationBase(ABC):
 
 class LimitOffsetPagination(PaginationBase):
     class Input(Schema):
-        limit: int = Field(settings.PAGINATION_PER_PAGE, ge=1)
+        limit: int = Field(
+            settings.PAGINATION_PER_PAGE,
+            ge=1,
+            le=settings.PAGINATION_MAX_LIMIT
+            if settings.PAGINATION_MAX_LIMIT != inf
+            else None,
+        )
         offset: int = Field(0, ge=0)
 
     def paginate_queryset(
