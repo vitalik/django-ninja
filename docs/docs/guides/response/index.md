@@ -20,7 +20,6 @@ def create_user(request, data: UserIn):
     user.set_password(data.password)
     user.save()
     # ... return ?
-
 ```
 
 Now let's define the output schema, and pass it as a `response` argument to the `@api.post` decorator:
@@ -48,12 +47,11 @@ def create_user(request, data: UserIn):
 
 **Django Ninja** will use this `response` schema to:
 
- - convert the output data to declared schema
- - validate the data
- - add an OpenAPI schema definition
- - it will be used by the automatic documentation systems
- - and, most importantly, it **will limit the output data** only to the fields only defined in the schema.
-
+- convert the output data to declared schema
+- validate the data
+- add an OpenAPI schema definition
+- it will be used by the automatic documentation systems
+- and, most importantly, it **will limit the output data** only to the fields only defined in the schema.
 
 ## Nested objects
 
@@ -61,7 +59,7 @@ There is also often a need to return responses with some nested/child objects.
 
 Imagine we have a `Task` Django model with a `User` ForeignKey:
 
-```python  hl_lines="6"
+```python hl_lines="6"
 from django.db import models
 
 class Task(models.Model):
@@ -72,7 +70,7 @@ class Task(models.Model):
 
 Now let's output all tasks, and for each task, output some fields about the user.
 
-```python  hl_lines="13 16"
+```python hl_lines="13 16"
 from typing import List
 from ninja import Schema
 
@@ -96,10 +94,10 @@ def tasks(request):
 
 If you execute this operation, you should get a response like this:
 
-```JSON  hl_lines="6 7 8 9 16"
+```JSON hl_lines="6 7 8 9 16"
 [
     {
-        "id": 1, 
+        "id": 1,
         "title": "Task 1",
         "is_completed": false,
         "owner": {
@@ -109,14 +107,13 @@ If you execute this operation, you should get a response like this:
         }
     },
     {
-        "id": 2, 
+        "id": 2,
         "title": "Task 2",
         "is_completed": false,
         "owner": null
     },
 ]
 ```
-
 
 ## Aliases
 
@@ -194,7 +191,6 @@ class Data(Schema):
     def resolve_path(obj, context):
         request = context["request"]
         return request.path
-
 ```
 
 if you use this schema for incoming requests - the `request` object will be automatically passed to context.
@@ -229,7 +225,6 @@ def tasks(request):
 
     See the [async support](../async-support.md#using-orm) guide for more information.
 
-
 ## FileField and ImageField
 
 **Django Ninja** by default converts files and images (declared with `FileField` or `ImageField`) to `string` URL's.
@@ -243,6 +238,7 @@ class Picture(models.Model):
 ```
 
 If you need to output to response image field, declare a schema for it as follows:
+
 ```python hl_lines="3"
 class PictureSchema(Schema):
     title: str
@@ -250,6 +246,7 @@ class PictureSchema(Schema):
 ```
 
 Once you output this to a response, the URL will be automatically generated for each object:
+
 ```JSON
 {
     "title": "Zebra",
@@ -259,25 +256,22 @@ Once you output this to a response, the URL will be automatically generated for 
 
 ## Multiple Response Schemas
 
-
 Sometimes you need to define more than response schemas.
 In case of authentication, for example, you can return:
 
- - **200** successful -> token
- - **401** -> Unauthorized
- - **402** -> Payment required
- - etc..
+- **200** successful -> token
+- **401** -> Unauthorized
+- **402** -> Payment required
+- etc..
 
 In fact, the [OpenAPI specification](https://swagger.io/docs/specification/describing-responses/) allows you to pass multiple response schemas.
 
-
 You can pass to a `response` argument a dictionary where:
 
- - key is a response code
- - value is a schema for that code
+- key is a response code
+- value is a schema for that code
 
 Also, when you return the result - you have to also pass a status code to tell **Django Ninja** which schema should be used for validation and serialization.
-
 
 An example:
 
@@ -337,15 +331,16 @@ You can also create your own range using a `frozenset`:
 
 ```python
 my_codes = frozenset({416, 418, 425, 429, 451})
-...
-@api.post('/login', response={200: Token, my_codes: Message})
-...
-```
 
+@api.post('/login', response={200: Token, my_codes: Message})
+def login(request, payload: Auth):
+    ...
+```
 
 ## Empty responses
 
-Some responses, such as `204 No Content`, have no body. To indicate the response body is empty mark `response` argument with `None` instead of Schema:
+Some responses, such as [204 No Content](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/204), have no body.
+To indicate the response body is empty mark `response` argument with `None` instead of Schema:
 
 ```python hl_lines="1 3"
 @api.post("/no_content", response={204: None})
@@ -353,6 +348,9 @@ def no_content(request):
     return 204, None
 ```
 
+## Error responses
+
+Check [Handling errors](../errors.md) for more information.
 
 ## Self-referencing schemes
 
@@ -360,8 +358,8 @@ Sometimes you need to create a schema that has reference to itself, or tree-stru
 
 To do that you need:
 
- - set a type of your schema in quotes
- - use `update_forward_refs` method to apply self referencing types
+- set a type of your schema in quotes
+- use `update_forward_refs` method to apply self referencing types
 
 ```python hl_lines="3 6"
 class Organization(Schema):
@@ -380,13 +378,13 @@ def list_organizations(request):
 ## Self-referencing schemes from `create_schema()`
 
 To be able to use the method `update_forward_refs()` from a schema generated via `create_schema()`,
-the "name" of the class needs to be in our namespace.  In this case it is very important to pass
+the "name" of the class needs to be in our namespace. In this case it is very important to pass
 the `name` parameter to `create_schema()`
 
 ```python hl_lines="3"
 UserSchema = create_schema(
     User,
-    name='UserSchema',  # !!! this is important for update_forward_refs()  
+    name='UserSchema',  # !!! this is important for update_forward_refs()
     fields=['id', 'username']
     custom_fields=[
         ('manager', 'UserSchema', None),
@@ -455,6 +453,4 @@ def result_django(request):
 @api.get("/something")
 def some_redirect(request):
     return redirect("/some-path")  # !!!!
-
-
 ```
