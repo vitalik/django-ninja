@@ -5,8 +5,9 @@ from django.shortcuts import get_object_or_404
 from pydantic import BaseModel
 
 from ninja import Router
+from ninja.pagination import CursorPagination, paginate
 
-from .models import Event
+from .models import Category, Event
 
 router = Router()
 
@@ -18,6 +19,19 @@ class EventSchema(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class CategorySchema(BaseModel):
+    title: str
+
+    class Config:
+        from_attributes = True
+
+
+@router.get("/categories", response=List[CategorySchema])
+@paginate(CursorPagination)
+def list_categories(request):
+    return Category.objects.order_by("title")
 
 
 @router.post("/create", url_name="event-create-url-name")
