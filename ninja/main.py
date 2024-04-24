@@ -6,6 +6,7 @@ from typing import (
     Callable,
     Dict,
     List,
+    NoReturn,
     Optional,
     Sequence,
     Tuple,
@@ -35,7 +36,9 @@ if TYPE_CHECKING:
 __all__ = ["NinjaAPI"]
 
 Exc = Union[Exception, Type[Exception]]
-ExcHandler = Callable[[HttpRequest, Exc], HttpResponse]
+ExcHandler = Union[
+    Callable[[HttpRequest, Exc], HttpResponse], Callable[[HttpRequest, Exc], NoReturn]
+]
 
 
 class NinjaAPI:
