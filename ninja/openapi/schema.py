@@ -4,6 +4,8 @@ import warnings
 from http.client import responses
 from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Set, Tuple
 
+from pydantic.json_schema import JsonSchemaMode
+
 from ninja.constants import NOT_SET
 from ninja.operation import Operation
 from ninja.params.models import TModel, TModels
@@ -212,7 +214,7 @@ class OpenAPISchema(dict):
         if hasattr(model, "__ninja_flatten_map__"):
             schema = self._flatten_schema(model)
         else:
-            mode = "validation"
+            mode: JsonSchemaMode = "validation"
             if is_response:
                 mode = "serialization"
             schema = model.model_json_schema(
