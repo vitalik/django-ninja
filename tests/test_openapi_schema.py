@@ -19,6 +19,7 @@ class Payload(Schema):
     f: float
     i_default: int = Field(1)
 
+
 class TypeA(Schema):
     a: str
 
