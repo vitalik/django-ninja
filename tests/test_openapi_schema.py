@@ -4,20 +4,9 @@ from unittest.mock import Mock
 
 import pytest
 from django.contrib.admin.views.decorators import staff_member_required
-from django.db import models
 from django.test import Client, override_settings
 
-from ninja import (
-    Body,
-    Field,
-    File,
-    Form,
-    ModelSchema,
-    NinjaAPI,
-    Query,
-    Schema,
-    UploadedFile,
-)
+from ninja import Body, Field, File, Form, NinjaAPI, Query, Schema, UploadedFile
 from ninja.openapi.urls import get_openapi_urls
 from ninja.pagination import PaginationBase, paginate
 from ninja.renderers import JSONRenderer
@@ -25,26 +14,10 @@ from ninja.renderers import JSONRenderer
 api = NinjaAPI()
 
 
-class XXXModel(models.Model):
-    test_default = models.IntegerField(default=1)
-
-    class Meta:
-        app_label = "tests"
-
-
-def to_camel(string: str) -> str:
-    return "".join(word.capitalize() for word in string.split("_"))
-
-
-class Payload(ModelSchema):
+class Payload(Schema):
     i: int
     f: float
-
-    class Meta(Schema.Config):
-        model = XXXModel
-        fields = ["test_default"]
-        alias_generator = to_camel
-
+    i_default: int = Field(1)
 
 class TypeA(Schema):
     a: str
@@ -54,14 +27,18 @@ class TypeB(Schema):
     b: str
 
 
-class Response(ModelSchema):
+def to_camel(string: str) -> str:
+    return "".join(word.capitalize() for word in string.split("_"))
+
+
+class Response(Schema):
     i: int
     f: float = Field(..., title="f title", description="f desc")
+    i_default: int = Field(1)
 
-    class Meta(Schema.Config):
-        model = XXXModel
-        fields = ["test_default"]
+    class Config(Schema.Config):
         alias_generator = to_camel
+        populate_by_name = True
 
 
 @api.post("/test", response=Response)
@@ -232,13 +209,13 @@ def test_schema(schema):
             "properties": {
                 "i": {"title": "I", "type": "integer"},
                 "f": {"description": "f desc", "title": "f title", "type": "number"},
-                "test_default": {
+                "i_default": {
                     "default": 1,
-                    "title": "Test Default",
+                    "title": "I Default",
                     "type": "integer",
                 },
             },
-            "required": ["i", "f", "test_default"],
+            "required": ["i", "f", "i_default"],
         },
         "Payload": {
             "title": "Payload",
@@ -246,9 +223,9 @@ def test_schema(schema):
             "properties": {
                 "i": {"title": "I", "type": "integer"},
                 "f": {"title": "F", "type": "number"},
-                "test_default": {
+                "i_default": {
                     "default": 1,
-                    "title": "Test Default",
+                    "title": "I Default",
                     "type": "integer",
                 },
             },
@@ -352,9 +329,9 @@ def test_schema_list(schema):
             "properties": {
                 "f": {"title": "F", "type": "number"},
                 "i": {"title": "I", "type": "integer"},
-                "test_default": {
+                "i_default": {
                     "default": 1,
-                    "title": "Test Default",
+                    "title": "I Default",
                     "type": "integer",
                 },
             },
@@ -382,13 +359,13 @@ def test_schema_list(schema):
             "properties": {
                 "f": {"description": "f desc", "title": "f title", "type": "number"},
                 "i": {"title": "I", "type": "integer"},
-                "test_default": {
+                "i_default": {
                     "default": 1,
-                    "title": "Test Default",
+                    "title": "I Default",
                     "type": "integer",
                 },
             },
-            "required": ["i", "f", "test_default"],
+            "required": ["i", "f", "i_default"],
             "title": "Response",
             "type": "object",
         },
@@ -491,9 +468,9 @@ def test_schema_form(schema):
                     "properties": {
                         "i": {"title": "I", "type": "integer"},
                         "f": {"title": "F", "type": "number"},
-                        "test_default": {
+                        "i_default": {
                             "default": 1,
-                            "title": "Test Default",
+                            "title": "I Default",
                             "type": "integer",
                         },
                     },
@@ -588,9 +565,9 @@ def test_schema_form_file(schema):
                         },
                         "i": {"title": "I", "type": "integer"},
                         "f": {"title": "F", "type": "number"},
-                        "test_default": {
+                        "i_default": {
                             "default": 1,
-                            "title": "Test Default",
+                            "title": "I Default",
                             "type": "integer",
                         },
                     },
