@@ -53,6 +53,7 @@ nav:
           - guides/response/response-renderers.md
       - Splitting your API with Routers: guides/routers.md
       - guides/authentication.md
+      - guides/testing.md
       - guides/api-docs.md
       - guides/errors.md
       - guides/urls.md
@@ -70,6 +71,7 @@ nav:
       - Intro: proposals/index.md
       - proposals/cbv.md
       - proposals/v1.md
+  - What's new in V1: whatsnew_v1.md
 markdown_extensions:
   - markdown_include.include
   - markdown.extensions.codehilite:

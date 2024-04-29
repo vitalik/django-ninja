@@ -1,6 +1,8 @@
+import importlib
 from typing import Any, List
 
 import pytest
+from django.test import override_settings
 
 from ninja import NinjaAPI, Schema
 from ninja.errors import ConfigError
@@ -321,6 +323,81 @@ def test_case9():
         "items": [5, 6, 7, 8, 9],
         "next": "http://testlocation/?skip=10",
         "prev": "http://testlocation/?skip=0",
+    }
+
+
+@override_settings(NINJA_PAGINATION_MAX_LIMIT=1000)
+def test_10_max_limit_set():
+    # reload to apply django settings
+    from ninja import conf, pagination
+
+    importlib.reload(conf)
+    importlib.reload(pagination)
+    new_api = NinjaAPI()
+    new_client = TestClient(new_api)
+
+    @new_api.get("/items_10", response=List[int])
+    @paginate  # LimitOffsetPagination is set as default
+    def items_10(request, **kwargs):
+        return ITEMS
+
+    response = new_client.get("/items_10?limit=1000").json()
+    assert response == {"items": ITEMS[:1000], "count": 100}
+
+    schema = new_api.get_openapi_schema()["paths"]["/api/items_10"]["get"]
+    # print(schema)
+    assert schema["parameters"] == [
+        {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+                "title": "Limit",
+                "default": 100,
+                "minimum": 1,
+                "maximum": 1000,
+                "type": "integer",
+            },
+            "required": False,
+        },
+        {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+                "title": "Offset",
+                "default": 0,
+                "minimum": 0,
+                "type": "integer",
+            },
+            "required": False,
+        },
+    ]
+
+
+@override_settings(NINJA_PAGINATION_MAX_LIMIT=1000)
+def test_11_max_limit_set_and_exceeded():
+    # reload to apply django settings
+    from ninja import conf, pagination
+
+    importlib.reload(conf)
+    importlib.reload(pagination)
+    new_api = NinjaAPI()
+    new_client = TestClient(new_api)
+
+    @new_api.get("/items_11", response=List[int])
+    @paginate  # LimitOffsetPagination is set as default
+    def items_11(request, **kwargs):
+        return ITEMS
+
+    response = new_client.get("/items_11?limit=1001").json()
+    assert response == {
+        "detail": [
+            {
+                "ctx": {"le": 1000},
+                "loc": ["query", "limit"],
+                "msg": "Input should be less than or equal to 1000",
+                "type": "less_than_equal",
+            }
+        ]
     }
 
 
