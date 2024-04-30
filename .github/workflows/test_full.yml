@@ -69,6 +69,6 @@ jobs:
       - name: Ruff format
         run: ruff format --check ninja tests
       - name: Ruff lint
-        run: ruff ninja tests
+        run: ruff check ninja tests
       - name: mypy
         run: mypy ninja tests/mypy_test.py
