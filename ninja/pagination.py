@@ -213,6 +213,7 @@ def _inject_pagination(
                     async for result in evaluate(result[paginator.items_attribute])
                 ]
             return result
+
     else:
 
         @wraps(func)

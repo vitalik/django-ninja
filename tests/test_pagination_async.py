@@ -54,12 +54,12 @@ class AsyncNoOutputPagination(AsyncPaginationBase):
         skip = pagination.skip
         return items[skip : skip + 5]
 
-    def _items_count(self, queryset: QuerySet) -> int:
+    async def _items_count(self, queryset: QuerySet) -> int:
         try:
             # forcing to find queryset.count instead of list.count:
             return queryset.all().count()
         except AttributeError:
-            asyncio.sleep(0)
+            await asyncio.sleep(0)
             return len(queryset)
 
 
@@ -99,7 +99,7 @@ async def test_async_default():
     @api.get("/items_default", response=List[int])
     @paginate  # WITHOUT brackets (should use default pagination)
     async def items_default(request, someparam: int = 0, **kwargs):
-        asyncio.sleep(0)
+        await asyncio.sleep(0)
         return ITEMS
 
     client = TestAsyncClient(api)
