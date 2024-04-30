@@ -45,10 +45,11 @@ class UserModel(BaseModel):
     user_name: str
     # skipping password output to responses
 
-    class Config:
-        from_attributes = True
-        alias_generator = to_camel
-        populate_by_name = True
+    model_config = dict(
+        from_attributes=True,
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
 
 
 @router.get("/check_model", response=UserModel)
