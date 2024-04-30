@@ -43,7 +43,7 @@ class ViewSignature:
     )
     response_arg: Optional[str] = None
 
-    def __init__(self, path: str, view_func: Callable) -> None:
+    def __init__(self, path: str, view_func: Callable[..., Any]) -> None:
         self.view_func = view_func
         self.signature = get_typed_signature(self.view_func)
         self.path = path
