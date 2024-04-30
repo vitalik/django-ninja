@@ -148,6 +148,10 @@ def paginate_queryset(self, queryset, pagination: Input, **params):
     request = params["request"]
 ```
 
+#### Async Pagination
+
+Standard **Django Ninja** pagination classes support async. If you wish to handle async requests with a custom pagination class, you should subclass `ninja.pagination.AsyncPaginationBase` and override the `apaginate_queryset(self, queryset, request, **params)` method.
+
 ### Output attribute
 
 By defult page items are placed to `'items'` attribute. To override this behaviour use `items_attribute`:

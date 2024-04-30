@@ -2,7 +2,7 @@ import inspect
 from abc import ABC, abstractmethod
 from functools import partial, wraps
 from math import inf
-from typing import Any, Callable, List, Optional, Tuple, Type
+from typing import Any, AsyncGenerator, Callable, List, Optional, Tuple, Type, Union
 
 from django.db.models import QuerySet
 from django.http import HttpRequest
@@ -15,7 +15,11 @@ from ninja.constants import NOT_SET
 from ninja.errors import ConfigError
 from ninja.operation import Operation
 from ninja.signature.details import is_collection_type
-from ninja.utils import contribute_operation_args, contribute_operation_callback
+from ninja.utils import (
+    contribute_operation_args,
+    contribute_operation_callback,
+    is_async_callable,
+)
 
 
 class PaginationBase(ABC):
@@ -54,7 +58,24 @@ class PaginationBase(ABC):
             return len(queryset)
 
 
-class LimitOffsetPagination(PaginationBase):
+class AsyncPaginationBase(PaginationBase):
+    @abstractmethod
+    async def apaginate_queryset(
+        self,
+        queryset: QuerySet,
+        pagination: Any,
+        **params: Any,
+    ) -> Any:
+        pass  # pragma: no cover
+
+    async def _aitems_count(self, queryset: QuerySet) -> int:
+        try:
+            return await queryset.all().acount()
+        except AttributeError:
+            return len(queryset)
+
+
+class LimitOffsetPagination(AsyncPaginationBase):
     class Input(Schema):
         limit: int = Field(
             settings.PAGINATION_PER_PAGE,
@@ -78,8 +99,21 @@ class LimitOffsetPagination(PaginationBase):
             "count": self._items_count(queryset),
         }  # noqa: E203
 
+    async def apaginate_queryset(
+        self,
+        queryset: QuerySet,
+        pagination: Input,
+        **params: Any,
+    ) -> Any:
+        offset = pagination.offset
+        limit: int = min(pagination.limit, settings.PAGINATION_MAX_LIMIT)
+        return {
+            "items": queryset[offset : offset + limit],
+            "count": await self._aitems_count(queryset),
+        }  # noqa: E203
 
-class PageNumberPagination(PaginationBase):
+
+class PageNumberPagination(AsyncPaginationBase):
     class Input(Schema):
         page: int = Field(1, ge=1)
 
@@ -101,6 +135,18 @@ class PageNumberPagination(PaginationBase):
             "count": self._items_count(queryset),
         }  # noqa: E203
 
+    async def apaginate_queryset(
+        self,
+        queryset: QuerySet,
+        pagination: Input,
+        **params: Any,
+    ) -> Any:
+        offset = (pagination.page - 1) * self.page_size
+        return {
+            "items": queryset[offset : offset + self.page_size],
+            "count": await self._aitems_count(queryset),
+        }  # noqa: E203
+
 
 def paginate(func_or_pgn_class: Any = NOT_SET, **paginator_params: Any) -> Callable:
     """
@@ -119,7 +165,9 @@ def paginate(func_or_pgn_class: Any = NOT_SET, **paginator_params: Any) -> Calla
     isfunction = inspect.isfunction(func_or_pgn_class)
     isnotset = func_or_pgn_class == NOT_SET
 
-    pagination_class: Type[PaginationBase] = import_string(settings.PAGINATION_CLASS)
+    pagination_class: Type[Union[PaginationBase, AsyncPaginationBase]] = import_string(
+        settings.PAGINATION_CLASS
+    )
 
     if isfunction:
         return _inject_pagination(func_or_pgn_class, pagination_class)
@@ -135,26 +183,55 @@ def paginate(func_or_pgn_class: Any = NOT_SET, **paginator_params: Any) -> Calla
 
 def _inject_pagination(
     func: Callable,
-    paginator_class: Type[PaginationBase],
+    paginator_class: Type[Union[PaginationBase, AsyncPaginationBase]],
     **paginator_params: Any,
 ) -> Callable:
-    paginator: PaginationBase = paginator_class(**paginator_params)
+    paginator = paginator_class(**paginator_params)
+    if is_async_callable(func):
+        if not hasattr(paginator, "apaginate_queryset"):
+            raise ConfigError("Pagination class not configured for async requests")
 
-    @wraps(func)
-    def view_with_pagination(request: HttpRequest, **kwargs: Any) -> Any:
-        pagination_params = kwargs.pop("ninja_pagination")
-        if paginator.pass_parameter:
-            kwargs[paginator.pass_parameter] = pagination_params
+        @wraps(func)
+        async def view_with_pagination(request: HttpRequest, **kwargs: Any) -> Any:
+            pagination_params = kwargs.pop("ninja_pagination")
+            if paginator.pass_parameter:
+                kwargs[paginator.pass_parameter] = pagination_params
 
-        items = func(request, **kwargs)
+            items = await func(request, **kwargs)
 
-        result = paginator.paginate_queryset(
-            items, pagination=pagination_params, request=request, **kwargs
-        )
-        if paginator.Output:  # type: ignore
-            result[paginator.items_attribute] = list(result[paginator.items_attribute])
-            # ^ forcing queryset evaluation #TODO: check why pydantic did not do it here
-        return result
+            result = await paginator.apaginate_queryset(
+                items, pagination=pagination_params, request=request, **kwargs
+            )
+
+            async def evaluate(results: Union[List, QuerySet]) -> AsyncGenerator:
+                for result in results:
+                    yield result
+
+            if paginator.Output:  # type: ignore
+                result[paginator.items_attribute] = [
+                    result
+                    async for result in evaluate(result[paginator.items_attribute])
+                ]
+            return result
+    else:
+
+        @wraps(func)
+        def view_with_pagination(request: HttpRequest, **kwargs: Any) -> Any:
+            pagination_params = kwargs.pop("ninja_pagination")
+            if paginator.pass_parameter:
+                kwargs[paginator.pass_parameter] = pagination_params
+
+            items = func(request, **kwargs)
+
+            result = paginator.paginate_queryset(
+                items, pagination=pagination_params, request=request, **kwargs
+            )
+            if paginator.Output:  # type: ignore
+                result[paginator.items_attribute] = list(
+                    result[paginator.items_attribute]
+                )
+                # ^ forcing queryset evaluation #TODO: check why pydantic did not do it here
+            return result
 
     contribute_operation_args(
         view_with_pagination,
