@@ -1,6 +1,17 @@
 import datetime
 from decimal import Decimal
-from typing import Any, Callable, Dict, List, Tuple, Type, TypeVar, Union, no_type_check
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    no_type_check,
+)
 from uuid import UUID
 
 from django.db.models import ManyToManyField
@@ -22,6 +33,18 @@ def title_if_lower(s: str) -> str:
     if s == s.lower():
         return s.title()
     return s
+
+
+class ModelField:
+    def __init__(
+        self, django_field: DjangoField, type_annotation: Optional[Any]
+    ) -> None:
+        self.django_field = django_field
+        self.type_annotation = type_annotation
+
+    @property
+    def name(self):
+        return self.django_field.name
 
 
 class AnyObject:
@@ -109,7 +132,7 @@ def create_m2m_link_type(type_: Type[TModel]) -> Type[TModel]:
 
 @no_type_check
 def get_schema_field(
-    field: DjangoField, *, depth: int = 0, optional: bool = False
+    field: ModelField, *, depth: int = 0, optional: bool = False
 ) -> Tuple:
     "Returns pydantic field from django's model field"
     alias = None
@@ -120,53 +143,61 @@ def get_schema_field(
     max_length = None
     python_type = None
 
-    if field.is_relation:
+    if field.django_field.is_relation:
         if depth > 0:
-            return get_related_field_schema(field, depth=depth)
+            return get_related_field_schema(field.django_field, depth=depth)
 
-        internal_type = field.related_model._meta.pk.get_internal_type()
+        internal_type = field.django_field.related_model._meta.pk.get_internal_type()
 
-        if not field.concrete and field.auto_created or field.null:
+        if (
+            not field.django_field.concrete
+            and field.django_field.auto_created
+            or field.django_field.null
+        ):
             default = None
 
-        alias = getattr(field, "get_attname", None) and field.get_attname()
+        alias = (
+            getattr(field.django_field, "get_attname", None)
+            and field.django_field.get_attname()
+        )
 
         pk_type = TYPES.get(internal_type, int)
-        if field.one_to_many or field.many_to_many:
+        if field.django_field.one_to_many or field.django_field.many_to_many:
             m2m_type = create_m2m_link_type(pk_type)
             python_type = List[m2m_type]  # type: ignore
         else:
             python_type = pk_type
 
     else:
-        _f_name, _f_path, _f_pos, field_options = field.deconstruct()
+        _f_name, _f_path, _f_pos, field_options = field.django_field.deconstruct()
         blank = field_options.get("blank", False)
         null = field_options.get("null", False)
         max_length = field_options.get("max_length")
 
-        internal_type = field.get_internal_type()
-        python_type = TYPES[internal_type]
+        if field.type_annotation and not isinstance(field.type_annotation, str):
+            python_type = field.type_annotation
+        else:
+            internal_type = field.django_field.get_internal_type()
+            python_type = TYPES[internal_type]
 
-        if field.has_default():
-            if callable(field.default):
-                default_factory = field.default
+        if field.django_field.has_default():
+            if callable(field.django_field.default):
+                default_factory = field.django_field.default
             else:
-                default = field.default
-        elif field.primary_key or blank or null:
+                default = field.django_field.default
+        elif field.django_field.primary_key or blank or null:
             default = None
 
     if default_factory:
         default = PydanticUndefined
-
-    if optional:
+    elif optional:
         default = None
 
     if default is None:
-        default = None
         python_type = Union[python_type, None]  # aka Optional in 3.7+
 
-    description = field.help_text or None
-    title = title_if_lower(field.verbose_name)
+    description = field.django_field.help_text or None
+    title = title_if_lower(field.django_field.verbose_name)
 
     return (
         python_type,
