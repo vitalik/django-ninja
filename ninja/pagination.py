@@ -2,7 +2,7 @@ import inspect
 from abc import ABC, abstractmethod
 from functools import partial, wraps
 from math import inf
-from typing import Any, AsyncGenerator, Callable, List, Optional, Tuple, Type, Union
+from typing import Any, AsyncGenerator, Callable, Iterator, List, Optional, Tuple, Type, Union
 
 from django.db.models import QuerySet
 from django.http import HttpRequest
@@ -198,7 +198,13 @@ def _inject_pagination(
                 kwargs[paginator.pass_parameter] = pagination_params
 
             items = await func(request, **kwargs)
+            status_code = None
 
+            # The decorated view function has returned <status_code>, items
+            if type(items) is tuple and len(items) == 2:
+                status_code = items[0]
+                items = items[1]
+            
             result = await paginator.apaginate_queryset(
                 items, pagination=pagination_params, request=request, **kwargs
             )
@@ -212,7 +218,11 @@ def _inject_pagination(
                     result
                     async for result in evaluate(result[paginator.items_attribute])
                 ]
-            return result
+
+            if status_code is not None:
+                return status_code, result
+            else:
+                return result
 
     else:
 
@@ -223,6 +233,13 @@ def _inject_pagination(
                 kwargs[paginator.pass_parameter] = pagination_params
 
             items = func(request, **kwargs)
+            status_code = None
+
+            # The decorated view function has returned <status_code>, items
+            print(type(items))
+            if type(items) is tuple and len(items) == 2:
+                status_code = items[0]
+                items = items[1]
 
             result = paginator.paginate_queryset(
                 items, pagination=pagination_params, request=request, **kwargs
@@ -232,7 +249,11 @@ def _inject_pagination(
                     result[paginator.items_attribute]
                 )
                 # ^ forcing queryset evaluation #TODO: check why pydantic did not do it here
-            return result
+            
+            if status_code is not None:
+                return status_code, result
+            else:
+                return result
 
     contribute_operation_args(
         view_with_pagination,
@@ -276,42 +297,48 @@ def make_response_paginated(paginator: PaginationBase, op: Operation) -> None:
             items: List[Some]
             count: int
     """
-    status_code, item_schema = _find_collection_response(op)
+    
+    for status_code, item_schema in _find_collection_response(op):
 
-    # Switching schema to Output schema
-    try:
-        new_name = f"Paged{item_schema.__name__}"
-    except AttributeError:
-        new_name = f"Paged{str(item_schema).replace('.', '_')}"  # typing.Any case
+        # Switching schema to Output schema
+        try:
+            new_name = f"Paged{item_schema.__name__}"
+        except AttributeError:
+            new_name = f"Paged{str(item_schema).replace('.', '_')}"  # typing.Any case
 
-    new_schema = type(
-        new_name,
-        (paginator.Output,),
-        {
-            "__annotations__": {paginator.items_attribute: List[item_schema]},  # type: ignore
-        },
-    )  # typing: ignore
+        new_schema = type(
+            new_name,
+            (paginator.Output,),
+            {
+                "__annotations__": {paginator.items_attribute: List[item_schema]},  # type: ignore
+            },
+        )  # typing: ignore
 
-    response = op._create_response_model(new_schema)
+        response = op._create_response_model(new_schema)
 
-    # Changing response model to newly created one
-    op.response_models[status_code] = response
+        # Changing response model to newly created one
+        op.response_models[status_code] = response
 
 
-def _find_collection_response(op: Operation) -> Tuple[int, Any]:
+def _find_collection_response(op: Operation) -> Iterator[Tuple[int, Any]]:
     """
     Walks through defined operation responses and finds the first
     that is of a collection type (e.g. List[SomeSchema])
     """
+    item_schema = None
     for code, resp_model in op.response_models.items():
         if resp_model is None or resp_model is NOT_SET:
             continue
 
         model = resp_model.__annotations__["response"]
+        
+        # It's possible that we could restrict this to only extend
+        # response codes 2xx
         if is_collection_type(model):
             item_schema = get_collection_args(model)[0]
-            return code, item_schema
+            yield code, item_schema
 
-    raise ConfigError(
-        f'"{op.view_func}" has no collection response (e.g. response=List[SomeSchema])'
-    )
+    if item_schema is None:
+      raise ConfigError(
+          f'"{op.view_func}" has no collection response (e.g. response=List[SomeSchema])'
+      )
