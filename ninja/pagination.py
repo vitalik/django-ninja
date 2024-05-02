@@ -2,7 +2,17 @@ import inspect
 from abc import ABC, abstractmethod
 from functools import partial, wraps
 from math import inf
-from typing import Any, AsyncGenerator, Callable, Iterator, List, Optional, Tuple, Type, Union
+from typing import (
+    Any,
+    AsyncGenerator,
+    Callable,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    Union,
+)
 
 from django.db.models import QuerySet
 from django.http import HttpRequest
@@ -204,7 +214,7 @@ def _inject_pagination(
             if type(items) is tuple and len(items) == 2:
                 status_code = items[0]
                 items = items[1]
-            
+
             result = await paginator.apaginate_queryset(
                 items, pagination=pagination_params, request=request, **kwargs
             )
@@ -236,7 +246,6 @@ def _inject_pagination(
             status_code = None
 
             # The decorated view function has returned <status_code>, items
-            print(type(items))
             if type(items) is tuple and len(items) == 2:
                 status_code = items[0]
                 items = items[1]
@@ -249,7 +258,7 @@ def _inject_pagination(
                     result[paginator.items_attribute]
                 )
                 # ^ forcing queryset evaluation #TODO: check why pydantic did not do it here
-            
+
             if status_code is not None:
                 return status_code, result
             else:
@@ -297,9 +306,8 @@ def make_response_paginated(paginator: PaginationBase, op: Operation) -> None:
             items: List[Some]
             count: int
     """
-    
-    for status_code, item_schema in _find_collection_response(op):
 
+    for status_code, item_schema in _find_collection_response(op):
         # Switching schema to Output schema
         try:
             new_name = f"Paged{item_schema.__name__}"
@@ -331,7 +339,7 @@ def _find_collection_response(op: Operation) -> Iterator[Tuple[int, Any]]:
             continue
 
         model = resp_model.__annotations__["response"]
-        
+
         # It's possible that we could restrict this to only extend
         # response codes 2xx
         if is_collection_type(model):
@@ -339,6 +347,6 @@ def _find_collection_response(op: Operation) -> Iterator[Tuple[int, Any]]:
             yield code, item_schema
 
     if item_schema is None:
-      raise ConfigError(
-          f'"{op.view_func}" has no collection response (e.g. response=List[SomeSchema])'
-      )
+        raise ConfigError(
+            f'"{op.view_func}" has no collection response (e.g. response=List[SomeSchema])'
+        )
