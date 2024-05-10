@@ -122,6 +122,5 @@ def _csrf_needed(api: "NinjaAPI") -> bool:
         if getattr(auth_callback, "csrf", False):
             api._add_csrf = True  # type: ignore[attr-defined]
             return True
-        continue
     api._add_csrf = False  # type: ignore[attr-defined]
     return False
