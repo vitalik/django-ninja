@@ -98,40 +98,61 @@ def test_csrf_cookie_auth():
     assert response.status_code == 200, response.content
 
 
-def test_docs():
+def test_docs_add_csrf_globally():
     "Testing that docs are initializing csrf headers correctly"
 
-    api = NinjaAPI(csrf=True)
-
-    client = TestClient(api)
-    resp = client.get("/docs")
-    assert resp.status_code == 200
-    csrf_token = re.findall(r'data-csrf-token="(.*?)"', resp.content.decode("utf8"))[0]
-    assert len(csrf_token) > 0
-
-    api.csrf = False
-    resp = client.get("/docs")
-    assert resp.status_code == 200
-    csrf_token = re.findall(r'data-csrf-token="(.*?)"', resp.content.decode("utf8"))[0]
-    assert len(csrf_token) == 0
-
-
-def test_docs_cookie_auth():
     class CookieAuth(APIKeyCookie):
         def authenticate(self, request, key):
             return key == "test"
 
+    api = NinjaAPI(csrf=False, auth=CookieAuth())  # `csrf=False` should be ignored
+
+    @api.get("/test1")
+    def endpoint1(request):
+        return {"success": True}
+
+    client = TestClient(api)
+    resp = client.get("/docs")
+    assert resp.status_code == 200
+    csrf_token = re.findall(r'data-csrf-token="(.*?)"', resp.content.decode("utf8"))[0]
+    assert len(csrf_token) > 0
+
+
+def test_docs_add_csrf_by_operation():
+    "Testing that docs are initializing csrf headers correctly"
+
+    class CookieAuth(APIKeyCookie):
+        def authenticate(self, request, key):
+            return key == "test"
+
+    api = NinjaAPI(csrf=False)  # `csrf=False` should be ignored
+
+    @api.get("/test1", auth=CookieAuth())
+    def endpoint1(request):
+        return {"success": True}
+
+    @api.get("/test2")
+    def endpoint1(request):
+        return {"success": True}
+
+    client = TestClient(api)
+    resp = client.get("/docs")
+    assert resp.status_code == 200
+    csrf_token = re.findall(r'data-csrf-token="(.*?)"', resp.content.decode("utf8"))[0]
+    assert len(csrf_token) > 0
+
+
+def test_docs_do_not_add_csrf():
     class HeaderAuth(APIKeyHeader):
         def authenticate(self, request, key):
             return key == "test"
 
-    api = NinjaAPI(csrf=False, auth=CookieAuth())
-    client = TestClient(api)
-    resp = client.get("/docs")
-    csrf_token = re.findall(r'data-csrf-token="(.*?)"', resp.content.decode("utf8"))[0]
-    assert len(csrf_token) > 0
+    api = NinjaAPI(csrf=True, auth=HeaderAuth())  # `csrf=True` should be ignored
 
-    api = NinjaAPI(csrf=False, auth=HeaderAuth())
+    @api.get("/test1")
+    def endpoint1(request):
+        return {"success": True}
+
     client = TestClient(api)
     resp = client.get("/docs")
     csrf_token = re.findall(r'data-csrf-token="(.*?)"', resp.content.decode("utf8"))[0]
