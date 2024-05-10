@@ -1,7 +1,7 @@
 import json
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 from django.conf import settings
 from django.http import HttpRequest, HttpResponse
@@ -13,7 +13,8 @@ from ninja.types import DictStrAny
 
 if TYPE_CHECKING:
     # if anyone knows a cleaner way to make mypy happy - welcome
-    from ninja import NinjaAPI  # pragma: no cover
+    from ninja import NinjaAPI, Router  # pragma: no cover
+    from ninja.operation import Operation
 
 ABS_TPL_PATH = Path(__file__).parent.parent / "templates/ninja/"
 
@@ -103,9 +104,21 @@ def _render_cdn_template(
 
 
 def _csrf_needed(api: "NinjaAPI") -> bool:
-    if api.csrf:
-        return True
-    if not api.auth or api.auth == NOT_SET:
-        return False
+    if not hasattr(api, "_csrf_cache"):
+        for operation in _iter_operations(api):
+            for auth_callback in operation.auth_callbacks:
+                if getattr(auth_callback, "csrf", False):
+                    api._csrf_cache = True
+                    return True
+                continue
+        api._csrf_cache = False
+    return api._csrf_cache
 
-    return any(getattr(a, "csrf", False) for a in api.auth)  # type: ignore
+
+def _iter_operations(api_or_router: Union["NinjaAPI", "Router"]) -> Iterator["Operation"]:
+    """this is helper to iterate over all operations in api or router"""
+    if isinstance(api_or_router, Router):
+        for _, path_view in api_or_router.path_operations.items():
+            yield from path_view.operations
+    for _, router in api_or_router._routers:  # noqa
+        yield from _iter_operations(router)
