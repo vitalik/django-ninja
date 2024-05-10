@@ -103,6 +103,15 @@ def _render_cdn_template(
     return HttpResponse(html)
 
 
+def _iter_operations(api_or_router: Union["NinjaAPI", "Router"]) -> Iterator["Operation"]:
+    """this is helper to iterate over all operations in api or router"""
+    if isinstance(api_or_router, Router):
+        for _, path_view in api_or_router.path_operations.items():
+            yield from path_view.operations
+    for _, router in api_or_router._routers:  # noqa
+        yield from _iter_operations(router)
+
+
 def _csrf_needed(api: "NinjaAPI") -> bool:
     if not hasattr(api, "_csrf_cache"):
         for operation in _iter_operations(api):
@@ -113,12 +122,3 @@ def _csrf_needed(api: "NinjaAPI") -> bool:
                 continue
         api._csrf_cache = False
     return api._csrf_cache
-
-
-def _iter_operations(api_or_router: Union["NinjaAPI", "Router"]) -> Iterator["Operation"]:
-    """this is helper to iterate over all operations in api or router"""
-    if isinstance(api_or_router, Router):
-        for _, path_view in api_or_router.path_operations.items():
-            yield from path_view.operations
-    for _, router in api_or_router._routers:  # noqa
-        yield from _iter_operations(router)
