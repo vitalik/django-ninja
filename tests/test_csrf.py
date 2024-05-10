@@ -107,8 +107,8 @@ def test_docs_add_csrf_globally():
 
     api = NinjaAPI(csrf=False, auth=CookieAuth())  # `csrf=False` should be ignored
 
-    @api.get("/test1")
-    def endpoint1(request):
+    @api.get("/test")
+    def test_view(request):
         return {"success": True}
 
     client = TestClient(api)
@@ -128,11 +128,11 @@ def test_docs_add_csrf_by_operation():
     api = NinjaAPI(csrf=False)  # `csrf=False` should be ignored
 
     @api.get("/test1", auth=CookieAuth())
-    def endpoint1(request):
+    def test_view1(request):
         return {"success": True}
 
     @api.get("/test2")
-    def endpoint1(request):
+    def test_view2(request):
         return {"success": True}
 
     client = TestClient(api)
@@ -149,8 +149,8 @@ def test_docs_do_not_add_csrf():
 
     api = NinjaAPI(csrf=True, auth=HeaderAuth())  # `csrf=True` should be ignored
 
-    @api.get("/test1")
-    def endpoint1(request):
+    @api.get("/test")
+    def test_view(request):
         return {"success": True}
 
     client = TestClient(api)
