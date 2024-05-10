@@ -3,7 +3,7 @@ import re
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 
-from ninja import NinjaAPI
+from ninja import NinjaAPI, Router
 from ninja.security import APIKeyCookie, APIKeyHeader
 from ninja.testing import TestClient as BaseTestClient
 
@@ -98,7 +98,7 @@ def test_csrf_cookie_auth():
     assert response.status_code == 200, response.content
 
 
-def test_docs_add_csrf_globally():
+def test_docs_add_csrf():
     "Testing that docs are initializing csrf headers correctly"
 
     class CookieAuth(APIKeyCookie):
@@ -112,6 +112,14 @@ def test_docs_add_csrf_globally():
         return {"success": True}
 
     client = TestClient(api)
+
+    resp = client.get("/docs")
+    assert resp.status_code == 200
+    csrf_token = re.findall(r'data-csrf-token="(.*?)"', resp.content.decode("utf8"))[0]
+    assert len(csrf_token) > 0
+
+    assert hasattr(api, "_add_csrf")  # `api._add_csrf` should be set as cache
+
     resp = client.get("/docs")
     assert resp.status_code == 200
     csrf_token = re.findall(r'data-csrf-token="(.*?)"', resp.content.decode("utf8"))[0]
@@ -134,6 +142,34 @@ def test_docs_add_csrf_by_operation():
     @api.get("/test2")
     def test_view2(request):
         return {"success": True}
+
+    client = TestClient(api)
+    resp = client.get("/docs")
+    assert resp.status_code == 200
+    csrf_token = re.findall(r'data-csrf-token="(.*?)"', resp.content.decode("utf8"))[0]
+    assert len(csrf_token) > 0
+
+
+def test_docs_add_csrf_by_sub_router():
+    "Testing that docs are initializing csrf headers correctly"
+
+    class CookieAuth(APIKeyCookie):
+        def authenticate(self, request, key):
+            return key == "test"
+
+    api = NinjaAPI(csrf=False)  # `csrf=False` should be ignored
+
+    @api.get("/test1", auth=CookieAuth())
+    def test_view1(request):
+        return {"success": True}
+
+    router = Router()
+
+    @router.get("/test2")
+    def test_view2(request):
+        return {"success": True}
+
+    api.add_router("/router", router)
 
     client = TestClient(api)
     resp = client.get("/docs")
