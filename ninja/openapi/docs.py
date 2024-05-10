@@ -8,12 +8,12 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
 from django.urls import reverse
 
-from ninja.constants import NOT_SET
+from ninja.router import Router
 from ninja.types import DictStrAny
 
 if TYPE_CHECKING:
     # if anyone knows a cleaner way to make mypy happy - welcome
-    from ninja import NinjaAPI, Router  # pragma: no cover
+    from ninja import NinjaAPI  # pragma: no cover
     from ninja.operation import Operation
 
 ABS_TPL_PATH = Path(__file__).parent.parent / "templates/ninja/"
@@ -103,7 +103,7 @@ def _render_cdn_template(
     return HttpResponse(html)
 
 
-def _iter_operations(api_or_router: Union["NinjaAPI", "Router"]) -> Iterator["Operation"]:
+def _iter_operations(api_or_router: Union["NinjaAPI", Router]) -> Iterator["Operation"]:
     """this is helper to iterate over all operations in api or router"""
     if isinstance(api_or_router, Router):
         for _, path_view in api_or_router.path_operations.items():
@@ -113,12 +113,14 @@ def _iter_operations(api_or_router: Union["NinjaAPI", "Router"]) -> Iterator["Op
 
 
 def _csrf_needed(api: "NinjaAPI") -> bool:
-    if not hasattr(api, "_csrf_cache"):
+    add_csrf = getattr(api, "_add_csrf", None)
+    if add_csrf is None:
         for operation in _iter_operations(api):
             for auth_callback in operation.auth_callbacks:
                 if getattr(auth_callback, "csrf", False):
-                    api._csrf_cache = True
+                    api._add_csrf = True  # type: ignore[attr-defined]
                     return True
                 continue
-        api._csrf_cache = False
-    return api._csrf_cache
+        add_csrf = False
+        api._add_csrf = add_csrf  # type: ignore[attr-defined]
+    return add_csrf
