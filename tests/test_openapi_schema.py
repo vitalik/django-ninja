@@ -942,3 +942,29 @@ def test_no_default_for_custom_items_attribute():
     paged_employee_out = schema["components"]["schemas"]["PagedEmployeeOut"]
     # a default value shouldn't be specified automatically
     assert "default" not in paged_employee_out["properties"]["data"]
+
+
+def test_renders_responses_with_serialization_alias():
+    api = NinjaAPI(renderer=TestRenderer)
+
+    class ResponseWithSerializationAlias(Schema):
+        my_field: str = Field(..., serialization_alias="myFieldName")
+
+    @api.get(
+        "/test-with-serialization-alias/",
+        response=ResponseWithSerializationAlias,
+        by_alias=True,
+    )
+    def method_test_with_serialization_alias(
+        request,
+    ):
+        return ResponseWithSerializationAlias(my_field="Field Value")
+
+    schema = api.get_openapi_schema()
+
+    assert (
+        "myFieldName"
+        in schema["components"]["schemas"]["ResponseWithSerializationAlias"][
+            "properties"
+        ]
+    )
