@@ -19,7 +19,15 @@ dotted attributes and resolver methods. For example::
 """
 
 import warnings
-from typing import Any, Callable, Dict, Type, TypeVar, Union, no_type_check
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Type,
+    TypeVar,
+    Union,
+    no_type_check,
+)
 
 import pydantic
 from django.db.models import Manager, QuerySet
@@ -29,6 +37,7 @@ from pydantic import BaseModel, Field, ValidationInfo, model_validator, validato
 from pydantic._internal._model_construction import ModelMetaclass
 from pydantic.functional_validators import ModelWrapValidatorHandler
 from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
+from typing_extensions import dataclass_transform
 
 from ninja.signature.utils import get_args_names, has_kwargs
 from ninja.types import DictStrAny
@@ -146,6 +155,7 @@ class Resolver:
     #     return PartialSchema()
 
 
+@dataclass_transform(kw_only_default=True, field_specifiers=(Field,))
 class ResolverMetaclass(ModelMetaclass):
     _ninja_resolvers: Dict[str, Resolver]
 
