@@ -68,6 +68,11 @@ class UserSchema(Schema):
     avatar: Optional[str] = None
 
 
+class BossSchema(Schema):
+    name: str
+    title: str
+
+
 class UserWithBossSchema(UserSchema):
     boss: Optional[str] = Field(None, alias="boss.name")
     has_boss: bool
@@ -76,6 +81,11 @@ class UserWithBossSchema(UserSchema):
     @staticmethod
     def resolve_has_boss(obj):
         return bool(obj.boss)
+
+
+class NestedUserWithBossSchema(UserSchema):
+    boss: Optional[BossSchema] = None
+    boss_name: Optional[str] = Field(None, alias="boss.name")
 
 
 class UserWithInitialsSchema(UserWithBossSchema):
@@ -142,6 +152,21 @@ def test_with_boss_schema():
         "tags": [{"id": 1, "title": "foo"}, {"id": 2, "title": "bar"}],
         "avatar": None,
     }
+
+
+def test_boss_schema_as_nested_dict():
+    user = User()
+    schema = NestedUserWithBossSchema.from_orm(user)
+
+    result1 = schema.dict(by_alias=True)
+    result1_no_boss_name = result1.copy()
+    result1_no_boss_name.pop("boss.name")
+
+    result2 = NestedUserWithBossSchema.from_orm(result1_no_boss_name).dict(
+        by_alias=True
+    )
+
+    assert result1 == result2
 
 
 SKIP_NON_STATIC_RESOLVES = True

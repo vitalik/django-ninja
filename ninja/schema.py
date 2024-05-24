@@ -66,21 +66,30 @@ class DjangoGetter:
         if resolver:
             value = resolver(getter=self)
         else:
+            resolve = False
             if isinstance(self._obj, dict):
-                if key not in self._obj:
+                if key in self._obj:
+                    value = self._obj[key]
+                elif "." in key and not key.startswith("_"):
+                    # Only do template lookup if necessary, which will also work around
+                    # Variable.resolve() returning default value of defaultdict's
+                    resolve = True
+                else:
                     raise AttributeError(key)
-                value = self._obj[key]
             else:
                 try:
                     value = getattr(self._obj, key)
                 except AttributeError:
-                    try:
-                        # value = attrgetter(key)(self._obj)
-                        value = Variable(key).resolve(self._obj)
-                        # TODO: Variable(key) __init__ is actually slower than
-                        #       Variable.resolve - so it better be cached
-                    except VariableDoesNotExist as e:
-                        raise AttributeError(key) from e
+                    resolve = True
+
+            if resolve and not key.startswith("_"):
+                try:
+                    # value = attrgetter(key)(self._obj)
+                    value = Variable(key).resolve(self._obj)
+                    # TODO: Variable(key) __init__ is actually slower than
+                    #       Variable.resolve - so it better be cached
+                except VariableDoesNotExist as e:
+                    raise AttributeError(key) from e
         return self._convert_result(value)
 
     # def get(self, key: Any, default: Any = None) -> Any:
