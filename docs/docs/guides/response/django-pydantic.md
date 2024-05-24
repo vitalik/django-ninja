@@ -91,7 +91,7 @@ class UserSchema(ModelSchema):
 
 ### Making fields optional
 
-Pretty often for PATCH API operations you need to make all fields of your schema optional. To do that you can use config fields_optional
+Pretty often for PATCH API operations you need to make all fields of your schema optional. To do that, you can use config fields_optional
 
 ```python hl_lines="5"
 class PatchGroupSchema(ModelSchema):
@@ -101,8 +101,27 @@ class PatchGroupSchema(ModelSchema):
         fields_optional = '__all__'
 ```
 
-also you can define just a few optional fields instead of all:
+Also, you can define a subset of optional fields instead of `__all__`:
 
 ```python
      fields_optional = ['description']
+```
+
+When you process input data, you need to tell Pydantic to avoid setting undefined fields to `None`:
+
+```python
+@api.patch("/patch/{pk}")
+def patch(request, pk: int, payload: PatchGroupSchema):
+
+    # Notice that we set exclude_unset=True
+    updated_fields = payload.dict(exclude_unset=True)
+
+    obj = MyModel.objects.get(pk=pk)
+
+    for attr, value in updated_fields.items():
+        setattr(obj, attr, value)
+
+    obj.save()
+
+
 ```
