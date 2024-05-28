@@ -1,37 +1,46 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <link type="text/css" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css">
     <link rel="shortcut icon" href="https://django-ninja.dev/img/favicon.png">
     <title>{{ api.title }}</title>
 </head>
 <body>
-    <div id="swagger-ui">
-    </div>
+<div id="swagger-ui">
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
-    <script type="application/json" id="swagger-settings">
+<script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+<script type="application/json" id="swagger-settings">
         {{ swagger_settings | safe }}
     </script>
-    <script>
+<script>
 
-        const configJson = document.getElementById("swagger-settings").textContent;
-        const configObject = JSON.parse(configJson);
+    const configJson = document.getElementById("swagger-settings").textContent;
+    const configObject = JSON.parse(configJson);
 
-        configObject.dom_id = "#swagger-ui";
-        configObject.presets = [
-            SwaggerUIBundle.presets.apis,
-            SwaggerUIBundle.SwaggerUIStandalonePreset
-        ];
+    configObject.dom_id = "#swagger-ui";
+    configObject.presets = [
+        SwaggerUIBundle.presets.apis,
+        SwaggerUIBundle.SwaggerUIStandalonePreset
+    ];
+
     {% if add_csrf %}
         configObject.requestInterceptor = (req) => {
-            req.headers['X-CSRFToken'] = "{{csrf_token}}";
+            const getCookie = (name) => {
+                const value = `; ${document.cookie}`;
+                const parts = value.split(`; ${name}=`);
+                if (parts.length === 2) return parts.pop().split(';').shift();
+                return null;
+            };
+
+            const csrftoken = getCookie('csrftoken') || "{{csrf_token}}";
+            req.headers['X-CSRFToken'] = csrftoken;
             return req;
         };
     {% endif %}
 
-        const ui = SwaggerUIBundle(configObject);
+    const ui = SwaggerUIBundle(configObject);
 
-    </script>
+</script>
 </body>
 </html>
