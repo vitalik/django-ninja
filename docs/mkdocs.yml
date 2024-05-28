@@ -75,6 +75,7 @@ nav:
       - guides/urls.md
       - guides/async-support.md
       - guides/versioning.md
+      - guides/custom-schema-generator.md
   - Reference:
       - NinjaAPI class: reference/api.md
       - reference/csrf.md
