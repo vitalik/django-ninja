@@ -118,6 +118,7 @@ def get_schema_field(
     description = None
     title = None
     max_length = None
+    nullable = False
     python_type = None
 
     if field.is_relation:
@@ -126,8 +127,9 @@ def get_schema_field(
 
         internal_type = field.related_model._meta.pk.get_internal_type()
 
-        if not field.concrete and field.auto_created or field.null:
+        if not field.concrete and field.auto_created or field.null or optional:
             default = None
+            nullable = True
 
         alias = getattr(field, "get_attname", None) and field.get_attname()
 
@@ -147,22 +149,20 @@ def get_schema_field(
         internal_type = field.get_internal_type()
         python_type = TYPES[internal_type]
 
+        if field.primary_key or blank or null or optional:
+            default = None
+            nullable = True
+
         if field.has_default():
             if callable(field.default):
                 default_factory = field.default
             else:
                 default = field.default
-        elif field.primary_key or blank or null:
-            default = None
 
     if default_factory:
         default = PydanticUndefined
 
-    if optional:
-        default = None
-
-    if default is None:
-        default = None
+    if nullable:
         python_type = Union[python_type, None]  # aka Optional in 3.7+
 
     description = field.help_text or None
