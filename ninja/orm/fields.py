@@ -65,6 +65,7 @@ TYPES = {
     "PositiveIntegerField": int,
     "PositiveSmallIntegerField": int,
     "SlugField": str,
+    "SmallAutoField": int,
     "SmallIntegerField": int,
     "TextField": str,
     "TimeField": datetime.time,
