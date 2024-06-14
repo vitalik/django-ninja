@@ -260,7 +260,7 @@ class OpenAPISchema(dict):
             model = models[0]
             content_type = BODY_CONTENT_TYPES[model.__ninja_param_source__]
             schema, required = self._create_schema_from_model(
-                model, remove_level=model.__ninja_param_source__ == "body"
+                model, remove_level=model.__ninja_param_source__ == "body", by_alias=operation.by_alias
             )
         else:
             schema, content_type = self._create_multipart_schema_from_models(models)
