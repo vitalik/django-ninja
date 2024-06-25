@@ -17,7 +17,7 @@ else:
     def evaluate_forwardref(type_: ForwardRef, globalns: Any, localns: Any) -> Any:
         # Even though it is the right signature for python 3.9, mypy complains with
         # `error: Too many arguments for "_evaluate" of "ForwardRef"` hence the cast...
-        return cast(Any, type_)._evaluate(globalns, localns, set())
+        return cast(Any, type_)._evaluate(globalns, localns, recursive_guard=set())
 
 
 from ninja.types import DictStrAny
