@@ -372,17 +372,32 @@ class NinjaAPI:
             router = import_string(router)
             assert isinstance(router, Router)
 
-        if auth is not NOT_SET:
-            router.auth = auth
-        if tags is not None:
-            router.tags = tags
-
         if parent_router:
             parent_prefix = next(
                 (path for path, r in self._routers if r is parent_router), None
             )  # pragma: no cover
             assert parent_prefix is not None
             prefix = normalize_path("/".join((parent_prefix, prefix))).lstrip("/")
+
+        if router.api == self and (prefix, router) in self._routers:
+            # We're idempotent on identical registration
+            # TODO: What if `auth` or `tags` are different?
+            return
+        elif router.api is not None:
+            # Router already attached
+            attached_prefix = [
+                attached_prefix
+                for attached_prefix, attached_router in router.api._routers
+                if attached_router == router
+            ][0]
+            raise ConfigError(
+                f"Router has already been attached to API {router.api.title}:{router.api.version} under '{attached_prefix}'"
+            )
+
+        if auth is not NOT_SET:
+            router.auth = auth
+        if tags is not None:
+            router.tags = tags
 
         self._routers.extend(router.build_routers(prefix))
         router.set_api_instance(self, parent_router)
