@@ -177,7 +177,7 @@ class AnonRateThrottle(SimpleRateThrottle):
     scope = "anon"
 
     def get_cache_key(self, request: HttpRequest) -> Optional[str]:
-        if request.auth is not None:  # type: ignore
+        if getattr(request, "auth", None) is not None:
             return None  # Only throttle unauthenticated requests.
 
         return self.cache_format % {
@@ -198,7 +198,7 @@ class AuthRateThrottle(SimpleRateThrottle):
     scope = "auth"
 
     def get_cache_key(self, request: HttpRequest) -> str:
-        if request.auth is not None:  # type: ignore
+        if getattr(request, "auth", None) is not None:
             ident = hashlib.sha256(str(request.auth).encode()).hexdigest()  # type: ignore
             # TODO: ^maybe auth should have an attribute that developer can overwrite
         else:
