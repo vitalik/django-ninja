@@ -37,7 +37,7 @@ class Router:
     ) -> None:
         self.api: Optional["NinjaAPI"] = None
         self.auth = auth
-        self.throttle: List[BaseThrottle] = throttle
+        self.throttle = throttle
         self.tags = tags
         self.path_operations: Dict[str, PathView] = {}
         self._routers: List[Tuple[str, Router]] = []

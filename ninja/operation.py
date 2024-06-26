@@ -73,7 +73,7 @@ class Operation:
         self.throttle_param = throttle
         self.throttle_objects: List[BaseThrottle] = []
         if throttle is not NOT_SET:
-            for th in throttle:
+            for th in throttle:  # type: ignore
                 assert isinstance(
                     th, BaseThrottle
                 ), "Throttle should be an instance of BaseThrottle"
@@ -140,14 +140,11 @@ class Operation:
                 self.throttle_objects = (
                     isinstance(api.throttle, BaseThrottle)
                     and [api.throttle]
-                    or api.throttle
+                    or api.throttle  # type: ignore
                 )
             if router.throttle != NOT_SET:
-                self.throttle_objects = (
-                    isinstance(router.throttle, BaseThrottle)
-                    and [router.throttle]
-                    or router.throttle
-                )
+                _t = router.throttle
+                self.throttle_objects = isinstance(_t, BaseThrottle) and [_t] or _t  # type: ignore
             assert all(
                 isinstance(th, BaseThrottle) for th in self.throttle_objects
             ), "Throttle should be an instance of BaseThrottle"
@@ -173,13 +170,13 @@ class Operation:
 
         # auth:
         if self.auth_callbacks:
-            error = self._run_authentication(request)
+            error = self._run_authentication(request)  # type: ignore
             if error:
                 return error
 
         # Throttling:
         if self.throttle_objects:
-            error = self._check_throttles(request)
+            error = self._check_throttles(request)  # type: ignore
             if error:
                 return error
 
@@ -213,7 +210,8 @@ class Operation:
             ]
 
             duration = max(durations, default=None)
-            return self.api.on_exception(request, Throttled(wait=duration))
+            return self.api.on_exception(request, Throttled(wait=duration))  # type: ignore
+        return None
 
     def _result_to_response(
         self, request: HttpRequest, result: Any, temporal_response: HttpResponse
@@ -384,7 +382,7 @@ class PathView:
         methods: List[str],
         view_func: Callable,
         *,
-        auth: Optional[Union[Sequence[Callable], Callable, object]] = NOT_SET,
+        auth: Optional[Union[Sequence[Callable], Callable, NOT_SET_TYPE]] = NOT_SET,
         throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,

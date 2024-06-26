@@ -1,12 +1,10 @@
-"""
-Provides various throttling policies.
-"""
-
 import hashlib
 import time
+from typing import Dict, List, Optional, Tuple
 
 from django.core.cache import cache as default_cache
 from django.core.exceptions import ImproperlyConfigured
+from django.http import HttpRequest
 
 
 class BaseThrottle:
@@ -14,13 +12,13 @@ class BaseThrottle:
     Rate throttling of requests.
     """
 
-    def allow_request(self, request):
+    def allow_request(self, request: HttpRequest) -> bool:
         """
         Return `True` if the request should be allowed, `False` otherwise.
         """
         raise NotImplementedError(".allow_request() must be overridden")
 
-    def get_ident(self, request):
+    def get_ident(self, request: HttpRequest) -> Optional[str]:
         """
         Identify the machine making the request by parsing HTTP_X_FORWARDED_FOR
         if present and number of proxies is > 0. If not use all of
@@ -35,13 +33,13 @@ class BaseThrottle:
         if num_proxies is not None:
             if num_proxies == 0 or xff is None:
                 return remote_addr
-            addrs = xff.split(",")
+            addrs: List[str] = xff.split(",")
             client_addr = addrs[-min(num_proxies, len(addrs))]
             return client_addr.strip()
 
         return "".join(xff.split()) if xff else remote_addr
 
-    def wait(self):
+    def wait(self) -> Optional[float]:
         """
         Optionally, return a recommended number of seconds to wait before
         the next request.
@@ -67,17 +65,18 @@ class SimpleRateThrottle(BaseThrottle):
     cache = default_cache
     timer = time.time
     cache_format = "throttle_%(scope)s_%(ident)s"
-    scope = None
-    THROTTLE_RATES = settings.DEFAULT_THROTTLE_RATES
+    scope: Optional[str] = None
+    THROTTLE_RATES: Dict[str, Optional[str]] = settings.DEFAULT_THROTTLE_RATES
 
-    def __init__(self, rate=None):
+    def __init__(self, rate: Optional[str] = None):
+        self.rate: Optional[str]
         if rate:
             self.rate = rate
         else:
             self.rate = self.get_rate()
         self.num_requests, self.duration = self.parse_rate(self.rate)
 
-    def get_cache_key(self, request):
+    def get_cache_key(self, request: HttpRequest) -> Optional[str]:
         """
         Should return a unique cache-key which can be used for throttling.
         Must be overridden.
@@ -86,7 +85,7 @@ class SimpleRateThrottle(BaseThrottle):
         """
         raise NotImplementedError(".get_cache_key() must be overridden")
 
-    def get_rate(self):
+    def get_rate(self) -> Optional[str]:
         """
         Determine the string representation of the allowed request rate.
         """
@@ -95,12 +94,12 @@ class SimpleRateThrottle(BaseThrottle):
             raise ImproperlyConfigured(msg)
 
         try:
-            return self.THROTTLE_RATES[self.scope]
+            return self.THROTTLE_RATES[self.scope]  # type: ignore
         except KeyError:
             msg = f"No default throttle rate set for '{self.scope}' scope"
             raise ImproperlyConfigured(msg) from None
 
-    def parse_rate(self, rate):
+    def parse_rate(self, rate: Optional[str]) -> Tuple[Optional[int], Optional[int]]:
         """
         Given the request rate string, return a two tuple of:
         <allowed number of requests>, <period of time in seconds>
@@ -112,7 +111,7 @@ class SimpleRateThrottle(BaseThrottle):
         duration = {"s": 1, "m": 60, "h": 3600, "d": 86400}[period[0]]
         return (num_requests, duration)
 
-    def allow_request(self, request):
+    def allow_request(self, request: HttpRequest) -> bool:
         """
         Implement the check to see if the request should be throttled.
 
@@ -127,17 +126,17 @@ class SimpleRateThrottle(BaseThrottle):
             return True
 
         self.history = self.cache.get(self.key, [])
-        self.now = self.timer()
+        self.now = self.timer()  # type: ignore
 
         # Drop any requests from the history which have now passed the
         # throttle duration
-        while self.history and self.history[-1] <= self.now - self.duration:
+        while self.history and self.history[-1] <= self.now - self.duration:  # type: ignore
             self.history.pop()
-        if len(self.history) >= self.num_requests:
+        if len(self.history) >= self.num_requests:  # type: ignore
             return self.throttle_failure()
         return self.throttle_success()
 
-    def throttle_success(self):
+    def throttle_success(self) -> bool:
         """
         Inserts the current request's timestamp along with the key
         into the cache.
@@ -146,13 +145,13 @@ class SimpleRateThrottle(BaseThrottle):
         self.cache.set(self.key, self.history, self.duration)
         return True
 
-    def throttle_failure(self):
+    def throttle_failure(self) -> bool:
         """
         Called when a request to the API has failed due to throttling.
         """
         return False
 
-    def wait(self):
+    def wait(self) -> Optional[float]:
         """
         Returns the recommended next request time in seconds.
         """
@@ -161,11 +160,11 @@ class SimpleRateThrottle(BaseThrottle):
         else:
             remaining_duration = self.duration
 
-        available_requests = self.num_requests - len(self.history) + 1
+        available_requests = self.num_requests - len(self.history) + 1  # type: ignore
         if available_requests <= 0:
             return None
 
-        return remaining_duration / float(available_requests)
+        return remaining_duration / float(available_requests)  # type: ignore
 
 
 class AnonRateThrottle(SimpleRateThrottle):
@@ -177,8 +176,8 @@ class AnonRateThrottle(SimpleRateThrottle):
 
     scope = "anon"
 
-    def get_cache_key(self, request):
-        if request.auth is not None:
+    def get_cache_key(self, request: HttpRequest) -> Optional[str]:
+        if request.auth is not None:  # type: ignore
             return None  # Only throttle unauthenticated requests.
 
         return self.cache_format % {
@@ -198,12 +197,12 @@ class AuthRateThrottle(SimpleRateThrottle):
 
     scope = "auth"
 
-    def get_cache_key(self, request):
-        if request.auth is not None:
-            ident = hashlib.sha256(str(request.auth).encode()).hexdigest()
+    def get_cache_key(self, request: HttpRequest) -> str:
+        if request.auth is not None:  # type: ignore
+            ident = hashlib.sha256(str(request.auth).encode()).hexdigest()  # type: ignore
             # TODO: ^maybe auth should have an attribute that developer can overwrite
         else:
-            ident = self.get_ident(request)
+            ident = self.get_ident(request)  # type: ignore
 
         return self.cache_format % {"scope": self.scope, "ident": ident}
 
@@ -219,7 +218,7 @@ class UserRateThrottle(SimpleRateThrottle):
 
     scope = "user"
 
-    def get_cache_key(self, request):
+    def get_cache_key(self, request: HttpRequest) -> str:
         if request.user and request.user.is_authenticated:
             ident = request.user.pk
         else:
