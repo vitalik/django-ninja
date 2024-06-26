@@ -199,7 +199,9 @@ class AuthRateThrottle(SimpleRateThrottle):
 
     def get_cache_key(self, request):
         if request.auth is not None:
-            ident = str(request.auth)  # TODO: maybe auth should have an attribute that developer can overwrite
+            ident = str(
+                request.auth
+            )  # TODO: maybe auth should have an attribute that developer can overwrite
         else:
             ident = self.get_ident(request)
 
@@ -215,7 +217,7 @@ class UserRateThrottle(SimpleRateThrottle):
     be used.
     """
 
-    scope = 'user'
+    scope = "user"
 
     def get_cache_key(self, request):
         if request.user and request.user.is_authenticated:
@@ -223,4 +225,4 @@ class UserRateThrottle(SimpleRateThrottle):
         else:
             ident = self.get_ident(request)
 
-        return self.cache_format % {'scope': self.scope, 'ident': ident}
+        return self.cache_format % {"scope": self.scope, "ident": ident}

@@ -7,7 +7,9 @@ from pydantic import BaseModel, Field
 
 class Settings(BaseModel):
     # Pagination
-    PAGINATION_CLASS: str = Field("ninja.pagination.LimitOffsetPagination", alias="NINJA_PAGINATION_CLASS")
+    PAGINATION_CLASS: str = Field(
+        "ninja.pagination.LimitOffsetPagination", alias="NINJA_PAGINATION_CLASS"
+    )
     PAGINATION_PER_PAGE: int = Field(100, alias="NINJA_PAGINATION_PER_PAGE")
     PAGINATION_MAX_LIMIT: int = Field(inf, alias="NINJA_PAGINATION_MAX_LIMIT")
 
@@ -29,4 +31,6 @@ class Settings(BaseModel):
 settings = Settings.model_validate(django_settings)
 
 if hasattr(django_settings, "NINJA_DOCS_VIEW"):
-    raise Exception("NINJA_DOCS_VIEW is removed. Use NinjaAPI(docs=...) instead")  # pragma: no cover
+    raise Exception(
+        "NINJA_DOCS_VIEW is removed. Use NinjaAPI(docs=...) instead"
+    )  # pragma: no cover
