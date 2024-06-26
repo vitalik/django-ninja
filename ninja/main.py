@@ -27,6 +27,7 @@ from ninja.openapi.urls import get_openapi_urls, get_root_url
 from ninja.parser import Parser
 from ninja.renderers import BaseRenderer, JSONRenderer
 from ninja.router import Router
+from ninja.throttling import BaseThrottle
 from ninja.types import DictStrAny, TCallable
 from ninja.utils import is_debug_server, normalize_path
 
@@ -61,6 +62,7 @@ class NinjaAPI:
         urls_namespace: Optional[str] = None,
         csrf: bool = False,
         auth: Optional[Union[Sequence[Callable], Callable, NOT_SET_TYPE]] = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         renderer: Optional[BaseRenderer] = None,
         parser: Optional[Parser] = None,
         default_router: Optional[Router] = None,
@@ -111,6 +113,8 @@ class NinjaAPI:
         else:
             self.auth = auth
 
+        self.throttle = throttle
+
         self._routers: List[Tuple[str, Router]] = []
         self.default_router = default_router or Router()
         self.add_router("", self.default_router)
@@ -120,6 +124,7 @@ class NinjaAPI:
         path: str,
         *,
         auth: Any = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
@@ -141,6 +146,7 @@ class NinjaAPI:
         return self.default_router.get(
             path,
             auth=auth is NOT_SET and self.auth or auth,
+            throttle=throttle is NOT_SET and self.throttle or throttle,
             response=response,
             operation_id=operation_id,
             summary=summary,
@@ -161,6 +167,7 @@ class NinjaAPI:
         path: str,
         *,
         auth: Any = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
@@ -182,6 +189,7 @@ class NinjaAPI:
         return self.default_router.post(
             path,
             auth=auth is NOT_SET and self.auth or auth,
+            throttle=throttle is NOT_SET and self.throttle or throttle,
             response=response,
             operation_id=operation_id,
             summary=summary,
@@ -202,6 +210,7 @@ class NinjaAPI:
         path: str,
         *,
         auth: Any = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
@@ -223,6 +232,7 @@ class NinjaAPI:
         return self.default_router.delete(
             path,
             auth=auth is NOT_SET and self.auth or auth,
+            throttle=throttle is NOT_SET and self.throttle or throttle,
             response=response,
             operation_id=operation_id,
             summary=summary,
@@ -243,6 +253,7 @@ class NinjaAPI:
         path: str,
         *,
         auth: Any = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
@@ -264,6 +275,7 @@ class NinjaAPI:
         return self.default_router.patch(
             path,
             auth=auth is NOT_SET and self.auth or auth,
+            throttle=throttle is NOT_SET and self.throttle or throttle,
             response=response,
             operation_id=operation_id,
             summary=summary,
@@ -284,6 +296,7 @@ class NinjaAPI:
         path: str,
         *,
         auth: Any = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
@@ -305,6 +318,7 @@ class NinjaAPI:
         return self.default_router.put(
             path,
             auth=auth is NOT_SET and self.auth or auth,
+            throttle=throttle is NOT_SET and self.throttle or throttle,
             response=response,
             operation_id=operation_id,
             summary=summary,
@@ -326,6 +340,7 @@ class NinjaAPI:
         path: str,
         *,
         auth: Any = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
@@ -344,6 +359,7 @@ class NinjaAPI:
             methods,
             path,
             auth=auth is NOT_SET and self.auth or auth,
+            throttle=throttle is NOT_SET and self.throttle or throttle,
             response=response,
             operation_id=operation_id,
             summary=summary,
@@ -365,6 +381,7 @@ class NinjaAPI:
         router: Union[Router, str],
         *,
         auth: Any = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         tags: Optional[List[str]] = None,
         parent_router: Optional[Router] = None,
     ) -> None:
@@ -374,6 +391,10 @@ class NinjaAPI:
 
         if auth is not NOT_SET:
             router.auth = auth
+
+        if throttle is not NOT_SET:
+            router.throttle = throttle
+
         if tags is not None:
             router.tags = tags
 

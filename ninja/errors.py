@@ -53,6 +53,12 @@ class HttpError(Exception):
         return self.message
 
 
+class Throttled(HttpError):
+    def __init__(self, wait: int) -> None:
+        self.wait = wait
+        super().__init__(status_code=429, message="Too many requests.")
+
+
 def set_default_exc_handlers(api: "NinjaAPI") -> None:
     api.add_exception_handler(
         Exception,

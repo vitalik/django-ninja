@@ -120,10 +120,11 @@ class NinjaClientBase:
         request.is_secure.return_value = False
         request.build_absolute_uri = build_absolute_uri
 
+        request.auth = None
         if "user" not in request_params:
             request.user.is_authenticated = False
 
-        request.META = request_params.pop("META", {})
+        request.META = request_params.pop("META", {"REMOTE_ADDR": "127.0.0.1"})
         request.FILES = request_params.pop("FILES", {})
 
         request.META.update(
