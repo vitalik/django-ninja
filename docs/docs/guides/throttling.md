@@ -18,7 +18,7 @@ The following example will limit unauthenticated users to only 10 requests per s
 ```Python
 from ninja.throttling import AnonRateThrottle, AuthRateThrottle
 
-api = NinjaAPI
+api = NinjaAPI(
     throttle=[
         AnonRateThrottle('10/s'),
         AuthRateThrottle('100/s'),
@@ -31,6 +31,8 @@ api = NinjaAPI
 
 ### Router level
 
+Pass `throttle` argument either to `add_router` function
+
 ```Python
 api = NinjaAPI()
 ...
@@ -38,7 +40,7 @@ api = NinjaAPI()
 api.add_router('/sensitive', 'myapp.api.router', throttle=AnonRateThrottle('100/m'))
 ```
 
-or
+or directly to init of the Router class:
 
 ```Python
 router = Router(..., throttle=[AnonRateThrottle('1000/h')])
@@ -47,6 +49,7 @@ router = Router(..., throttle=[AnonRateThrottle('1000/h')])
 
 ### Operation level
 
+If `throttle` argument is passed to operation - it will overrule all global and router throttles:
 
 ```Python
 from ninja.throttling import UserRateThrottle
