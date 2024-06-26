@@ -2,6 +2,7 @@
 Provides various throttling policies.
 """
 
+import hashlib
 import time
 
 from django.core.cache import cache as default_cache
@@ -199,9 +200,8 @@ class AuthRateThrottle(SimpleRateThrottle):
 
     def get_cache_key(self, request):
         if request.auth is not None:
-            ident = str(
-                request.auth
-            )  # TODO: maybe auth should have an attribute that developer can overwrite
+            ident = hashlib.sha256(str(request.auth).encode()).hexdigest()
+            # TODO: ^maybe auth should have an attribute that developer can overwrite
         else:
             ident = self.get_ident(request)
 
