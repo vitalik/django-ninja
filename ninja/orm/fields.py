@@ -160,6 +160,7 @@ def get_schema_field(
 
     if optional:
         default = None
+        default_factory = None
 
     if default is None:
         default = None
