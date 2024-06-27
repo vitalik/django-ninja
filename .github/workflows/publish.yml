@@ -18,8 +18,10 @@ jobs:
         run: flit install --symlink
       - name: Publish
         env:
-          FLIT_USERNAME: ${{ secrets.FLIT_USERNAME }}
-          FLIT_PASSWORD: ${{ secrets.FLIT_PASSWORD }}
+          # FLIT_USERNAME: ${{ secrets.FLIT_USERNAME }}
+          # FLIT_PASSWORD: ${{ secrets.FLIT_PASSWORD }}
+          FLIT_USERNAME: __token__
+          FLIT_PASSWORD: ${{ secrets.PYPI_TOKEN }}
         run: flit publish
 
   docs:
