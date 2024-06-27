@@ -196,7 +196,7 @@ def test_all_fields():
     [
         models.BigAutoField,
         models.SmallAutoField,
-    ]
+    ],
 )
 def test_altautofield(field: type):
     class ModelAltAuto(models.Model):
