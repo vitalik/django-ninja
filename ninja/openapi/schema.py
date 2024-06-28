@@ -4,6 +4,8 @@ import warnings
 from http.client import responses
 from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Set, Tuple
 
+from pydantic.json_schema import JsonSchemaMode
+
 from ninja.constants import NOT_SET
 from ninja.operation import Operation
 from ninja.params.models import TModel, TModels
@@ -207,6 +209,7 @@ class OpenAPISchema(dict):
         model: TModel,
         by_alias: bool = True,
         remove_level: bool = True,
+        mode: JsonSchemaMode = "validation",
     ) -> Tuple[DictStrAny, bool]:
         if hasattr(model, "__ninja_flatten_map__"):
             schema = self._flatten_schema(model)
@@ -215,6 +218,7 @@ class OpenAPISchema(dict):
                 ref_template=REF_TEMPLATE,
                 by_alias=by_alias,
                 schema_generator=NinjaGenerateJsonSchema,
+                mode=mode,
             ).copy()
 
         # move Schemas from definitions
@@ -284,7 +288,7 @@ class OpenAPISchema(dict):
             if model not in [None, NOT_SET]:
                 # ::TODO:: test this: by_alias == True
                 schema = self._create_schema_from_model(
-                    model, by_alias=operation.by_alias
+                    model, by_alias=operation.by_alias, mode="serialization"
                 )[0]
                 details[status]["content"] = {
                     self.api.renderer.media_type: {"schema": schema}
