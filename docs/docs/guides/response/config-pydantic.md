@@ -9,17 +9,16 @@ There are many customizations available for a **Django Ninja `Schema`**, via the
     when using Django models, as Pydantic's model class is called Model by default, and conflicts with
     Django's Model class.
 
-## Example Camel Case mode
+## Automatic Camel Case Aliases
 
-One interesting `Config` attribute is [`alias_generator`](https://pydantic-docs.helpmanual.io/usage/model_config/#alias-generator).
+One useful `Config` attribute is [`alias_generator`](https://pydantic-docs.helpmanual.io/usage/model_config/#alias-generator).
+We can use it to automatically generate aliases for field names with a given function. This is mostly commonly used to create
+an API that uses camelCase for its property names.
 Using Pydantic's example in **Django Ninja** can look something like:
 
-```python hl_lines="12 13"
+```python hl_lines="9 10"
 from ninja import Schema
-
-
-def to_camel(string: str) -> str:
-    return ''.join(word.capitalize() for word in string.split('_'))
+from pydantic.alias_generators import to_camel
 
 
 class CamelModelSchema(Schema):
@@ -33,15 +32,18 @@ class CamelModelSchema(Schema):
 !!! note
     When overriding the schema's `Config`, it is necessary to inherit from the base `Config` class. 
 
-Keep in mind that when you want modify output for field names (like cammel case) - you need to set as well  `populate_by_name` and `by_alias`
+To alias `ModelSchema`'s field names, you'll also need to set `populate_by_name` on the `Schema` config and 
+enable `by_alias` in all endpoints using the model.
 
-```python hl_lines="6 9"
+```python hl_lines="4 11"
 class UserSchema(ModelSchema):
-    class Config:
-        model = User
-        model_fields = ["id", "email"]
+    class Config(Schema.Config):
         alias_generator = to_camel
         populate_by_name = True  # !!!!!! <--------
+        
+    class Meta:
+        model = User
+        model_fields = ["id", "email", "created_date"]
 
 
 @api.get("/users", response=list[UserSchema], by_alias=True) # !!!!!! <-------- by_alias
@@ -55,13 +57,15 @@ results:
 ```JSON
 [
   {
-    "Id": 1,
-    "Email": "tim@apple.com"
+    "id": 1,
+    "email": "tim@apple.com",
+    "createdDate": "2011-08-24"
   },
   {
-    "Id": 2,
-    "Email": "sarah@smith.com"
-  }
+    "id": 2,
+    "email": "sarah@smith.com",
+    "createdDate": "2012-03-06"
+  },
   ...
 ]
 
