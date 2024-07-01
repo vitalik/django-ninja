@@ -23,6 +23,9 @@ def test_alias():
                 "properties": {
                     "foo": {"type": "string", "default": "", "title": "Foo"}
                 },
+                "required": [
+                    "foo",
+                ],
                 "title": "SchemaWithAlias",
             }
         }

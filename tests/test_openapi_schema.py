@@ -17,6 +17,7 @@ api = NinjaAPI()
 class Payload(Schema):
     i: int
     f: float
+    i_default: int = Field(1)
 
 
 class TypeA(Schema):
@@ -34,6 +35,7 @@ def to_camel(string: str) -> str:
 class Response(Schema):
     i: int
     f: float = Field(..., title="f title", description="f desc")
+    i_default: int = Field(1)
 
     class Config(Schema.Config):
         alias_generator = to_camel
@@ -208,8 +210,13 @@ def test_schema(schema):
             "properties": {
                 "i": {"title": "I", "type": "integer"},
                 "f": {"description": "f desc", "title": "f title", "type": "number"},
+                "i_default": {
+                    "default": 1,
+                    "title": "I Default",
+                    "type": "integer",
+                },
             },
-            "required": ["i", "f"],
+            "required": ["i", "f", "i_default"],
         },
         "Payload": {
             "title": "Payload",
@@ -217,6 +224,11 @@ def test_schema(schema):
             "properties": {
                 "i": {"title": "I", "type": "integer"},
                 "f": {"title": "F", "type": "number"},
+                "i_default": {
+                    "default": 1,
+                    "title": "I Default",
+                    "type": "integer",
+                },
             },
             "required": ["i", "f"],
         },
@@ -318,6 +330,11 @@ def test_schema_list(schema):
             "properties": {
                 "f": {"title": "F", "type": "number"},
                 "i": {"title": "I", "type": "integer"},
+                "i_default": {
+                    "default": 1,
+                    "title": "I Default",
+                    "type": "integer",
+                },
             },
             "required": ["i", "f"],
             "title": "Payload",
@@ -343,8 +360,13 @@ def test_schema_list(schema):
             "properties": {
                 "f": {"description": "f desc", "title": "f title", "type": "number"},
                 "i": {"title": "I", "type": "integer"},
+                "i_default": {
+                    "default": 1,
+                    "title": "I Default",
+                    "type": "integer",
+                },
             },
-            "required": ["i", "f"],
+            "required": ["i", "f", "i_default"],
             "title": "Response",
             "type": "object",
         },
@@ -447,6 +469,11 @@ def test_schema_form(schema):
                     "properties": {
                         "i": {"title": "I", "type": "integer"},
                         "f": {"title": "F", "type": "number"},
+                        "i_default": {
+                            "default": 1,
+                            "title": "I Default",
+                            "type": "integer",
+                        },
                     },
                     "required": ["i", "f"],
                 }
@@ -539,6 +566,11 @@ def test_schema_form_file(schema):
                         },
                         "i": {"title": "I", "type": "integer"},
                         "f": {"title": "F", "type": "number"},
+                        "i_default": {
+                            "default": 1,
+                            "title": "I Default",
+                            "type": "integer",
+                        },
                     },
                     "required": ["files", "i", "f"],
                     "title": "MultiPartBodyParams",
