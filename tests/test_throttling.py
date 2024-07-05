@@ -3,7 +3,7 @@ from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
 
 from ninja import NinjaAPI, Router
-from ninja.testing import TestClient
+from ninja.testing import TestAsyncClient, TestClient
 from ninja.throttling import (
     AnonRateThrottle,
     AuthRateThrottle,
@@ -112,6 +112,26 @@ def test_operation_throttling():
     resp = client.get("/check1")
     assert resp.status_code == 429
     assert resp.json() == {"detail": "Too many requests."}
+
+
+@pytest.mark.asyncio
+async def test_async_throttling():
+    th = AnonRateThrottle("1/s")
+    set_throttle_timer(th, 0)
+
+    api = NinjaAPI(throttle=th)
+
+    @api.get("/check-async")
+    async def check(request):
+        return "OK"
+
+    client = TestAsyncClient(api)
+
+    resp = await client.get("/check-async")
+    assert resp.status_code == 200
+
+    resp = await client.get("/check-async")
+    assert resp.status_code == 429
 
 
 # "Unit tests" for the throttling module

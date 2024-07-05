@@ -161,6 +161,7 @@ class Operation:
 
     def _run_checks(self, request: HttpRequest) -> Optional[HttpResponse]:
         "Runs security/throttle checks for each operation"
+        # NOTE: if you change anything in this function - do this also in AsyncOperation
 
         # csrf:
         if self.api.csrf:
@@ -336,6 +337,8 @@ class AsyncOperation(Operation):
 
     async def _run_checks(self, request: HttpRequest) -> Optional[HttpResponse]:  # type: ignore
         "Runs security checks for each operation"
+        # NOTE: if you change anything in this function - do this also in Sync Operation
+
         # auth:
         if self.auth_callbacks:
             error = await self._run_authentication(request)
@@ -345,6 +348,12 @@ class AsyncOperation(Operation):
         # csrf:
         if self.api.csrf:
             error = check_csrf(request, self.view_func)
+            if error:
+                return error
+
+        # Throttling:
+        if self.throttle_objects:
+            error = self._check_throttles(request)  # type: ignore
             if error:
                 return error
 
