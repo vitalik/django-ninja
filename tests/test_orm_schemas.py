@@ -1,6 +1,7 @@
-from typing import List
+from typing import List, Literal
 from unittest.mock import Mock
 
+from ninja import Schema
 import pytest
 from django.contrib.postgres import fields as ps_fields
 from django.db import models
@@ -44,9 +45,8 @@ def test_inheritance():
 def test_all_fields():
     # test all except relational field
     class TypeChoice(models.TextChoices):
-        TYPE_A = "TYPE_A"
-        TYPE_B = "TYPE_B"
-        TYPE_C = "TYPE_C"
+        NAME_A = "VALUE_A"
+        NAME_B = "VALUE_B"
 
     class AllFields(models.Model):
         bigintegerfield = models.BigIntegerField()
@@ -165,7 +165,10 @@ def test_all_fields():
             },
             "arrayofchoicefield": {
                 "type": "array",
-                "items": {"type": "string"},
+                "items": {
+                    "enum": ["VALUE_A", "VALUE_B"],
+                    "type": "string",
+                },
                 "title": "Arrayofchoicefield",
             },
             "cicharfield": {"type": "string", "title": "Cicharfield"},
@@ -602,3 +605,44 @@ def test_optional_fields():
         SomeReqFieldModel, optional_fields=["some_field", "other_field", "optional"]
     )
     assert Schema.json_schema().get("required") is None
+
+
+def test_array_fields():
+    # Test Postgres ArrayField
+
+    class TypeChoice(models.TextChoices):
+        NAME_A = "VALUE_A"
+        NAME_B = "VALUE_B"
+
+    class ArrayModel(models.Model):
+        array_of_int = ps_fields.ArrayField(models.IntegerField())
+        array_of_str = ps_fields.ArrayField(models.CharField(max_length=100))
+        array_of_choice = ps_fields.ArrayField(
+            models.CharField(choices=TypeChoice.choices)
+        )
+
+        class Meta:
+            app_label = "tests"
+
+    class ExpectedSchema(Schema):
+        array_of_int: List[int]
+        array_of_str: List[str]
+        array_of_choice: List[Literal["VALUE_A", "VALUE_B"]]
+
+    model_json_schema = create_schema(ArrayModel).json_schema()
+    expected_json_schema = ExpectedSchema.json_schema()
+
+    assert (
+        model_json_schema["properties"]["array_of_int"]
+        == expected_json_schema["properties"]["array_of_int"]
+    )
+
+    assert (
+        model_json_schema["properties"]["array_of_str"]
+        == expected_json_schema["properties"]["array_of_str"]
+    )
+
+    assert (
+        model_json_schema["properties"]["array_of_choice"]
+        == expected_json_schema["properties"]["array_of_choice"]
+    )

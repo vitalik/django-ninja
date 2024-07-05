@@ -1,6 +1,17 @@
 import datetime
 from decimal import Decimal
-from typing import Any, Callable, Dict, List, Tuple, Type, TypeVar, Union, no_type_check
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    no_type_check,
+    Literal,
+)
 from uuid import UUID
 
 from django.db.models import ManyToManyField
@@ -150,10 +161,14 @@ def get_schema_field(
         internal_type = field.get_internal_type()
         python_type = TYPES[internal_type]
 
-        # Handle Container types
-        if getattr(field, "base_field", None):
-            inner_type = TYPES[field.base_field.get_internal_type()]
-            python_type = List[inner_type]
+        # Handle CharField with choices
+        if internal_type == "CharField" and field.choices:
+            python_type = Literal[tuple(str(c[0]) for c in field.choices)]
+
+        # Handle PG ArrayField
+        if internal_type == "ArrayField":
+            inner_internal_type, _ = get_schema_field(field.base_field)
+            python_type = python_type[inner_internal_type]
 
         if field.primary_key or blank or null or optional:
             default = None
