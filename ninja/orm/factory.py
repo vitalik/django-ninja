@@ -66,7 +66,7 @@ class SchemaFactory:
             python_type, field_info = get_schema_field(
                 fld,
                 depth=depth,
-                optional=optional_fields and (fld.name in optional_fields),
+                optional=bool(optional_fields and (fld.name in optional_fields)),
                 choices_exclude=choices_exclude,
             )
             definitions[fld.name] = (python_type, field_info)

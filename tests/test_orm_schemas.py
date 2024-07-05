@@ -596,7 +596,9 @@ def test_choices():
             AVERAGE = 5, "Average"
             BAD = 1, "Bad"
 
-        theme = models.CharField(max_length=32, choices=ThemeChoices.choices)
+        theme = models.CharField(
+            max_length=32, choices=ThemeChoices.choices, default=ThemeChoices.SYS
+        )
         score = models.PositiveSmallIntegerField(choices=ScoreChoices.choices)
 
         class Meta:
@@ -609,13 +611,14 @@ def test_choices():
             "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
             "score": {"enum": [10, 5, 1], "title": "Score", "type": "integer"},
             "theme": {
+                "default": "system",
                 "enum": ["system", "dark", "light"],
                 "maxLength": 32,
                 "title": "Theme",
                 "type": "string",
             },
         },
-        "required": ["theme", "score"],
+        "required": ["score"],
         "title": "ModelWithChoices",
         "type": "object",
     }
@@ -628,13 +631,14 @@ def test_choices():
             "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
             "score": {"title": "Score", "type": "integer"},
             "theme": {
+                "default": "system",
                 "enum": ["system", "dark", "light"],
                 "maxLength": 32,
                 "title": "Theme",
                 "type": "string",
             },
         },
-        "required": ["theme", "score"],
+        "required": ["score"],
         "title": "ModelWithChoices",
         "type": "object",
     }
@@ -650,13 +654,14 @@ def test_choices():
             "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
             "score": {"title": "Score", "type": "integer"},
             "theme": {
+                "default": "system",
                 "enum": ["system", "dark", "light"],
                 "maxLength": 32,
                 "title": "Theme",
                 "type": "string",
             },
         },
-        "required": ["theme", "score"],
+        "required": ["score"],
         "title": "ModelWithChoicesSchema",
         "type": "object",
     }
