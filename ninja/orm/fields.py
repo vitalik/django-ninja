@@ -5,12 +5,12 @@ from typing import (
     Callable,
     Dict,
     List,
+    Literal,
     Tuple,
     Type,
     TypeVar,
     Union,
     no_type_check,
-    Literal,
 )
 from uuid import UUID
 

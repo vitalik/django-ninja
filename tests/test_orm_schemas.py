@@ -1,12 +1,12 @@
 from typing import List, Literal
 from unittest.mock import Mock
 
-from ninja import Schema
 import pytest
 from django.contrib.postgres import fields as ps_fields
 from django.db import models
 from django.db.models import Manager
 
+from ninja import Schema
 from ninja.errors import ConfigError
 from ninja.orm import create_schema
 from ninja.orm.shortcuts import L, S
