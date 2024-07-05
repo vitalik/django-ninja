@@ -150,6 +150,11 @@ def get_schema_field(
         internal_type = field.get_internal_type()
         python_type = TYPES[internal_type]
 
+        # Handle Container types
+        if getattr(field, "base_field", None):
+            inner_type = TYPES[field.base_field.get_internal_type()]
+            python_type = List[inner_type]
+
         if field.primary_key or blank or null or optional:
             default = None
             nullable = True

@@ -43,6 +43,10 @@ def test_inheritance():
 
 def test_all_fields():
     # test all except relational field
+    class TypeChoice(models.TextChoices):
+        TYPE_A = "TYPE_A"
+        TYPE_B = "TYPE_B"
+        TYPE_C = "TYPE_C"
 
     class AllFields(models.Model):
         bigintegerfield = models.BigIntegerField()
@@ -71,7 +75,11 @@ def test_all_fields():
         timefield = models.TimeField()
         urlfield = models.URLField()
         uuidfield = models.UUIDField()
-        arrayfield = ps_fields.ArrayField(models.CharField())
+        arrayofstringfield = ps_fields.ArrayField(models.CharField())
+        arrayofintegerfield = ps_fields.ArrayField(models.IntegerField())
+        arrayofchoicefield = ps_fields.ArrayField(
+            models.CharField(choices=TypeChoice.choices)
+        )
         cicharfield = ps_fields.CICharField()
         ciemailfield = ps_fields.CIEmailField()
         citextfield = ps_fields.CITextField()
@@ -145,7 +153,21 @@ def test_all_fields():
             "timefield": {"type": "string", "format": "time", "title": "Timefield"},
             "urlfield": {"type": "string", "title": "Urlfield"},
             "uuidfield": {"type": "string", "format": "uuid", "title": "Uuidfield"},
-            "arrayfield": {"type": "array", "items": {}, "title": "Arrayfield"},
+            "arrayofstringfield": {
+                "type": "array",
+                "items": {"type": "string"},
+                "title": "Arrayofstringfield",
+            },
+            "arrayofintegerfield": {
+                "type": "array",
+                "items": {"type": "integer"},
+                "title": "Arrayofintegerfield",
+            },
+            "arrayofchoicefield": {
+                "type": "array",
+                "items": {"type": "string"},
+                "title": "Arrayofchoicefield",
+            },
             "cicharfield": {"type": "string", "title": "Cicharfield"},
             "ciemailfield": {
                 "type": "string",
@@ -182,7 +204,9 @@ def test_all_fields():
             "timefield",
             "urlfield",
             "uuidfield",
-            "arrayfield",
+            "arrayofstringfield",
+            "arrayofintegerfield",
+            "arrayofchoicefield",
             "cicharfield",
             "ciemailfield",
             "citextfield",
