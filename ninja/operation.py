@@ -353,7 +353,7 @@ class AsyncOperation(Operation):
 
         # Throttling:
         if self.throttle_objects:
-            error = self._check_throttles(request)  # type: ignore
+            error = self._check_throttles(request)
             if error:
                 return error
 
