@@ -43,6 +43,7 @@ class SchemaFactory:
         optional_fields: Optional[List[str]] = None,
         custom_fields: Optional[List[Tuple[str, Any, Any]]] = None,
         base_class: Type[Schema] = Schema,
+        choices_exclude: Optional[List[str]] = None,
     ) -> Type[Schema]:
         name = name or model.__name__
 
@@ -65,7 +66,8 @@ class SchemaFactory:
             python_type, field_info = get_schema_field(
                 fld,
                 depth=depth,
-                optional=optional_fields and (fld.name in optional_fields),
+                optional=bool(optional_fields and (fld.name in optional_fields)),
+                choices_exclude=choices_exclude,
             )
             definitions[fld.name] = (python_type, field_info)
 

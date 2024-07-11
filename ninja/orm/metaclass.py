@@ -17,6 +17,7 @@ class MetaConf:
     fields: Optional[List[str]] = None
     exclude: Union[List[str], str, None] = None
     fields_optional: Union[List[str], str, None] = None
+    choices_exclude: Optional[List[str]] = None
 
     @staticmethod
     def from_schema_class(name: str, namespace: dict) -> "MetaConf":
@@ -26,6 +27,7 @@ class MetaConf:
             fields = getattr(meta, "fields", None)
             exclude = getattr(meta, "exclude", None)
             optional_fields = getattr(meta, "fields_optional", None)
+            choices_exclude = getattr(meta, "choices_exclude", None)
 
         elif "Config" in namespace:
             config = namespace["Config"]
@@ -33,6 +35,7 @@ class MetaConf:
             fields = getattr(config, "model_fields", None)
             exclude = getattr(config, "model_exclude", None)
             optional_fields = getattr(config, "model_fields_optional", None)
+            choices_exclude = getattr(config, "choices_exclude", None)
 
             warnings.warn(
                 "The use of `Config` class is deprecated for ModelSchema, use 'Meta' instead",
@@ -62,6 +65,7 @@ class MetaConf:
             fields=fields,
             exclude=exclude,
             fields_optional=optional_fields,
+            choices_exclude=choices_exclude,
         )
 
 
@@ -110,6 +114,7 @@ class ModelSchemaMetaclass(ResolverMetaclass):
                     exclude=meta_conf.exclude,
                     optional_fields=meta_conf.fields_optional,
                     custom_fields=custom_fields,
+                    choices_exclude=meta_conf.choices_exclude,
                     base_class=cls,
                 )
                 model_schema.__doc__ = cls.__doc__

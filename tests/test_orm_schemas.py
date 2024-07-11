@@ -8,6 +8,7 @@ from django.db.models import Manager
 
 from ninja.errors import ConfigError
 from ninja.orm import create_schema
+from ninja.orm.factory import SchemaFactory
 from ninja.orm.shortcuts import L, S
 
 
@@ -471,6 +472,7 @@ def test_manytomany():
     bar = Mock()
     bar.id = 1
     bar.m2m = m2m
+    bar._meta = None
 
     data = Schema.from_orm(bar).dict()
 
@@ -578,3 +580,94 @@ def test_optional_fields():
         SomeReqFieldModel, optional_fields=["some_field", "other_field", "optional"]
     )
     assert Schema.json_schema().get("required") is None
+
+
+def test_choices():
+    from ninja import ModelSchema
+
+    class ModelWithChoices(models.Model):
+        class ThemeChoices(models.TextChoices):
+            SYS = "system", "System"
+            DARK = "dark", "Dark"
+            LIGHT = "light", "Light"
+
+        class ScoreChoices(models.IntegerChoices):
+            GOOD = 10, "Good"
+            AVERAGE = 5, "Average"
+            BAD = 1, "Bad"
+
+        theme = models.CharField(
+            max_length=32, choices=ThemeChoices.choices, default=ThemeChoices.SYS
+        )
+        score = models.PositiveSmallIntegerField(choices=ScoreChoices.choices)
+
+        class Meta:
+            app_label = "tests"
+
+    OrmSchema = create_schema(ModelWithChoices)
+
+    assert OrmSchema.json_schema() == {
+        "properties": {
+            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+            "score": {"enum": [10, 5, 1], "title": "Score", "type": "integer"},
+            "theme": {
+                "default": "system",
+                "enum": ["system", "dark", "light"],
+                "maxLength": 32,
+                "title": "Theme",
+                "type": "string",
+            },
+        },
+        "required": ["score"],
+        "title": "ModelWithChoices",
+        "type": "object",
+    }
+    # Avoid cache inside schemafactory instance
+    ChoiceExcludeScore = SchemaFactory().create_schema(
+        ModelWithChoices, choices_exclude=["score"]
+    )
+    assert ChoiceExcludeScore.json_schema() == {
+        "properties": {
+            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+            "score": {"title": "Score", "type": "integer"},
+            "theme": {
+                "default": "system",
+                "enum": ["system", "dark", "light"],
+                "maxLength": 32,
+                "title": "Theme",
+                "type": "string",
+            },
+        },
+        "required": ["score"],
+        "title": "ModelWithChoices",
+        "type": "object",
+    }
+
+    class ModelWithChoicesSchema(ModelSchema):
+        class Meta:
+            model = ModelWithChoices
+            fields = "__all__"
+            choices_exclude = ["score"]
+
+    assert ModelWithChoicesSchema.json_schema() == {
+        "properties": {
+            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+            "score": {"title": "Score", "type": "integer"},
+            "theme": {
+                "default": "system",
+                "enum": ["system", "dark", "light"],
+                "maxLength": 32,
+                "title": "Theme",
+                "type": "string",
+            },
+        },
+        "required": ["score"],
+        "title": "ModelWithChoicesSchema",
+        "type": "object",
+    }
+    obj = ModelWithChoices(
+        theme=ModelWithChoices.ThemeChoices.SYS,
+        score=ModelWithChoices.ScoreChoices.GOOD,
+    )
+    schema = ModelWithChoicesSchema.from_orm(obj)
+    assert schema.dict() == {"id": None, "score": 10, "theme": "system"}

@@ -2,11 +2,13 @@ from typing import List, Optional
 from unittest.mock import Mock
 
 import pytest
+from django.db import models
 from django.db.models import Manager, QuerySet
 from django.db.models.fields.files import ImageFieldFile
 from pydantic_core import ValidationError
 
 from ninja import Schema
+from ninja.orm import create_schema
 from ninja.schema import DjangoGetter, Field
 
 
@@ -215,3 +217,33 @@ def test_django_getter_validates_assignment():
     except ValidationError:
         # We expect this error, all is okay
         pass
+
+
+def test_choices_default():
+    class ModelWithChoices2(models.Model):
+        class ThemeChoices(models.TextChoices):
+            SYS = "system", "System"
+            DARK = "dark", "Dark"
+            LIGHT = "light", "Light"
+
+        class ScoreChoices(models.IntegerChoices):
+            GOOD = 10, "Good"
+            AVERAGE = 5, "Average"
+            BAD = 1, "Bad"
+
+        theme = models.CharField(
+            max_length=32, choices=ThemeChoices.choices, default=ThemeChoices.SYS
+        )
+        score = models.PositiveSmallIntegerField(choices=ScoreChoices.choices)
+
+        class Meta:
+            app_label = "tests"
+
+    OrmSchema = create_schema(ModelWithChoices2)
+    obj = ModelWithChoices2(score=10)
+    schema = OrmSchema.from_orm(obj)
+    assert schema.dict() == {
+        "id": None,
+        "score": 10,
+        "theme": "system",
+    }
