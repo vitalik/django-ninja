@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 from unittest.mock import Mock
 
 import pytest
@@ -215,7 +215,7 @@ def test_schema_validates_assignment_and_reassigns_the_value():
 
 @pytest.mark.parametrize("test_validate_assignment", [False, None])
 def test_schema_skips_validation_when_validate_assignment_False(
-    test_validate_assignment: bool | None,
+    test_validate_assignment: Union[bool, None],
 ):
     class ValidateAssignmentSchema(Schema):
         str_var: str
