@@ -197,7 +197,7 @@ def test_django_getter():
     assert repr(dg) == "<DjangoGetter: {'i': 1}>"
 
 
-def test_django_getter_validates_assignment():
+def test_django_getter_validates_assignment_and_reassigns_the_value():
     class ValidateAssignmentSchema(Schema):
         str_var: str
 
@@ -209,6 +209,7 @@ def test_django_getter_validates_assignment():
     # a bug where validate_assignment would cause an AttributeError
     # for __dict__ on the target schema.
     schema_inst.str_var = "reassigned_value"
+    assert schema_inst.str_var == "reassigned_value"
     try:
         schema_inst.str_var = 5
         raise AssertionError()
