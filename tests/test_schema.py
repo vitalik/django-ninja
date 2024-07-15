@@ -222,9 +222,8 @@ def test_schema_skips_validation_when_validate_assignment_False(
         model_config = {"validate_assignment": test_validate_assignment}
 
     schema_inst = ValidateAssignmentSchema(str_var="test_value")
-    schema_inst.str_var = "reassigned_value"
-    assert schema_inst.str_var == "reassigned_value"
     try:
         schema_inst.str_var = 5
+        assert schema_inst.str_var == 5
     except ValidationError as ve:
         raise AssertionError() from ve
