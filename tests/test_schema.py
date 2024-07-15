@@ -226,5 +226,5 @@ def test_schema_skips_validation_when_validate_assignment_False(
     assert schema_inst.str_var == "reassigned_value"
     try:
         schema_inst.str_var = 5
-    except ValidationError:
-        raise AssertionError()
+    except ValidationError as ve:
+        raise AssertionError() from ve
