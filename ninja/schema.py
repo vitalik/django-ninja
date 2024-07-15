@@ -220,7 +220,7 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
         # to DjangoGetter, since any checks or modifications on DjangoGetter's __dict__
         # will not persist to the original object.
         forbids_extra = cls.model_config.get("extra") == "forbid"
-        should_validate_assignment = cls.model_config.get("validate_assignment")
+        should_validate_assignment = cls.model_config.get("validate_assignment", False)
         if forbids_extra or should_validate_assignment:
             handler(values)
 
