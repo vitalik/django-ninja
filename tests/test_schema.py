@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 from unittest.mock import Mock
 
 import pytest
@@ -197,21 +197,33 @@ def test_django_getter():
     assert repr(dg) == "<DjangoGetter: {'i': 1}>"
 
 
-def test_django_getter_validates_assignment():
+def test_schema_validates_assignment_and_reassigns_the_value():
     class ValidateAssignmentSchema(Schema):
         str_var: str
-
         model_config = {"validate_assignment": True}
 
     schema_inst = ValidateAssignmentSchema(str_var="test_value")
-
-    # Validate we can re-assign the value, this is a test for
-    # a bug where validate_assignment would cause an AttributeError
-    # for __dict__ on the target schema.
     schema_inst.str_var = "reassigned_value"
+    assert schema_inst.str_var == "reassigned_value"
     try:
         schema_inst.str_var = 5
         raise AssertionError()
     except ValidationError:
         # We expect this error, all is okay
         pass
+
+
+@pytest.mark.parametrize("test_validate_assignment", [False, None])
+def test_schema_skips_validation_when_validate_assignment_False(
+    test_validate_assignment: Union[bool, None],
+):
+    class ValidateAssignmentSchema(Schema):
+        str_var: str
+        model_config = {"validate_assignment": test_validate_assignment}
+
+    schema_inst = ValidateAssignmentSchema(str_var="test_value")
+    try:
+        schema_inst.str_var = 5
+        assert schema_inst.str_var == 5
+    except ValidationError as ve:
+        raise AssertionError() from ve
