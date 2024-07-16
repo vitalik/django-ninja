@@ -1,8 +1,9 @@
 import itertools
 import re
-import warnings
 from http.client import responses
 from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Set, Tuple
+
+from django.utils.termcolors import make_style
 
 from ninja.constants import NOT_SET
 from ninja.operation import Operation
@@ -26,6 +27,9 @@ BODY_CONTENT_TYPES: Dict[str, str] = {
 def get_schema(api: "NinjaAPI", path_prefix: str = "") -> "OpenAPISchema":
     openapi = OpenAPISchema(api, path_prefix)
     return openapi
+
+
+bold_red_style = make_style(opts=("bold",), fg="red")
 
 
 class OpenAPISchema(dict):
@@ -103,9 +107,10 @@ class OpenAPISchema(dict):
     def operation_details(self, operation: Operation) -> DictStrAny:
         op_id = operation.operation_id or self.api.get_openapi_operation_id(operation)
         if op_id in self.all_operation_ids:
-            warnings.warn(
-                f'operation_id "{op_id}" is already used (func: {operation.view_func})',
-                stacklevel=2,
+            print(
+                bold_red_style(
+                    f'Warning: operation_id "{op_id}" is already used (Try giving a different name to: {operation.view_func.__module__}.{operation.view_func.__name__})'
+                )
             )
         self.all_operation_ids.add(op_id)
         result = {

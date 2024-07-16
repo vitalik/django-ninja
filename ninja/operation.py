@@ -18,11 +18,12 @@ from asgiref.sync import async_to_sync
 from django.http import HttpRequest, HttpResponse, HttpResponseNotAllowed
 from django.http.response import HttpResponseBase
 
-from ninja.constants import NOT_SET
-from ninja.errors import AuthenticationError, ConfigError, ValidationError
+from ninja.constants import NOT_SET, NOT_SET_TYPE
+from ninja.errors import AuthenticationError, ConfigError, Throttled, ValidationError
 from ninja.params.models import TModels
 from ninja.schema import Schema
 from ninja.signature import ViewSignature, is_async
+from ninja.throttling import BaseThrottle
 from ninja.types import DictStrAny
 from ninja.utils import check_csrf, is_async_callable
 
@@ -39,7 +40,8 @@ class Operation:
         methods: List[str],
         view_func: Callable,
         *,
-        auth: Optional[Union[Sequence[Callable], Callable, object]] = NOT_SET,
+        auth: Optional[Union[Sequence[Callable], Callable, NOT_SET_TYPE]] = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
@@ -65,6 +67,17 @@ class Operation:
         self.auth_param: Optional[Union[Sequence[Callable], Callable, object]] = auth
         self.auth_callbacks: Sequence[Callable] = []
         self._set_auth(auth)
+
+        if isinstance(throttle, BaseThrottle):
+            throttle = [throttle]
+        self.throttle_param = throttle
+        self.throttle_objects: List[BaseThrottle] = []
+        if throttle is not NOT_SET:
+            for th in throttle:  # type: ignore
+                assert isinstance(
+                    th, BaseThrottle
+                ), "Throttle should be an instance of BaseThrottle"
+                self.throttle_objects.append(th)
 
         self.signature = ViewSignature(self.path, self.view_func)
         self.models: TModels = self.signature.models
@@ -92,7 +105,7 @@ class Operation:
         self.exclude_none = exclude_none
 
         if hasattr(view_func, "_ninja_contribute_to_operation"):
-            # Allow 3rd party code to contribute to the operation behaviour
+            # Allow 3rd party code to contribute to the operation behavior
             callbacks: List[Callable] = view_func._ninja_contribute_to_operation
             for callback in callbacks:
                 callback(self)
@@ -115,11 +128,26 @@ class Operation:
 
     def set_api_instance(self, api: "NinjaAPI", router: "Router") -> None:
         self.api = api
+
         if self.auth_param == NOT_SET:
             if api.auth != NOT_SET:
                 self._set_auth(self.api.auth)
             if router.auth != NOT_SET:
                 self._set_auth(router.auth)
+
+        if self.throttle_param == NOT_SET:
+            if api.throttle != NOT_SET:
+                self.throttle_objects = (
+                    isinstance(api.throttle, BaseThrottle)
+                    and [api.throttle]
+                    or api.throttle  # type: ignore
+                )
+            if router.throttle != NOT_SET:
+                _t = router.throttle
+                self.throttle_objects = isinstance(_t, BaseThrottle) and [_t] or _t  # type: ignore
+            assert all(
+                isinstance(th, BaseThrottle) for th in self.throttle_objects
+            ), "Throttle should be an instance of BaseThrottle"
 
         if self.tags is None:
             if router.tags is not None:
@@ -132,16 +160,24 @@ class Operation:
             self.auth_callbacks = isinstance(auth, Sequence) and auth or [auth]
 
     def _run_checks(self, request: HttpRequest) -> Optional[HttpResponse]:
-        "Runs security checks for each operation"
-        # auth:
-        if self.auth_callbacks:
-            error = self._run_authentication(request)
-            if error:
-                return error
+        "Runs security/throttle checks for each operation"
+        # NOTE: if you change anything in this function - do this also in AsyncOperation
 
         # csrf:
         if self.api.csrf:
             error = check_csrf(request, self.view_func)
+            if error:
+                return error
+
+        # auth:
+        if self.auth_callbacks:
+            error = self._run_authentication(request)  # type: ignore
+            if error:
+                return error
+
+        # Throttling:
+        if self.throttle_objects:
+            error = self._check_throttles(request)  # type: ignore
             if error:
                 return error
 
@@ -161,6 +197,22 @@ class Operation:
                 request.auth = result  # type: ignore
                 return None
         return self.api.on_exception(request, AuthenticationError())
+
+    def _check_throttles(self, request: HttpRequest) -> Optional[HttpResponse]:
+        throttle_durations = []
+        for throttle in self.throttle_objects:
+            if not throttle.allow_request(request):
+                throttle_durations.append(throttle.wait())
+
+        if throttle_durations:
+            # Filter out `None` values which may happen in case of config / rate
+            durations = [
+                duration for duration in throttle_durations if duration is not None
+            ]
+
+            duration = max(durations, default=None)
+            return self.api.on_exception(request, Throttled(wait=duration))  # type: ignore
+        return None
 
     def _result_to_response(
         self, request: HttpRequest, result: Any, temporal_response: HttpResponse
@@ -285,6 +337,8 @@ class AsyncOperation(Operation):
 
     async def _run_checks(self, request: HttpRequest) -> Optional[HttpResponse]:  # type: ignore
         "Runs security checks for each operation"
+        # NOTE: if you change anything in this function - do this also in Sync Operation
+
         # auth:
         if self.auth_callbacks:
             error = await self._run_authentication(request)
@@ -294,6 +348,12 @@ class AsyncOperation(Operation):
         # csrf:
         if self.api.csrf:
             error = check_csrf(request, self.view_func)
+            if error:
+                return error
+
+        # Throttling:
+        if self.throttle_objects:
+            error = self._check_throttles(request)
             if error:
                 return error
 
@@ -331,7 +391,8 @@ class PathView:
         methods: List[str],
         view_func: Callable,
         *,
-        auth: Optional[Union[Sequence[Callable], Callable, object]] = NOT_SET,
+        auth: Optional[Union[Sequence[Callable], Callable, NOT_SET_TYPE]] = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
@@ -359,6 +420,7 @@ class PathView:
             methods,
             view_func,
             auth=auth,
+            throttle=throttle,
             response=response,
             operation_id=operation_id,
             summary=summary,

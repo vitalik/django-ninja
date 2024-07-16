@@ -191,24 +191,27 @@ def test_all_fields():
     }
 
 
-def test_bigautofield():
-    class ModelBigAuto(models.Model):
-        bigautofiled = models.BigAutoField(primary_key=True)
+@pytest.mark.parametrize(
+    "field",
+    [
+        models.BigAutoField,
+        models.SmallAutoField,
+    ],
+)
+def test_altautofield(field: type):
+    class ModelAltAuto(models.Model):
+        altautofield = field(primary_key=True)
 
         class Meta:
             app_label = "tests"
 
-    SchemaCls = create_schema(ModelBigAuto)
+    SchemaCls = create_schema(ModelAltAuto)
     # print(SchemaCls.json_schema())
-    assert SchemaCls.json_schema() == {
-        "type": "object",
-        "properties": {
-            "bigautofiled": {
-                "anyOf": [{"type": "integer"}, {"type": "null"}],
-                "title": "Bigautofiled",
-            }
-        },
-        "title": "ModelBigAuto",
+    assert SchemaCls.json_schema()["properties"] == {
+        "altautofield": {
+            "anyOf": [{"type": "integer"}, {"type": "null"}],
+            "title": "Altautofield",
+        }
     }
 
 

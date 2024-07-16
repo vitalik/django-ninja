@@ -215,9 +215,13 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
     def _run_root_validator(
         cls, values: Any, handler: ModelWrapValidatorHandler[S], info: ValidationInfo
     ) -> Any:
-        # when extra is "forbid" we need to perform default pydantic validation
-        # as DjangoGetter does not act as dict and pydantic will not be able to validate it
-        if cls.model_config.get("extra") == "forbid":
+        # If Pydantic intends to validate against the __dict__ of the immediate Schema
+        # object, then we need to call `handler` directly on `values` before the conversion
+        # to DjangoGetter, since any checks or modifications on DjangoGetter's __dict__
+        # will not persist to the original object.
+        forbids_extra = cls.model_config.get("extra") == "forbid"
+        should_validate_assignment = cls.model_config.get("validate_assignment", False)
+        if forbids_extra or should_validate_assignment:
             handler(values)
 
         values = DjangoGetter(values, cls, info.context)

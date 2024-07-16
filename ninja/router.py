@@ -1,11 +1,22 @@
-from typing import TYPE_CHECKING, Any, Callable, Dict, Iterator, List, Optional, Tuple
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    Union,
+)
 
 from django.urls import URLPattern
 from django.urls import path as django_path
 
-from ninja.constants import NOT_SET
+from ninja.constants import NOT_SET, NOT_SET_TYPE
 from ninja.errors import ConfigError
 from ninja.operation import PathView
+from ninja.throttling import BaseThrottle
 from ninja.types import TCallable
 from ninja.utils import normalize_path, replace_path_param_notation
 
@@ -18,10 +29,15 @@ __all__ = ["Router"]
 
 class Router:
     def __init__(
-        self, *, auth: Any = NOT_SET, tags: Optional[List[str]] = None
+        self,
+        *,
+        auth: Any = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
+        tags: Optional[List[str]] = None,
     ) -> None:
         self.api: Optional["NinjaAPI"] = None
         self.auth = auth
+        self.throttle = throttle
         self.tags = tags
         self.path_operations: Dict[str, PathView] = {}
         self._routers: List[Tuple[str, Router]] = []
@@ -31,6 +47,7 @@ class Router:
         path: str,
         *,
         auth: Any = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
@@ -49,6 +66,7 @@ class Router:
             ["GET"],
             path,
             auth=auth,
+            throttle=throttle,
             response=response,
             operation_id=operation_id,
             summary=summary,
@@ -69,6 +87,7 @@ class Router:
         path: str,
         *,
         auth: Any = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
@@ -87,6 +106,7 @@ class Router:
             ["POST"],
             path,
             auth=auth,
+            throttle=throttle,
             response=response,
             operation_id=operation_id,
             summary=summary,
@@ -107,6 +127,7 @@ class Router:
         path: str,
         *,
         auth: Any = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
@@ -125,6 +146,7 @@ class Router:
             ["DELETE"],
             path,
             auth=auth,
+            throttle=throttle,
             response=response,
             operation_id=operation_id,
             summary=summary,
@@ -145,6 +167,7 @@ class Router:
         path: str,
         *,
         auth: Any = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
@@ -163,6 +186,7 @@ class Router:
             ["PATCH"],
             path,
             auth=auth,
+            throttle=throttle,
             response=response,
             operation_id=operation_id,
             summary=summary,
@@ -183,6 +207,7 @@ class Router:
         path: str,
         *,
         auth: Any = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
@@ -201,6 +226,7 @@ class Router:
             ["PUT"],
             path,
             auth=auth,
+            throttle=throttle,
             response=response,
             operation_id=operation_id,
             summary=summary,
@@ -222,6 +248,7 @@ class Router:
         path: str,
         *,
         auth: Any = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
@@ -242,6 +269,7 @@ class Router:
                 methods,
                 view_func,
                 auth=auth,
+                throttle=throttle,
                 response=response,
                 operation_id=operation_id,
                 summary=summary,
@@ -267,6 +295,7 @@ class Router:
         view_func: Callable,
         *,
         auth: Any = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
@@ -291,6 +320,7 @@ class Router:
             methods=methods,
             view_func=view_func,
             auth=auth,
+            throttle=throttle,
             response=response,
             operation_id=operation_id,
             summary=summary,
@@ -344,17 +374,24 @@ class Router:
         router: "Router",
         *,
         auth: Any = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         tags: Optional[List[str]] = None,
     ) -> None:
         if self.api:
             # we are already attached to an api
             self.api.add_router(
-                prefix=prefix, router=router, auth=auth, tags=tags, parent_router=self
+                prefix=prefix,
+                router=router,
+                auth=auth,
+                throttle=throttle,
+                tags=tags,
+                parent_router=self,
             )
         else:
             # we are not attached to an api
             if auth != NOT_SET:
                 router.auth = auth
+            # TODO: throttle
             if tags is not None:
                 router.tags = tags
             self._routers.append((prefix, router))

@@ -102,6 +102,7 @@ def test_optional():
         title = models.CharField()
         other = models.CharField(null=True)
         extra = models.IntegerField()
+        count = models.IntegerField(default=0, null=True)
 
         class Meta:
             app_label = "tests"
@@ -124,6 +125,11 @@ def test_optional():
         "title": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Title"},
         "other": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Other"},
         "extra": {"title": "Extra", "type": "integer"},
+        "count": {
+            "anyOf": [{"type": "integer"}, {"type": "null"}],
+            "default": 0,
+            "title": "Count",
+        },
     }
 
     assert OptSchema2.json_schema().get("required") is None
@@ -132,6 +138,11 @@ def test_optional():
         "title": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Title"},
         "other": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Other"},
         "extra": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "Extra"},
+        "count": {
+            "anyOf": [{"type": "integer"}, {"type": "null"}],
+            "default": 0,
+            "title": "Count",
+        },
     }
 
 

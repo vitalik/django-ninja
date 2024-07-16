@@ -1,7 +1,7 @@
 import logging
 import traceback
 from functools import partial
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional
 
 from django.conf import settings
 from django.http import Http404, HttpRequest, HttpResponse
@@ -51,6 +51,12 @@ class HttpError(Exception):
 
     def __str__(self) -> str:
         return self.message
+
+
+class Throttled(HttpError):
+    def __init__(self, wait: Optional[int]) -> None:
+        self.wait = wait
+        super().__init__(status_code=429, message="Too many requests.")
 
 
 def set_default_exc_handlers(api: "NinjaAPI") -> None:
