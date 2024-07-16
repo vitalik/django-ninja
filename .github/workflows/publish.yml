@@ -23,13 +23,3 @@ jobs:
           FLIT_USERNAME: __token__
           FLIT_PASSWORD: ${{ secrets.PYPI_TOKEN }}
         run: flit publish
-
-  docs:
-    runs-on: ubuntu-latest
-    
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - name: Docs update
-        run: git push origin master:docs
