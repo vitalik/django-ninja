@@ -40,23 +40,21 @@ class OpenAPISchema(dict):
         self.securitySchemes: DictStrAny = {}
         self.all_operation_ids: Set = set()
         extra_info = api.openapi_extra.get("info", {})
-        super().__init__(
-            [
-                ("openapi", "3.1.0"),
-                (
-                    "info",
-                    {
-                        "title": api.title,
-                        "version": api.version,
-                        "description": api.description,
-                        **extra_info,
-                    },
-                ),
-                ("paths", self.get_paths()),
-                ("components", self.get_components()),
-                ("servers", api.servers),
-            ]
-        )
+        super().__init__([
+            ("openapi", "3.1.0"),
+            (
+                "info",
+                {
+                    "title": api.title,
+                    "version": api.version,
+                    "description": api.description,
+                    **extra_info,
+                },
+            ),
+            ("paths", self.get_paths()),
+            ("components", self.get_components()),
+            ("servers", api.servers),
+        ])
         for k, v in api.openapi_extra.items():
             if k not in self:
                 self[k] = v
@@ -242,12 +240,12 @@ class OpenAPISchema(dict):
         content_type = BODY_CONTENT_TYPES["file"]
 
         # get the various schemas
-        result = merge_schemas(
-            [
-                self._create_schema_from_model(model, remove_level=False, by_alias=by_alias)[0]
-                for model in models
-            ]
-        )
+        result = merge_schemas([
+            self._create_schema_from_model(
+                model, remove_level=False, by_alias=by_alias
+            )[0]
+            for model in models
+        ])
         result["title"] = "MultiPartBodyParams"
 
         return result, content_type
@@ -265,10 +263,14 @@ class OpenAPISchema(dict):
             model = models[0]
             content_type = BODY_CONTENT_TYPES[model.__ninja_param_source__]
             schema, required = self._create_schema_from_model(
-                model, remove_level=model.__ninja_param_source__ == "body", by_alias=operation.by_alias
+                model,
+                remove_level=model.__ninja_param_source__ == "body",
+                by_alias=operation.by_alias,
             )
         else:
-            schema, content_type = self._create_multipart_schema_from_models(models, by_alias=operation.by_alias)
+            schema, content_type = self._create_multipart_schema_from_models(
+                models, by_alias=operation.by_alias
+            )
             required = True
 
         return {
