@@ -121,6 +121,7 @@ class NinjaClientBase:
         request.build_absolute_uri = build_absolute_uri
 
         request.auth = None
+        request.user = Mock()
         if "user" not in request_params:
             request.user.is_authenticated = False
 
