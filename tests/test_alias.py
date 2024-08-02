@@ -55,7 +55,7 @@ def test_alias_foreignkey_schema():
         id = models.AutoField(primary_key=True)
         name = models.CharField(max_length=100)
         author = models.ForeignKey(Author, on_delete=models.CASCADE)
-        published_date = models.DateField(default=datetime.date.today())
+        published_date = models.DateField(default=datetime.date(2024, 1, 1))
 
         class Meta:
             app_label = "tests"
@@ -73,7 +73,7 @@ def test_alias_foreignkey_schema():
             "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "Id"},
             "name": {"maxLength": 100, "title": "Name", "type": "string"},
             "publishedDate": {
-                "default": "2024-03-22",
+                "default": "2024-01-01",
                 "format": "date",
                 "title": "Published Date",
                 "type": "string",
