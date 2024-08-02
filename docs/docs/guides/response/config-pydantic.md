@@ -30,7 +30,7 @@ class CamelModelSchema(Schema):
 ```
 
 !!! note
-    When overriding the schema's `Config`, it is necessary to inherit from the base `Config` class. 
+    When overriding the schema's `Config`, it is necessary to inherit from the base `Schema.Config` class. 
 
 To alias `ModelSchema`'s field names, you'll also need to set `populate_by_name` on the `Schema` config and 
 enable `by_alias` in all endpoints using the model.
