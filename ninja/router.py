@@ -12,6 +12,7 @@ from typing import (
 
 from django.urls import URLPattern
 from django.urls import path as django_path
+from django.utils.module_loading import import_string
 
 from ninja.constants import NOT_SET, NOT_SET_TYPE
 from ninja.errors import ConfigError
@@ -371,12 +372,16 @@ class Router:
     def add_router(
         self,
         prefix: str,
-        router: "Router",
+        router: Union["Router", str],
         *,
         auth: Any = NOT_SET,
         throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         tags: Optional[List[str]] = None,
     ) -> None:
+        if isinstance(router, str):
+            router = import_string(router)
+            assert isinstance(router, Router)
+
         if self.api:
             # we are already attached to an api
             self.api.add_router(
