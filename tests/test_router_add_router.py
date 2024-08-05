@@ -1,7 +1,6 @@
 from ninja import NinjaAPI, Router
 from ninja.testing import TestClient
 
-
 router = Router()
 
 
