@@ -143,7 +143,7 @@ def test_all_fields():
             "smallintegerfield": {"type": "integer", "title": "Smallintegerfield"},
             "textfield": {"type": "string", "title": "Textfield"},
             "timefield": {"type": "string", "format": "time", "title": "Timefield"},
-            "urlfield": {"type": "string", "title": "Urlfield"},
+            "urlfield": {'format': 'uri', 'minLength': 1, 'title': 'Urlfield', 'type': 'string'},
             "uuidfield": {"type": "string", "format": "uuid", "title": "Uuidfield"},
             "arrayfield": {"type": "array", "items": {}, "title": "Arrayfield"},
             "cicharfield": {"type": "string", "title": "Cicharfield"},

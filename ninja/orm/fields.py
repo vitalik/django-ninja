@@ -3,9 +3,9 @@ from decimal import Decimal
 from typing import Any, Callable, Dict, List, Tuple, Type, TypeVar, Union, no_type_check
 from uuid import UUID
 
-from django.db.models import ManyToManyField
+from django.db.models import ManyToManyField, URLField
 from django.db.models.fields import Field as DjangoField
-from pydantic import IPvAnyAddress
+from pydantic import AnyUrl, IPvAnyAddress
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined, core_schema
 
@@ -69,6 +69,7 @@ TYPES = {
     "SmallIntegerField": int,
     "TextField": str,
     "TimeField": datetime.time,
+    "URLField": AnyUrl,
     "UUIDField": UUID,
     # postgres fields:
     "ArrayField": List,
@@ -148,6 +149,9 @@ def get_schema_field(
         max_length = field_options.get("max_length")
 
         internal_type = field.get_internal_type()
+        if isinstance(field, URLField):
+            internal_type = "URLField"
+
         python_type = TYPES[internal_type]
 
         if field.primary_key or blank or null or optional:
