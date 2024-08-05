@@ -150,7 +150,7 @@ def get_schema_field(
         internal_type = field.get_internal_type()
         python_type = TYPES[internal_type]
 
-        if field.primary_key or blank or null or optional:
+        if blank or null or optional:
             default = None
             nullable = True
 

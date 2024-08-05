@@ -32,12 +32,12 @@ def test_inheritance():
         "title": "ChildModel",
         "type": "object",
         "properties": {
-            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+            "id": {"title": "ID", "type": "integer"},
             "parent_field": {"type": "string", "title": "Parent Field"},
             "parentmodel_ptr_id": {"type": "integer", "title": "Parentmodel Ptr"},
             "child_field": {"type": "string", "title": "Child Field"},
         },
-        "required": ["parent_field", "parentmodel_ptr_id", "child_field"],
+        "required": ["id", "parent_field", "parentmodel_ptr_id", "child_field"],
     }
 
 
@@ -86,7 +86,7 @@ def test_all_fields():
         "title": "AllFields",
         "type": "object",
         "properties": {
-            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+            "id": {"title": "ID", "type": "integer"},
             "bigintegerfield": {"title": "Bigintegerfield", "type": "integer"},
             "binaryfield": {
                 "title": "Binaryfield",
@@ -156,6 +156,7 @@ def test_all_fields():
             "hstorefield": {"type": "object", "title": "Hstorefield"},
         },
         "required": [
+            "id",
             "bigintegerfield",
             "binaryfield",
             "booleanfield",
@@ -208,10 +209,7 @@ def test_altautofield(field: type):
     SchemaCls = create_schema(ModelAltAuto)
     # print(SchemaCls.json_schema())
     assert SchemaCls.json_schema()["properties"] == {
-        "altautofield": {
-            "anyOf": [{"type": "integer"}, {"type": "null"}],
-            "title": "Altautofield",
-        }
+        "altautofield": {"title": "Altautofield", "type": "integer"}
     }
 
 
@@ -229,14 +227,14 @@ def test_django_31_fields():
         "title": "ModelNewFields",
         "type": "object",
         "properties": {
-            "id": {"title": "ID", "anyOf": [{"type": "integer"}, {"type": "null"}]},
+            "id": {"title": "ID", "type": "integer"},
             "jsonfield": {"title": "Jsonfield", "type": "object"},
             "positivebigintegerfield": {
                 "title": "Positivebigintegerfield",
                 "type": "integer",
             },
         },
-        "required": ["jsonfield", "positivebigintegerfield"],
+        "required": ["id", "jsonfield", "positivebigintegerfield"],
     }
 
     obj = Schema(id=1, jsonfield={"any": "data"}, positivebigintegerfield=1)
@@ -268,7 +266,7 @@ def test_relational():
         "title": "TestSchema",
         "type": "object",
         "properties": {
-            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+            "id": {"title": "ID", "type": "integer"},
             "onetoonefield_id": {"title": "Onetoonefield", "type": "integer"},
             "foreignkey_id": {
                 "anyOf": [{"type": "integer"}, {"type": "null"}],
@@ -280,7 +278,7 @@ def test_relational():
                 "items": {"type": "integer"},
             },
         },
-        "required": ["onetoonefield_id", "manytomanyfield"],
+        "required": ["id", "onetoonefield_id", "manytomanyfield"],
     }
 
     SchemaClsDeep = create_schema(TestModel, name="TestSchemaDeep", depth=1)
@@ -288,7 +286,7 @@ def test_relational():
     assert SchemaClsDeep.json_schema() == {
         "type": "object",
         "properties": {
-            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+            "id": {"title": "ID", "type": "integer"},
             "onetoonefield": {
                 "title": "Onetoonefield",
                 "description": "",
@@ -306,20 +304,17 @@ def test_relational():
                 "description": "",
             },
         },
-        "required": ["onetoonefield", "manytomanyfield"],
+        "required": ["id", "onetoonefield", "manytomanyfield"],
         "title": "TestSchemaDeep",
         "$defs": {
             "Related": {
                 "title": "Related",
                 "type": "object",
                 "properties": {
-                    "id": {
-                        "anyOf": [{"type": "integer"}, {"type": "null"}],
-                        "title": "ID",
-                    },
+                    "id": {"title": "ID", "type": "integer"},
                     "charfield": {"type": "string", "title": "Charfield"},
                 },
-                "required": ["charfield"],
+                "required": ["id", "charfield"],
             }
         },
     }
@@ -339,7 +334,7 @@ def test_default():
         "title": "MyModel",
         "type": "object",
         "properties": {
-            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+            "id": {"title": "ID", "type": "integer"},
             "default_static": {
                 "default": "hello",
                 "title": "Default Static",
@@ -347,6 +342,7 @@ def test_default():
             },
             "default_dynamic": {"title": "Default Dynamic", "type": "string"},
         },
+        "required": ["id"],
     }
 
 
@@ -388,11 +384,11 @@ def test_fields_exclude():
     assert Schema3.json_schema() == {
         "type": "object",
         "properties": {
-            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+            "id": {"title": "ID", "type": "integer"},
             "f1": {"type": "string", "title": "F1"},
             "f2": {"type": "string", "title": "F2"},
         },
-        "required": ["f1", "f2"],
+        "required": ["id", "f1", "f2"],
         "title": "SampleModel3",
     }
 
@@ -437,10 +433,10 @@ def test_with_relations():
         "title": "Category",
         "type": "object",
         "properties": {
-            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+            "id": {"title": "ID", "type": "integer"},
             "title": {"title": "Title", "maxLength": 100, "type": "string"},
         },
-        "required": ["title"],
+        "required": ["id", "title"],
     }
 
 
@@ -491,12 +487,12 @@ def test_custom_fields():
     assert Schema1.json_schema() == {
         "type": "object",
         "properties": {
-            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+            "id": {"title": "ID", "type": "integer"},
             "f1": {"type": "string", "title": "F1"},
             "f2": {"type": "string", "title": "F2"},
             "custom": {"type": "integer", "title": "Custom"},
         },
-        "required": ["f1", "f2", "custom"],
+        "required": ["id", "f1", "f2", "custom"],
         "title": "SmallModel",
     }
 
@@ -506,11 +502,11 @@ def test_custom_fields():
     assert Schema2.json_schema() == {
         "type": "object",
         "properties": {
-            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+            "id": {"title": "ID", "type": "integer"},
             "f1": {"type": "integer", "title": "F1"},
             "f2": {"type": "string", "title": "F2"},
         },
-        "required": ["f1", "f2"],
+        "required": ["id", "f1", "f2"],
         "title": "SmallModel2",
     }
 
@@ -569,12 +565,32 @@ def test_optional_fields():
             app_label = "tests"
 
     Schema = create_schema(SomeReqFieldModel)
-    assert Schema.json_schema()["required"] == ["some_field", "other_field"]
+    assert Schema.json_schema()["required"] == ["id", "some_field", "other_field"]
 
     Schema = create_schema(SomeReqFieldModel, optional_fields=["some_field"])
-    assert Schema.json_schema()["required"] == ["other_field"]
+    assert Schema.json_schema()["required"] == ["id", "other_field"]
 
     Schema = create_schema(
         SomeReqFieldModel, optional_fields=["some_field", "other_field", "optional"]
     )
-    assert Schema.json_schema().get("required") is None
+    assert Schema.json_schema()["required"] == ["id"]
+
+
+def test_optional_primary_key():
+    class ModelWithOptionalPK(models.Model):
+        id = models.AutoField(primary_key=True, null=True)
+        name = models.CharField()
+
+        class Meta:
+            app_label = "tests"
+
+    Schema = create_schema(ModelWithOptionalPK)
+    assert Schema.json_schema() == {
+        "properties": {
+            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "Id"},
+            "name": {"title": "Name", "type": "string"},
+        },
+        "required": ["name"],
+        "title": "ModelWithOptionalPK",
+        "type": "object",
+    }
