@@ -262,6 +262,7 @@ In case of authentication, for example, you can return:
 - **200** successful -> token
 - **401** -> Unauthorized
 - **402** -> Payment required
+- **403** -> Forbidden
 - etc..
 
 In fact, the [OpenAPI specification](https://swagger.io/docs/specification/describing-responses/) allows you to pass multiple response schemas.
