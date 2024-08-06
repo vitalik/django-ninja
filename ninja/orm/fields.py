@@ -1,11 +1,11 @@
 import datetime
 from decimal import Decimal
-from typing import Any, Callable, Dict, List, Tuple, Type, TypeVar, Union, no_type_check
+from typing import Annotated, Any, Callable, Dict, List, Tuple, Type, TypeVar, Union, no_type_check
 from uuid import UUID
 
 from django.db.models import ManyToManyField, URLField
 from django.db.models.fields import Field as DjangoField
-from pydantic import AnyUrl, IPvAnyAddress
+from pydantic import AnyUrl, BeforeValidator, IPvAnyAddress, TypeAdapter
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined, core_schema
 
@@ -41,6 +41,13 @@ class AnyObject:
     def validate(cls, value: Any, _: Any) -> Any:
         return value
 
+# Allows to have url validation on URLFields without breaking JSON serialization
+# https://github.com/vitalik/django-ninja/pull/1255
+AnyUrlTypeAdapter = TypeAdapter(AnyUrl)
+AnyUrlStr = Annotated[
+    str,
+    BeforeValidator(lambda value: AnyUrlTypeAdapter.validate_python(value) and value),
+]
 
 TYPES = {
     "AutoField": int,
@@ -69,7 +76,7 @@ TYPES = {
     "SmallIntegerField": int,
     "TextField": str,
     "TimeField": datetime.time,
-    "URLField": AnyUrl,
+    "URLField": AnyUrlStr,
     "UUIDField": UUID,
     # postgres fields:
     "ArrayField": List,
