@@ -145,6 +145,12 @@ def items_9(request):
     return list(range(100))
 
 
+@api.get("/items_12", response={101: int, 200: List[Any], 220: List[Any]})
+@paginate(PageNumberPagination, page_size=10, pass_parameter="page_info")
+def items_12(request, **kwargs):
+    return 220, ITEMS + [kwargs["page_info"]]
+
+
 client = TestClient(api)
 
 
@@ -324,6 +330,18 @@ def test_case9():
         "next": "http://testlocation/?skip=10",
         "prev": "http://testlocation/?skip=0",
     }
+
+
+def test_case12_status_code():
+    page = 11
+    response = client.get(f"/items_12?page={page}")
+    assert response.status_code == 220
+    assert response.json() == {"items": [{"page": 11}], "count": 101}
+
+    schema = api.get_openapi_schema()["paths"]["/api/items_12"]["get"]
+
+    assert schema["responses"][200] == {'description': 'OK', 'content': {'application/json': {'schema': {'$ref': '#/components/schemas/PagedAny'}}}}
+    assert schema["responses"][220] == {'description': 'Unknown Status Code', 'content': {'application/json': {'schema': {'$ref': '#/components/schemas/PagedAny'}}}}
 
 
 @override_settings(NINJA_PAGINATION_MAX_LIMIT=1000)
