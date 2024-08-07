@@ -5,7 +5,7 @@ from uuid import UUID
 
 from django.db.models import ManyToManyField, URLField
 from django.db.models.fields import Field as DjangoField
-from pydantic import AnyUrl, BeforeValidator, IPvAnyAddress, TypeAdapter
+from pydantic import AnyUrl, IPvAnyAddress, TypeAdapter
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined, core_schema
 
@@ -41,13 +41,29 @@ class AnyObject:
     def validate(cls, value: Any, _: Any) -> Any:
         return value
 
+
 # Allows to have url validation on URLFields without breaking JSON serialization
 # https://github.com/vitalik/django-ninja/pull/1255
-AnyUrlTypeAdapter = TypeAdapter(AnyUrl)
-AnyUrlStr = Annotated[
-    str,
-    BeforeValidator(lambda value: AnyUrlTypeAdapter.validate_python(value) and value),
-]
+class AnyUrlStr(str):
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, source: Any, handler: Callable[..., Any]
+    ) -> Any:
+        return core_schema.with_info_plain_validator_function(cls.validate)
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls, schema: Any, handler: Callable[..., Any]
+    ) -> DictStrAny:
+        return {"type": "string"}
+
+    @classmethod
+    def validate(cls, value: Any, _: Any) -> str:
+        if isinstance(value, AnyUrl):
+            return str(value)
+        validated = TypeAdapter(AnyUrl).validate_python(value)
+        return str(validated)
+
 
 TYPES = {
     "AutoField": int,
