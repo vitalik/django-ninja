@@ -27,6 +27,11 @@ def simple_get(request):
     return "test"
 
 
+@router.get("/test-headers")
+def get_headers(request):
+    return dict(request.headers)
+
+
 client = TestClient(router)
 
 
@@ -78,3 +83,21 @@ def test_json_as_body():
             ClientTestSchema.model_validate_json(request.body).model_dump_json()
             == schema_instance.model_dump_json()
         )
+
+
+headered_client = TestClient(router, headers={"A": "a", "B": "b"})
+
+
+def test_client_request_only_header():
+    r = client.get("/test-headers", headers={"A": "na"})
+    assert r.json() == {"A": "na"}
+
+
+def test_headered_client_request_with_default_headers():
+    r = headered_client.get("/test-headers")
+    assert r.json() == {"A": "a", "B": "b"}
+
+
+def test_headered_client_request_with_overwritten_and_additional_headers():
+    r = headered_client.get("/test-headers", headers={"A": "na", "C": "nc"})
+    assert r.json() == {"A": "na", "B": "b", "C": "nc"}
