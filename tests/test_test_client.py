@@ -78,3 +78,8 @@ def test_json_as_body():
             ClientTestSchema.model_validate_json(request.body).model_dump_json()
             == schema_instance.model_dump_json()
         )
+
+
+def test_response_data():
+    r = client.get("/test")
+    assert r.data == r.json() == "test"
