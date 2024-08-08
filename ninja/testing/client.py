@@ -26,7 +26,12 @@ def build_absolute_uri(location: Optional[str] = None) -> str:
 class NinjaClientBase:
     __test__ = False  # <- skip pytest
 
-    def __init__(self, router_or_app: Union[NinjaAPI, Router]) -> None:
+    def __init__(
+        self,
+        router_or_app: Union[NinjaAPI, Router],
+        headers: Optional[Dict[str, str]] = None,
+    ) -> None:
+        self.headers = headers or {}
         self.router_or_app = router_or_app
 
     def get(
@@ -82,6 +87,11 @@ class NinjaClientBase:
             request_params["body"] = json_dumps(json, cls=NinjaJSONEncoder)
         if data is None:
             data = {}
+        if self.headers or request_params.get("headers"):
+            request_params["headers"] = {
+                **self.headers,
+                **request_params.get("headers", {}),
+            }
         func, request, kwargs = self._resolve(method, path, data, request_params)
         return self._call(func, request, kwargs)  # type: ignore
 
