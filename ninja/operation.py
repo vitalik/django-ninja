@@ -262,9 +262,11 @@ class Operation:
         )
 
         model_dump_kwargs = {}
-        if pydantic_version >= [2,7]:
+        if pydantic_version >= [2, 7]:
             # pydantic added support for serialization context at 2.7
-            model_dump_kwargs.update(context={"request": request, "response_status": status})
+            model_dump_kwargs.update(
+                context={"request": request, "response_status": status}
+            )
 
         result = validated_object.model_dump(
             by_alias=self.by_alias,
