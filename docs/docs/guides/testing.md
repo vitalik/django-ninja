@@ -33,6 +33,11 @@ class HelloTest(TestCase):
         self.assertEqual(response.json(), {"msg": "Hello World"})
 ```
 
+It is also possible to access the deserialized data using the `data` property:
+```python
+    self.assertEqual(response.data, {"msg": "Hello World"})
+```
+
 Arbitrary attributes can be added to the request object by passing keyword arguments to the client request methods:
 ```python
 class HelloTest(TestCase):

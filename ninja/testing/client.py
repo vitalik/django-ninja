@@ -189,9 +189,16 @@ class NinjaResponse:
             self.content = b"".join(http_response.streaming_content)  # type: ignore
         else:
             self.content = http_response.content  # type: ignore[union-attr]
+        self._data = None
 
     def json(self) -> Any:
         return json_loads(self.content)
+
+    @property
+    def data(self) -> Any:
+        if self._data is None:  # Recomputes if json() is None but cheap then
+            self._data = self.json()
+        return self._data
 
     def __getitem__(self, key: str) -> Any:
         return self._response[key]
