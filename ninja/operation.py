@@ -21,7 +21,7 @@ from django.http.response import HttpResponseBase
 from ninja.constants import NOT_SET, NOT_SET_TYPE
 from ninja.errors import AuthenticationError, ConfigError, Throttled, ValidationError
 from ninja.params.models import TModels
-from ninja.schema import Schema
+from ninja.schema import Schema, pydantic_version
 from ninja.signature import ViewSignature, is_async
 from ninja.throttling import BaseThrottle
 from ninja.types import DictStrAny
@@ -261,11 +261,17 @@ class Operation:
             resp_object, context={"request": request, "response_status": status}
         )
 
+        model_dump_kwargs = {}
+        if pydantic_version >= [2,7]:
+            # pydantic added support for serialization context at 2.7
+            model_dump_kwargs.update(context={"request": request, "response_status": status})
+
         result = validated_object.model_dump(
             by_alias=self.by_alias,
             exclude_unset=self.exclude_unset,
             exclude_defaults=self.exclude_defaults,
             exclude_none=self.exclude_none,
+            **model_dump_kwargs,
         )["response"]
         return self.api.create_response(
             request, result, temporal_response=temporal_response
