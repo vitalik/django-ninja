@@ -46,9 +46,15 @@ def test_empty_q_when_none_ignored():
     assert q == Q()
 
 
-def test_q_expressions2():
+@pytest.mark.parametrize("implicit_field_name", [False, True])
+def test_q_expressions2(implicit_field_name):
+    if implicit_field_name:
+        q = "__icontains"
+    else:
+        q = "name__icontains"
+
     class DummyFilterSchema(FilterSchema):
-        name: Optional[str] = Field(None, q="name__icontains")
+        name: Optional[str] = Field(None, q=q)
         tag: Optional[str] = Field(None, q="tag")
 
     filter_instance = DummyFilterSchema(name="John", tag=None)
@@ -66,11 +72,15 @@ def test_q_expressions3():
     assert q == Q(name__icontains="John") & Q(tag="active")
 
 
-def test_q_is_a_list():
+@pytest.mark.parametrize("implicit_field_name", [False, True])
+def test_q_is_a_list(implicit_field_name):
+    if implicit_field_name:
+        q__name = "__icontains"
+    else:
+        q__name = "name__icontains"
+
     class DummyFilterSchema(FilterSchema):
-        name: Optional[str] = Field(
-            None, q=["name__icontains", "user__username__icontains"]
-        )
+        name: Optional[str] = Field(None, q=[q__name, "user__username__icontains"])
         tag: Optional[str] = Field(None, q="tag")
 
     filter_instance = DummyFilterSchema(name="foo", tag="bar")

@@ -75,14 +75,21 @@ The `name` field will be converted into `Q(name=...)` expression.
 When your database lookups are more complicated than that, you can explicitly specify them in the field definition using a `"q"` kwarg:
 ```python hl_lines="2"
 class BookFilterSchema(FilterSchema):
-    name: Optional[str] = Field(None, q='name__icontains') 
+    name: Optional[str] = Field(None, q='name__icontains')
 ```
 You can even specify multiple lookup keyword argument names as a list:
 ```python hl_lines="2 3 4"
 class BookFilterSchema(FilterSchema):
     search: Optional[str] = Field(None, q=['name__icontains',
                                      'author__name__icontains',
-                                     'publisher__name__icontains']) 
+                                     'publisher__name__icontains'])
+```
+And to make generic fields, you can make the field name implicit by skipping it:
+```python hl_lines="2"
+IContainsField = Annotated[Optional[str], Field(None, q='__icontains')]
+
+class BookFilterSchema(FilterSchema):
+    name: IContainsField
 ```
 By default, field-level expressions are combined using `"OR"` connector, so with the above setup, a query parameter `?search=foobar` will search for books that have "foobar" in either of their name, author or publisher.
 
