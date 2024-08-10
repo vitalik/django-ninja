@@ -5,7 +5,7 @@ from unittest.mock import Mock
 from urllib.parse import urljoin
 
 from django.http import QueryDict, StreamingHttpResponse
-from django.http.request import HttpHeaders
+from django.http.request import HttpHeaders, HttpRequest
 
 from ninja import NinjaAPI, Router
 from ninja.responses import NinjaJSONEncoder
@@ -121,7 +121,7 @@ class NinjaClientBase:
     def _build_request(
         self, method: str, path: str, data: Dict, request_params: Any
     ) -> Mock:
-        request = Mock()
+        request = Mock(spec=HttpRequest)
         request.method = method
         request.path = path
         request.body = ""
@@ -131,6 +131,7 @@ class NinjaClientBase:
         request.build_absolute_uri = build_absolute_uri
 
         request.auth = None
+        request.user = Mock()
         if "user" not in request_params:
             request.user.is_authenticated = False
 
