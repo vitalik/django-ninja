@@ -125,3 +125,31 @@ def patch(request, pk: int, payload: PatchGroupSchema):
 
 
 ```
+
+#### PatchDict
+
+Another way to work with patch request data is a `PatchDict` container which allows you to make 
+a schema with all optional fields and get a dict with **only** fields that was provide
+
+```Python hl_lines="1 11"
+from ninja import PatchDict
+
+class GroupSchema(Schema):
+    # You do not have to make fields optional it will be converted by PatchDict
+    name: str
+    description: str
+    due_date: date
+
+
+@api.patch("/patch/{pk}")
+def modify_data(request, pk: int, payload: PatchDict[GroupSchema]):
+    obj = MyModel.objects.get(pk=pk)
+
+    for attr, value in payload.items():
+        setattr(obj, attr, value)
+    
+    obj.save()
+
+```
+
+in this example the `payload` argument will be a type of `dict` only fields that were passed in request and validated using `GroupSchema`
