@@ -41,3 +41,10 @@ class HelloTest(TestCase):
         # request.company_id will now be set within the view
         response = client.get("/hello", company_id=1)
 ```
+
+It is also possible to specify headers, both from the TestCase instanciation and the actual request:
+```python
+    client = TestClient(router, headers={"A": "a", "B": "b"})
+    # The request will be made with {"A": "na", "B": "b", "C": "nc"} headers
+    response = client.get("/test-headers", headers={"A": "na", "C": "nc"})
+```
