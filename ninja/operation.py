@@ -261,7 +261,7 @@ class Operation:
             resp_object, context={"request": request, "response_status": status}
         )
 
-        model_dump_kwargs = {}
+        model_dump_kwargs: Dict[str, Any] = {}
         if pydantic_version >= [2, 7]:
             # pydantic added support for serialization context at 2.7
             model_dump_kwargs.update(
