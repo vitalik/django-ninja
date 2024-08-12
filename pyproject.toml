@@ -59,7 +59,7 @@ test = [
     "pytest-asyncio",
     "psycopg2-binary",
     "mypy==1.7.1",
-    "ruff==0.4.2",
+    "ruff==0.5.7",
     "django-stubs",
 ]
 doc = ["mkdocs", "mkdocs-material", "markdown-include", "mkdocstrings"]
