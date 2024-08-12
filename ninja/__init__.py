@@ -27,6 +27,7 @@ from ninja.params import (
     Query,
     QueryEx,
 )
+from ninja.patch_dict import PatchDict
 from ninja.router import Router
 from ninja.schema import Schema
 
@@ -55,4 +56,5 @@ __all__ = [
     "FilterSchema",
     "Swagger",
     "Redoc",
+    "PatchDict",
 ]
