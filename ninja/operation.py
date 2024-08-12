@@ -60,7 +60,7 @@ class Operation:
         self.path: str = path
         self.methods: List[str] = methods
         self.view_func: Callable = view_func
-        self.api: "NinjaAPI" = cast("NinjaAPI", None)
+        self.api: NinjaAPI = cast("NinjaAPI", None)
         if url_name is not None:
             self.url_name = url_name
 

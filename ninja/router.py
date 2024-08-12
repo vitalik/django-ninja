@@ -36,7 +36,7 @@ class Router:
         throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         tags: Optional[List[str]] = None,
     ) -> None:
-        self.api: Optional["NinjaAPI"] = None
+        self.api: Optional[NinjaAPI] = None
         self.auth = auth
         self.throttle = throttle
         self.tags = tags
