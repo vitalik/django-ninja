@@ -37,8 +37,15 @@ def op_exclude_none(request):
 router_exc_unset = Router(operation_defaults={"exclude_unset": True})
 
 
-@router_exc_unset.get("/r1-test-unset", response=SomeResponse, exclude_unset=True)
+@router_exc_unset.get("/r1-test-unset", response=SomeResponse)
 def r1_op_exclude_unset(request):
+    return {"field3": 10}
+
+
+@router_exc_unset.get(
+    "/r1-test-unset-override", response=SomeResponse, exclude_unset=False
+)
+def r1_op_exclude_unset_override(request):
     return {"field3": 10}
 
 
@@ -51,11 +58,27 @@ def r2_op_exclude_defaults(request):
     return {"field1": 3, "field2": "default value"}
 
 
+@router_exc_defaults.get(
+    "/r2-test-defaults-override", response=SomeResponse, exclude_defaults=False
+)
+def r2_op_exclude_defaults_override(request):
+    # changing only field1
+    return {"field1": 3, "field2": "default value"}
+
+
 router_exc_none = Router(operation_defaults={"exclude_none": True})
 
 
 @router_exc_none.get("/r3-test-none", response=SomeResponse)
 def r3_op_exclude_none(request):
+    # setting field1 to None to exclude
+    return {"field1": None, "field2": "default value"}
+
+
+@router_exc_none.get(
+    "/r3-test-none-override", response=SomeResponse, exclude_none=False
+)
+def r3_op_exclude_none_override(request):
     # setting field1 to None to exclude
     return {"field1": None, "field2": "default value"}
 
@@ -78,6 +101,24 @@ def test_arguments():
     assert client.get("/test-defaults").json() == {"field1": 3}
     assert client.get("/test-none").json() == {"field2": "default value"}
 
+
+def test_default_arguments():
+    """Testing default operation arguments set on the Router"""
     assert client.get("/r1-test-unset").json() == {"field3": 10}
+    assert client.get("/r1-test-unset-override").json() == {
+        "field1": 1,
+        "field2": "default value",
+        "field3": 10,
+    }
     assert client.get("/r2-test-defaults").json() == {"field1": 3}
+    assert client.get("/r2-test-defaults-override").json() == {
+        "field1": 3,
+        "field2": "default value",
+        "field3": None,
+    }
     assert client.get("/r3-test-none").json() == {"field2": "default value"}
+    assert client.get("/r3-test-none-override").json() == {
+        "field1": None,
+        "field2": "default value",
+        "field3": None,
+    }
