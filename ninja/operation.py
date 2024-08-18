@@ -9,6 +9,7 @@ from typing import (
     Optional,
     Sequence,
     Type,
+    TypedDict,
     Union,
     cast,
 )
@@ -30,7 +31,14 @@ from ninja.utils import check_csrf, is_async_callable
 if TYPE_CHECKING:
     from ninja import NinjaAPI, Router  # pragma: no cover
 
-__all__ = ["Operation", "PathView", "ResponseObject"]
+__all__ = ["Operation", "PathView", "ResponseObject", "OperationOptions"]
+
+
+class OperationOptions(TypedDict, total=False):
+    exclude_unset: bool
+    exclude_defaults: bool
+    exclude_none: bool
+    by_alias: bool
 
 
 class Operation:
