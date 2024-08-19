@@ -16,7 +16,7 @@ from django.utils.module_loading import import_string
 
 from ninja.constants import NOT_SET, NOT_SET_TYPE
 from ninja.errors import ConfigError
-from ninja.operation import OperationOptions, PathView
+from ninja.operation import PathView
 from ninja.throttling import BaseThrottle
 from ninja.types import TCallable
 from ninja.utils import normalize_path, replace_path_param_notation
@@ -35,15 +35,20 @@ class Router:
         auth: Any = NOT_SET,
         throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         tags: Optional[List[str]] = None,
-        operation_defaults: Optional[OperationOptions] = None,
+        by_alias: bool = False,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = False,
     ) -> None:
         self.api: Optional[NinjaAPI] = None
         self.auth = auth
         self.throttle = throttle
         self.tags = tags
-        self.operation_defaults: OperationOptions = (
-            operation_defaults or OperationOptions()
-        )
+        self.by_alias = by_alias
+        self.exclude_unset = exclude_unset
+        self.exclude_defaults = exclude_defaults
+        self.exclude_none = exclude_none
+
         self.path_operations: Dict[str, PathView] = {}
         self._routers: List[Tuple[str, Router]] = []
 
@@ -321,26 +326,12 @@ class Router:
         else:
             path_view = self.path_operations[path]
 
-        by_alias = (
-            by_alias
-            if by_alias is not None
-            else self.operation_defaults.get("by_alias", False)
-        )
-        exclude_unset = (
-            exclude_unset
-            if exclude_unset is not None
-            else self.operation_defaults.get("exclude_unset", False)
-        )
+        by_alias = by_alias is None and self.by_alias or by_alias
+        exclude_unset = exclude_unset is None and self.exclude_unset or exclude_unset
         exclude_defaults = (
-            exclude_defaults
-            if exclude_defaults is not None
-            else self.operation_defaults.get("exclude_defaults", False)
+            exclude_defaults is None and self.exclude_defaults or exclude_defaults
         )
-        exclude_none = (
-            exclude_none
-            if exclude_none is not None
-            else self.operation_defaults.get("exclude_none", False)
-        )
+        exclude_none = exclude_none is None and self.exclude_none or exclude_none
 
         path_view.add_operation(
             path=path,

@@ -34,7 +34,7 @@ def op_exclude_none(request):
     return {"field1": None, "field2": "default value"}
 
 
-router_exc_unset = Router(operation_defaults={"exclude_unset": True})
+router_exc_unset = Router(exclude_unset=True)
 
 
 @router_exc_unset.get("/r1-test-unset", response=SomeResponse)
@@ -49,7 +49,7 @@ def r1_op_exclude_unset_override(request):
     return {"field3": 10}
 
 
-router_exc_defaults = Router(operation_defaults={"exclude_defaults": True})
+router_exc_defaults = Router(exclude_defaults=True)
 
 
 @router_exc_defaults.get("/r2-test-defaults", response=SomeResponse)
@@ -66,7 +66,7 @@ def r2_op_exclude_defaults_override(request):
     return {"field1": 3, "field2": "default value"}
 
 
-router_exc_none = Router(operation_defaults={"exclude_none": True})
+router_exc_none = Router(exclude_none=True)
 
 
 @router_exc_none.get("/r3-test-none", response=SomeResponse)
