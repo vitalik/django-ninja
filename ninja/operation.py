@@ -21,7 +21,7 @@ from django.http.response import HttpResponseBase
 from ninja.constants import NOT_SET, NOT_SET_TYPE
 from ninja.errors import AuthenticationError, ConfigError, Throttled, ValidationError
 from ninja.params.models import TModels
-from ninja.schema import Schema
+from ninja.schema import Schema, pydantic_version
 from ninja.signature import ViewSignature, is_async
 from ninja.throttling import BaseThrottle
 from ninja.types import DictStrAny
