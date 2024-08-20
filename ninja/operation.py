@@ -30,7 +30,7 @@ from ninja.utils import check_csrf, is_async_callable
 try:
     from asgiref.sync import sync_to_async
 except ModuleNotFoundError:
-    pass
+    sync_to_async = None
 
 if TYPE_CHECKING:
     from ninja import NinjaAPI, Router  # pragma: no cover
@@ -466,6 +466,9 @@ class PathView:
             HttpResponseNotAllowed(allowed_methods, content=b"Method not allowed"),
         )
 
+        if is_async:
+            assert sync_to_async  # Ensure we fail here and not in view
+
         def sync_view(request: HttpRequest, *a: Any, **kw: Any) -> HttpResponseBase:
             operation = next(
                 (op for op in operations if request.method in op.methods), None
@@ -490,8 +493,6 @@ class PathView:
                 return await cast(AsyncOperation, operation).run(request, *a, **kw)
             return await sync_to_async(operation.run)(request, *a, **kw)
 
-        if is_async:
-            sync_to_async  # Ensure we fail here and not in view
         view = async_view if is_async else sync_view
         view.csrf_exempt = True  # type: ignore
         if self.url_name:
