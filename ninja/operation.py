@@ -27,11 +27,6 @@ from ninja.throttling import BaseThrottle
 from ninja.types import DictStrAny
 from ninja.utils import check_csrf, is_async_callable
 
-try:
-    from asgiref.sync import sync_to_async
-except ModuleNotFoundError:
-    sync_to_async = None
-
 if TYPE_CHECKING:
     from ninja import NinjaAPI, Router  # pragma: no cover
 
@@ -462,12 +457,9 @@ class PathView:
         is_async = self.is_async
         operations = self.operations
         allowed_methods = {method for op in operations for method in op.methods}
-        response_not_allowed = (
-            HttpResponseNotAllowed(allowed_methods, content=b"Method not allowed"),
-        )
 
         if is_async:
-            assert sync_to_async  # Ensure we fail here and not in view
+            from asgiref.sync import sync_to_async
 
         def sync_view(request: HttpRequest, *a: Any, **kw: Any) -> HttpResponseBase:
             operation = next(
