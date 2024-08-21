@@ -457,16 +457,18 @@ class NinjaAPI:
             response.content = content
         else:
             response = HttpResponse(
-                content, status=status, content_type=self.get_content_type()
+                content, status=status, content_type=self.get_content_type(request)
             )
 
         return response
 
     def create_temporal_response(self, request: HttpRequest) -> HttpResponse:
-        return HttpResponse("", content_type=self.get_content_type())
+        return HttpResponse("", content_type=self.get_content_type(request))
 
-    def get_content_type(self) -> str:
-        return f"{self.renderer.media_type}; charset={self.renderer.charset}"
+    def get_content_type(self, request: HttpRequest) -> str:
+        return (
+            f"{self.renderer.get_media_type(request)}; charset={self.renderer.charset}"
+        )
 
     def get_openapi_schema(
         self,
