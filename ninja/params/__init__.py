@@ -19,7 +19,6 @@ __all__ = [
     "HeaderEx",
     "PathEx",
     "QueryEx",
-    "Router",
     "P",
 ]
 
