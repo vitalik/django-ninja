@@ -23,12 +23,29 @@ api = NinjaAPI(renderer=MyRenderer())
 
 The `render` method takes the following arguments:
 
- - request -> HttpRequest object 
+ - request -> HttpRequest object
  - data -> object that needs to be serialized
  - response_status as an `int` -> the HTTP status code that will be returned to the client
 
 You need also define the `media_type` attribute on the class to set the content-type header for the response.
 
+## Rendering multiple content types
+
+To create a renderer that will allow multiple different content types returned from the same API, you need to inherit `ninja.renderers.BaseDynamicRenderer` and override the `render` method. You still need to define the `media_type` but you can also define a list of prioritized media types within a `media_types` list. Like so:
+
+```python hl_lines="5"
+from ninja import NinjaAPI
+from ninja.renderers import BaseDynamicRenderer
+
+class MyDynamicRenderer(BaseDynamicRenderer):
+    media_type = "application/json" # Default response content type
+    media_types = ["application/json", "text/csv"]
+
+    def render(self, request, data, *, response_status):
+        return ... # your custom serialization here
+
+api = NinjaAPI(renderer=MyDynamicRenderer())
+```
 
 ## ORJSON renderer example:
 
@@ -105,3 +122,34 @@ class XMLRenderer(BaseRenderer):
 api = NinjaAPI(renderer=XMLRenderer())
 ```
 *(Copyright note: this code is basically copied from [DRF-xml](https://jpadilla.github.io/django-rest-framework-xml/))*
+
+## JSON and CSV responses example:
+
+This is how you can return JSON or a CSV based on passed headers:
+
+```python hl_lines="4 8 15 21"
+from ninja import NinjaAPI
+from ninja.renderers import BaseDynamicRenderer
+
+class DynamicRenderer(BaseDynamicRenderer):
+    media_type = "application/json" # Default response content type
+    media_types = ["application/json", "text/csv"]
+
+    def render(self, request, data, *, response_status):
+        media_type = self.get_media_type(request)
+        if media_type == "text/csv":
+            return self.render_csv(data)
+
+        return self.render_json(data)
+
+    def render_csv(self, data):
+        content = [",".join(data[0].keys())]
+        for item in data:
+            content.append(",".join(item.values()))
+        return "\n".join(content)
+
+    def render_json(self, data):
+        return json.dumps(data, cls=NinjaJSONEncoder)
+
+api = NinjaAPI(renderer=DynamicRenderer())
+```
