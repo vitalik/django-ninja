@@ -3,10 +3,18 @@ from typing import Any, List
 
 import pytest
 from django.test import override_settings
+from pydantic.errors import PydanticSchemaGenerationError
 
 from ninja import NinjaAPI, Schema
 from ninja.errors import ConfigError
-from ninja.pagination import PageNumberPagination, PaginationBase, paginate
+from ninja.operation import Operation
+from ninja.pagination import (
+    LimitOffsetPagination,
+    PageNumberPagination,
+    PaginationBase,
+    make_response_paginated,
+    paginate,
+)
 from ninja.testing import TestClient
 
 api = NinjaAPI()
@@ -417,3 +425,16 @@ def test_config_error_NOT_SET():
         @paginate
         def invalid2(request):
             pass
+
+
+def test_pagination_works_with_unnamed_classes():
+    """
+    This test lets you check that the typing.Any case handled in `ninja.pagination.make_response_paginated`
+    works for Python<3.10, as a typing.Any does possess the __name__ atribute past that version
+    """
+    operation = Operation("/whatever", ["GET"], lambda: None, response=List[int])
+    operation.response_models[200].__annotations__["response"] = List[object()]
+    with pytest.raises(
+        PydanticSchemaGenerationError
+    ):  # It does fail after we passed the logic that we are testing
+        make_response_paginated(LimitOffsetPagination, operation)
