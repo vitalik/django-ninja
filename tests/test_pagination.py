@@ -1,4 +1,5 @@
 import importlib
+from sys import version_info
 from typing import Any, List
 
 import pytest
@@ -435,6 +436,6 @@ def test_pagination_works_with_unnamed_classes():
     operation = Operation("/whatever", ["GET"], lambda: None, response=List[int])
     operation.response_models[200].__annotations__["response"] = List[object()]
     with pytest.raises(
-        PydanticSchemaGenerationError
-    ):  # It does fail after we passed the logic that we are testing
+        PydanticSchemaGenerationError if sys.version_info >= (3, 11) else TypeError
+    ):  # It does fail after we passed the logic that we are testing on >=3.11, otherwise from another error
         make_response_paginated(LimitOffsetPagination, operation)
