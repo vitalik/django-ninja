@@ -433,7 +433,6 @@ def test_pagination_works_with_unnamed_classes():
     This test lets you check that the typing.Any case handled in `ninja.pagination.make_response_paginated`
     works for Python>=3.11, as a typing.Any does possess the __name__ atribute past that version
     """
-    PydanticSchemaGenerationError if  else TypeError
     operation = Operation("/whatever", ["GET"], lambda: None, response=List[int])
     operation.response_models[200].__annotations__["response"] = List[object()]
     with pytest.raises(
