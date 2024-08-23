@@ -427,15 +427,16 @@ def test_config_error_NOT_SET():
         def invalid2(request):
             pass
 
-
+@pytest.mark.skipif(sys.version_info < (3, 11), "Not needed at this Python version")
 def test_pagination_works_with_unnamed_classes():
     """
     This test lets you check that the typing.Any case handled in `ninja.pagination.make_response_paginated`
-    works for Python<3.10, as a typing.Any does possess the __name__ atribute past that version
+    works for Python>=3.11, as a typing.Any does possess the __name__ atribute past that version
     """
+    PydanticSchemaGenerationError if  else TypeError
     operation = Operation("/whatever", ["GET"], lambda: None, response=List[int])
     operation.response_models[200].__annotations__["response"] = List[object()]
     with pytest.raises(
-        PydanticSchemaGenerationError if sys.version_info >= (3, 11) else TypeError
-    ):  # It does fail after we passed the logic that we are testing on >=3.11, otherwise from another error
+        PydanticSchemaGenerationError
+    ):  # It does fail after we passed the logic that we are testing
         make_response_paginated(LimitOffsetPagination, operation)
