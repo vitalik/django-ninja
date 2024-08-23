@@ -427,6 +427,7 @@ def test_config_error_NOT_SET():
         def invalid2(request):
             pass
 
+
 @pytest.mark.skipif(version_info < (3, 11), reason="Not needed at this Python version")
 def test_pagination_works_with_unnamed_classes():
     """
