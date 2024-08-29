@@ -154,7 +154,7 @@ Standard **Django Ninja** pagination classes support async. If you wish to handl
 
 ### Output attribute
 
-By defult page items are placed to `'items'` attribute. To override this behaviour use `items_attribute`:
+By default page items are placed to `'items'` attribute. To override this behaviour use `items_attribute`:
 
 ```python hl_lines="4 8"
 class CustomPagination(PaginationBase):
