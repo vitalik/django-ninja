@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any, List, TypeVar
 
 from django.db.models import QuerySet
-from pydantic import ValidationError, field_validator
+from pydantic import field_validator
 
 from .schema import Schema
 
@@ -12,7 +12,7 @@ QS = TypeVar("QS", bound=QuerySet)
 class OrderingBaseSchema(Schema, ABC):
     order_by: List[str] = []
 
-    class Config:
+    class Config(Schema.Config):
         allowed_fields = "__all__"
 
     @field_validator("order_by")
@@ -24,7 +24,7 @@ class OrderingBaseSchema(Schema, ABC):
             for order_field in value:
                 field_name = order_field.lstrip("-")
                 if field_name not in allowed_fields_set:
-                    raise ValidationError(f"Ordering by {field_name} is not allowed")
+                    raise ValueError(f"Ordering by {field_name} is not allowed")
 
         return value
 
