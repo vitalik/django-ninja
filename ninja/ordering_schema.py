@@ -1,16 +1,15 @@
 from abc import ABC, abstractmethod
-from typing import Generic, List, TypeVar
+from typing import Any, List, TypeVar
 
 from django.db.models import QuerySet
 from pydantic import ValidationError, field_validator
 
 from .schema import Schema
 
-T = TypeVar("T")
 QS = TypeVar("QS", bound=QuerySet)
 
 
-class OrderingBaseSchema(Schema, ABC, Generic[T]):
+class OrderingBaseSchema(Schema, ABC):
     order_by: List[str] = []
 
     class Config:
@@ -30,10 +29,10 @@ class OrderingBaseSchema(Schema, ABC, Generic[T]):
         return value
 
     @abstractmethod
-    def sort(self, elements: T) -> T:
+    def sort(self, elements: Any) -> Any:
         raise NotImplementedError
 
 
-class OrderingSchema(OrderingBaseSchema, Generic[QS]):
+class OrderingSchema(OrderingBaseSchema):
     def sort(self, queryset: QS) -> QS:
         return queryset.order_by(*self.order_by)
