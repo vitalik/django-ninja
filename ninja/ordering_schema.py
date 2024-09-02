@@ -1,4 +1,3 @@
-from abc import ABC, abstractmethod
 from typing import Any, List, TypeVar
 
 from django.db.models import QuerySet
@@ -9,7 +8,7 @@ from .schema import Schema
 QS = TypeVar("QS", bound=QuerySet)
 
 
-class OrderingBaseSchema(Schema, ABC):
+class OrderingBaseSchema(Schema):
     order_by: List[str] = []
 
     class Config(Schema.Config):
@@ -28,7 +27,6 @@ class OrderingBaseSchema(Schema, ABC):
 
         return value
 
-    @abstractmethod
     def sort(self, elements: Any) -> Any:
         raise NotImplementedError
 

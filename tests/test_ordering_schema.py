@@ -2,6 +2,7 @@ import pytest
 from django.db.models import QuerySet
 
 from ninja import OrderingSchema
+from ninja.ordering_schema import OrderingBaseSchema
 
 
 class FakeQS(QuerySet):
@@ -83,3 +84,11 @@ def test_sort__should_call_order_by_on_queryset_with_expected_args():
     queryset = ordering_schema.sort(queryset)
     assert queryset.is_ordered
     assert queryset.order_by_args == tuple(order_by_value)
+
+
+def test_sort__should_raise_not_implemented_error():
+    class DummyOrderingSchema(OrderingBaseSchema):
+        pass
+
+    with pytest.raises(NotImplementedError):
+        DummyOrderingSchema().sort(FakeQS())
