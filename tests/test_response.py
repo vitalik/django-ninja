@@ -7,7 +7,7 @@ import pytest
 from django.http import HttpResponse
 from pydantic import BaseModel, ValidationError
 
-from ninja import Router
+from ninja import Router, Schema
 from ninja.responses import Response
 from ninja.testing import TestClient
 
@@ -50,6 +50,27 @@ class UserModel(BaseModel):
         alias_generator=to_camel,
         populate_by_name=True,
     )
+
+
+class DefaultOutSchema(Schema):
+    name: str
+
+
+class ExtraAllowedOutSchema(Schema):
+    name: str
+
+    class Config(Schema.Config):
+        extra = "allow"
+
+
+@router.get("/user-extra-allowed", response=ExtraAllowedOutSchema)
+def get_user_extra_values(request):
+    return dict(name="test", age=100)
+
+
+@router.get("/user-extra-dropped", response=DefaultOutSchema)
+def get_user_extra_values_dropped(request):
+    return dict(name="test", age=100)
 
 
 @router.get("/check_model", response=UserModel)
@@ -172,3 +193,20 @@ def test_enum_encoding():
     response = Response(data)
     response_data = json.loads(response.content)
     assert response_data["enum"] == str(data["enum"])
+
+
+# Test Schema.model_config extra behavior
+def test_extra_allowed_response():
+    """
+    Output Schema only defines "name" but has extra="allow"
+    """
+    response = client.get("/user-extra-allowed")
+    assert response.json() == {"name": "test", "age": 100}
+
+
+def test_extra_defaulted_dropped():
+    """
+    Test default behavior where schema defines "name" and drops any extra keys
+    """
+    response = client.get("/user-extra-dropped")
+    assert response.json() == {"name": "test"}

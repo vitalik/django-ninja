@@ -9,6 +9,46 @@ There are many customizations available for a **Django Ninja `Schema`**, via the
     when using Django models, as Pydantic's model class is called Model by default, and conflicts with
     Django's Model class.
 
+## Allow extra fields in POST request body
+
+You can allow extra fields to be passed to your view using the Pydantic model config option `extra="allow"`
+
+```python
+from ninja import Schema
+
+class UserInSchema(Schema):
+    name: str
+
+    class Config(Schema.Config):
+        extra = "allow"
+
+# ---
+# views.py
+
+@api.post("/users")
+def create_user(request, payload: UserInSchema):
+    print(payload)
+    return payload
+
+```
+
+Call the endpoint with more data than the schema defined
+
+```bash
+# POST: /users
+# JSON Payload { "name": "your name", "age": 100 }
+```
+
+Result:
+
+```json
+{
+  "name": "your name",
+  "age": 1000
+}
+```
+
+
 ## Example Camel Case mode
 
 One interesting `Config` attribute is [`alias_generator`](https://pydantic-docs.helpmanual.io/usage/model_config/#alias-generator).
