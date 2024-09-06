@@ -46,10 +46,10 @@ def test_simple():
         "title": "SampleSchema2",
         "type": "object",
         "properties": {
-            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+            "id": {"title": "ID", "type": "integer"},
             "firstname": {"title": "Firstname", "type": "string"},
         },
-        "required": ["firstname"],
+        "required": ["id", "firstname"],
     }
 
 
@@ -119,9 +119,9 @@ def test_optional():
             fields = "__all__"
             fields_optional = "__all__"
 
-    assert OptSchema.json_schema().get("required") == ["extra"]
+    assert OptSchema.json_schema().get("required") == ["id", "extra"]
     assert OptSchema.json_schema()["properties"] == {
-        "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+        "id": {"title": "ID", "type": "integer"},
         "title": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Title"},
         "other": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Other"},
         "extra": {"title": "Extra", "type": "integer"},
@@ -164,14 +164,14 @@ def test_fields_all():
         "title": "SomeSchema",
         "type": "object",
         "properties": {
-            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+            "id": {"title": "ID", "type": "integer"},
             "field1": {"title": "Field1", "type": "string"},
             "field2": {
                 "anyOf": [{"type": "string"}, {"type": "null"}],
                 "title": "Field2",
             },
         },
-        "required": ["field1"],
+        "required": ["id", "field1"],
     }
 
 
