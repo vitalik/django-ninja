@@ -1,3 +1,4 @@
+from collections.abc import AsyncIterable, Iterable
 import inspect
 from abc import ABC, abstractmethod
 from functools import partial, wraps
@@ -248,6 +249,55 @@ def _inject_pagination(
         )
 
     return view_with_pagination
+
+
+def _inject_async_pagination(
+    func: Callable,
+    paginator_class: Type[AsyncPaginationBase],
+    **paginator_params: Any,
+) -> Callable:
+    paginator = paginator_class(**paginator_params)
+    if not hasattr(paginator, "apaginate_queryset"):
+        raise ConfigError("Pagination class not configured for async requests")
+
+    @wraps(func)
+    async def paginated_view(request: HttpRequest, **kwargs: Any) -> Any:
+        pagination_params = kwargs.pop("ninja_pagination")
+        if paginator.pass_parameter:
+            kwargs[paginator.pass_parameter] = pagination_params
+
+        result = await func(request, **kwargs)
+        paginated_result = await paginator.apaginate_queryset(
+            result, pagination=pagination_params, request=request, **kwargs
+        )
+
+        if paginator.Output:  # type: ignore
+            items = paginated_result[paginator.items_attribute]
+            if isinstance(items, QuerySet) or isinstance(items, AsyncIterable):
+                new_items = [r async for r in items]
+            elif isinstance(items, Iterable):
+                new_items = list(items)
+            else:
+                raise TypeError("Unexpected type")
+
+            paginated_result[paginator.items_attribute] = new_items
+
+        return paginated_result
+
+    contribute_operation_args(
+        paginated_view,
+        "ninja_pagination",
+        paginator.Input,
+        paginator.InputSource,
+    )
+
+    if paginator.Output:  # type: ignore
+        contribute_operation_callback(
+            paginated_view,
+            partial(make_response_paginated, paginator),
+        )
+
+    return paginated_view
 
 
 class RouterPaginated(Router):
