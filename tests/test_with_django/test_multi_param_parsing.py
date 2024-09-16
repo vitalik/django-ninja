@@ -105,6 +105,8 @@ def test_validate_test_data():
                 json.dump(schema["paths"][path], f, indent=2)
         with Path(filename).open() as f:
             data = json.load(f)
+            print("---" * 10, filename)
+            print(data)
             assert json.loads(json.dumps(schema["paths"][path])) == data
 
 
