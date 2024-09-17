@@ -1,3 +1,4 @@
+import re
 import json
 from pathlib import Path
 
@@ -105,9 +106,13 @@ def test_validate_test_data():
                 json.dump(schema["paths"][path], f, indent=2)
         with Path(filename).open() as f:
             data = json.load(f)
-            print("---" * 10, filename)
-            print(data)
-            assert json.loads(json.dumps(schema["paths"][path])) == data
+            path_schema = json.dumps(schema["paths"][path])
+            if "allOf" in path_schema:
+                # special case for pydantic 1.7 ... 2.9
+                path_schema = re.sub(
+                    r'"allOf": \[\{"\$ref": "(.*?)"\}\]', r'"$ref": "\1"', path_schema
+                )
+            assert json.loads(path_schema) == data
 
 
 @pytest.mark.parametrize("path, client_args", tuple(test_client_args.items()))
