@@ -341,6 +341,8 @@ def flatten_properties(
             # is_required = "default" not in prop_details
             yield prop_name, prop_details, prop_required
         else:
+            # pragma: no cover
+            # TODO: this code was for pydanitc 1.7+ ... <2.9 - check if this is still needed
             for item in prop_details["allOf"]:
                 yield from flatten_properties("", item, True, definitions)
 
