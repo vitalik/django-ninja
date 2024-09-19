@@ -282,8 +282,7 @@ def make_response_paginated(paginator: PaginationBase, op: Operation) -> None:
     try:
         new_name = f"Paged{item_schema.__name__}"
     except AttributeError:
-        new_name = f"Paged{str(item_schema).replace('.', '_')}"  # typing.Any case
-
+        new_name = f"Paged{str(item_schema).replace('.', '_')}"  # typing.Any case, only for Python < 3.11
     new_schema = type(
         new_name,
         (paginator.Output,),
