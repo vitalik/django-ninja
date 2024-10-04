@@ -30,8 +30,10 @@ class NinjaClientBase:
         self,
         router_or_app: Union[NinjaAPI, Router],
         headers: Optional[Dict[str, str]] = None,
+        COOKIES: Optional[Dict[str, str]] = None,
     ) -> None:
         self.headers = headers or {}
+        self.cookies = COOKIES or {}
         self.router_or_app = router_or_app
 
     def get(
@@ -91,6 +93,11 @@ class NinjaClientBase:
             request_params["headers"] = {
                 **self.headers,
                 **request_params.get("headers", {}),
+            }
+        if self.cookies or request_params.get("COOKIES"):
+            request_params["COOKIES"] = {
+                **self.cookies,
+                **request_params.get("COOKIES", {}),
             }
         func, request, kwargs = self._resolve(method, path, data, request_params)
         return self._call(func, request, kwargs)  # type: ignore
