@@ -59,6 +59,10 @@ By default, **Django Ninja** initialized the following exception handlers:
 
 Raised when authentication data is not valid
 
+#### `ninja.errors.AuthorizationError`
+
+Raised when authentication data is valid, but doesn't allow you to access the resource
+
 #### `ninja.errors.ValidationError`
 
 Raised when request data does not validate

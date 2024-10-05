@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 __all__ = [
     "ConfigError",
     "AuthenticationError",
+    "AuthorizationError",
     "ValidationError",
     "HttpError",
     "set_default_exc_handlers",
@@ -28,6 +29,10 @@ class ConfigError(Exception):
 
 
 class AuthenticationError(Exception):
+    pass
+
+
+class AuthorizationError(AuthenticationError):
     pass
 
 
@@ -80,6 +85,10 @@ def set_default_exc_handlers(api: "NinjaAPI") -> None:
         AuthenticationError,
         partial(_default_authentication_error, api=api),
     )
+    api.add_exception_handler(
+        AuthorizationError,
+        partial(_default_authorization_error, api=api),
+    )
 
 
 def _default_404(request: HttpRequest, exc: Exception, api: "NinjaAPI") -> HttpResponse:
@@ -105,6 +114,12 @@ def _default_authentication_error(
     request: HttpRequest, exc: AuthenticationError, api: "NinjaAPI"
 ) -> HttpResponse:
     return api.create_response(request, {"detail": "Unauthorized"}, status=401)
+
+
+def _default_authorization_error(
+    request: HttpRequest, exc: AuthorizationError, api: "NinjaAPI"
+) -> HttpResponse:
+    return api.create_response(request, {"detail": "Forbidden"}, status=403)
 
 
 def _default_exception(
