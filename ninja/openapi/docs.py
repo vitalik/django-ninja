@@ -1,14 +1,14 @@
 import json
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Callable, Iterator, Optional, Union
 
 from django.conf import settings
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
 from django.urls import reverse
 
-from ninja.constants import NOT_SET
+from ninja.router import Router
 from ninja.types import DictStrAny
 
 if TYPE_CHECKING:
@@ -102,10 +102,25 @@ def _render_cdn_template(
     return HttpResponse(html)
 
 
-def _csrf_needed(api: "NinjaAPI") -> bool:
-    if api.csrf:
-        return True
-    if not api.auth or api.auth == NOT_SET:
-        return False
+def _iter_auth_callbacks(
+    api_or_router: Union["NinjaAPI", Router],
+) -> Iterator[Callable[..., Any]]:
+    """this is helper to iterate over all operations in api or router"""
+    if isinstance(api_or_router, Router):
+        for _, path_view in api_or_router.path_operations.items():
+            for operation in path_view.operations:
+                yield from operation.auth_callbacks
+    for _, router in api_or_router._routers:  # noqa
+        yield from _iter_auth_callbacks(router)
 
-    return any(getattr(a, "csrf", False) for a in api.auth)  # type: ignore
+
+def _csrf_needed(api: "NinjaAPI") -> bool:
+    add_csrf: Optional[bool] = getattr(api, "_add_csrf", None)
+    if add_csrf is not None:
+        return add_csrf
+    for auth_callback in _iter_auth_callbacks(api):
+        if getattr(auth_callback, "csrf", False):
+            api._add_csrf = True  # type: ignore[attr-defined]
+            return True
+    api._add_csrf = False  # type: ignore[attr-defined]
+    return False
