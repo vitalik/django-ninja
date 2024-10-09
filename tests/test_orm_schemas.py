@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Literal
 from unittest.mock import Mock
 
 import pytest
@@ -7,6 +7,7 @@ from django.db import models
 from django.db.models import Manager
 from util import pydantic_ref_fix
 
+from ninja import Schema
 from ninja.errors import ConfigError
 from ninja.orm import create_schema
 from ninja.orm.shortcuts import L, S
@@ -44,6 +45,9 @@ def test_inheritance():
 
 def test_all_fields():
     # test all except relational field
+    class TypeChoice(models.TextChoices):
+        NAME_A = "VALUE_A"
+        NAME_B = "VALUE_B"
 
     class AllFields(models.Model):
         bigintegerfield = models.BigIntegerField()
@@ -72,7 +76,11 @@ def test_all_fields():
         timefield = models.TimeField()
         urlfield = models.URLField()
         uuidfield = models.UUIDField()
-        arrayfield = ps_fields.ArrayField(models.CharField())
+        arrayofstringfield = ps_fields.ArrayField(models.CharField())
+        arrayofintegerfield = ps_fields.ArrayField(models.IntegerField())
+        arrayofchoicefield = ps_fields.ArrayField(
+            models.CharField(choices=TypeChoice.choices)
+        )
         cicharfield = ps_fields.CICharField()
         ciemailfield = ps_fields.CIEmailField()
         citextfield = ps_fields.CITextField()
@@ -146,7 +154,24 @@ def test_all_fields():
             "timefield": {"type": "string", "format": "time", "title": "Timefield"},
             "urlfield": {"type": "string", "title": "Urlfield"},
             "uuidfield": {"type": "string", "format": "uuid", "title": "Uuidfield"},
-            "arrayfield": {"type": "array", "items": {}, "title": "Arrayfield"},
+            "arrayofstringfield": {
+                "type": "array",
+                "items": {"type": "string"},
+                "title": "Arrayofstringfield",
+            },
+            "arrayofintegerfield": {
+                "type": "array",
+                "items": {"type": "integer"},
+                "title": "Arrayofintegerfield",
+            },
+            "arrayofchoicefield": {
+                "type": "array",
+                "items": {
+                    "enum": ["VALUE_A", "VALUE_B"],
+                    "type": "string",
+                },
+                "title": "Arrayofchoicefield",
+            },
             "cicharfield": {"type": "string", "title": "Cicharfield"},
             "ciemailfield": {
                 "type": "string",
@@ -183,7 +208,9 @@ def test_all_fields():
             "timefield",
             "urlfield",
             "uuidfield",
-            "arrayfield",
+            "arrayofstringfield",
+            "arrayofintegerfield",
+            "arrayofchoicefield",
             "cicharfield",
             "ciemailfield",
             "citextfield",
@@ -581,3 +608,44 @@ def test_optional_fields():
         SomeReqFieldModel, optional_fields=["some_field", "other_field", "optional"]
     )
     assert Schema.json_schema().get("required") is None
+
+
+def test_array_fields():
+    # Test Postgres ArrayField
+
+    class TypeChoice(models.TextChoices):
+        NAME_A = "VALUE_A"
+        NAME_B = "VALUE_B"
+
+    class ArrayModel(models.Model):
+        array_of_int = ps_fields.ArrayField(models.IntegerField())
+        array_of_str = ps_fields.ArrayField(models.CharField(max_length=100))
+        array_of_choice = ps_fields.ArrayField(
+            models.CharField(choices=TypeChoice.choices)
+        )
+
+        class Meta:
+            app_label = "tests"
+
+    class ExpectedSchema(Schema):
+        array_of_int: List[int]
+        array_of_str: List[str]
+        array_of_choice: List[Literal["VALUE_A", "VALUE_B"]]
+
+    model_json_schema = create_schema(ArrayModel).json_schema()
+    expected_json_schema = ExpectedSchema.json_schema()
+
+    assert (
+        model_json_schema["properties"]["array_of_int"]
+        == expected_json_schema["properties"]["array_of_int"]
+    )
+
+    assert (
+        model_json_schema["properties"]["array_of_str"]
+        == expected_json_schema["properties"]["array_of_str"]
+    )
+
+    assert (
+        model_json_schema["properties"]["array_of_choice"]
+        == expected_json_schema["properties"]["array_of_choice"]
+    )
