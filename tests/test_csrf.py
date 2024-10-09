@@ -1,10 +1,11 @@
 import re
 
 from django.conf import settings
-from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
 from ninja import NinjaAPI
-from ninja.security import APIKeyCookie, APIKeyHeader
+from ninja.security import APIKeyCookie, APIKeyHeader, django_auth
 from ninja.testing import TestClient as BaseTestClient
 
 
@@ -17,6 +18,9 @@ class TestClient(BaseTestClient):
 
 csrf_OFF = NinjaAPI(urls_namespace="csrf_OFF")
 csrf_ON = NinjaAPI(urls_namespace="csrf_ON", csrf=True)
+csrf_ON_with_django_auth = NinjaAPI(
+    urls_namespace="csrf_ON", csrf=True, auth=django_auth
+)
 
 
 @csrf_OFF.post("/post")
@@ -96,6 +100,50 @@ def test_csrf_cookie_auth():
     cookie_auth.csrf = False
     response = client.post("/test", COOKIES={"key": "test"})
     assert response.status_code == 200, response.content
+
+
+def test_csrf_cookies_can_be_obtained():
+    @csrf_ON.get("/obtain_csrf_token_get")
+    @ensure_csrf_cookie
+    def obtain_csrf_token_get(request):
+        return JsonResponse(data={"success": True})
+
+    @csrf_ON.post("/obtain_csrf_token_post")
+    @ensure_csrf_cookie
+    @csrf_exempt
+    def obtain_csrf_token_post(request):
+        return JsonResponse(data={"success": True})
+
+    @csrf_ON_with_django_auth.get("/obtain_csrf_token_get", auth=None)
+    @ensure_csrf_cookie
+    def obtain_csrf_token_get_no_auth_route(request):
+        return JsonResponse(data={"success": True})
+
+    @csrf_ON_with_django_auth.post("/obtain_csrf_token_post", auth=None)
+    @ensure_csrf_cookie
+    @csrf_exempt
+    def obtain_csrf_token_post_no_auth_route(request):
+        return JsonResponse(data={"success": True})
+
+    client = TestClient(csrf_ON)
+    # can get csrf cookie through get
+    response = client.get("/obtain_csrf_token_get")
+    assert response.status_code == 200
+    assert len(response.cookies["csrftoken"].value) > 0
+    # can get csrf cookie through exempted post
+    response = client.post("/obtain_csrf_token_post")
+    assert response.status_code == 200
+    assert len(response.cookies["csrftoken"].value) > 0
+    # Now testing a route with disabled auth from a client with django_auth set globally also works
+    client = TestClient(csrf_ON_with_django_auth)
+    # can get csrf cookie through get on route with disabled auth
+    response = client.get("/obtain_csrf_token_get")
+    assert response.status_code == 200
+    assert len(response.cookies["csrftoken"].value) > 0
+    # can get csrf cookie through exempted post on route with disabled auth
+    response = client.post("/obtain_csrf_token_post")
+    assert response.status_code == 200
+    assert len(response.cookies["csrftoken"].value) > 0
 
 
 def test_docs():
