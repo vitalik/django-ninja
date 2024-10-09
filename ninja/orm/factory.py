@@ -60,14 +60,24 @@ class SchemaFactory:
             if optional_fields == "__all__":
                 optional_fields = [f.name for f in model_fields_list]
 
+        custom_field_names = {name for name, *_ in (custom_fields or [])}
+
         definitions = {}
         for fld in model_fields_list:
-            python_type, field_info = get_schema_field(
-                fld,
-                depth=depth,
-                optional=optional_fields and (fld.name in optional_fields),
-            )
-            definitions[fld.name] = (python_type, field_info)
+            if fld.name in custom_field_names:
+                continue
+            try:
+                python_type, field_info = get_schema_field(
+                    fld,
+                    depth=depth,
+                    optional=optional_fields and (fld.name in optional_fields),
+                )
+                definitions[fld.name] = (python_type, field_info)
+            except KeyError as e:
+                raise KeyError(
+                    "%s, you may need to provide a custom field. "
+                    "Use ninja.orm.fields.register_field_type to register it." % e
+                ) from e
 
         if custom_fields:
             for fld_name, python_type, field_info in custom_fields:
