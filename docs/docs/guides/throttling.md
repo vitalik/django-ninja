@@ -6,7 +6,7 @@ Throttles allows to control the rate of requests that clients can make to an API
     The application-level throttling that Django Ninja provides should not be considered a security measure or protection against brute forcing or denial-of-service attacks. Deliberately malicious actors will always be able to spoof IP origins. The built-in throttling implementations are implemented using Django's cache framework, and use non-atomic operations to determine the request rate, which may sometimes result in some fuzziness.
 
 
-Django Ninja’s throttling feature is pretty much based on what Django Rest Framework (DRF) uses, which you can check out [here](https://www.django-rest-framework.org/api-guide/throttling/). So, if you’ve already got custom throttling set up for DRF, there’s a good chance it’ll work with Django Ninja right out of the box. They key difference is that you need to pass initialized Throttle objects instead of classes (which should give a better performance)
+Django Ninja’s throttling feature is pretty much based on what Django Rest Framework (DRF) uses, which you can check out [here](https://www.django-rest-framework.org/api-guide/throttling/). So, if you’ve already got custom throttling set up for DRF, there’s a good chance it’ll work with Django Ninja right out of the box. The key difference is that you need to pass initialized Throttle objects instead of classes (which should give a better performance).
 
 
 ## Usage
