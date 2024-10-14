@@ -56,7 +56,7 @@ class NoOutputPagination(PaginationBase):
 
 
 class ResultsPaginator(PaginationBase):
-    "Use 'results' insted of 'items' for the output"
+    "Use 'results' instead of 'items' for the output"
 
     class Input(Schema):
         skip: int
@@ -432,7 +432,7 @@ def test_config_error_NOT_SET():
 def test_pagination_works_with_unnamed_classes():
     """
     This test lets you check that the typing.Any case handled in `ninja.pagination.make_response_paginated`
-    works for Python>=3.11, as a typing.Any does possess the __name__ atribute past that version
+    works for Python>=3.11, as a typing.Any does possess the __name__ attribute past that version
     """
     operation = Operation("/whatever", ["GET"], lambda: None, response=List[int])
     operation.response_models[200].__annotations__["response"] = List[object()]

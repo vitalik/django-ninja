@@ -26,6 +26,7 @@ from ninja.testing import TestClient
 
 class HelloTest(TestCase):
     def test_hello(self):
+        # don't forget to import router from code above
         client = TestClient(router)
         response = client.get("/hello")
         
@@ -49,7 +50,7 @@ class HelloTest(TestCase):
 ```
 
 ### Headers
-It is also possible to specify headers, both from the TestCase instanciation and the actual request:
+It is also possible to specify headers, both from the TestCase instantiation and the actual request:
 ```python
     client = TestClient(router, headers={"A": "a", "B": "b"})
     # The request will be made with {"A": "na", "B": "b", "C": "nc"} headers
@@ -57,7 +58,7 @@ It is also possible to specify headers, both from the TestCase instanciation and
 ```
 
 ### Cookies
-It is also possible to specify cookies, both from the TestCase instanciation and the actual request:
+It is also possible to specify cookies, both from the TestCase instantiation and the actual request:
 ```python
     client = TestClient(router, COOKIES={"A": "a", "B": "b"})
     # The request will be made with {"A": "na", "B": "b", "C": "nc"} cookies
