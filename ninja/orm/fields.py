@@ -147,8 +147,15 @@ def get_schema_field(
         null = field_options.get("null", False)
         max_length = field_options.get("max_length")
 
-        internal_type = field.get_internal_type()
-        python_type = TYPES[internal_type]
+        if hasattr(field, 'get_schema_type'):
+            internal_type = field.get_schema_type()
+        else:
+            internal_type = field.get_internal_type()
+
+        try:
+            python_type = TYPES[internal_type]
+        except KeyError as e:
+            raise KeyError("Type '{0}' isn't registered in ninja.orm.fields.TYPES".format(internal_type)) from e
 
         if field.primary_key or blank or null or optional:
             default = None

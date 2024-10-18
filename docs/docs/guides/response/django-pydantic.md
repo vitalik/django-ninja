@@ -147,9 +147,48 @@ def modify_data(request, pk: int, payload: PatchDict[GroupSchema]):
 
     for attr, value in payload.items():
         setattr(obj, attr, value)
-    
+
     obj.save()
 
 ```
 
 in this example the `payload` argument will be a type of `dict` only fields that were passed in request and validated using `GroupSchema`
+
+### Custom fields
+
+For each Django field it encounters, `ModelSchema` uses the default `Field.get_internal_type` method
+to find the correct representation in Pydantic schema. This process works fine for the built-in field
+types, but there are cases where the user wants to create a custom field, with its own mapping to
+Pydantic field. Consider the following (barebones) example field:
+
+```python
+class TranslatedTextField(models.JSONField):
+    description = "Translated string represented as a JSON field"
+    languages = {"en": _("English"), "fr": _("French")}
+
+    def formfield(self, **kwargs):
+        is_required = not self.blank
+        return TextDictField(
+            widget=TranslatedTextFieldWidget(languages=self.languages), required=is_required
+        )
+```
+
+In all cases where this field is used in a model, we would like to use the following schema:
+
+```python
+class TranslatedTextFieldSchema(Schema):
+    en: Optional[str] = None
+    fr: Optional[str] = None
+```
+
+To achieve that, we can add a `get_schema_type` function to the django field and add it to supported
+types in Django Ninja:
+
+```python
+class TranslatedTextField(models.JSONField):
+    ...
+    def get_schema_type(self):
+        return "TranslatedTextField"
+
+ninja.orm.fields.TYPES["TranslatedTextField"] = TranslatedTextFieldSchema
+```
