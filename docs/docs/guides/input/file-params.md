@@ -89,3 +89,15 @@ this will expect from the client side to send data as `multipart/form-data with 
 def create_user(request, details: Form[UserDetails], files: File[list[UploadedFile]]):
     return [details.dict(), [f.name for f in files]]
 ```
+
+### Optional file input
+
+If you would like the file input to be optional, all that you have to do is to pass `None` to the `File` type, like so:
+
+```python
+@api.post('/users')
+def create_user(request, details: Form[UserDetails], avatar: UploadedFile = File(None)):
+    user = add_user_to_database(details)
+    if avatar is not None:
+        set_user_avatar(user)
+```
