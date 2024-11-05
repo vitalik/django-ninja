@@ -151,11 +151,7 @@ def get_schema_field(
             python_type = field.get_schema_type()
         else:
             internal_type = field.get_internal_type()
-
-            try:
-                python_type = TYPES[internal_type]
-            except KeyError as e:
-                raise KeyError("Type '{0}' isn't registered in ninja.orm.fields.TYPES".format(internal_type)) from e
+            python_type = TYPES[internal_type]
 
         if field.primary_key or blank or null or optional:
             default = None
