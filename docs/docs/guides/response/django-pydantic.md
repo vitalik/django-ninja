@@ -181,14 +181,13 @@ class TranslatedTextFieldSchema(Schema):
     fr: Optional[str] = None
 ```
 
-To achieve that, we can add a `get_schema_type` function to the django field and add it to supported
-types in Django Ninja:
+To achieve that, we can add a `get_schema_type` function to the django field and make it return
+the desired type:
 
 ```python
 class TranslatedTextField(models.JSONField):
     ...
     def get_schema_type(self):
-        return "TranslatedTextField"
-
-ninja.orm.fields.TYPES["TranslatedTextField"] = TranslatedTextFieldSchema
+        return TranslatedTextFieldSchema
+ 
 ```
