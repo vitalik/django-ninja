@@ -54,6 +54,7 @@ class OpenAPISchema(dict):
                 ),
                 ("paths", self.get_paths()),
                 ("components", self.get_components()),
+                ("channels", api.openapi_extra.get("channels", {})),
                 ("servers", api.servers),
             ]
         )
