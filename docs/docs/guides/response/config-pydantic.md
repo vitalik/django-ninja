@@ -33,7 +33,7 @@ class CamelModelSchema(Schema):
 !!! note
     When overriding the schema's `Config`, it is necessary to inherit from the base `Config` class. 
 
-Keep in mind that when you want modify output for field names (like cammel case) - you need to set as well  `populate_by_name` and `by_alias`
+Keep in mind that when you want modify output for field names (like camel case) - you need to set as well  `populate_by_name` and `by_alias`
 
 ```python hl_lines="6 9"
 class UserSchema(ModelSchema):

@@ -2,7 +2,7 @@
 
 ## OpenAPI Schema related
 
-The following parameters interact with the how the OpenAPI schema (and docs) are generated.
+The following parameters interact with how the OpenAPI schema (and docs) are generated.
 
 ### `tags`
 
@@ -244,5 +244,5 @@ api = NinjaAPI(
         ]
 )
 ```
-This will allow switching between enviroments when using interactive OpenAPI docs:
+This will allow switching between environments when using interactive OpenAPI docs:
 ![Servers](../img/servers.png)

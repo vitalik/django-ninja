@@ -8,8 +8,8 @@ Let's say you are making API that depends on some external service that is desig
 
 To achieve that you need:
 
- - 1) create some exception (or use existing one)
- - 2) use api.exception_handler decorator
+1. create some exception (or use existing one)
+2. use api.exception_handler decorator
 
 
 Example:
