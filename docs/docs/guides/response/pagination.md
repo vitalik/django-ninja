@@ -186,7 +186,7 @@ def items(request):
     return MyModel.objects.all()
 
 @router.get("/other-items", response=List[OtherSchema])
-def ohter_items(request):
+def other_items(request):
     return OtherModel.objects.all()
 
 ```
