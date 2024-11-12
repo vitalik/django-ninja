@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Pattern, TypeVar, Union
 
 from typing_extensions import Annotated
 
@@ -86,7 +86,7 @@ def P(
     le: Optional[float] = None,
     min_length: Optional[int] = None,
     max_length: Optional[int] = None,
-    regex: Optional[str] = None,
+    pattern: Union[str, Pattern[str], None] = None,
     example: Any = None,
     examples: Optional[Dict[str, Any]] = None,
     deprecated: Optional[bool] = None,
@@ -104,7 +104,7 @@ def P(
         le=le,
         min_length=min_length,
         max_length=max_length,
-        regex=regex,
+        pattern=pattern,
         example=example,
         examples=examples,
         deprecated=deprecated,
