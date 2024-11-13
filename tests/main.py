@@ -135,6 +135,11 @@ def get_path_param_le_ge_int(request, item_id: int = Path(..., le=3, ge=1)):
     return item_id
 
 
+@router.get("/path/param-pattern/{item_id}")
+def get_path_param_pattern(request, item_id: str = Path(..., pattern="^foo")):
+    return item_id
+
+
 @router.get("/path/param-django-str/{str:item_id}")
 def get_path_param_django_str(request, item_id):
     return item_id
