@@ -67,6 +67,11 @@ def check_model_alias(request):
     return User(1, "John", "Password")
 
 
+@router.get("/check_pydantic", response=UserModel)
+def check_pydantic(request):
+    return UserModel(id=1, user_name="John")
+
+
 @router.get("/check_union", response=Union[int, UserModel])
 def check_union(request, q: int):
     if q == 0:
@@ -109,6 +114,7 @@ client = TestClient(router)
         ),  # the password is skipped
         ("/check_model", {"id": 1, "user_name": "John"}),  # the password is skipped
         ("/check_model_alias", {"Id": 1, "UserName": "John"}),  # result is Camal Case
+        ("/check_pydantic", {"id": 1, "user_name": "John"}),  # result is Camal Case
         ("/check_union?q=0", 1),
         ("/check_union?q=1", {"id": 1, "user_name": "John"}),
     ],

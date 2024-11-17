@@ -255,11 +255,13 @@ class Operation:
             # Empty response.
             return temporal_response
 
-        resp_object = ResponseObject(result)
-        # ^ we need object because getter_dict seems work only with model_validate
-        validated_object = response_model.model_validate(
-            resp_object, context={"request": request, "response_status": status}
-        )
+        if isinstance(result, response_model):
+            validated_object = result
+        else:
+            # ^ we need object because getter_dict seems work only with model_validate
+            validated_object = response_model.model_validate(
+                ResponseObject(result), context={"request": request, "response_status": status}
+            )
 
         model_dump_kwargs: Dict[str, Any] = {}
         if pydantic_version >= [2, 7]:
