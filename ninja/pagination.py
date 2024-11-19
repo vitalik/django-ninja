@@ -2,7 +2,7 @@ import inspect
 from abc import ABC, abstractmethod
 from functools import partial, wraps
 from math import inf
-from typing import Any, AsyncGenerator, Callable, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, List, Optional, Tuple, Type, Union
 
 from django.db.models import QuerySet
 from django.http import HttpRequest
@@ -53,7 +53,7 @@ class PaginationBase(ABC):
         """
         try:
             # forcing to find queryset.count instead of list.count:
-            return queryset.all().count()
+            return queryset.count()
         except AttributeError:
             return len(queryset)
 
@@ -70,7 +70,7 @@ class AsyncPaginationBase(PaginationBase):
 
     async def _aitems_count(self, queryset: QuerySet) -> int:
         try:
-            return await queryset.all().acount()
+            return await queryset.acount()
         except AttributeError:
             return len(queryset)
 
@@ -203,14 +203,10 @@ def _inject_pagination(
                 items, pagination=pagination_params, request=request, **kwargs
             )
 
-            async def evaluate(results: Union[List, QuerySet]) -> AsyncGenerator:
-                for result in results:
-                    yield result
-
             if paginator.Output:  # type: ignore
                 result[paginator.items_attribute] = [
                     result
-                    async for result in evaluate(result[paginator.items_attribute])
+                    async for result in result[paginator.items_attribute]
                 ]
             return result
 
