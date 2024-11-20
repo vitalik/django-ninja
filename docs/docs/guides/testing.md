@@ -64,3 +64,12 @@ It is also possible to specify cookies, both from the TestCase instantiation and
     # The request will be made with {"A": "na", "B": "b", "C": "nc"} cookies
     response = client.get("/test-cookies", COOKIES={"A": "na", "C": "nc"})
 ```
+
+### Users
+It is also possible to specify a User for the request:
+```python
+    user = User.objects.create(...)
+    client = TestClient(router)
+    # The request will be made with user logged in
+    response = client.get("/test-with-user", user=user)
+```
