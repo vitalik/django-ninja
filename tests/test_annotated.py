@@ -1,6 +1,7 @@
 from typing import List
 
 from typing_extensions import Annotated
+from util import pydantic_ref_fix
 
 from ninja import Body, Cookie, Form, Header, NinjaAPI, Path, Query, Schema
 from ninja.testing import TestClient
@@ -192,10 +193,12 @@ def test_openapi_schema():
                 "requestBody": {
                     "content": {
                         "application/json": {
-                            "schema": {
-                                "allOf": [{"$ref": "#/components/schemas/Payload"}],
-                                "examples": [{"p": "test", "t": 42}],
-                            }
+                            "schema": pydantic_ref_fix(
+                                {
+                                    "$ref": "#/components/schemas/Payload",
+                                    "examples": [{"p": "test", "t": 42}],
+                                }
+                            )
                         }
                     },
                     "required": True,

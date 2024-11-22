@@ -117,6 +117,7 @@ def test_responses(path, expected_response):
     response = client.get(path)
     assert response.status_code == 200, response.content
     assert response.json() == expected_response
+    assert response.data == response.data == expected_response  # Ensures cache works
 
 
 def test_validates():

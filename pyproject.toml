@@ -36,6 +36,7 @@ classifiers = [
     "Framework :: Django :: 4.1",
     "Framework :: Django :: 4.2",
     "Framework :: Django :: 5.0",
+    "Framework :: Django :: 5.1",
     "Framework :: AsyncIO",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Internet :: WWW/HTTP",
@@ -59,7 +60,7 @@ test = [
     "pytest-asyncio",
     "psycopg2-binary",
     "mypy==1.7.1",
-    "ruff==0.4.2",
+    "ruff==0.5.7",
     "django-stubs",
 ]
 doc = ["mkdocs", "mkdocs-material", "markdown-include", "mkdocstrings"]

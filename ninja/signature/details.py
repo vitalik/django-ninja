@@ -72,6 +72,15 @@ class ViewSignature:
                 self.response_arg = name
                 continue
 
+            if (
+                arg.annotation is inspect.Parameter.empty
+                and isinstance(arg.default, type)
+                and issubclass(arg.default, pydantic.BaseModel)
+            ):
+                raise ConfigError(
+                    f"Looks like you are using `{name}={arg.default.__name__}` instead of `{name}: {arg.default.__name__}` (annotation)"
+                )
+
             func_param = self._get_param_type(name, arg)
             self.params.append(func_param)
 

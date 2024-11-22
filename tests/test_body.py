@@ -1,6 +1,8 @@
+import pytest
 from pydantic import field_validator
 
 from ninja import Body, Form, NinjaAPI, Schema
+from ninja.errors import ConfigError
 from ninja.testing import TestClient
 
 api = NinjaAPI()
@@ -66,3 +68,17 @@ def test_body_validation_error():
             "ctx": {"error": "invalid email"},
         }
     ]
+
+
+def test_incorrect_annotation():
+    api = NinjaAPI()
+
+    class Some(Schema):
+        a: int
+
+    with pytest.raises(ConfigError):
+
+        @api.post("/some")
+        def some(request, payload=Some):
+            #  ................. ^------ invalid usage assigning class instead of annotation
+            return 42

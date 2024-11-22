@@ -5,6 +5,7 @@ import pytest
 from django.contrib.postgres import fields as ps_fields
 from django.db import models
 from django.db.models import Manager
+from util import pydantic_ref_fix
 
 from ninja.errors import ConfigError
 from ninja.orm import create_schema
@@ -284,16 +285,18 @@ def test_relational():
     }
 
     SchemaClsDeep = create_schema(TestModel, name="TestSchemaDeep", depth=1)
-    # print(SchemaClsDeep.json_schema())
+    print(SchemaClsDeep.json_schema())
     assert SchemaClsDeep.json_schema() == {
         "type": "object",
         "properties": {
             "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
-            "onetoonefield": {
-                "title": "Onetoonefield",
-                "description": "",
-                "allOf": [{"$ref": "#/$defs/Related"}],
-            },
+            "onetoonefield": pydantic_ref_fix(
+                {
+                    "title": "Onetoonefield",
+                    "description": "",
+                    "$ref": "#/$defs/Related",
+                }
+            ),
             "foreignkey": {
                 "title": "Foreignkey",
                 "allOf": [{"$ref": "#/$defs/Related"}],

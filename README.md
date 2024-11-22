@@ -22,16 +22,6 @@
 
 # Django Ninja - Fast Django REST Framework
 
-# v1.0 What's new
-Read more details here - https://django-ninja.dev/whatsnew_v1/ 
-
-Or Watch here:
-
-
-<a href="https://youtu.be/GrIpDXPG41o"><img width="500" alt="SCR-20231116-qmoj" src="https://github.com/vitalik/django-ninja/assets/95222/06958fbf-6d3a-4f33-aa76-7a29279c9959"></a>
-
-
-
 **Django Ninja** is a web framework for building APIs with **Django** and Python 3.6+ **type hints**.
 
 

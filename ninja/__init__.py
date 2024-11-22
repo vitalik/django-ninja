@@ -1,6 +1,6 @@
 """Django Ninja - Fast Django REST framework"""
 
-__version__ = "1.2.2"
+__version__ = "1.3.0"
 
 
 from pydantic import Field
@@ -27,6 +27,7 @@ from ninja.params import (
     Query,
     QueryEx,
 )
+from ninja.patch_dict import PatchDict
 from ninja.router import Router
 from ninja.schema import Schema
 
@@ -55,4 +56,5 @@ __all__ = [
     "FilterSchema",
     "Swagger",
     "Redoc",
+    "PatchDict",
 ]

@@ -21,7 +21,7 @@ from django.http.response import HttpResponseBase
 from ninja.constants import NOT_SET, NOT_SET_TYPE
 from ninja.errors import AuthenticationError, ConfigError, Throttled, ValidationError
 from ninja.params.models import TModels
-from ninja.schema import Schema
+from ninja.schema import Schema, pydantic_version
 from ninja.signature import ViewSignature, is_async
 from ninja.throttling import BaseThrottle
 from ninja.types import DictStrAny
@@ -48,10 +48,10 @@ class Operation:
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
-        by_alias: bool = False,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
+        by_alias: Optional[bool] = None,
+        exclude_unset: Optional[bool] = None,
+        exclude_defaults: Optional[bool] = None,
+        exclude_none: Optional[bool] = None,
         include_in_schema: bool = True,
         url_name: Optional[str] = None,
         openapi_extra: Optional[Dict[str, Any]] = None,
@@ -60,7 +60,7 @@ class Operation:
         self.path: str = path
         self.methods: List[str] = methods
         self.view_func: Callable = view_func
-        self.api: "NinjaAPI" = cast("NinjaAPI", None)
+        self.api: NinjaAPI = cast("NinjaAPI", None)
         if url_name is not None:
             self.url_name = url_name
 
@@ -99,10 +99,10 @@ class Operation:
         self.openapi_extra = openapi_extra
 
         # Exporting models params
-        self.by_alias = by_alias
-        self.exclude_unset = exclude_unset
-        self.exclude_defaults = exclude_defaults
-        self.exclude_none = exclude_none
+        self.by_alias = by_alias or False
+        self.exclude_unset = exclude_unset or False
+        self.exclude_defaults = exclude_defaults or False
+        self.exclude_none = exclude_none or False
 
         if hasattr(view_func, "_ninja_contribute_to_operation"):
             # Allow 3rd party code to contribute to the operation behavior
@@ -261,11 +261,19 @@ class Operation:
             resp_object, context={"request": request, "response_status": status}
         )
 
+        model_dump_kwargs: Dict[str, Any] = {}
+        if pydantic_version >= [2, 7]:
+            # pydantic added support for serialization context at 2.7
+            model_dump_kwargs.update(
+                context={"request": request, "response_status": status}
+            )
+
         result = validated_object.model_dump(
             by_alias=self.by_alias,
             exclude_unset=self.exclude_unset,
             exclude_defaults=self.exclude_defaults,
             exclude_none=self.exclude_none,
+            **model_dump_kwargs,
         )["response"]
         return self.api.create_response(
             request, result, temporal_response=temporal_response
@@ -399,10 +407,10 @@ class PathView:
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
-        by_alias: bool = False,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
+        by_alias: Optional[bool] = None,
+        exclude_unset: Optional[bool] = None,
+        exclude_defaults: Optional[bool] = None,
+        exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
