@@ -3,7 +3,7 @@ from unittest.mock import Mock
 import pytest
 
 from ninja import NinjaAPI
-from ninja.errors import ConfigError
+from ninja.errors import AuthorizationError, ConfigError
 from ninja.security import (
     APIKeyCookie,
     APIKeyHeader,
@@ -60,6 +60,8 @@ class BearerAuth(HttpBearer):
     def authenticate(self, request, token):
         if token == "bearertoken":
             return token
+        if token == "nottherightone":
+            raise AuthorizationError
 
 
 def demo_operation(request):
@@ -102,6 +104,7 @@ class MockSuperUser(str):
 
 
 BODY_UNAUTHORIZED_DEFAULT = dict(detail="Unauthorized")
+BODY_FORBIDDEN_DEFAULT = dict(detail="Forbidden")
 
 
 @pytest.mark.parametrize(
@@ -177,6 +180,18 @@ BODY_UNAUTHORIZED_DEFAULT = dict(detail="Unauthorized")
             dict(headers={"Authorization": "Invalid bearertoken"}),
             401,
             BODY_UNAUTHORIZED_DEFAULT,
+        ),
+        (
+            "/bearer",
+            dict(headers={"Authorization": "Bearer nonexistingtoken"}),
+            401,
+            BODY_UNAUTHORIZED_DEFAULT,
+        ),
+        (
+            "/bearer",
+            dict(headers={"Authorization": "Bearer nottherightone"}),
+            403,
+            BODY_FORBIDDEN_DEFAULT,
         ),
         ("/customexception", {}, 401, dict(custom=True)),
         (

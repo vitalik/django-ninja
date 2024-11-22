@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 __all__ = [
     "ConfigError",
     "AuthenticationError",
+    "AuthorizationError",
     "ValidationError",
     "HttpError",
     "set_default_exc_handlers",
@@ -24,10 +25,6 @@ logger = logging.getLogger("django")
 
 
 class ConfigError(Exception):
-    pass
-
-
-class AuthenticationError(Exception):
     pass
 
 
@@ -53,6 +50,16 @@ class HttpError(Exception):
         return self.message
 
 
+class AuthenticationError(HttpError):
+    def __init__(self, status_code: int = 401, message: str = "Unauthorized") -> None:
+        super().__init__(status_code=status_code, message=message)
+
+
+class AuthorizationError(HttpError):
+    def __init__(self, status_code: int = 403, message: str = "Forbidden") -> None:
+        super().__init__(status_code=status_code, message=message)
+
+
 class Throttled(HttpError):
     def __init__(self, wait: Optional[int]) -> None:
         self.wait = wait
@@ -76,10 +83,6 @@ def set_default_exc_handlers(api: "NinjaAPI") -> None:
         ValidationError,
         partial(_default_validation_error, api=api),
     )
-    api.add_exception_handler(
-        AuthenticationError,
-        partial(_default_authentication_error, api=api),
-    )
 
 
 def _default_404(request: HttpRequest, exc: Exception, api: "NinjaAPI") -> HttpResponse:
@@ -99,12 +102,6 @@ def _default_validation_error(
     request: HttpRequest, exc: ValidationError, api: "NinjaAPI"
 ) -> HttpResponse:
     return api.create_response(request, {"detail": exc.errors}, status=422)
-
-
-def _default_authentication_error(
-    request: HttpRequest, exc: AuthenticationError, api: "NinjaAPI"
-) -> HttpResponse:
-    return api.create_response(request, {"detail": "Unauthorized"}, status=401)
 
 
 def _default_exception(
