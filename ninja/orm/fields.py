@@ -1,11 +1,11 @@
 import datetime
 from decimal import Decimal
-from typing import Any, Callable, Dict, List, Tuple, Type, TypeVar, Union, no_type_check
+from typing import Annotated, Any, Callable, Dict, List, Tuple, Type, TypeVar, Union, no_type_check
 from uuid import UUID
 
-from django.db.models import ManyToManyField
+from django.db.models import ManyToManyField, URLField
 from django.db.models.fields import Field as DjangoField
-from pydantic import IPvAnyAddress
+from pydantic import AnyUrl, IPvAnyAddress, TypeAdapter
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined, core_schema
 
@@ -42,6 +42,29 @@ class AnyObject:
         return value
 
 
+# Allows to have url validation on URLFields without breaking JSON serialization
+# https://github.com/vitalik/django-ninja/pull/1255
+class AnyUrlStr(str):
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, source: Any, handler: Callable[..., Any]
+    ) -> Any:
+        return core_schema.with_info_plain_validator_function(cls.validate)
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls, schema: Any, handler: Callable[..., Any]
+    ) -> DictStrAny:
+        return {"type": "string"}
+
+    @classmethod
+    def validate(cls, value: Any, _: Any) -> str:
+        if isinstance(value, AnyUrl):
+            return str(value)
+        validated = TypeAdapter(AnyUrl).validate_python(value)
+        return str(validated)
+
+
 TYPES = {
     "AutoField": int,
     "BigAutoField": int,
@@ -69,6 +92,7 @@ TYPES = {
     "SmallIntegerField": int,
     "TextField": str,
     "TimeField": datetime.time,
+    "URLField": AnyUrlStr,
     "UUIDField": UUID,
     # postgres fields:
     "ArrayField": List,
@@ -148,6 +172,9 @@ def get_schema_field(
         max_length = field_options.get("max_length")
 
         internal_type = field.get_internal_type()
+        if isinstance(field, URLField):
+            internal_type = "URLField"
+
         python_type = TYPES[internal_type]
 
         if field.primary_key or blank or null or optional:
