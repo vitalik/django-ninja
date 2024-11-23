@@ -236,7 +236,7 @@ class OpenAPISchema(dict):
             return schema, True
 
     def _create_multipart_schema_from_models(
-        self, models: TModels
+        self, models: TModels, by_alias: bool = True
     ) -> Tuple[DictStrAny, str]:
         # We have File and Form or Body, so we need to use multipart (File)
         content_type = BODY_CONTENT_TYPES["file"]
@@ -244,7 +244,9 @@ class OpenAPISchema(dict):
         # get the various schemas
         result = merge_schemas(
             [
-                self._create_schema_from_model(model, remove_level=False)[0]
+                self._create_schema_from_model(
+                    model, remove_level=False, by_alias=by_alias
+                )[0]
                 for model in models
             ]
         )
@@ -265,10 +267,14 @@ class OpenAPISchema(dict):
             model = models[0]
             content_type = BODY_CONTENT_TYPES[model.__ninja_param_source__]
             schema, required = self._create_schema_from_model(
-                model, remove_level=model.__ninja_param_source__ == "body"
+                model,
+                remove_level=model.__ninja_param_source__ == "body",
+                by_alias=operation.by_alias,
             )
         else:
-            schema, content_type = self._create_multipart_schema_from_models(models)
+            schema, content_type = self._create_multipart_schema_from_models(
+                models, by_alias=operation.by_alias
+            )
             required = True
 
         return {
