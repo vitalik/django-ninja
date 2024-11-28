@@ -73,3 +73,15 @@ It is also possible to specify a User for the request:
     # The request will be made with user logged in
     response = client.get("/test-with-user", user=user)
 ```
+
+## Testing async operations
+
+To test operations in async context use `TestAsyncClient`:
+
+```python
+from ninja.testing import TestAsyncClient
+
+client = TestAsyncClient(router)
+response = await client.post("/test/")
+
+```
