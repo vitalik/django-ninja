@@ -1,7 +1,7 @@
 from json import dumps as json_dumps
 from json import loads as json_loads
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
-from unittest.mock import Mock
+from unittest.mock import Mock, AsyncMock
 from urllib.parse import urljoin
 
 from django.http import QueryDict, StreamingHttpResponse
@@ -139,8 +139,12 @@ class NinjaClientBase:
 
         request.auth = None
         request.user = Mock()
+        auser_mock = AsyncMock()
+        request.auser = AsyncMock(return_value=auser_mock)
+
         if "user" not in request_params:
             request.user.is_authenticated = False
+            auser_mock.is_authenticated = False
 
         request.META = request_params.pop("META", {"REMOTE_ADDR": "127.0.0.1"})
         request.FILES = request_params.pop("FILES", {})
