@@ -6,6 +6,7 @@ from typing import List, Union
 import pytest
 from django.http import HttpResponse
 from pydantic import BaseModel, ValidationError
+from pydantic_core import Url
 
 from ninja import Router
 from ninja.responses import Response
@@ -172,3 +173,10 @@ def test_enum_encoding():
     response = Response(data)
     response_data = json.loads(response.content)
     assert response_data["enum"] == str(data["enum"])
+
+
+def test_pydantic_url():
+    data = {"url": Url("https://django-ninja.dev/")}
+    response = Response(data)
+    response_data = json.loads(response.content)
+    assert response_data == {"url": "https://django-ninja.dev/"}
