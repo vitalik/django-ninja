@@ -9,6 +9,7 @@ from pydantic import IPvAnyAddress
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined, core_schema
 
+from ninja.errors import ConfigError
 from ninja.openapi.schema import OpenAPISchema
 from ninja.types import DictStrAny
 
@@ -81,6 +82,10 @@ TYPES = {
 TModel = TypeVar("TModel")
 
 
+def register_field(django_field: str, python_type: Any) -> None:
+    TYPES[django_field] = python_type
+
+
 @no_type_check
 def create_m2m_link_type(type_: Type[TModel]) -> Type[TModel]:
     class M2MLink(type_):  # type: ignore
@@ -148,7 +153,15 @@ def get_schema_field(
         max_length = field_options.get("max_length")
 
         internal_type = field.get_internal_type()
-        python_type = TYPES[internal_type]
+        try:
+            python_type = TYPES[internal_type]
+        except KeyError as e:
+            msg = [
+                f"Do not know how to convert django field '{internal_type}'.",
+                "Try from ninja.orm import register_field",
+                f"register_field('{internal_type}', <your-python-type>)",
+            ]
+            raise ConfigError("\n".join(msg)) from e
 
         if field.primary_key or blank or null or optional:
             default = None
