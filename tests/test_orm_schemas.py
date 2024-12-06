@@ -8,7 +8,7 @@ from django.db.models import Manager
 from util import pydantic_ref_fix
 
 from ninja.errors import ConfigError
-from ninja.orm import create_schema
+from ninja.orm import create_schema, register_field
 from ninja.orm.shortcuts import L, S
 
 
@@ -581,3 +581,22 @@ def test_optional_fields():
         SomeReqFieldModel, optional_fields=["some_field", "other_field", "optional"]
     )
     assert Schema.json_schema().get("required") is None
+
+
+def test_register_custom_field():
+    class MyCustomField(models.Field):
+        description = "MyCustomField"
+
+    class ModelWithCustomField(models.Model):
+        some_field = MyCustomField()
+
+        class Meta:
+            app_label = "tests"
+
+    with pytest.raises(ConfigError):
+        create_schema(ModelWithCustomField)
+
+    register_field("MyCustomField", int)
+    Schema = create_schema(ModelWithCustomField)
+    print(Schema.json_schema())
+    assert Schema.json_schema()["properties"]["some_field"]["type"] == "integer"
