@@ -11,7 +11,7 @@ class Settings(BaseModel):
         "ninja.pagination.LimitOffsetPagination", alias="NINJA_PAGINATION_CLASS"
     )
     PAGINATION_PER_PAGE: int = Field(100, alias="NINJA_PAGINATION_PER_PAGE")
-    PAGINATION_MAX_LIMIT: int = Field(inf, alias="NINJA_PAGINATION_MAX_LIMIT")
+    PAGINATION_MAX_LIMIT: int = Field(inf, alias="NINJA_PAGINATION_MAX_LIMIT")  # type: ignore
 
     # Throttling
     NUM_PROXIES: Optional[int] = Field(None, alias="NINJA_NUM_PROXIES")
