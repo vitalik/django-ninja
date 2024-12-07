@@ -126,6 +126,27 @@ def patch(request, pk: int, payload: PatchGroupSchema):
 
 ```
 
+
+### Custom fields types
+
+For each Django field it encounters, `ModelSchema` uses the default `Field.get_internal_type` method
+to find the correct representation in Pydantic schema (python type). This process works fine for the built-in field
+types, but there are cases where the user wants to create or use a custom field, with its own mapping to
+python type. In this case you should use `register_field` method to tell django-ninja which type should this django field represent:
+
+```python hl_lines="4 7 8 9"
+# models.py
+
+class MyModel(models.Modle):
+    embedding = pgvector.VectorField()
+
+# schemas.py
+from ninja.orm import register_field
+
+register_field('VectorField', list[float])
+
+```
+
 #### PatchDict
 
 Another way to work with patch request data is a `PatchDict` container which allows you to make 
