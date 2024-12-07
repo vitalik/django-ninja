@@ -255,28 +255,31 @@ class Operation:
             # Empty response.
             return temporal_response
 
-        if isinstance(result, response_model):
+        model_dump_kwargs: Dict[str, Any] = {
+            "by_alias": self.by_alias,
+            "exclude_unset": self.exclude_unset,
+            "exclude_defaults": self.exclude_defaults,
+            "exclude_none": self.exclude_none,
+        }
+        if pydantic_version >= [2, 7]:
+            # pydantic added support for serialization context at 2.7
+            model_dump_kwargs.update(context={"request": request, "response_status": status})
+
+        response_schema = response_model.__annotations__["response"]
+        if (
+            isinstance(response_schema, type)
+            and issubclass(response_schema, pydantic.BaseModel)
+            and isinstance(result, response_schema)
+        ):
             validated_object = result
+            result = validated_object.model_dump(**model_dump_kwargs)
         else:
             # ^ we need object because getter_dict seems work only with model_validate
             validated_object = response_model.model_validate(
                 ResponseObject(result), context={"request": request, "response_status": status}
             )
+            result = validated_object.model_dump(**model_dump_kwargs)["response"]
 
-        model_dump_kwargs: Dict[str, Any] = {}
-        if pydantic_version >= [2, 7]:
-            # pydantic added support for serialization context at 2.7
-            model_dump_kwargs.update(
-                context={"request": request, "response_status": status}
-            )
-
-        result = validated_object.model_dump(
-            by_alias=self.by_alias,
-            exclude_unset=self.exclude_unset,
-            exclude_defaults=self.exclude_defaults,
-            exclude_none=self.exclude_none,
-            **model_dump_kwargs,
-        )["response"]
         return self.api.create_response(
             request, result, temporal_response=temporal_response
         )
