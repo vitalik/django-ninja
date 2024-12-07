@@ -145,12 +145,10 @@ class NinjaClientBase:
         request.META = request_params.pop("META", {"REMOTE_ADDR": "127.0.0.1"})
         request.FILES = request_params.pop("FILES", {})
 
-        request.META.update(
-            {
-                f"HTTP_{k.replace('-', '_')}": v
-                for k, v in request_params.pop("headers", {}).items()
-            }
-        )
+        request.META.update({
+            f"HTTP_{k.replace('-', '_')}": v
+            for k, v in request_params.pop("headers", {}).items()
+        })
 
         request.headers = HttpHeaders(request.META)
 
