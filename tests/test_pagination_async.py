@@ -9,8 +9,8 @@ from ninja.errors import ConfigError
 from ninja.pagination import (
     AsyncPaginationBase,
     PageNumberPagination,
-    PaginationBase,
     paginate,
+    PaginationBase,
 )
 from ninja.testing import TestAsyncClient
 
@@ -113,11 +113,15 @@ async def test_async_page_number():
     api = NinjaAPI()
 
     @api.get("/items_page_number", response=List[Any])
-    @paginate(PageNumberPagination, page_size=10, pass_parameter="page_info")
+    @paginate(PageNumberPagination, pass_parameter="page_info")
     async def items_page_number(request, **kwargs):
         return ITEMS + [kwargs["page_info"]]
 
     client = TestAsyncClient(api)
-
-    response = await client.get("/items_page_number?page=11")
-    assert response.json() == {"items": [{"page": 11}], "count": 101}
+    page = 11
+    page_size = 10
+    response = await client.get(f"/items_page_number?page={page}&page_size={page_size}")
+    assert response.json() == {
+        "items": [{"page": page, "page_size": page_size}],
+        "count": 101,
+    }

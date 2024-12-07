@@ -4,19 +4,19 @@ from typing import Any, List
 
 import pytest
 from django.test import override_settings
-from pydantic.errors import PydanticSchemaGenerationError
 
 from ninja import NinjaAPI, Schema
 from ninja.errors import ConfigError
 from ninja.operation import Operation
 from ninja.pagination import (
     LimitOffsetPagination,
-    PageNumberPagination,
-    PaginationBase,
     make_response_paginated,
+    PageNumberPagination,
     paginate,
+    PaginationBase,
 )
 from ninja.testing import TestClient
+from pydantic.errors import PydanticSchemaGenerationError
 
 api = NinjaAPI()
 
@@ -119,19 +119,19 @@ def items_3(request, **kwargs):
 
 
 @api.get("/items_4", response=List[int])
-@paginate(PageNumberPagination, page_size=10)
+@paginate(PageNumberPagination)
 def items_4(request, **kwargs):
     return ITEMS
 
 
 @api.get("/items_5", response=List[int])
-@paginate(PageNumberPagination, page_size=10)
+@paginate(PageNumberPagination)
 def items_5(request):
     return ITEMS
 
 
 @api.get("/items_6", response={101: int, 200: List[Any]})
-@paginate(PageNumberPagination, page_size=10, pass_parameter="page_info")
+@paginate(PageNumberPagination, pass_parameter="page_info")
 def items_6(request, **kwargs):
     return ITEMS + [kwargs["page_info"]]
 
@@ -244,7 +244,7 @@ def test_case3():
 
 
 def test_case4():
-    response = client.get("/items_4?page=2").json()
+    response = client.get("/items_4?page=2&page_size=10").json()
     assert response == {"items": ITEMS[10:20], "count": 100}
 
     schema = api.get_openapi_schema()["paths"]["/api/items_4"]["get"]
@@ -260,12 +260,24 @@ def test_case4():
                 "type": "integer",
             },
             "required": False,
-        }
+        },
+        {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+                "default": 100,
+                "maximum": 100,
+                "minimum": 1,
+                "title": "Page Size",
+                "type": "integer",
+            },
+            "required": False,
+        },
     ]
 
 
 def test_case5_no_kwargs():
-    response = client.get("/items_5?page=2").json()
+    response = client.get("/items_5?page=2&page_size=10").json()
     assert response == {"items": ITEMS[10:20], "count": 100}
 
     schema = api.get_openapi_schema()["paths"]["/api/items_5"]["get"]
@@ -281,14 +293,27 @@ def test_case5_no_kwargs():
                 "type": "integer",
             },
             "required": False,
-        }
+        },
+        {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+                "default": 100,
+                "maximum": 100,
+                "minimum": 1,
+                "title": "Page Size",
+                "type": "integer",
+            },
+            "required": False,
+        },
     ]
 
 
 def test_case6_pass_param_kwargs():
     page = 11
-    response = client.get(f"/items_6?page={page}").json()
-    assert response == {"items": [{"page": 11}], "count": 101}
+    page_size = 10
+    response = client.get(f"/items_6?page={page}&page_size={page_size}").json()
+    assert response == {"items": [{"page": page, "page_size": page_size}], "count": 101}
 
     schema = api.get_openapi_schema()["paths"]["/api/items_6"]["get"]
 
@@ -303,7 +328,19 @@ def test_case6_pass_param_kwargs():
                 "type": "integer",
             },
             "required": False,
-        }
+        },
+        {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+                "default": 100,
+                "maximum": 100,
+                "minimum": 1,
+                "title": "Page Size",
+                "type": "integer",
+            },
+            "required": False,
+        },
     ]
 
 
