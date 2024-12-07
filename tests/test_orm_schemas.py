@@ -290,13 +290,11 @@ def test_relational():
         "type": "object",
         "properties": {
             "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
-            "onetoonefield": pydantic_ref_fix(
-                {
-                    "title": "Onetoonefield",
-                    "description": "",
-                    "$ref": "#/$defs/Related",
-                }
-            ),
+            "onetoonefield": pydantic_ref_fix({
+                "title": "Onetoonefield",
+                "description": "",
+                "$ref": "#/$defs/Related",
+            }),
             "foreignkey": {
                 "title": "Foreignkey",
                 "allOf": [{"$ref": "#/$defs/Related"}],

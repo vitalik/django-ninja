@@ -193,12 +193,10 @@ def test_openapi_schema():
                 "requestBody": {
                     "content": {
                         "application/json": {
-                            "schema": pydantic_ref_fix(
-                                {
-                                    "$ref": "#/components/schemas/Payload",
-                                    "examples": [{"p": "test", "t": 42}],
-                                }
-                            )
+                            "schema": pydantic_ref_fix({
+                                "$ref": "#/components/schemas/Payload",
+                                "examples": [{"p": "test", "t": 42}],
+                            })
                         }
                     },
                     "required": True,
