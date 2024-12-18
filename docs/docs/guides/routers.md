@@ -217,3 +217,38 @@ Now you have the following endpoints:
 Great! Now go have a look at the automatically generated docs:
 
 ![Swagger UI Nested Routers](../img/nested-routers-swagger.png)
+
+### Nested url parameters
+
+You can also use url parameters in nested routers by adding `= Path(...)` to the function parameters:
+
+```python hl_lines="13 16"
+from django.contrib import admin
+from django.urls import path
+from ninja import NinjaAPI, Path, Router
+
+api = NinjaAPI()
+router = Router()
+
+@api.get("/add/{a}/{b}")
+def add(request, a: int, b: int):
+    return {"result": a + b}
+
+@router.get("/multiply/{c}")
+def multiply(request, c: int, a: int = Path(...), b: int = Path(...)):
+    return {"result": (a + b) * c}
+
+api.add_router("add/{a}/{b}", router)
+
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("api/", api.urls),
+]
+```
+
+This will generate the following endpoints:
+
+```
+/api/add/{a}/{b}
+/api/add/{a}/{b}/multiply/{c}
+```
