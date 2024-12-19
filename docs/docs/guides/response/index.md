@@ -360,7 +360,7 @@ Sometimes you need to create a schema that has reference to itself, or tree-stru
 To do that you need:
 
 - set a type of your schema in quotes
-- use `update_forward_refs` method to apply self referencing types
+- use `model_rebuild` method to apply self referencing types
 
 ```python hl_lines="3 6"
 class Organization(Schema):
@@ -368,7 +368,7 @@ class Organization(Schema):
     part_of: 'Organization' = None     #!! note the type in quotes here !!
 
 
-Organization.update_forward_refs()  # !!! this is important
+Organization.model_rebuild()  # !!! this is important
 
 
 @api.get('/organizations', response=List[Organization])
@@ -378,20 +378,20 @@ def list_organizations(request):
 
 ## Self-referencing schemes from `create_schema()`
 
-To be able to use the method `update_forward_refs()` from a schema generated via `create_schema()`,
+To be able to use the method `model_rebuild()` from a schema generated via `create_schema()`,
 the "name" of the class needs to be in our namespace. In this case it is very important to pass
 the `name` parameter to `create_schema()`
 
 ```python hl_lines="3"
 UserSchema = create_schema(
     User,
-    name='UserSchema',  # !!! this is important for update_forward_refs()
+    name='UserSchema',  # !!! this is important for model_rebuild()
     fields=['id', 'username']
     custom_fields=[
         ('manager', 'UserSchema', None),
     ]
 )
-UserSchema.update_forward_refs()
+UserSchema.model_rebuild()
 ```
 
 ## Serializing Outside of Views
