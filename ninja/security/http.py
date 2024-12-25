@@ -42,6 +42,28 @@ class HttpBearer(HttpAuthBase, ABC):
         pass  # pragma: no cover
 
 
+class HttpToken(HttpAuthBase, ABC):
+    openapi_scheme: str = "token"
+    header: str = "Authorization"
+
+    def __call__(self, request: HttpRequest) -> Optional[Any]:
+        headers = request.headers
+        auth_value = headers.get(self.header)
+        if not auth_value:
+            return None
+        parts = auth_value.split(" ")
+
+        if parts[0].lower() != self.openapi_scheme:
+            if settings.DEBUG:
+                logger.error(f"Unexpected auth - '{auth_value}'")
+            return None
+        token = " ".join(parts[1:])
+        return self.authenticate(request, token)
+
+    @abstractmethod
+    def authenticate(self, request: HttpRequest, token: str) -> Optional[Any]:
+        pass  # pragma: no cover
+
 class DecodeError(Exception):
     pass
 
