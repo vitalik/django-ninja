@@ -67,6 +67,16 @@ class SimpleRateThrottle(BaseThrottle):
     cache_format = "throttle_%(scope)s_%(ident)s"
     scope: Optional[str] = None
     THROTTLE_RATES: Dict[str, Optional[str]] = settings.DEFAULT_THROTTLE_RATES
+    _PERIODS = {
+        "s": 1,
+        "m": 60,
+        "h": 60 * 60,
+        "d": 60 * 60 * 24,
+        "sec": 1,
+        "min": 60,
+        "hour": 60 * 60,
+        "day": 60 * 60 * 24,
+    }
 
     def __init__(self, rate: Optional[str] = None):
         self.rate: Optional[str]
@@ -106,10 +116,23 @@ class SimpleRateThrottle(BaseThrottle):
         """
         if rate is None:
             return (None, None)
-        num, period = rate.split("/")
-        num_requests = int(num)
-        duration = {"s": 1, "m": 60, "h": 3600, "d": 86400}[period[0]]
-        return (num_requests, duration)
+
+        try:
+            count, rest = rate.split("/", 1)
+
+            for unit in self._PERIODS:
+                if rest.endswith(unit):
+                    multi = int(rest[: -len(unit)]) if rest[: -len(unit)] else 1
+                    period = self._PERIODS[unit]
+                    break
+            else:
+                multi, period = int(rest), 1
+
+            count = int(count)
+            return count, multi * period
+
+        except (ValueError, IndexError):
+            raise ValueError(f"Invalid rate format: {rate}") from None
 
     def allow_request(self, request: HttpRequest) -> bool:
         """
