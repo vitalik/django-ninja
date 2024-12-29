@@ -186,7 +186,10 @@ def test_throttle_auth():
     set_throttle_timer(th, 2)
     assert th.allow_request(request) is True
 
-    assert th.get_cache_key(request) == "throttle_auth_a6b46dd0d1ae5e86cbc8f37e75ceeb6760230c1ca4ffbcb0c97b96dd7d9c464b"
+    assert (
+        th.get_cache_key(request)
+        == "throttle_auth_a6b46dd0d1ae5e86cbc8f37e75ceeb6760230c1ca4ffbcb0c97b96dd7d9c464b"
+    )
 
 
 def test_throttle_user():
@@ -209,7 +212,9 @@ def test_throttle_user():
     request.user.is_authenticated = False
     assert th.allow_request(request) is True
     assert th.allow_request(request) is False
-    assert th.get_cache_key(request) == "throttle_user_8.8.8.8"  # not authenticated throttled by IP
+    assert (
+        th.get_cache_key(request) == "throttle_user_8.8.8.8"
+    )  # not authenticated throttled by IP
 
 
 def test_wait():
