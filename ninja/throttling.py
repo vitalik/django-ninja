@@ -128,8 +128,7 @@ class SimpleRateThrottle(BaseThrottle):
             else:
                 multi, period = int(rest), 1
 
-            count = int(count)
-            return count, multi * period
+            return int(count), multi * period
 
         except (ValueError, IndexError):
             raise ValueError(f"Invalid rate format: {rate}") from None
