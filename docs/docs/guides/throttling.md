@@ -8,6 +8,18 @@ Throttles allows to control the rate of requests that clients can make to an API
 
 Django Ninja’s throttling feature is pretty much based on what Django Rest Framework (DRF) uses, which you can check out [here](https://www.django-rest-framework.org/api-guide/throttling/). So, if you’ve already got custom throttling set up for DRF, there’s a good chance it’ll work with Django Ninja right out of the box. The key difference is that you need to pass initialized Throttle objects instead of classes (which should give a better performance).
 
+You can specify a rate using the format requests/time-unit, where time-unit represents a number of units followed by an optional unit of time. If the unit is omitted, it defaults to seconds. For example, the following are equivalent and all represent "100 requests per 5 minutes":
+
+    * 100/5m
+    * 100/300s
+    * 100/300
+
+The following units are supported:
+
+    * `s` or `sec`
+    * `m` or `min`
+    * `h` or `hour`
+    * `d` or `day`
 
 ## Usage
 
