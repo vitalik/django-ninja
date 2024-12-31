@@ -1,8 +1,8 @@
 """
-This module contains enumerations for standard HTTP and WebSocket status codes, defined according to IETF RFCs. 
+This module contains enumerations for standard HTTP and WebSocket status codes, defined according to IETF RFCs.
 These enums make it easier to handle and reference HTTP and WebSocket status codes in a structured way.
 
-The `HTTPStatus` Enum represents all HTTP status codes from RFC 7231 and RFC 7540, categorizing them into informational, success, redirection, client error, and server error responses. 
+The `HTTPStatus` Enum represents all HTTP status codes from RFC 7231 and RFC 7540, categorizing them into informational, success, redirection, client error, and server error responses.
 It also includes HTTP/2 status codes as per RFC 7540.
 
 The `WebSocketStatus` Enum represents WebSocket close status codes from RFC 6455, including common closure reasons and reserved codes.
@@ -22,7 +22,7 @@ In Django Ninja, these status codes can be incorporated in:
 
 Example usage:
 
--  Single Response Example (HTTPStatus): 
+-  Single Response Example (HTTPStatus):
     This example demonstrates how to use the `HTTPStatus` enum in a Django Ninja API view to return different HTTP status codes based on conditions.
 
     ```python
@@ -68,25 +68,25 @@ Example usage:
         resolution: str
 
     @router.get(
-        "/example", 
+        "/example",
         response={
-            HTTPStatus.HTTP_OK: SuccessResponse, 
-            HTTPStatus.HTTP_NOT_FOUND: NotFoundResponse, 
+            HTTPStatus.HTTP_OK: SuccessResponse,
+            HTTPStatus.HTTP_NOT_FOUND: NotFoundResponse,
             HTTPStatus.HTTP_BAD_REQUEST: ErrorResponse
         }
     )
     def example_view(request):
         # Simulate success, error, or not found based on some condition
         condition = "not_found"  # You can change this to test different conditions
-        
+
         if condition == "success":
             return {
-                "message": "Request successful", 
+                "message": "Request successful",
                 "data": {"key": "value"}
                 }, HTTPStatus.HTTP_OK
         elif condition == "not_found":
             return {
-                "detail": "Resource not found", 
+                "detail": "Resource not found",
                 "resolution": "Check the URL or try again later"
                 }, HTTPStatus.HTTP_NOT_FOUND
         else:
@@ -127,9 +127,10 @@ Example usage:
 ---
 """
 
-
 from __future__ import annotations
+
 from enum import Enum
+
 
 class HTTPStatus(Enum):
     """
@@ -160,91 +161,91 @@ class HTTPStatus(Enum):
     Example:
         HTTPStatus.HTTP_OK  # Returns the HTTP status code 200
     """
-    
+
     # Informational responses (100–199)
-    HTTP_CONTINUE                           = 100
-    HTTP_SWITCHING_PROTOCOLS                = 101
-    HTTP_PROCESSING                         = 102
-    HTTP_EARLY_HINTS                        = 103
+    HTTP_CONTINUE = 100
+    HTTP_SWITCHING_PROTOCOLS = 101
+    HTTP_PROCESSING = 102
+    HTTP_EARLY_HINTS = 103
 
     # Successful responses (200–299)
-    HTTP_OK                                 = 200
-    HTTP_CREATED                            = 201
-    HTTP_ACCEPTED                           = 202
-    HTTP_NON_AUTHORITATIVE_INFORMATION      = 203
-    HTTP_NO_CONTENT                         = 204
-    HTTP_RESET_CONTENT                      = 205
-    HTTP_PARTIAL_CONTENT                    = 206
-    HTTP_MULTI_STATUS                       = 207  
-    HTTP_ALREADY_REPORTED                   = 208 
-    HTTP_IM_USED                            = 226 
+    HTTP_OK = 200
+    HTTP_CREATED = 201
+    HTTP_ACCEPTED = 202
+    HTTP_NON_AUTHORITATIVE_INFORMATION = 203
+    HTTP_NO_CONTENT = 204
+    HTTP_RESET_CONTENT = 205
+    HTTP_PARTIAL_CONTENT = 206
+    HTTP_MULTI_STATUS = 207
+    HTTP_ALREADY_REPORTED = 208
+    HTTP_IM_USED = 226
 
     # Redirection responses (300–399)
-    HTTP_MULTIPLE_CHOICES                   = 300
-    HTTP_MOVED_PERMANENTLY                  = 301
-    HTTP_FOUND                              = 302
-    HTTP_SEE_OTHER                          = 303
-    HTTP_NOT_MODIFIED                       = 304
-    HTTP_USE_PROXY                          = 305  
-    HTTP_TEMPORARY_REDIRECT                 = 307
-    HTTP_PERMANENT_REDIRECT                 = 308
+    HTTP_MULTIPLE_CHOICES = 300
+    HTTP_MOVED_PERMANENTLY = 301
+    HTTP_FOUND = 302
+    HTTP_SEE_OTHER = 303
+    HTTP_NOT_MODIFIED = 304
+    HTTP_USE_PROXY = 305
+    HTTP_TEMPORARY_REDIRECT = 307
+    HTTP_PERMANENT_REDIRECT = 308
 
     # Client error responses (400–499)
-    HTTP_BAD_REQUEST                        = 400
-    HTTP_UNAUTHORIZED                       = 401
-    HTTP_PAYMENT_REQUIRED                   = 402
-    HTTP_FORBIDDEN                          = 403
-    HTTP_NOT_FOUND                          = 404
-    HTTP_METHOD_NOT_ALLOWED                 = 405
-    HTTP_NOT_ACCEPTABLE                     = 406
-    HTTP_PROXY_AUTHENTICATION_REQUIRED      = 407
-    HTTP_REQUEST_TIMEOUT                    = 408
-    HTTP_CONFLICT                           = 409
-    HTTP_GONE                               = 410
-    HTTP_LENGTH_REQUIRED                    = 411
-    HTTP_PRECONDITION_FAILED                = 412
-    HTTP_PAYLOAD_TOO_LARGE                  = 413
-    HTTP_URI_TOO_LONG                       = 414
-    HTTP_UNSUPPORTED_MEDIA_TYPE             = 415
-    HTTP_RANGE_NOT_SATISFIABLE              = 416
-    HTTP_EXPECTATION_FAILED                 = 417
-    HTTP_I_AM_A_TEAPOT                      = 418  
-    HTTP_MISDIRECTED_REQUEST                = 421
-    HTTP_UNPROCESSABLE_ENTITY               = 422  
-    HTTP_LOCKED                             = 423  
-    HTTP_FAILED_DEPENDENCY                  = 424  
-    HTTP_TOO_EARLY                          = 425
-    HTTP_UPGRADE_REQUIRED                   = 426
-    HTTP_PRECONDITION_REQUIRED              = 428
-    HTTP_TOO_MANY_REQUESTS                  = 429
-    HTTP_REQUEST_HEADER_FIELDS_TOO_LARGE    = 431
-    HTTP_UNAVAILABLE_FOR_LEGAL_REASONS      = 451
+    HTTP_BAD_REQUEST = 400
+    HTTP_UNAUTHORIZED = 401
+    HTTP_PAYMENT_REQUIRED = 402
+    HTTP_FORBIDDEN = 403
+    HTTP_NOT_FOUND = 404
+    HTTP_METHOD_NOT_ALLOWED = 405
+    HTTP_NOT_ACCEPTABLE = 406
+    HTTP_PROXY_AUTHENTICATION_REQUIRED = 407
+    HTTP_REQUEST_TIMEOUT = 408
+    HTTP_CONFLICT = 409
+    HTTP_GONE = 410
+    HTTP_LENGTH_REQUIRED = 411
+    HTTP_PRECONDITION_FAILED = 412
+    HTTP_PAYLOAD_TOO_LARGE = 413
+    HTTP_URI_TOO_LONG = 414
+    HTTP_UNSUPPORTED_MEDIA_TYPE = 415
+    HTTP_RANGE_NOT_SATISFIABLE = 416
+    HTTP_EXPECTATION_FAILED = 417
+    HTTP_I_AM_A_TEAPOT = 418
+    HTTP_MISDIRECTED_REQUEST = 421
+    HTTP_UNPROCESSABLE_ENTITY = 422
+    HTTP_LOCKED = 423
+    HTTP_FAILED_DEPENDENCY = 424
+    HTTP_TOO_EARLY = 425
+    HTTP_UPGRADE_REQUIRED = 426
+    HTTP_PRECONDITION_REQUIRED = 428
+    HTTP_TOO_MANY_REQUESTS = 429
+    HTTP_REQUEST_HEADER_FIELDS_TOO_LARGE = 431
+    HTTP_UNAVAILABLE_FOR_LEGAL_REASONS = 451
 
     # Server error responses (500–599)
-    HTTP_INTERNAL_SERVER_ERROR              = 500
-    HTTP_NOT_IMPLEMENTED                    = 501
-    HTTP_BAD_GATEWAY                        = 502
-    HTTP_SERVICE_UNAVAILABLE                = 503
-    HTTP_GATEWAY_TIMEOUT                    = 504
-    HTTP_VERSION_NOT_SUPPORTED              = 505
-    HTTP_VARIANT_ALSO_NEGOTIATES            = 506
-    HTTP_INSUFFICIENT_STORAGE               = 507  
-    HTTP_LOOP_DETECTED                      = 508 
-    HTTP_NOT_EXTENDED                       = 510
-    HTTP_NETWORK_AUTHENTICATION_REQUIRED    = 511
+    HTTP_INTERNAL_SERVER_ERROR = 500
+    HTTP_NOT_IMPLEMENTED = 501
+    HTTP_BAD_GATEWAY = 502
+    HTTP_SERVICE_UNAVAILABLE = 503
+    HTTP_GATEWAY_TIMEOUT = 504
+    HTTP_VERSION_NOT_SUPPORTED = 505
+    HTTP_VARIANT_ALSO_NEGOTIATES = 506
+    HTTP_INSUFFICIENT_STORAGE = 507
+    HTTP_LOOP_DETECTED = 508
+    HTTP_NOT_EXTENDED = 510
+    HTTP_NETWORK_AUTHENTICATION_REQUIRED = 511
 
     # HTTP/2 Status Codes (RFC 7540)
-    HTTP_NO_ERROR                           = 0
-    HTTP_PROTOCOL_ERROR                     = 1
-    HTTP_INTERNAL_ERROR                     = 2
-    HTTP_FLOW_CONTROL_ERROR                 = 3
-    HTTP_SETTINGS_TIMEOUT                   = 4
-    HTTP_STREAM_CLOSED                      = 5
-    HTTP_STREAM_ERROR                       = 6
-    HTTP_MALFORMED_FRAME                    = 7
-    HTTP_ENHANCE_YOUR_CALM                  = 8
-    HTTP_INADEQUATE_SECURITY                = 9
-    HTTP_HTTP_1_1_REQUIRED                  = 10
+    HTTP_NO_ERROR = 0
+    HTTP_PROTOCOL_ERROR = 1
+    HTTP_INTERNAL_ERROR = 2
+    HTTP_FLOW_CONTROL_ERROR = 3
+    HTTP_SETTINGS_TIMEOUT = 4
+    HTTP_STREAM_CLOSED = 5
+    HTTP_STREAM_ERROR = 6
+    HTTP_MALFORMED_FRAME = 7
+    HTTP_ENHANCE_YOUR_CALM = 8
+    HTTP_INADEQUATE_SECURITY = 9
+    HTTP_HTTP_1_1_REQUIRED = 10
 
 
 class WebSocketStatus(Enum):
@@ -253,7 +254,7 @@ class WebSocketStatus(Enum):
 
     This Enum class represents the WebSocket closure status codes (1000–1015) as defined in the WebSocket protocol (RFC 6455).
     These codes indicate why a WebSocket connection was closed, ranging from normal closure to protocol errors or unexpected conditions.
-    
+
     Each status code corresponds to a specific reason for the WebSocket connection being closed. For example:
     - `1000` indicates a successful closure.
     - `1006` indicates an abnormal closure due to no close frame being received.
@@ -275,21 +276,20 @@ class WebSocketStatus(Enum):
         WebSocketStatus.NORMAL_CLOSURE  # Returns the WebSocket closure code 1000
     """
 
-    
     # WebSocket Closure Status Codes (1000-1100)
-    NORMAL_CLOSURE                          = 1000
-    GOING_AWAY                              = 1001
-    PROTOCOL_ERROR                          = 1002
-    UNSUPPORTED_DATA                        = 1003
-    RESERVED                                = 1004
-    NO_STATUS_RECEIVED                      = 1005
-    ABNORMAL_CLOSURE                        = 1006
-    INVALID_FRAME_PAYLOAD_DATA              = 1007
-    POLICY_VIOLATION                        = 1008
-    MESSAGE_TOO_BIG                         = 1009
-    MANDATORY_EXTENSION                     = 1010
-    INTERNAL_ERROR                          = 1011
-    SERVICE_RESTART                         = 1012
-    TRY_AGAIN_LATER                         = 1013
-    BAD_GATEWAY                             = 1014
-    TLS_HANDSHAKE                           = 1015
+    NORMAL_CLOSURE = 1000
+    GOING_AWAY = 1001
+    PROTOCOL_ERROR = 1002
+    UNSUPPORTED_DATA = 1003
+    RESERVED = 1004
+    NO_STATUS_RECEIVED = 1005
+    ABNORMAL_CLOSURE = 1006
+    INVALID_FRAME_PAYLOAD_DATA = 1007
+    POLICY_VIOLATION = 1008
+    MESSAGE_TOO_BIG = 1009
+    MANDATORY_EXTENSION = 1010
+    INTERNAL_ERROR = 1011
+    SERVICE_RESTART = 1012
+    TRY_AGAIN_LATER = 1013
+    BAD_GATEWAY = 1014
+    TLS_HANDSHAKE = 1015
