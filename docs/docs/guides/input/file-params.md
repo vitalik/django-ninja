@@ -7,7 +7,7 @@ from ninja import NinjaAPI, File
 from ninja.files import UploadedFile
 
 @api.post("/upload")
-def upload(request, file: UploadedFile = File(...)):
+def upload(request, file: File[UploadedFile]):
     data = file.read()
     return {'name': file.name, 'len': len(data)}
 ```
@@ -36,7 +36,7 @@ from ninja import NinjaAPI, File
 from ninja.files import UploadedFile
 
 @api.post("/upload-many")
-def upload_many(request, files: List[UploadedFile] = File(...)):
+def upload_many(request, files: File[List[UploadedFile]]):
     return [f.name for f in files]
 ```
 
@@ -96,7 +96,7 @@ If you would like the file input to be optional, all that you have to do is to p
 
 ```python
 @api.post('/users')
-def create_user(request, details: Form[UserDetails], avatar: UploadedFile = File(None)):
+def create_user(request, details: Form[UserDetails], avatar: File[UploadedFile] = None):
     user = add_user_to_database(details)
     if avatar is not None:
         set_user_avatar(user)
