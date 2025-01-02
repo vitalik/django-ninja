@@ -3,7 +3,7 @@ import asyncio
 import pytest
 
 from ninja import NinjaAPI
-from ninja.security import APIKeyQuery, HttpBearer
+from ninja.security import APIKeyQuery, HttpBearer, SessionAuth
 from ninja.testing import TestAsyncClient, TestClient
 
 
@@ -176,3 +176,32 @@ async def test_async_with_bearer():
 
     res = await client.get("/async", headers={"Authorization": "Bearer secret"})
     assert res.json() == {"auth": "secret"}
+
+@pytest.mark.asyncio
+async def test_async_user_auth():
+
+    class AsyncSessionAuth(SessionAuth):
+        async def __call__(self, request):
+            return await self.authenticate(request, None)
+
+        async def authenticate(self, request, key):
+            user = await request.auser()
+            return user if user.is_authenticated else None
+
+    api = NinjaAPI(auth=AsyncSessionAuth())
+
+    @api.get("/foobar")
+    async def foobar(request) -> str:
+        return {"info": "foobar"}
+
+    client = TestAsyncClient(api)
+
+    res = await client.get("/foobar")
+
+    assert res.json() == {"detail": "Unauthorized"}
+
+    res = await client.get("/foobar", user='abc')
+
+    assert res.json() == {"info": "foobar"}
+
+
