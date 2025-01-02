@@ -41,6 +41,10 @@ def to_camel(string: str) -> str:
     return "".join(word.capitalize() for word in string.split("_"))
 
 
+class MessageModel(BaseModel):
+    message: str
+
+
 class UserModel(BaseModel):
     id: int
     user_name: str
@@ -66,6 +70,14 @@ def check_list_model(request):
 @router.get("/check_model_alias", response=UserModel, by_alias=True)
 def check_model_alias(request):
     return User(1, "John", "Password")
+
+
+@router.get("/check_pydantic", response={200: UserModel, 201: MessageModel}, by_alias=True)
+def check_pydantic(request, message_only: bool):
+    print(message_only)
+    if message_only:
+        return 201, {"message": "Created"}
+    return 200, UserModel(id=1, user_name="John")
 
 
 @router.get("/check_union", response=Union[int, UserModel])
@@ -100,23 +112,26 @@ client = TestClient(router)
 
 
 @pytest.mark.parametrize(
-    "path,expected_response",
+    "path,expected_status_code,expected_response",
     [
-        ("/check_int", 1),
-        ("/check_model", {"id": 1, "user_name": "John"}),  # the password is skipped
+        ("/check_int", 200, 1),
+        ("/check_model", 200, {"id": 1, "user_name": "John"}),  # the password is skipped
         (
             "/check_list_model",
+            200,
             [{"id": 1, "user_name": "John"}],
         ),  # the password is skipped
-        ("/check_model", {"id": 1, "user_name": "John"}),  # the password is skipped
-        ("/check_model_alias", {"Id": 1, "UserName": "John"}),  # result is Camal Case
-        ("/check_union?q=0", 1),
-        ("/check_union?q=1", {"id": 1, "user_name": "John"}),
+        ("/check_model", 200, {"id": 1, "user_name": "John"}),  # the password is skipped
+        ("/check_model_alias", 200, {"Id": 1, "UserName": "John"}),  # result is Camal Case
+        ("/check_pydantic?message_only=0", 200, {"Id": 1, "UserName": "John"}),  # result is Camal Case
+        ("/check_pydantic?message_only=1", 201, {"message": "Created"}),
+        ("/check_union?q=0", 200, 1),
+        ("/check_union?q=1", 200, {"id": 1, "user_name": "John"}),
     ],
 )
-def test_responses(path, expected_response):
+def test_responses(path, expected_status_code, expected_response):
     response = client.get(path)
-    assert response.status_code == 200, response.content
+    assert response.status_code == expected_status_code, response.content
     assert response.json() == expected_response
     assert response.data == response.data == expected_response  # Ensures cache works
 
