@@ -1,8 +1,9 @@
 import logging
 import traceback
 from functools import partial
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Generic, List, Optional, TypeVar
 
+import pydantic
 from django.conf import settings
 from django.http import Http404, HttpRequest, HttpResponse
 
@@ -10,6 +11,7 @@ from ninja.types import DictStrAny
 
 if TYPE_CHECKING:
     from ninja import NinjaAPI  # pragma: no cover
+    from ninja.params.models import ParamModel  # pragma: no cover
 
 __all__ = [
     "ConfigError",
@@ -26,6 +28,22 @@ logger = logging.getLogger("django")
 
 class ConfigError(Exception):
     pass
+
+
+TModel = TypeVar("TModel", bound="ParamModel")
+
+
+class ValidationErrorContext(Generic[TModel]):
+    """
+    The full context of a `pydantic.ValidationError`, including all information
+    needed to produce a `ninja.errors.ValidationError`.
+    """
+
+    def __init__(
+        self, pydantic_validation_error: pydantic.ValidationError, model: TModel
+    ):
+        self.pydantic_validation_error = pydantic_validation_error
+        self.model = model
 
 
 class ValidationError(Exception):
