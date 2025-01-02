@@ -12,6 +12,8 @@ from ninja.security import (
     HttpBearer,
     django_auth,
     django_auth_superuser,
+    SessionAuthHasPerms,
+    SessionAuthHasPerm,
 )
 from ninja.security.base import AuthBase
 from ninja.testing import TestClient
@@ -79,6 +81,8 @@ def on_custom_error(request, exc):
 for path, auth in [
     ("django_auth", django_auth),
     ("django_auth_superuser", django_auth_superuser),
+    ("SessionAuthHasPerm", SessionAuthHasPerm("perm1")),
+    ("SessionAuthHasPerms", SessionAuthHasPerms(["perm1", "perm2"])),
     ("callable", callable_auth),
     ("apikeyquery", KeyQuery()),
     ("apikeyheader", KeyHeader()),
