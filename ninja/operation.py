@@ -19,7 +19,12 @@ from django.http import HttpRequest, HttpResponse, HttpResponseNotAllowed
 from django.http.response import HttpResponseBase
 
 from ninja.constants import NOT_SET, NOT_SET_TYPE
-from ninja.errors import AuthenticationError, ConfigError, Throttled, ValidationError
+from ninja.errors import (
+    AuthenticationError,
+    ConfigError,
+    Throttled,
+    ValidationErrorContext,
+)
 from ninja.params.models import TModels
 from ninja.schema import Schema, pydantic_version
 from ninja.signature import ViewSignature, is_async
@@ -282,29 +287,21 @@ class Operation:
     def _get_values(
         self, request: HttpRequest, path_params: Any, temporal_response: HttpResponse
     ) -> DictStrAny:
-        values, errors = {}, []
+        values = {}
+        error_contexts: List[ValidationErrorContext] = []
         for model in self.models:
             try:
                 data = model.resolve(request, self.api, path_params)
                 values.update(data)
             except pydantic.ValidationError as e:
-                items = []
-                for i in e.errors(include_url=False):
-                    i["loc"] = (
-                        model.__ninja_param_source__,
-                    ) + model.__ninja_flatten_map_reverse__.get(i["loc"], i["loc"])
-                    # removing pydantic hints
-                    del i["input"]  # type: ignore
-                    if (
-                        "ctx" in i
-                        and "error" in i["ctx"]
-                        and isinstance(i["ctx"]["error"], Exception)
-                    ):
-                        i["ctx"]["error"] = str(i["ctx"]["error"])
-                    items.append(dict(i))
-                errors.extend(items)
-        if errors:
-            raise ValidationError(errors)
+                error_contexts.append(
+                    ValidationErrorContext(pydantic_validation_error=e, model=model)
+                )
+        if error_contexts:
+            validation_error = self.api.validation_error_from_error_contexts(
+                error_contexts
+            )
+            raise validation_error
         if self.signature.response_arg:
             values[self.signature.response_arg] = temporal_response
         return values
