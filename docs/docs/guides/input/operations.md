@@ -9,6 +9,7 @@ An `operation` can be one of the following [HTTP methods](https://developer.mozi
 - PUT
 - DELETE
 - PATCH
+- EVENT SOURCE
 
 **Django Ninja** comes with a decorator for each operation:
 
@@ -31,6 +32,10 @@ def delete_operation(request):
 
 @api.patch("/path")
 def patch_operation(request):
+    ...
+
+@api.event_source("/path")
+def event_source_operation(request):
     ...
 ```
 
