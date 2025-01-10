@@ -64,6 +64,14 @@ class BearerAuth(HttpBearer):
             raise AuthorizationError
 
 
+class AsyncBearerAuth(HttpBearer):
+    async def authenticate(self, request, token):
+        if token == "bearertoken":
+            return token
+        if token == "nottherightone":
+            raise AuthorizationError
+
+
 def demo_operation(request):
     return {"auth": request.auth}
 
@@ -85,6 +93,7 @@ for path, auth in [
     ("apikeycookie", KeyCookie()),
     ("basic", BasicAuth()),
     ("bearer", BearerAuth()),
+    ("async_bearer", AsyncBearerAuth()),
     ("customexception", KeyHeaderCustomException()),
 ]:
     api.get(f"/{path}", auth=auth, operation_id=path)(demo_operation)
@@ -188,6 +197,12 @@ BODY_FORBIDDEN_DEFAULT = dict(detail="Forbidden")
             BODY_UNAUTHORIZED_DEFAULT,
         ),
         (
+            "/async_bearer",
+            dict(headers={"Authorization": "Bearer nonexistingtoken"}),
+            401,
+            BODY_UNAUTHORIZED_DEFAULT,
+        ),
+        (
             "/bearer",
             dict(headers={"Authorization": "Bearer nottherightone"}),
             403,
@@ -215,6 +230,7 @@ def test_schema():
     assert schema["components"]["securitySchemes"] == {
         "BasicAuth": {"scheme": "basic", "type": "http"},
         "BearerAuth": {"scheme": "bearer", "type": "http"},
+        "AsyncBearerAuth": {"scheme": "bearer", "type": "http"},
         "KeyCookie": {"in": "cookie", "name": "key", "type": "apiKey"},
         "KeyHeader": {"in": "header", "name": "key", "type": "apiKey"},
         "KeyHeaderCustomException": {"in": "header", "name": "key", "type": "apiKey"},
