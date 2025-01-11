@@ -1,7 +1,9 @@
-from ninja import NinjaAPI
-from ninja.testing import TestClient
+import asyncio
 
-api = NinjaAPI()
+import pytest
+
+from ninja import NinjaAPI
+from ninja.testing import TestAsyncClient, TestClient
 
 messages = [
     "lorem",
@@ -15,16 +17,38 @@ messages = [
 ]
 
 
-@api.event_source("/event_source")
-def event_source_op(request):
-    for message in messages:
-        yield f"data: {message}\n\n"
+@pytest.mark.asyncio
+async def test_async_event_source():
+    api = NinjaAPI()
+
+    @api.event_source("/event_source_delay")
+    async def async_event_source_op(request):
+        for message in messages:
+            await asyncio.sleep(0.1)
+            yield f"data: {message}\n\n"
+
+    client = TestAsyncClient(api)
+
+    response = await client.get("/event_source_delay")
+
+    assert response.status_code == 200
+
+    expected_content = b"".join(
+        [f"data: {message}\n\n".encode() for message in messages]
+    )
+    assert response.content == expected_content
 
 
-client = TestClient(api)
+def test_sync_event_source():
+    api = NinjaAPI()
 
+    @api.event_source("/event_source")
+    def sync_event_source_op(request):
+        for message in messages:
+            yield f"data: {message}\n\n"
 
-def test_event_source_op():
+    client = TestClient(api)
+
     response = client.get("/event_source")
 
     assert response.status_code == 200
