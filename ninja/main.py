@@ -357,10 +357,16 @@ class NinjaAPI:
         """
         `EventSource` operation.
         """
+
         def decorator(view_func: TCallable) -> TCallable:
-            def wrapped_view(request: HttpRequest, *args: Any, **kwargs: Any) -> StreamingHttpResponse:
-                response = StreamingHttpResponse(view_func(request, *args, **kwargs), content_type='text/event-stream')
-                response['Cache-Control'] = 'no-cache'
+            def wrapped_view(
+                request: HttpRequest, *args: Any, **kwargs: Any
+            ) -> StreamingHttpResponse:
+                response = StreamingHttpResponse(
+                    view_func(request, *args, **kwargs),
+                    content_type="text/event-stream",
+                )
+                response["Cache-Control"] = "no-cache"
                 return response
 
             self.default_router.add_api_operation(
