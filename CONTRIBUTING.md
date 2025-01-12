@@ -5,7 +5,7 @@ Django Ninja uses Flit to build, package and publish the project.
 to install it use:
 
 ```
-pip install flit
+pipx install flit
 ```
 
 Once you have it - to install all dependencies required for development and testing  use this command:
