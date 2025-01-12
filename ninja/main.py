@@ -19,7 +19,12 @@ from django.urls import URLPattern, URLResolver, reverse
 from django.utils.module_loading import import_string
 
 from ninja.constants import NOT_SET, NOT_SET_TYPE
-from ninja.errors import ConfigError, set_default_exc_handlers
+from ninja.errors import (
+    ConfigError,
+    ValidationError,
+    ValidationErrorContext,
+    set_default_exc_handlers,
+)
 from ninja.openapi import get_schema
 from ninja.openapi.docs import DocsBase, Swagger
 from ninja.openapi.schema import OpenAPISchema
@@ -513,6 +518,28 @@ class NinjaAPI:
         if handler is None:
             raise exc
         return handler(request, exc)
+
+    def validation_error_from_error_contexts(
+        self, error_contexts: List[ValidationErrorContext]
+    ) -> ValidationError:
+        errors: List[Dict[str, Any]] = []
+        for context in error_contexts:
+            model = context.model
+            e = context.pydantic_validation_error
+            for i in e.errors(include_url=False):
+                i["loc"] = (
+                    model.__ninja_param_source__,
+                ) + model.__ninja_flatten_map_reverse__.get(i["loc"], i["loc"])
+                # removing pydantic hints
+                del i["input"]  # type: ignore
+                if (
+                    "ctx" in i
+                    and "error" in i["ctx"]
+                    and isinstance(i["ctx"]["error"], Exception)
+                ):
+                    i["ctx"]["error"] = str(i["ctx"]["error"])
+                errors.append(dict(i))
+        return ValidationError(errors)
 
     def _lookup_exception_handler(self, exc: Exc[_E]) -> Optional[ExcHandler[_E]]:
         for cls in type(exc).__mro__:
