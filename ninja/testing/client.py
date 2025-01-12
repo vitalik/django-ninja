@@ -1,5 +1,5 @@
-import types
 from collections.abc import AsyncIterable, Iterable
+from inspect import isasyncgen
 from json import dumps as json_dumps
 from json import loads as json_loads
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
@@ -206,7 +206,7 @@ class NinjaResponse:
     def __get_content(
         self, streaming_content: Union[AsyncIterable[bytes], Iterable[bytes]]
     ) -> bytes:
-        if isinstance(streaming_content, types.AsyncGeneratorType):
+        if isasyncgen(streaming_content):
             return self.__get_async_content(streaming_content)  # type: ignore
         else:
             return self.__get_sync_content(streaming_content)  # type: ignore
