@@ -188,23 +188,16 @@ class Operation:
         for callback in self.auth_callbacks:
             try:
                 if is_async_callable(callback) or getattr(callback, "is_async", False):
-                    # Store the initial result of the callback
-                    initial_result = callback(request)
-                    # Check if the initial result is a coroutine
-                    if inspect.iscoroutine(initial_result):
-                        # If it's a coroutine, use async_to_sync to resolve it
-                        resolved_result = async_to_sync(callback)(request)
-                    else:
-                        # If it's not a coroutine, use the initial result
-                        resolved_result = initial_result
+                    result = callback(request)
+                    if inspect.iscoroutine(result):
+                        result = async_to_sync(callback)(request)
                 else:
-                    # For synchronous callbacks, directly use the result
-                    resolved_result = callback(request)
+                    result = callback(request)
             except Exception as exc:
                 return self.api.on_exception(request, exc)
 
-            if resolved_result is not None:
-                request.auth = resolved_result  # type: ignore
+            if result:
+                request.auth = result  # type: ignore
                 return None
         return self.api.on_exception(request, AuthenticationError())
 
