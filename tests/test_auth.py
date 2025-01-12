@@ -203,6 +203,12 @@ BODY_FORBIDDEN_DEFAULT = dict(detail="Forbidden")
             BODY_UNAUTHORIZED_DEFAULT,
         ),
         (
+            "/async_bearer",
+            dict(headers={}),
+            401,
+            BODY_UNAUTHORIZED_DEFAULT,
+        ),
+        (
             "/bearer",
             dict(headers={"Authorization": "Bearer nottherightone"}),
             403,
