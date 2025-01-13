@@ -31,3 +31,34 @@ class SessionAuthSuperUser(APIKeyCookie):
             return request.user
 
         return None
+
+
+class SessionAuthHasPerm(APIKeyCookie):
+    "Reusing Django session authentication & verify that the user has a permission"
+
+    param_name: str = settings.SESSION_COOKIE_NAME
+
+    def __init__(self, perm: str):
+        self.perm = perm
+
+    def authenticate(self, request: HttpRequest, key: Optional[str]) -> Optional[Any]:
+        has_perm = getattr(request.user, "has_perm", None)
+        if request.user.is_authenticated and has_perm(self.perm):
+            return request.user
+
+        return None
+
+class SessionAuthHasPerms(APIKeyCookie):
+    "Reusing Django session authentication & verify that the user has a permission"
+
+    param_name: str = settings.SESSION_COOKIE_NAME
+
+    def __init__(self, perms: list):
+        self.perms = perms
+
+    def authenticate(self, request: HttpRequest, key: Optional[str]) -> Optional[Any]:
+        has_perms = getattr(request.user, "has_perms", None)
+        if request.user.is_authenticated and has_perms(self.perms):
+            return request.user
+
+        return None
