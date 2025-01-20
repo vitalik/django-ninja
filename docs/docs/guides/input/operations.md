@@ -38,6 +38,8 @@ def patch_operation(request):
 def event_source_operation(request):
     ...
 ```
+> [!WARNING]
+> Note that using synchronous SSE may block the WSGI worker; use asynchronous SSE with the ASGI worker for better performance.
 
 See the [operations parameters](../../reference/operations-parameters.md)
 reference docs for information on what you can pass to any of these decorators.
