@@ -8,7 +8,7 @@ from django.utils.termcolors import make_style
 from ninja.constants import NOT_SET
 from ninja.operation import Operation
 from ninja.params.models import TModel, TModels
-from ninja.schema import NinjaGenerateJsonSchema, Schema
+from ninja.schema import Schema, NinjaGenerateJsonSchema
 from ninja.types import DictStrAny
 from ninja.utils import normalize_path
 
