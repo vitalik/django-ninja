@@ -21,19 +21,19 @@ class Payload(Schema):
 
 @api.post("/multi/{p}")
 def multi_op(
-    request,
-    q: Annotated[str, Query(description="Query param")],
-    p: Annotated[int, Path(description="Path param")],
-    f: Annotated[FormData, Form(description="Form params")],
-    c: Annotated[str, Cookie(description="Cookie params")],
+        request,
+        q: Annotated[str, Query(description="Query param")],
+        p: Annotated[int, Path(description="Path param")],
+        f: Annotated[FormData, Form(description="Form params")],
+        c: Annotated[str, Cookie(description="Cookie params")],
 ):
     return {"q": q, "p": p, "f": f.dict(), "c": c}
 
 
 @api.post("/query_list")
 def query_list(
-    request,
-    q: Annotated[List[str], Query(description="User ID")],
+        request,
+        q: Annotated[List[str], Query(description="User ID")],
 ):
     return {"q": q}
 
@@ -45,7 +45,7 @@ def headers(request, h: Annotated[str, Header()] = "some-default"):
 
 @api.post("/body")
 def body_op(
-    request, payload: Annotated[Payload, Body(examples=[{"t": 42, "p": "test"}])]
+        request, payload: Annotated[Payload, Body(examples=[{"t": 42, "p": "test"}])]
 ):
     return {"payload": payload}
 
@@ -84,7 +84,6 @@ def test_headers():
 
 def test_openapi_schema():
     schema = api.get_openapi_schema()["paths"]
-    print(schema)
     assert schema == {
         "/api/multi/{p}": {
             "post": {
@@ -125,7 +124,21 @@ def test_openapi_schema():
                         "description": "Cookie params",
                     },
                 ],
-                "responses": {200: {"description": "OK"}},
+                "responses": {
+                    200: {
+                        "description": "OK"
+                    },
+                    422: {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DefaultValidationError"
+                                }
+                            }
+                        },
+                        "description": "Validation error"
+                    }
+                },
                 "requestBody": {
                     "content": {
                         "application/x-www-form-urlencoded": {
@@ -162,7 +175,21 @@ def test_openapi_schema():
                         "description": "User ID",
                     }
                 ],
-                "responses": {200: {"description": "OK"}},
+                "responses": {
+                    200: {
+                        "description": "OK"
+                    },
+                    422: {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DefaultValidationError"
+                                }
+                            }
+                        },
+                        "description": "Validation error"
+                    }
+                },
             }
         },
         "/api/headers": {
@@ -181,7 +208,21 @@ def test_openapi_schema():
                         "required": False,
                     }
                 ],
-                "responses": {200: {"description": "OK"}},
+                "responses": {
+                    200: {
+                        "description": "OK"
+                    },
+                    422: {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DefaultValidationError"
+                                }
+                            }
+                        },
+                        "description": "Validation error"
+                    }
+                },
             }
         },
         "/api/body": {
@@ -189,7 +230,21 @@ def test_openapi_schema():
                 "operationId": "test_annotated_body_op",
                 "summary": "Body Op",
                 "parameters": [],
-                "responses": {200: {"description": "OK"}},
+                "responses": {
+                    200: {
+                        "description": "OK"
+                    },
+                    422: {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DefaultValidationError"
+                                }
+                            }
+                        },
+                        "description": "Validation error"
+                    }
+                },
                 "requestBody": {
                     "content": {
                         "application/json": {
