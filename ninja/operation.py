@@ -123,13 +123,17 @@ class Operation:
             temporal_response = self.api.create_temporal_response(request)
             values = self._get_values(request, kw, temporal_response)
             result = self.view_func(request, **values)
+
+            if isinstance(result, HttpResponseBase):
+                return result
+
             return self._result_to_response(request, result, temporal_response)
         except Exception as e:
             if isinstance(e, TypeError) and "required positional argument" in str(e):
                 msg = "Did you fail to use functools.wraps() in a decorator?"
                 msg = f"{e.args[0]}: {msg}" if e.args else msg
                 e.args = (msg,) + e.args[1:]
-            return self.api.on_exception(request, e)
+            return self._on_exception(request, e)
 
     def set_api_instance(self, api: "NinjaAPI", router: "Router") -> None:
         self.api = api
@@ -157,6 +161,12 @@ class Operation:
         if self.tags is None:
             if router.tags is not None:
                 self.tags = router.tags
+
+    def _on_exception(self, request: HttpRequest, exc: Exception) -> HttpResponse:
+        temporal_response = self.api.create_temporal_response(request)
+        result = self.api.on_exception(request, exc)
+
+        return self._result_to_response(request, result, temporal_response)
 
     def _set_auth(
         self, auth: Optional[Union[Sequence[Callable], Callable, object]]
@@ -196,12 +206,12 @@ class Operation:
                 else:
                     result = callback(request)
             except Exception as exc:
-                return self.api.on_exception(request, exc)
+                return self._on_exception(request, exc)
 
             if result:
                 request.auth = result  # type: ignore
                 return None
-        return self.api.on_exception(request, AuthenticationError())
+        return self._on_exception(request, AuthenticationError())
 
     def _check_throttles(self, request: HttpRequest) -> Optional[HttpResponse]:
         throttle_durations = []
@@ -216,19 +226,19 @@ class Operation:
             ]
 
             duration = max(durations, default=None)
-            return self.api.on_exception(request, Throttled(wait=duration))  # type: ignore
+            return self._on_exception(request, Throttled(wait=duration))  # type: ignore
         return None
 
     def _result_to_response(
         self, request: HttpRequest, result: Any, temporal_response: HttpResponse
-    ) -> HttpResponseBase:
+    ) -> HttpResponse:
         """
         The protocol for results
          - if HttpResponse - returns as is
          - if tuple with 2 elements - means http_code + body
          - otherwise it's a body
         """
-        if isinstance(result, HttpResponseBase):
+        if isinstance(result, HttpResponse):
             return result
 
         status: int = 200
@@ -338,7 +348,7 @@ class AsyncOperation(Operation):
             result = await self.view_func(request, **values)
             return self._result_to_response(request, result, temporal_response)
         except Exception as e:
-            return self.api.on_exception(request, e)
+            return self._on_exception(request, e)
 
     async def _run_checks(self, request: HttpRequest) -> Optional[HttpResponse]:  # type: ignore
         "Runs security checks for each operation"
@@ -376,12 +386,12 @@ class AsyncOperation(Operation):
                 else:
                     result = callback(request)
             except Exception as exc:
-                return self.api.on_exception(request, exc)
+                return self._on_exception(request, exc)
 
             if result:
                 request.auth = result  # type: ignore
                 return None
-        return self.api.on_exception(request, AuthenticationError())
+        return self._on_exception(request, AuthenticationError())
 
 
 class PathView:
