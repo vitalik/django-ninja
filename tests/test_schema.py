@@ -92,6 +92,15 @@ class ResolveAttrSchema(Schema):
     resolve_attr: str
 
 
+class UserWithExplicitValueSchema(Schema):
+    name: str
+    title: str
+
+    @staticmethod
+    def resolve_title(obj):
+        return "Resolved Title"
+
+
 def test_schema():
     user = User()
     schema = UserSchema.from_orm(user)
@@ -185,6 +194,23 @@ def test_with_attr_that_has_resolve():
         resolve_attr = "2"
 
     assert ResolveAttrSchema.from_orm(Obj()).dict() == {"id": "1", "resolve_attr": "2"}
+
+
+def test_explicit_value_overrides_resolver():
+    # Test that when an explicit value is provided, the resolver is not called
+    user = User()
+    
+    # When creating schema without explicit value, resolver should be called
+    schema = UserWithExplicitValueSchema.from_orm(user)
+    assert schema.title == "Resolved Title"
+    
+    # When providing explicit value, it should override the resolver
+    schema = UserWithExplicitValueSchema(name=user.name, title="Explicit Title")
+    assert schema.title == "Explicit Title"
+
+    # Test dict initialization
+    schema = UserWithExplicitValueSchema.model_validate({"name": user.name, "title": "Dict Title"})
+    assert schema.title == "Dict Title"
 
 
 def test_django_getter():

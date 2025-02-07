@@ -59,26 +59,20 @@ class DjangoGetter:
         self._context = context
 
     def __getattr__(self, key: str) -> Any:
-        # if key.startswith("__pydantic"):
-        #     return getattr(self._obj, key)
-
-        resolver = self._schema_cls._ninja_resolvers.get(key)
-        if resolver:
-            value = resolver(getter=self)
+        # First check if the value was explicitly provided
+        if isinstance(self._obj, dict) and key in self._obj:
+            value = self._obj[key]
         else:
-            if isinstance(self._obj, dict):
-                if key not in self._obj:
-                    raise AttributeError(key)
-                value = self._obj[key]
+            # If no explicit value, try resolver
+            resolver = self._schema_cls._ninja_resolvers.get(key)
+            if resolver:
+                value = resolver(getter=self)
             else:
                 try:
                     value = getattr(self._obj, key)
                 except AttributeError:
                     try:
-                        # value = attrgetter(key)(self._obj)
                         value = Variable(key).resolve(self._obj)
-                        # TODO: Variable(key) __init__ is actually slower than
-                        #       Variable.resolve - so it better be cached
                     except VariableDoesNotExist as e:
                         raise AttributeError(key) from e
         return self._convert_result(value)
