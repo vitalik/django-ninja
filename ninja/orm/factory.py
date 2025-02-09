@@ -98,11 +98,13 @@ class SchemaFactory:
         self.schemas[key] = schema
         self.schema_names.add(name)
 
+        # Create aliases for any foreign keys
         if depth == 0:
             for fld in model_fields_list:
-                if fld.is_relation:
-                    field_name, prop = get_field_property_accessors(fld)
-                    setattr(schema, field_name, prop)
+                # Do not create the alias if the user manually defined a field with the same name
+                if fld.is_relation and fld.name not in schema.model_fields:
+                    prop = get_field_property_accessors(fld)
+                    setattr(schema, fld.name, prop)
 
         return schema
 

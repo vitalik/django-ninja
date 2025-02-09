@@ -116,3 +116,44 @@ def test_alias_foreignkey_property():
     schema_test.author = 2
     assert schema_test.author == 2
     assert schema_test.author_id == 2
+
+
+def test_foreignkey_property_collision():
+    """
+    Ensure a foreign key's property alias does not override any user created fields
+    """
+
+    class Author(models.Model):
+        id = models.AutoField(primary_key=True)
+        name = models.CharField(max_length=50)
+
+        class Meta:
+            app_label = "tests"
+
+    class Book(models.Model):
+        id = models.AutoField(primary_key=True)
+        name = models.CharField(max_length=100)
+        author = models.ForeignKey(Author, on_delete=models.CASCADE)
+        published_date = models.DateField(default=datetime.date.today())
+
+        class Meta:
+            app_label = "tests"
+
+    class AuthorSchema(ModelSchema):
+        class Meta:
+            model = Author
+            fields = ["name"]
+
+    class BookSchema(ModelSchema):
+        author: AuthorSchema
+
+        class Meta:
+            model = Book
+            fields = "__all__"
+
+    author_test = Author(name="J. R. R. Tolkien", id=1)
+    model_test = Book(author=author_test, name="The Hobbit", id=1)
+    schema_test = BookSchema.from_orm(model_test)
+
+    assert schema_test.author_id == 1
+    assert schema_test.author.name == "J. R. R. Tolkien"

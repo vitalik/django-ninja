@@ -235,11 +235,10 @@ def get_related_field_schema(
     )
 
 
-def get_field_property_accessors(field: DjangoField) -> Tuple[str, property]:
+def get_field_property_accessors(field: DjangoField) -> property:
     attribute_name = cast(
         str, getattr(field, "get_attname", None) and field.get_attname()
     )
-    property_name: str = field.name
 
     def getter(self: BaseModel) -> Any:
         return getattr(self, attribute_name)
@@ -247,4 +246,4 @@ def get_field_property_accessors(field: DjangoField) -> Tuple[str, property]:
     def setter(self: BaseModel, value: Any) -> None:
         setattr(self, attribute_name, value)
 
-    return property_name, property(getter, setter)
+    return property(getter, setter)
