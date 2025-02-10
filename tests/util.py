@@ -11,3 +11,18 @@ def pydantic_ref_fix(data: dict):
     if "$ref" in data:
         result["allOf"] = [{"$ref": result.pop("$ref")}]
     return result
+
+
+def pydantic_arbitrary_dict_fix(data: dict):
+    """
+    In Pydantic 2.11, arbitrary dictionaries now contain "additionalProperties": True in the schema
+    https://github.com/pydantic/pydantic/pull/11392
+
+    :param data: A pre-Pydantic 2.11 arbitrary dictionary schema
+    """
+    v = tuple(map(int, pydantic.version.version_short().split(".")))
+    if v < (2, 11):
+        return data
+
+    data["additionalProperties"] = True
+    return data
