@@ -1,6 +1,6 @@
 from ninja.security.apikey import APIKeyCookie, APIKeyHeader, APIKeyQuery
 from ninja.security.http import HttpBasicAuth, HttpBearer
-from ninja.security.session import SessionAuth, SessionAuthSuperUser
+from ninja.security.session import SessionAuth, SessionAuthSuperUser, SessionAuthIsStaff
 
 __all__ = [
     "APIKeyCookie",
@@ -12,7 +12,9 @@ __all__ = [
     "SessionAuthSuperUser",
     "django_auth",
     "django_auth_superuser",
+    "django_auth_is_staff",
 ]
 
 django_auth = SessionAuth()
 django_auth_superuser = SessionAuthSuperUser()
+django_auth_is_staff = SessionAuthIsStaff()
