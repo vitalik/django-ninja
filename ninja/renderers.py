@@ -19,7 +19,7 @@ class BaseRenderer:
 class JSONRenderer(BaseRenderer):
     media_type = "application/json"
     encoder_class: Type[json.JSONEncoder] = NinjaJSONEncoder
-    json_dumps_params: Mapping[str, Any] = {}
+    json_dumps_params: Mapping[str, Any] = {'separators': (',', ':')}
 
     def render(self, request: HttpRequest, data: Any, *, response_status: int) -> Any:
         return json.dumps(data, cls=self.encoder_class, **self.json_dumps_params)
