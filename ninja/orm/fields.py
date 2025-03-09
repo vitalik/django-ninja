@@ -1,11 +1,22 @@
 import datetime
 from decimal import Decimal
-from typing import Any, Callable, Dict, List, Tuple, Type, TypeVar, Union, no_type_check
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+    no_type_check,
+)
 from uuid import UUID
 
 from django.db.models import ManyToManyField
 from django.db.models.fields import Field as DjangoField
-from pydantic import IPvAnyAddress
+from pydantic import BaseModel, IPvAnyAddress
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined, core_schema
 
@@ -116,8 +127,9 @@ def create_m2m_link_type(type_: Type[TModel]) -> Type[TModel]:
 @no_type_check
 def get_schema_field(
     field: DjangoField, *, depth: int = 0, optional: bool = False
-) -> Tuple:
+) -> Tuple[str, Type, FieldInfo]:
     "Returns pydantic field from django's model field"
+    name = field.name
     alias = None
     default = ...
     default_factory = None
@@ -129,7 +141,8 @@ def get_schema_field(
 
     if field.is_relation:
         if depth > 0:
-            return get_related_field_schema(field, depth=depth)
+            python_type, field_info = get_related_field_schema(field, depth=depth)
+            return name, python_type, field_info
 
         internal_type = field.related_model._meta.pk.get_internal_type()
 
@@ -137,7 +150,7 @@ def get_schema_field(
             default = None
             nullable = True
 
-        alias = getattr(field, "get_attname", None) and field.get_attname()
+        name = getattr(field, "get_attname", None) and field.get_attname()
 
         pk_type = TYPES.get(internal_type, int)
         if field.one_to_many or field.many_to_many:
@@ -183,6 +196,7 @@ def get_schema_field(
     title = title_if_lower(field.verbose_name)
 
     return (
+        name,
         python_type,
         FieldInfo(
             default=default,
@@ -198,7 +212,9 @@ def get_schema_field(
 
 
 @no_type_check
-def get_related_field_schema(field: DjangoField, *, depth: int) -> Tuple[OpenAPISchema]:
+def get_related_field_schema(
+    field: DjangoField, *, depth: int
+) -> Tuple[OpenAPISchema, FieldInfo]:
     from ninja.orm import create_schema
 
     model = field.related_model
@@ -217,3 +233,17 @@ def get_related_field_schema(field: DjangoField, *, depth: int) -> Tuple[OpenAPI
             title=title_if_lower(field.verbose_name),
         ),
     )
+
+
+def get_field_property_accessors(field: DjangoField) -> property:
+    attribute_name = cast(
+        str, getattr(field, "get_attname", None) and field.get_attname()
+    )
+
+    def getter(self: BaseModel) -> Any:
+        return getattr(self, attribute_name)
+
+    def setter(self: BaseModel, value: Any) -> None:
+        setattr(self, attribute_name, value)
+
+    return property(getter, setter)
