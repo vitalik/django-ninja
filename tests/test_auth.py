@@ -12,6 +12,7 @@ from ninja.security import (
     HttpBearer,
     django_auth,
     django_auth_superuser,
+    django_auth_is_staff,
 )
 from ninja.security.base import AuthBase
 from ninja.testing import TestClient
@@ -79,6 +80,7 @@ def on_custom_error(request, exc):
 for path, auth in [
     ("django_auth", django_auth),
     ("django_auth_superuser", django_auth_superuser),
+    ("django_auth_is_staff", django_auth_is_staff),
     ("callable", callable_auth),
     ("apikeyquery", KeyQuery()),
     ("apikeyheader", KeyHeader()),
@@ -102,6 +104,10 @@ class MockSuperUser(str):
     is_authenticated = True
     is_superuser = True
 
+class MockStaffUser(str):
+    is_authenticated = True
+    is_staff = True
+
 
 BODY_UNAUTHORIZED_DEFAULT = dict(detail="Unauthorized")
 BODY_FORBIDDEN_DEFAULT = dict(detail="Forbidden")
@@ -122,6 +128,25 @@ BODY_FORBIDDEN_DEFAULT = dict(detail="Forbidden")
         (
             "/django_auth_superuser",
             dict(user=MockSuperUser("admin")),
+            200,
+            dict(auth="admin"),
+        ),
+        ("/django_auth_is_staff", {}, 401, BODY_UNAUTHORIZED_DEFAULT),
+        (
+            "/django_auth_is_staff",
+            dict(user=MockUser("admin")),
+            401,
+            BODY_UNAUTHORIZED_DEFAULT,
+        ),
+        (
+            "/django_auth_is_staff",
+            dict(user=MockSuperUser("admin")),
+            200,
+            dict(auth="admin"),
+        ),
+        (
+            "/django_auth_is_staff",
+            dict(user=MockStaffUser("admin")),
             200,
             dict(auth="admin"),
         ),
@@ -221,6 +246,7 @@ def test_schema():
         "KeyQuery": {"in": "query", "name": "key", "type": "apiKey"},
         "SessionAuth": {"in": "cookie", "name": "sessionid", "type": "apiKey"},
         "SessionAuthSuperUser": {"in": "cookie", "name": "sessionid", "type": "apiKey"},
+        "SessionAuthIsStaff": {"in": "cookie", "name": "sessionid", "type": "apiKey"},
     }
     # TODO: Samename for schema check
     # TODO: check operation security attributes
