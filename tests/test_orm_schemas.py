@@ -1,6 +1,7 @@
 from typing import List
 from unittest.mock import Mock
 
+import pydantic
 import pytest
 from django.contrib.postgres import fields as ps_fields
 from django.db import models
@@ -83,7 +84,7 @@ def test_all_fields():
 
     SchemaCls = create_schema(AllFields)
     # print(SchemaCls.json_schema())
-    assert SchemaCls.json_schema() == {
+    expected_schema = {
         "title": "AllFields",
         "type": "object",
         "properties": {
@@ -154,7 +155,11 @@ def test_all_fields():
                 "title": "Ciemailfield",
             },
             "citextfield": {"type": "string", "title": "Citextfield"},
-            "hstorefield": {"type": "object", "title": "Hstorefield"},
+            "hstorefield": {
+                # "additionalProperties": True, # this is added in pydantic 2.11
+                "type": "object",
+                "title": "Hstorefield",
+            },
         },
         "required": [
             "bigintegerfield",
@@ -190,6 +195,11 @@ def test_all_fields():
             "hstorefield",
         ],
     }
+
+    pydantic_version = tuple(map(int, pydantic.VERSION.split(".")[:2]))
+    if pydantic_version >= (2, 11):
+        expected_schema["properties"]["hstorefield"]["additionalProperties"] = True
+    assert SchemaCls.json_schema() == expected_schema
 
 
 @pytest.mark.parametrize(
