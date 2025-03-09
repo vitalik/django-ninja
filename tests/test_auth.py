@@ -11,8 +11,8 @@ from ninja.security import (
     HttpBasicAuth,
     HttpBearer,
     django_auth,
-    django_auth_superuser,
     django_auth_is_staff,
+    django_auth_superuser,
 )
 from ninja.security.base import AuthBase
 from ninja.testing import TestClient
@@ -98,14 +98,18 @@ client = TestClient(api)
 class MockUser(str):
     is_authenticated = True
     is_superuser = False
+    is_staff = False
 
 
 class MockSuperUser(str):
     is_authenticated = True
     is_superuser = True
+    is_staff = True
+
 
 class MockStaffUser(str):
     is_authenticated = True
+    is_superuser = False
     is_staff = True
 
 

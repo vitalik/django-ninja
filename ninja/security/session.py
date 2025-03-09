@@ -34,12 +34,11 @@ class SessionAuthSuperUser(APIKeyCookie):
 
 
 class SessionAuthIsStaff(SessionAuthSuperUser):
-    
     def authenticate(self, request: HttpRequest, key: Optional[str]) -> Optional[Any]:
         result = super().authenticate(request, key)
-        if result:
-              return result
-        if getattr(request.user, "is_staff", None):
+        if result is not None:
+            return result
+        if request.user.is_authenticated and getattr(request.user, "is_staff", None):
             return request.user
 
         return None

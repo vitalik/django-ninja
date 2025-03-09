@@ -141,6 +141,8 @@ class NinjaClientBase:
         request.user = Mock()
         if "user" not in request_params:
             request.user.is_authenticated = False
+            request.user.is_staff = False
+            request.user.is_superuser = False
 
         request.META = request_params.pop("META", {"REMOTE_ADDR": "127.0.0.1"})
         request.FILES = request_params.pop("FILES", {})

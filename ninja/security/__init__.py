@@ -1,6 +1,6 @@
 from ninja.security.apikey import APIKeyCookie, APIKeyHeader, APIKeyQuery
 from ninja.security.http import HttpBasicAuth, HttpBearer
-from ninja.security.session import SessionAuth, SessionAuthSuperUser, SessionAuthIsStaff
+from ninja.security.session import SessionAuth, SessionAuthIsStaff, SessionAuthSuperUser
 
 __all__ = [
     "APIKeyCookie",
