@@ -13,7 +13,23 @@ extra_css:
 theme:
   name: material
   palette:
-    primary: green
+    - media: "(prefers-color-scheme)"
+      primary: green
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: green
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)" 
+      scheme: slate
+      primary: green
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
   logo: img/docs-logo.png
   favicon: img/favicon.png
   language: en
@@ -53,6 +69,7 @@ nav:
           - guides/response/response-renderers.md
       - Splitting your API with Routers: guides/routers.md
       - guides/authentication.md
+      - guides/throttling.md
       - guides/testing.md
       - guides/api-docs.md
       - guides/errors.md
@@ -91,5 +108,3 @@ plugins:
           setup_commands:
             - from django.conf import settings
             - settings.configure()
-      watch:
-        - ../ninja

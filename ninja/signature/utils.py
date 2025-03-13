@@ -17,7 +17,7 @@ else:
     def evaluate_forwardref(type_: ForwardRef, globalns: Any, localns: Any) -> Any:
         # Even though it is the right signature for python 3.9, mypy complains with
         # `error: Too many arguments for "_evaluate" of "ForwardRef"` hence the cast...
-        return cast(Any, type_)._evaluate(globalns, localns, set())
+        return cast(Any, type_)._evaluate(globalns, localns, recursive_guard=set())
 
 
 from ninja.types import DictStrAny
@@ -31,7 +31,7 @@ __all__ = [
 ]
 
 
-def get_typed_signature(call: Callable) -> inspect.Signature:
+def get_typed_signature(call: Callable[..., Any]) -> inspect.Signature:
     "Finds call signature and resolves all forwardrefs"
     signature = inspect.signature(call)
     globalns = getattr(call, "__globals__", {})
@@ -65,18 +65,18 @@ def get_path_param_names(path: str) -> Set[str]:
     return {item.strip("{}").split(":")[-1] for item in re.findall("{[^}]*}", path)}
 
 
-def is_async(callable: Callable) -> bool:
+def is_async(callable: Callable[..., Any]) -> bool:
     return asyncio.iscoroutinefunction(callable)
 
 
-def has_kwargs(func: Callable) -> bool:
+def has_kwargs(func: Callable[..., Any]) -> bool:
     for param in inspect.signature(func).parameters.values():
         if param.kind == param.VAR_KEYWORD:
             return True
     return False
 
 
-def get_args_names(func: Callable) -> List[str]:
+def get_args_names(func: Callable[..., Any]) -> List[str]:
     "returns list of function argument names"
     return list(inspect.signature(func).parameters.keys())
 

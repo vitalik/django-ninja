@@ -43,7 +43,7 @@ class ViewSignature:
     )
     response_arg: Optional[str] = None
 
-    def __init__(self, path: str, view_func: Callable) -> None:
+    def __init__(self, path: str, view_func: Callable[..., Any]) -> None:
         self.view_func = view_func
         self.signature = get_typed_signature(self.view_func)
         self.path = path
@@ -71,6 +71,15 @@ class ViewSignature:
             if arg.annotation is HttpResponse:
                 self.response_arg = name
                 continue
+
+            if (
+                arg.annotation is inspect.Parameter.empty
+                and isinstance(arg.default, type)
+                and issubclass(arg.default, pydantic.BaseModel)
+            ):
+                raise ConfigError(
+                    f"Looks like you are using `{name}={arg.default.__name__}` instead of `{name}: {arg.default.__name__}` (annotation)"
+                )
 
             func_param = self._get_param_type(name, arg)
             self.params.append(func_param)

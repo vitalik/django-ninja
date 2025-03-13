@@ -172,6 +172,20 @@ response_less_than_equal_3 = {
 }
 
 
+response_not_valid_pattern = {
+    "detail": [
+        {
+            "ctx": {
+                "pattern": "^foo",
+            },
+            "loc": ["path", "item_id"],
+            "msg": "String should match pattern '^foo'",
+            "type": "string_pattern_mismatch",
+        }
+    ]
+}
+
+
 @pytest.mark.parametrize(
     "path,expected_status,expected_response",
     [
@@ -249,6 +263,8 @@ response_less_than_equal_3 = {
         ("/path/param-le-ge-int/3", 200, 3),
         ("/path/param-le-ge-int/4", 422, response_less_than_equal_3),
         ("/path/param-le-ge-int/2.7", 422, response_not_valid_int_float),
+        ("/path/param-pattern/foo", 200, "foo"),
+        ("/path/param-pattern/fo", 422, response_not_valid_pattern),
     ],
 )
 def test_get_path(path, expected_status, expected_response):

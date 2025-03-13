@@ -18,11 +18,17 @@ from asgiref.sync import async_to_sync
 from django.http import HttpRequest, HttpResponse, HttpResponseNotAllowed
 from django.http.response import HttpResponseBase
 
-from ninja.constants import NOT_SET
-from ninja.errors import AuthenticationError, ConfigError, ValidationError
+from ninja.constants import NOT_SET, NOT_SET_TYPE
+from ninja.errors import (
+    AuthenticationError,
+    ConfigError,
+    Throttled,
+    ValidationErrorContext,
+)
 from ninja.params.models import TModels
-from ninja.schema import Schema
+from ninja.schema import Schema, pydantic_version
 from ninja.signature import ViewSignature, is_async
+from ninja.throttling import BaseThrottle
 from ninja.types import DictStrAny
 from ninja.utils import check_csrf, is_async_callable
 
@@ -39,17 +45,18 @@ class Operation:
         methods: List[str],
         view_func: Callable,
         *,
-        auth: Optional[Union[Sequence[Callable], Callable, object]] = NOT_SET,
+        auth: Optional[Union[Sequence[Callable], Callable, NOT_SET_TYPE]] = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
-        by_alias: bool = False,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
+        by_alias: Optional[bool] = None,
+        exclude_unset: Optional[bool] = None,
+        exclude_defaults: Optional[bool] = None,
+        exclude_none: Optional[bool] = None,
         include_in_schema: bool = True,
         url_name: Optional[str] = None,
         openapi_extra: Optional[Dict[str, Any]] = None,
@@ -58,13 +65,24 @@ class Operation:
         self.path: str = path
         self.methods: List[str] = methods
         self.view_func: Callable = view_func
-        self.api: "NinjaAPI" = cast("NinjaAPI", None)
+        self.api: NinjaAPI = cast("NinjaAPI", None)
         if url_name is not None:
             self.url_name = url_name
 
         self.auth_param: Optional[Union[Sequence[Callable], Callable, object]] = auth
         self.auth_callbacks: Sequence[Callable] = []
         self._set_auth(auth)
+
+        if isinstance(throttle, BaseThrottle):
+            throttle = [throttle]
+        self.throttle_param = throttle
+        self.throttle_objects: List[BaseThrottle] = []
+        if throttle is not NOT_SET:
+            for th in throttle:  # type: ignore
+                assert isinstance(
+                    th, BaseThrottle
+                ), "Throttle should be an instance of BaseThrottle"
+                self.throttle_objects.append(th)
 
         self.signature = ViewSignature(self.path, self.view_func)
         self.models: TModels = self.signature.models
@@ -86,13 +104,13 @@ class Operation:
         self.openapi_extra = openapi_extra
 
         # Exporting models params
-        self.by_alias = by_alias
-        self.exclude_unset = exclude_unset
-        self.exclude_defaults = exclude_defaults
-        self.exclude_none = exclude_none
+        self.by_alias = by_alias or False
+        self.exclude_unset = exclude_unset or False
+        self.exclude_defaults = exclude_defaults or False
+        self.exclude_none = exclude_none or False
 
         if hasattr(view_func, "_ninja_contribute_to_operation"):
-            # Allow 3rd party code to contribute to the operation behaviour
+            # Allow 3rd party code to contribute to the operation behavior
             callbacks: List[Callable] = view_func._ninja_contribute_to_operation
             for callback in callbacks:
                 callback(self)
@@ -115,11 +133,26 @@ class Operation:
 
     def set_api_instance(self, api: "NinjaAPI", router: "Router") -> None:
         self.api = api
+
         if self.auth_param == NOT_SET:
             if api.auth != NOT_SET:
                 self._set_auth(self.api.auth)
             if router.auth != NOT_SET:
                 self._set_auth(router.auth)
+
+        if self.throttle_param == NOT_SET:
+            if api.throttle != NOT_SET:
+                self.throttle_objects = (
+                    isinstance(api.throttle, BaseThrottle)
+                    and [api.throttle]
+                    or api.throttle  # type: ignore
+                )
+            if router.throttle != NOT_SET:
+                _t = router.throttle
+                self.throttle_objects = isinstance(_t, BaseThrottle) and [_t] or _t  # type: ignore
+            assert all(
+                isinstance(th, BaseThrottle) for th in self.throttle_objects
+            ), "Throttle should be an instance of BaseThrottle"
 
         if self.tags is None:
             if router.tags is not None:
@@ -132,16 +165,24 @@ class Operation:
             self.auth_callbacks = isinstance(auth, Sequence) and auth or [auth]
 
     def _run_checks(self, request: HttpRequest) -> Optional[HttpResponse]:
-        "Runs security checks for each operation"
-        # auth:
-        if self.auth_callbacks:
-            error = self._run_authentication(request)
-            if error:
-                return error
+        "Runs security/throttle checks for each operation"
+        # NOTE: if you change anything in this function - do this also in AsyncOperation
 
         # csrf:
         if self.api.csrf:
             error = check_csrf(request, self.view_func)
+            if error:
+                return error
+
+        # auth:
+        if self.auth_callbacks:
+            error = self._run_authentication(request)  # type: ignore
+            if error:
+                return error
+
+        # Throttling:
+        if self.throttle_objects:
+            error = self._check_throttles(request)  # type: ignore
             if error:
                 return error
 
@@ -161,6 +202,22 @@ class Operation:
                 request.auth = result  # type: ignore
                 return None
         return self.api.on_exception(request, AuthenticationError())
+
+    def _check_throttles(self, request: HttpRequest) -> Optional[HttpResponse]:
+        throttle_durations = []
+        for throttle in self.throttle_objects:
+            if not throttle.allow_request(request):
+                throttle_durations.append(throttle.wait())
+
+        if throttle_durations:
+            # Filter out `None` values which may happen in case of config / rate
+            durations = [
+                duration for duration in throttle_durations if duration is not None
+            ]
+
+            duration = max(durations, default=None)
+            return self.api.on_exception(request, Throttled(wait=duration))  # type: ignore
+        return None
 
     def _result_to_response(
         self, request: HttpRequest, result: Any, temporal_response: HttpResponse
@@ -209,11 +266,19 @@ class Operation:
             resp_object, context={"request": request, "response_status": status}
         )
 
+        model_dump_kwargs: Dict[str, Any] = {}
+        if pydantic_version >= [2, 7]:
+            # pydantic added support for serialization context at 2.7
+            model_dump_kwargs.update(
+                context={"request": request, "response_status": status}
+            )
+
         result = validated_object.model_dump(
             by_alias=self.by_alias,
             exclude_unset=self.exclude_unset,
             exclude_defaults=self.exclude_defaults,
             exclude_none=self.exclude_none,
+            **model_dump_kwargs,
         )["response"]
         return self.api.create_response(
             request, result, temporal_response=temporal_response
@@ -222,29 +287,21 @@ class Operation:
     def _get_values(
         self, request: HttpRequest, path_params: Any, temporal_response: HttpResponse
     ) -> DictStrAny:
-        values, errors = {}, []
+        values = {}
+        error_contexts: List[ValidationErrorContext] = []
         for model in self.models:
             try:
                 data = model.resolve(request, self.api, path_params)
                 values.update(data)
             except pydantic.ValidationError as e:
-                items = []
-                for i in e.errors(include_url=False):
-                    i["loc"] = (
-                        model.__ninja_param_source__,
-                    ) + model.__ninja_flatten_map_reverse__.get(i["loc"], i["loc"])
-                    # removing pydantic hints
-                    del i["input"]  # type: ignore
-                    if (
-                        "ctx" in i
-                        and "error" in i["ctx"]
-                        and isinstance(i["ctx"]["error"], Exception)
-                    ):
-                        i["ctx"]["error"] = str(i["ctx"]["error"])
-                    items.append(dict(i))
-                errors.extend(items)
-        if errors:
-            raise ValidationError(errors)
+                error_contexts.append(
+                    ValidationErrorContext(pydantic_validation_error=e, model=model)
+                )
+        if error_contexts:
+            validation_error = self.api.validation_error_from_error_contexts(
+                error_contexts
+            )
+            raise validation_error
         if self.signature.response_arg:
             values[self.signature.response_arg] = temporal_response
         return values
@@ -285,6 +342,8 @@ class AsyncOperation(Operation):
 
     async def _run_checks(self, request: HttpRequest) -> Optional[HttpResponse]:  # type: ignore
         "Runs security checks for each operation"
+        # NOTE: if you change anything in this function - do this also in Sync Operation
+
         # auth:
         if self.auth_callbacks:
             error = await self._run_authentication(request)
@@ -294,6 +353,12 @@ class AsyncOperation(Operation):
         # csrf:
         if self.api.csrf:
             error = check_csrf(request, self.view_func)
+            if error:
+                return error
+
+        # Throttling:
+        if self.throttle_objects:
+            error = self._check_throttles(request)
             if error:
                 return error
 
@@ -331,17 +396,18 @@ class PathView:
         methods: List[str],
         view_func: Callable,
         *,
-        auth: Optional[Union[Sequence[Callable], Callable, object]] = NOT_SET,
+        auth: Optional[Union[Sequence[Callable], Callable, NOT_SET_TYPE]] = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
-        by_alias: bool = False,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
+        by_alias: Optional[bool] = None,
+        exclude_unset: Optional[bool] = None,
+        exclude_defaults: Optional[bool] = None,
+        exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
@@ -359,6 +425,7 @@ class PathView:
             methods,
             view_func,
             auth=auth,
+            throttle=throttle,
             response=response,
             operation_id=operation_id,
             summary=summary,

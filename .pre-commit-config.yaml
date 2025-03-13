@@ -12,7 +12,7 @@ repos:
         additional_dependencies: ["django-stubs", "pydantic"]
         exclude: (tests|docs)/
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.1.6
+    rev: v0.4.2
     hooks:
       - id: ruff-format
       - id: ruff

@@ -5,7 +5,7 @@ from unittest.mock import Mock
 from urllib.parse import urljoin
 
 from django.http import QueryDict, StreamingHttpResponse
-from django.http.request import HttpHeaders
+from django.http.request import HttpHeaders, HttpRequest
 
 from ninja import NinjaAPI, Router
 from ninja.responses import NinjaJSONEncoder
@@ -26,7 +26,14 @@ def build_absolute_uri(location: Optional[str] = None) -> str:
 class NinjaClientBase:
     __test__ = False  # <- skip pytest
 
-    def __init__(self, router_or_app: Union[NinjaAPI, Router]) -> None:
+    def __init__(
+        self,
+        router_or_app: Union[NinjaAPI, Router],
+        headers: Optional[Dict[str, str]] = None,
+        COOKIES: Optional[Dict[str, str]] = None,
+    ) -> None:
+        self.headers = headers or {}
+        self.cookies = COOKIES or {}
         self.router_or_app = router_or_app
 
     def get(
@@ -82,6 +89,16 @@ class NinjaClientBase:
             request_params["body"] = json_dumps(json, cls=NinjaJSONEncoder)
         if data is None:
             data = {}
+        if self.headers or request_params.get("headers"):
+            request_params["headers"] = {
+                **self.headers,
+                **request_params.get("headers", {}),
+            }
+        if self.cookies or request_params.get("COOKIES"):
+            request_params["COOKIES"] = {
+                **self.cookies,
+                **request_params.get("COOKIES", {}),
+            }
         func, request, kwargs = self._resolve(method, path, data, request_params)
         return self._call(func, request, kwargs)  # type: ignore
 
@@ -116,7 +133,7 @@ class NinjaClientBase:
         request_params: Any,
         resolver_match: Any,
     ) -> Mock:
-        request = Mock()
+        request = Mock(spec=HttpRequest)
         request.method = method
         request.path = path
         request.body = ""
@@ -126,18 +143,20 @@ class NinjaClientBase:
         request.build_absolute_uri = build_absolute_uri
         request.resolver_match = resolver_match
 
+        request.auth = None
+        request.user = Mock()
         if "user" not in request_params:
             request.user.is_authenticated = False
+            request.user.is_staff = False
+            request.user.is_superuser = False
 
-        request.META = request_params.pop("META", {})
+        request.META = request_params.pop("META", {"REMOTE_ADDR": "127.0.0.1"})
         request.FILES = request_params.pop("FILES", {})
 
-        request.META.update(
-            {
-                f"HTTP_{k.replace('-', '_')}": v
-                for k, v in request_params.pop("headers", {}).items()
-            }
-        )
+        request.META.update({
+            f"HTTP_{k.replace('-', '_')}": v
+            for k, v in request_params.pop("headers", {}).items()
+        })
 
         request.headers = HttpHeaders(request.META)
 
@@ -183,9 +202,16 @@ class NinjaResponse:
             self.content = b"".join(http_response.streaming_content)  # type: ignore
         else:
             self.content = http_response.content  # type: ignore[union-attr]
+        self._data = None
 
     def json(self) -> Any:
         return json_loads(self.content)
+
+    @property
+    def data(self) -> Any:
+        if self._data is None:  # Recomputes if json() is None but cheap then
+            self._data = self.json()
+        return self._data
 
     def __getitem__(self, key: str) -> Any:
         return self._response[key]

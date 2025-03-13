@@ -1,7 +1,8 @@
 from functools import partial
-from typing import Callable, Tuple
+from typing import Any, Callable, Tuple
 
 from ninja.operation import Operation
+from ninja.types import TCallable
 from ninja.utils import contribute_operation_callback
 
 # Since @api.method decorator is applied to function
@@ -18,8 +19,8 @@ from ninja.utils import contribute_operation_callback
 #
 
 
-def decorate_view(*decorators: Callable) -> Callable:
-    def outer_wrapper(op_func: Callable) -> Callable:
+def decorate_view(*decorators: Callable[..., Any]) -> Callable[[TCallable], TCallable]:
+    def outer_wrapper(op_func: TCallable) -> TCallable:
         if hasattr(op_func, "_ninja_operation"):
             # Means user used decorate_view on top of @api.method
             _apply_decorators(decorators, op_func._ninja_operation)  # type: ignore
@@ -34,6 +35,8 @@ def decorate_view(*decorators: Callable) -> Callable:
     return outer_wrapper
 
 
-def _apply_decorators(decorators: Tuple[Callable], operation: Operation) -> None:
+def _apply_decorators(
+    decorators: Tuple[Callable[..., Any]], operation: Operation
+) -> None:
     for deco in decorators:
         operation.run = deco(operation.run)  # type: ignore

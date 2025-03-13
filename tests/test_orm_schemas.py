@@ -1,13 +1,15 @@
 from typing import List
 from unittest.mock import Mock
 
+import pydantic
 import pytest
 from django.contrib.postgres import fields as ps_fields
 from django.db import models
 from django.db.models import Manager
+from util import pydantic_ref_fix
 
 from ninja.errors import ConfigError
-from ninja.orm import create_schema
+from ninja.orm import create_schema, register_field
 from ninja.orm.shortcuts import L, S
 
 
@@ -82,7 +84,7 @@ def test_all_fields():
 
     SchemaCls = create_schema(AllFields)
     # print(SchemaCls.json_schema())
-    assert SchemaCls.json_schema() == {
+    expected_schema = {
         "title": "AllFields",
         "type": "object",
         "properties": {
@@ -153,7 +155,11 @@ def test_all_fields():
                 "title": "Ciemailfield",
             },
             "citextfield": {"type": "string", "title": "Citextfield"},
-            "hstorefield": {"type": "object", "title": "Hstorefield"},
+            "hstorefield": {
+                # "additionalProperties": True, # this is added in pydantic 2.11
+                "type": "object",
+                "title": "Hstorefield",
+            },
         },
         "required": [
             "bigintegerfield",
@@ -190,25 +196,33 @@ def test_all_fields():
         ],
     }
 
+    pydantic_version = tuple(map(int, pydantic.VERSION.split(".")[:2]))
+    if pydantic_version >= (2, 11):
+        expected_schema["properties"]["hstorefield"]["additionalProperties"] = True
+    assert SchemaCls.json_schema() == expected_schema
 
-def test_bigautofield():
-    class ModelBigAuto(models.Model):
-        bigautofiled = models.BigAutoField(primary_key=True)
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        models.BigAutoField,
+        models.SmallAutoField,
+    ],
+)
+def test_altautofield(field: type):
+    class ModelAltAuto(models.Model):
+        altautofield = field(primary_key=True)
 
         class Meta:
             app_label = "tests"
 
-    SchemaCls = create_schema(ModelBigAuto)
+    SchemaCls = create_schema(ModelAltAuto)
     # print(SchemaCls.json_schema())
-    assert SchemaCls.json_schema() == {
-        "type": "object",
-        "properties": {
-            "bigautofiled": {
-                "anyOf": [{"type": "integer"}, {"type": "null"}],
-                "title": "Bigautofiled",
-            }
-        },
-        "title": "ModelBigAuto",
+    assert SchemaCls.json_schema()["properties"] == {
+        "altautofield": {
+            "anyOf": [{"type": "integer"}, {"type": "null"}],
+            "title": "Altautofield",
+        }
     }
 
 
@@ -281,16 +295,16 @@ def test_relational():
     }
 
     SchemaClsDeep = create_schema(TestModel, name="TestSchemaDeep", depth=1)
-    # print(SchemaClsDeep.json_schema())
+    print(SchemaClsDeep.json_schema())
     assert SchemaClsDeep.json_schema() == {
         "type": "object",
         "properties": {
             "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
-            "onetoonefield": {
+            "onetoonefield": pydantic_ref_fix({
                 "title": "Onetoonefield",
                 "description": "",
-                "allOf": [{"$ref": "#/$defs/Related"}],
-            },
+                "$ref": "#/$defs/Related",
+            }),
             "foreignkey": {
                 "title": "Foreignkey",
                 "allOf": [{"$ref": "#/$defs/Related"}],
@@ -575,3 +589,22 @@ def test_optional_fields():
         SomeReqFieldModel, optional_fields=["some_field", "other_field", "optional"]
     )
     assert Schema.json_schema().get("required") is None
+
+
+def test_register_custom_field():
+    class MyCustomField(models.Field):
+        description = "MyCustomField"
+
+    class ModelWithCustomField(models.Model):
+        some_field = MyCustomField()
+
+        class Meta:
+            app_label = "tests"
+
+    with pytest.raises(ConfigError):
+        create_schema(ModelWithCustomField)
+
+    register_field("MyCustomField", int)
+    Schema = create_schema(ModelWithCustomField)
+    print(Schema.json_schema())
+    assert Schema.json_schema()["properties"]["some_field"]["type"] == "integer"

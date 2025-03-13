@@ -1,10 +1,21 @@
+import importlib
+from sys import version_info
 from typing import Any, List
 
 import pytest
+from django.test import override_settings
+from pydantic.errors import PydanticSchemaGenerationError
 
 from ninja import NinjaAPI, Schema
 from ninja.errors import ConfigError
-from ninja.pagination import PageNumberPagination, PaginationBase, paginate
+from ninja.operation import Operation
+from ninja.pagination import (
+    LimitOffsetPagination,
+    PageNumberPagination,
+    PaginationBase,
+    make_response_paginated,
+    paginate,
+)
 from ninja.testing import TestClient
 
 api = NinjaAPI()
@@ -45,7 +56,7 @@ class NoOutputPagination(PaginationBase):
 
 
 class ResultsPaginator(PaginationBase):
-    "Use 'results' insted of 'items' for the output"
+    "Use 'results' instead of 'items' for the output"
 
     class Input(Schema):
         skip: int
@@ -324,6 +335,81 @@ def test_case9():
     }
 
 
+@override_settings(NINJA_PAGINATION_MAX_LIMIT=1000)
+def test_10_max_limit_set():
+    # reload to apply django settings
+    from ninja import conf, pagination
+
+    importlib.reload(conf)
+    importlib.reload(pagination)
+    new_api = NinjaAPI()
+    new_client = TestClient(new_api)
+
+    @new_api.get("/items_10", response=List[int])
+    @paginate  # LimitOffsetPagination is set as default
+    def items_10(request, **kwargs):
+        return ITEMS
+
+    response = new_client.get("/items_10?limit=1000").json()
+    assert response == {"items": ITEMS[:1000], "count": 100}
+
+    schema = new_api.get_openapi_schema()["paths"]["/api/items_10"]["get"]
+    # print(schema)
+    assert schema["parameters"] == [
+        {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+                "title": "Limit",
+                "default": 100,
+                "minimum": 1,
+                "maximum": 1000,
+                "type": "integer",
+            },
+            "required": False,
+        },
+        {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+                "title": "Offset",
+                "default": 0,
+                "minimum": 0,
+                "type": "integer",
+            },
+            "required": False,
+        },
+    ]
+
+
+@override_settings(NINJA_PAGINATION_MAX_LIMIT=1000)
+def test_11_max_limit_set_and_exceeded():
+    # reload to apply django settings
+    from ninja import conf, pagination
+
+    importlib.reload(conf)
+    importlib.reload(pagination)
+    new_api = NinjaAPI()
+    new_client = TestClient(new_api)
+
+    @new_api.get("/items_11", response=List[int])
+    @paginate  # LimitOffsetPagination is set as default
+    def items_11(request, **kwargs):
+        return ITEMS
+
+    response = new_client.get("/items_11?limit=1001").json()
+    assert response == {
+        "detail": [
+            {
+                "ctx": {"le": 1000},
+                "loc": ["query", "limit"],
+                "msg": "Input should be less than or equal to 1000",
+                "type": "less_than_equal",
+            }
+        ]
+    }
+
+
 def test_config_error_None():
     with pytest.raises(ConfigError):
 
@@ -340,3 +426,17 @@ def test_config_error_NOT_SET():
         @paginate
         def invalid2(request):
             pass
+
+
+@pytest.mark.skipif(version_info < (3, 11), reason="Not needed at this Python version")
+def test_pagination_works_with_unnamed_classes():
+    """
+    This test lets you check that the typing.Any case handled in `ninja.pagination.make_response_paginated`
+    works for Python>=3.11, as a typing.Any does possess the __name__ attribute past that version
+    """
+    operation = Operation("/whatever", ["GET"], lambda: None, response=List[int])
+    operation.response_models[200].__annotations__["response"] = List[object()]
+    with pytest.raises(
+        PydanticSchemaGenerationError
+    ):  # It does fail after we passed the logic that we are testing
+        make_response_paginated(LimitOffsetPagination, operation)

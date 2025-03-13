@@ -1,7 +1,7 @@
 # Form data
 
 **Django Ninja** also allows you to parse and validate `request.POST` data
-(aka `application x-www-form-urlencoded` or `multipart/form-data`).
+(aka `application/x-www-form-urlencoded` or `multipart/form-data`).
 
 ## Form Data as params 
 

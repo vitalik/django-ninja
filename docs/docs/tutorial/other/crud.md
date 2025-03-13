@@ -59,7 +59,7 @@ See the recipe below for handling the file upload (when using Django models):
 from ninja import UploadedFile, File
 
 @api.post("/employees")
-def create_employee(request, payload: EmployeeIn, cv: UploadedFile = File(...)):
+def create_employee(request, payload: EmployeeIn, cv: File[UploadedFile]):
     payload_dict = payload.dict()
     employee = Employee(**payload_dict)
     employee.cv.save(cv.name, cv) # will save model instance as well
@@ -75,7 +75,7 @@ from ninja import UploadedFile, File
 STORAGE = FileSystemStorage()
 
 @api.post("/upload")
-def create_upload(request, cv: UploadedFile = File(...)):
+def create_upload(request, cv: File[UploadedFile]):
     filename = STORAGE.save(cv.name, cv)
     # Handle things further
 ```

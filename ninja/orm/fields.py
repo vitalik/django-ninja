@@ -9,6 +9,7 @@ from pydantic import IPvAnyAddress
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined, core_schema
 
+from ninja.errors import ConfigError
 from ninja.openapi.schema import OpenAPISchema
 from ninja.types import DictStrAny
 
@@ -26,11 +27,15 @@ def title_if_lower(s: str) -> str:
 
 class AnyObject:
     @classmethod
-    def __get_pydantic_core_schema__(cls, source: Any, handler: Callable) -> Any:
+    def __get_pydantic_core_schema__(
+        cls, source: Any, handler: Callable[..., Any]
+    ) -> Any:
         return core_schema.with_info_plain_validator_function(cls.validate)
 
     @classmethod
-    def __get_pydantic_json_schema__(cls, schema: Any, handler: Callable) -> DictStrAny:
+    def __get_pydantic_json_schema__(
+        cls, schema: Any, handler: Callable[..., Any]
+    ) -> DictStrAny:
         return {"type": "object"}
 
     @classmethod
@@ -61,6 +66,7 @@ TYPES = {
     "PositiveIntegerField": int,
     "PositiveSmallIntegerField": int,
     "SlugField": str,
+    "SmallAutoField": int,
     "SmallIntegerField": int,
     "TextField": str,
     "TimeField": datetime.time,
@@ -74,6 +80,10 @@ TYPES = {
 }
 
 TModel = TypeVar("TModel")
+
+
+def register_field(django_field: str, python_type: Any) -> None:
+    TYPES[django_field] = python_type
 
 
 @no_type_check
@@ -114,6 +124,7 @@ def get_schema_field(
     description = None
     title = None
     max_length = None
+    nullable = False
     python_type = None
 
     if field.is_relation:
@@ -122,8 +133,9 @@ def get_schema_field(
 
         internal_type = field.related_model._meta.pk.get_internal_type()
 
-        if not field.concrete and field.auto_created or field.null:
+        if not field.concrete and field.auto_created or field.null or optional:
             default = None
+            nullable = True
 
         alias = getattr(field, "get_attname", None) and field.get_attname()
 
@@ -141,24 +153,30 @@ def get_schema_field(
         max_length = field_options.get("max_length")
 
         internal_type = field.get_internal_type()
-        python_type = TYPES[internal_type]
+        try:
+            python_type = TYPES[internal_type]
+        except KeyError as e:
+            msg = [
+                f"Do not know how to convert django field '{internal_type}'.",
+                "Try from ninja.orm import register_field",
+                f"register_field('{internal_type}', <your-python-type>)",
+            ]
+            raise ConfigError("\n".join(msg)) from e
+
+        if field.primary_key or blank or null or optional:
+            default = None
+            nullable = True
 
         if field.has_default():
             if callable(field.default):
                 default_factory = field.default
             else:
                 default = field.default
-        elif field.primary_key or blank or null:
-            default = None
 
     if default_factory:
         default = PydanticUndefined
 
-    if optional:
-        default = None
-
-    if default is None:
-        default = None
+    if nullable:
         python_type = Union[python_type, None]  # aka Optional in 3.7+
 
     description = field.help_text or None

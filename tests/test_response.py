@@ -6,6 +6,7 @@ from typing import List, Union
 import pytest
 from django.http import HttpResponse
 from pydantic import BaseModel, ValidationError
+from pydantic_core import Url
 
 from ninja import Router
 from ninja.responses import Response
@@ -45,10 +46,11 @@ class UserModel(BaseModel):
     user_name: str
     # skipping password output to responses
 
-    class Config:
-        from_attributes = True
-        alias_generator = to_camel
-        populate_by_name = True
+    model_config = dict(
+        from_attributes=True,
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
 
 
 @router.get("/check_model", response=UserModel)
@@ -116,6 +118,7 @@ def test_responses(path, expected_response):
     response = client.get(path)
     assert response.status_code == 200, response.content
     assert response.json() == expected_response
+    assert response.data == response.data == expected_response  # Ensures cache works
 
 
 def test_validates():
@@ -170,3 +173,10 @@ def test_enum_encoding():
     response = Response(data)
     response_data = json.loads(response.content)
     assert response_data["enum"] == str(data["enum"])
+
+
+def test_pydantic_url():
+    data = {"url": Url("https://django-ninja.dev/")}
+    response = Response(data)
+    response_data = json.loads(response.content)
+    assert response_data == {"url": "https://django-ninja.dev/"}
