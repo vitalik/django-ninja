@@ -1,10 +1,11 @@
 from collections.abc import Awaitable, Callable
-from typing import Any, List, TypeAlias
+from typing import Any, List
 
 from asgiref.sync import iscoroutinefunction, sync_to_async
 from django.conf import settings
 from django.http import HttpRequest, HttpResponse
 from django.utils.decorators import sync_and_async_middleware
+from typing_extensions import TypeAlias
 
 from ninja.conf import settings as ninja_settings
 from ninja.params.models import FileModel
