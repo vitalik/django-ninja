@@ -1,5 +1,5 @@
 from collections.abc import Awaitable, Callable
-from typing import Any, List
+from typing import Any, List, Union
 
 from asgiref.sync import iscoroutinefunction, sync_to_async
 from django.conf import settings
@@ -10,7 +10,7 @@ from typing_extensions import TypeAlias
 from ninja.conf import settings as ninja_settings
 from ninja.params.models import FileModel
 
-ResponseType: TypeAlias = HttpResponse | Any
+ResponseType: TypeAlias = Union[HttpResponse, Any]
 RequestHandler: TypeAlias = Callable[[HttpRequest], ResponseType]
 AsyncRequestHandler: TypeAlias = Callable[[HttpRequest], Awaitable[ResponseType]]
 
@@ -29,8 +29,8 @@ def need_to_fix_request_files(methods: List[str], params_models: list[Any]) -> b
 
 @sync_and_async_middleware
 def fix_request_files_middleware(
-    get_response: RequestHandler | AsyncRequestHandler,
-) -> RequestHandler | AsyncRequestHandler:
+    get_response: Union[RequestHandler, AsyncRequestHandler],
+) -> Union[RequestHandler, AsyncRequestHandler]:
     """
     This middleware fixes long historical Django behavior where request.FILES is only
     populated for POST requests.
