@@ -172,7 +172,11 @@ class NinjaClientBase:
             if query_params:
                 query_dict = QueryDict(mutable=True)
                 for k, v in query_params.items():
-                    query_dict[k] = v
+                    if isinstance(v, list):
+                        for item in v:
+                            query_dict.appendlist(k, item)
+                    else:
+                        query_dict[k] = v
                 request.GET = query_dict
             else:
                 request.GET = QueryDict()
