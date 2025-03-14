@@ -43,6 +43,10 @@ def get_typed_annotation(param: inspect.Parameter, globalns: DictStrAny) -> Any:
 
 
 def make_forwardref(annotation: str, globalns: DictStrAny) -> Any:
+    # NOTE: in future versions of pydantic, the import may be changed to:
+    # from pydantic._internal._typing_extra import try_eval_type
+    # usage:
+    # result, _ = try_eval_type(forward_ref, globalns, globalns)
     forward_ref = ForwardRef(annotation)
     return evaluate_forwardref(forward_ref, globalns, globalns)
 
