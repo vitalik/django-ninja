@@ -168,7 +168,18 @@ class NinjaClientBase:
         if "?" in path:
             request.GET = QueryDict(path.split("?")[1])
         else:
-            request.GET = QueryDict()
+            query_params = request_params.pop("query_params", None)
+            if query_params:
+                query_dict = QueryDict(mutable=True)
+                for k, v in query_params.items():
+                    if isinstance(v, list):
+                        for item in v:
+                            query_dict.appendlist(k, item)
+                    else:
+                        query_dict[k] = v
+                request.GET = query_dict
+            else:
+                request.GET = QueryDict()
 
         for k, v in request_params.items():
             setattr(request, k, v)
