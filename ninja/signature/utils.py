@@ -1,24 +1,11 @@
 import asyncio
 import inspect
 import re
-import sys
-from typing import Any, Callable, ForwardRef, List, Set, cast
+from typing import Any, Callable, ForwardRef, List, Set
 
 from django.urls import register_converter
 from django.urls.converters import UUIDConverter
-
-if sys.version_info < (3, 9):  # pragma: nocover
-
-    def evaluate_forwardref(type_: ForwardRef, globalns: Any, localns: Any) -> Any:
-        return type_._evaluate(globalns, localns)
-
-else:
-
-    def evaluate_forwardref(type_: ForwardRef, globalns: Any, localns: Any) -> Any:
-        # Even though it is the right signature for python 3.9, mypy complains with
-        # `error: Too many arguments for "_evaluate" of "ForwardRef"` hence the cast...
-        return cast(Any, type_)._evaluate(globalns, localns, recursive_guard=set())
-
+from pydantic._internal._typing_extra import eval_type_lenient as evaluate_forwardref
 
 from ninja.types import DictStrAny
 
