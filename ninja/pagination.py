@@ -6,7 +6,6 @@ from typing import Any, AsyncGenerator, Callable, List, Optional, Tuple, Type, U
 
 from django.db.models import QuerySet
 from django.http import HttpRequest
-from django.shortcuts import aget_list_or_404
 from django.utils.module_loading import import_string
 from typing_extensions import get_args as get_collection_args
 
@@ -109,7 +108,7 @@ class LimitOffsetPagination(AsyncPaginationBase):
         offset = pagination.offset
         limit: int = min(pagination.limit, settings.PAGINATION_MAX_LIMIT)
         return {
-            "items": await aget_list_or_404(queryset[offset : offset + limit]),
+            "items": [obj async for obj in queryset[offset : offset + page_size]],
             "count": await self._aitems_count(queryset),
         }  # noqa: E203
 
@@ -144,7 +143,7 @@ class PageNumberPagination(AsyncPaginationBase):
     ) -> Any:
         offset = (pagination.page - 1) * self.page_size
         return {
-            "items": await aget_list_or_404(queryset[offset: offset + self.page_size]),
+            "items": [obj async for obj in queryset[offset : offset + page_size]],
             "count": await self._aitems_count(queryset),
         }  # noqa: E203
 
