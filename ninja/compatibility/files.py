@@ -1,18 +1,12 @@
-from collections.abc import Awaitable, Callable
-from typing import Any, List, Union
+from typing import Any, List
 
 from asgiref.sync import iscoroutinefunction, sync_to_async
 from django.conf import settings
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest
 from django.utils.decorators import sync_and_async_middleware
-from typing_extensions import TypeAlias
 
 from ninja.conf import settings as ninja_settings
 from ninja.params.models import FileModel
-
-ResponseType: TypeAlias = Union[HttpResponse, Any]
-RequestHandler: TypeAlias = Callable[[HttpRequest], ResponseType]
-AsyncRequestHandler: TypeAlias = Callable[[HttpRequest], Awaitable[ResponseType]]
 
 FIX_MIDDLEWARE_PATH: str = "ninja.compatibility.files.fix_request_files_middleware"
 FIX_METHODS = ninja_settings.FIX_REQUEST_FILES_METHODS
@@ -28,9 +22,7 @@ def need_to_fix_request_files(methods: List[str], params_models: list[Any]) -> b
 
 
 @sync_and_async_middleware
-def fix_request_files_middleware(
-    get_response: Union[RequestHandler, AsyncRequestHandler],
-) -> Union[RequestHandler, AsyncRequestHandler]:
+def fix_request_files_middleware(get_response: Any) -> Any:
     """
     This middleware fixes long historical Django behavior where request.FILES is only
     populated for POST requests.
@@ -38,7 +30,7 @@ def fix_request_files_middleware(
     """
     if iscoroutinefunction(get_response):
 
-        async def async_middleware(request: HttpRequest) -> ResponseType:
+        async def async_middleware(request: HttpRequest) -> Any:
             if (
                 request.method in FIX_METHODS
                 and request.content_type != "application/json"
@@ -55,7 +47,7 @@ def fix_request_files_middleware(
         return async_middleware
     else:
 
-        def sync_middleware(request: HttpRequest) -> ResponseType:
+        def sync_middleware(request: HttpRequest) -> Any:
             if (
                 request.method in FIX_METHODS
                 and request.content_type != "application/json"
