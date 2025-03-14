@@ -108,7 +108,7 @@ class LimitOffsetPagination(AsyncPaginationBase):
         offset = pagination.offset
         limit: int = min(pagination.limit, settings.PAGINATION_MAX_LIMIT)
         return {
-            "items": [obj async for obj in queryset[offset : offset + page_size]],
+            "items": [obj async for obj in queryset[offset : offset + limit]],
             "count": await self._aitems_count(queryset),
         }  # noqa: E203
 
@@ -143,7 +143,7 @@ class PageNumberPagination(AsyncPaginationBase):
     ) -> Any:
         offset = (pagination.page - 1) * self.page_size
         return {
-            "items": [obj async for obj in queryset[offset : offset + page_size]],
+            "items": [obj async for obj in queryset[offset : offset + limit]],
             "count": await self._aitems_count(queryset),
         }  # noqa: E203
 
