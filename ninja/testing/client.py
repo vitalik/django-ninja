@@ -1,3 +1,5 @@
+from collections.abc import AsyncIterable, Iterable
+from inspect import isasyncgen
 from json import dumps as json_dumps
 from json import loads as json_loads
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
@@ -147,10 +149,12 @@ class NinjaClientBase:
         request.META = request_params.pop("META", {"REMOTE_ADDR": "127.0.0.1"})
         request.FILES = request_params.pop("FILES", {})
 
-        request.META.update({
-            f"HTTP_{k.replace('-', '_')}": v
-            for k, v in request_params.pop("headers", {}).items()
-        })
+        request.META.update(
+            {
+                f"HTTP_{k.replace('-', '_')}": v
+                for k, v in request_params.pop("headers", {}).items()
+            }
+        )
 
         request.headers = HttpHeaders(request.META)
 
@@ -204,13 +208,34 @@ class NinjaResponse:
         self.status_code = http_response.status_code
         self.streaming = http_response.streaming
         if self.streaming:
-            self.content = b"".join(http_response.streaming_content)  # type: ignore
+            self.content = self.__get_content(http_response.streaming_content)  # type: ignore
         else:
             self.content = http_response.content  # type: ignore[union-attr]
         self._data = None
 
     def json(self) -> Any:
         return json_loads(self.content)
+
+    def __get_content(
+        self, streaming_content: Union[AsyncIterable[bytes], Iterable[bytes]]
+    ) -> bytes:
+        if isasyncgen(streaming_content):
+            return self.__get_async_content(streaming_content)  # type: ignore
+        else:
+            return self.__get_sync_content(streaming_content)  # type: ignore
+
+    def __get_sync_content(self, streaming_content: Iterable[bytes]) -> bytes:
+        return b"".join(streaming_content)
+
+    async def __get_async_content(
+        self, streaming_content: AsyncIterable[bytes]
+    ) -> bytes:
+        async def async_generator_to_list(
+            async_gen: AsyncIterable[bytes],
+        ) -> List[bytes]:
+            return [item async for item in async_gen]
+
+        return b"".join(await async_generator_to_list(streaming_content))
 
     @property
     def data(self) -> Any:
