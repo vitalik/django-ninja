@@ -1,5 +1,5 @@
 from math import inf
-from typing import Dict, Optional
+from typing import Dict, Optional, Set
 
 from django.conf import settings as django_settings
 from pydantic import BaseModel, Field
@@ -22,6 +22,10 @@ class Settings(BaseModel):
             "anon": "1000/day",
         },
         alias="NINJA_DEFAULT_THROTTLE_RATES",
+    )
+
+    FIX_REQUEST_FILES_METHODS: Set[str] = Field(
+        {"PUT", "PATCH", "DELETE"}, alias="NINJA_FIX_REQUEST_FILES_METHODS"
     )
 
     class Config:

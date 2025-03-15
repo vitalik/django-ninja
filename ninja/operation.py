@@ -18,6 +18,7 @@ from asgiref.sync import async_to_sync
 from django.http import HttpRequest, HttpResponse, HttpResponseNotAllowed
 from django.http.response import HttpResponseBase
 
+from ninja.compatibility.files import FIX_MIDDLEWARE_PATH, need_to_fix_request_files
 from ninja.constants import NOT_SET, NOT_SET_TYPE
 from ninja.errors import (
     AuthenticationError,
@@ -94,6 +95,12 @@ class Operation:
             self.response_models = self._create_response_model_multiple(response)
         else:
             self.response_models = {200: self._create_response_model(response)}
+
+        if need_to_fix_request_files(methods, self.models):
+            raise ConfigError(
+                f"Router '{path}' has method(s) {methods}  that require fixing request.FILES. "
+                f"Please add '{FIX_MIDDLEWARE_PATH}' to settings.MIDDLEWARE"
+            )
 
         self.operation_id = operation_id
         self.summary = summary or self.view_func.__name__.title().replace("_", " ")
