@@ -116,12 +116,23 @@ class LimitOffsetPagination(AsyncPaginationBase):
 class PageNumberPagination(AsyncPaginationBase):
     class Input(Schema):
         page: int = Field(1, ge=1)
+        page_size: Optional[int] = Field(None, ge=1)
 
     def __init__(
-        self, page_size: int = settings.PAGINATION_PER_PAGE, **kwargs: Any
+        self,
+        page_size: int = settings.PAGINATION_PER_PAGE,
+        max_page_size: int = settings.PAGINATION_MAX_PER_PAGE_SIZE,
+        **kwargs: Any,
     ) -> None:
         self.page_size = page_size
+        self.max_page_size = max_page_size
         super().__init__(**kwargs)
+
+    def _get_page_size(self, requested_page_size: Optional[int]) -> int:
+        if requested_page_size is None:
+            return self.page_size
+
+        return min(requested_page_size, self.max_page_size)
 
     def paginate_queryset(
         self,
@@ -129,9 +140,10 @@ class PageNumberPagination(AsyncPaginationBase):
         pagination: Input,
         **params: Any,
     ) -> Any:
-        offset = (pagination.page - 1) * self.page_size
+        page_size = self._get_page_size(pagination.page_size)
+        offset = (pagination.page - 1) * page_size
         return {
-            "items": queryset[offset : offset + self.page_size],
+            "items": queryset[offset : offset + page_size],
             "count": self._items_count(queryset),
         }  # noqa: E203
 
@@ -141,9 +153,10 @@ class PageNumberPagination(AsyncPaginationBase):
         pagination: Input,
         **params: Any,
     ) -> Any:
-        offset = (pagination.page - 1) * self.page_size
+        page_size = self._get_page_size(pagination.page_size)
+        offset = (pagination.page - 1) * page_size
         return {
-            "items": queryset[offset : offset + self.page_size],
+            "items": queryset[offset : offset + page_size],
             "count": await self._aitems_count(queryset),
         }  # noqa: E203
 
