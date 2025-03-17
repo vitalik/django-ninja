@@ -260,7 +260,16 @@ def test_case4():
                 "type": "integer",
             },
             "required": False,
-        }
+        },
+        {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+                "anyOf": [{"minimum": 1, "type": "integer"}, {"type": "null"}],
+                "title": "Page Size",
+            },
+            "required": False,
+        },
     ]
 
 
@@ -281,14 +290,23 @@ def test_case5_no_kwargs():
                 "type": "integer",
             },
             "required": False,
-        }
+        },
+        {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+                "anyOf": [{"minimum": 1, "type": "integer"}, {"type": "null"}],
+                "title": "Page Size",
+            },
+            "required": False,
+        },
     ]
 
 
 def test_case6_pass_param_kwargs():
     page = 11
     response = client.get(f"/items_6?page={page}").json()
-    assert response == {"items": [{"page": 11}], "count": 101}
+    assert response == {"items": [{"page": 11, "page_size": None}], "count": 101}
 
     schema = api.get_openapi_schema()["paths"]["/api/items_6"]["get"]
 
@@ -303,7 +321,16 @@ def test_case6_pass_param_kwargs():
                 "type": "integer",
             },
             "required": False,
-        }
+        },
+        {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+                "anyOf": [{"minimum": 1, "type": "integer"}, {"type": "null"}],
+                "title": "Page Size",
+            },
+            "required": False,
+        },
     ]
 
 
