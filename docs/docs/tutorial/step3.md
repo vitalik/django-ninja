@@ -6,7 +6,9 @@
 
 We'll create a third operation that will return information about the current Django user.
 
-```Python
+```python
+from ninja import Schema
+
 class UserSchema(Schema):
     username: str
     is_authenticated: bool
@@ -26,7 +28,7 @@ This will convert the Django `User` object into a dictionary of only the defined
 
 Let's return a different response if the current user is not authenticated.
 
-```Python hl_lines="2-5 7-8 10 12-13"
+```python hl_lines="2-5 7-8 10 12-13"
 class UserSchema(Schema):
     username: str
     email: str

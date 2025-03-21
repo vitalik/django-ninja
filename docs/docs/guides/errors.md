@@ -8,14 +8,14 @@ Let's say you are making API that depends on some external service that is desig
 
 To achieve that you need:
 
- - 1) create some exception (or use existing one)
- - 2) use api.exception_handler decorator
+1. create some exception (or use existing one)
+2. use api.exception_handler decorator
 
 
 Example:
 
 
-```Python hl_lines="9 10"
+```python hl_lines="9 10"
 api = NinjaAPI()
 
 class ServiceUnavailableError(Exception):
@@ -52,12 +52,16 @@ function must return http response
 
 ## Override the default exception handlers
 
-By default, **Django Ninja** initialized the following exception handlers:
-
+**Django Ninja** registers default exception handlers for the types shown below.
+You can register your own handlers with `@api.exception_handler` to override the default handlers.
 
 #### `ninja.errors.AuthenticationError`
 
 Raised when authentication data is not valid
+
+#### `ninja.errors.AuthorizationError`
+
+Raised when authentication data is valid, but doesn't allow you to access the resource
 
 #### `ninja.errors.ValidationError`
 
@@ -81,12 +85,19 @@ Default behavior
   - **else** - default django exception handler mechanism is used (error logging, email to ADMINS)
 
 
-### Override default handler
+## Customizing request validation errors
 
-If you need to change default output for validation errors - override ValidationError exception handler:
+Requests that fail validation raise `ninja.errors.ValidationError` (not to be confused with `pydantic.ValidationError`).
+`ValidationError`s have a default exception handler that returns a 422 (Unprocessable Content) JSON response of the form:
+```json
+{
+    "detail": [ ... ]
+}
+```
 
+You can change this behavior by overriding the default handler for `ValidationError`s:
 
-```Python hl_lines="1 4"
+```python hl_lines="1 4"
 from ninja.errors import ValidationError
 ...
 
@@ -95,13 +106,43 @@ def validation_errors(request, exc):
     return HttpResponse("Invalid input", status=422)
 ```
 
+If you need even more control over validation errors (for example, if you need to reference the schema associated with
+the model that failed validation), you can supply your own `validation_error_from_error_contexts` in a `NinjaAPI` subclass:
+
+```python hl_lines="4"
+from ninja.errors import ValidationError, ValidationErrorContext
+from typing import Any, Dict, List
+
+class CustomNinjaAPI(NinjaAPI):
+    def validation_error_from_error_contexts(
+        self, error_contexts: List[ValidationErrorContext],
+    ) -> ValidationError:
+        custom_error_infos: List[Dict[str, Any]] = []
+        for context in error_contexts:
+            model = context.model
+            pydantic_schema = model.__pydantic_core_schema__
+            param_source = model.__ninja_param_source__
+            for e in context.pydantic_validation_error.errors(
+                include_url=False, include_context=False, include_input=False
+            ):
+                custom_error_info = {
+                # TODO: use `e`, `param_source`, and `pydantic_schema` as desired
+                }
+                custom_error_infos.append(custom_error_info)
+        return ValidationError(custom_error_infos)
+
+api = CustomNinjaAPI()
+```
+
+Now each `ValidationError` raised during request validation will contain data from your `validation_error_from_error_contexts`.
+
 
 ## Throwing HTTP responses with exceptions
 
 As an alternative to custom exceptions and writing handlers for it - you can as well throw http exception that will lead to returning a http response with desired code
 
 
-```Python
+```python
 from ninja.errors import HttpError
 
 @api.get("/some/resource")

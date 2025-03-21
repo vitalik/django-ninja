@@ -1,33 +1,21 @@
 import itertools
 import re
-import warnings
 from http.client import responses
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Dict,
-    Generator,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Set, Tuple
 
-from pydantic import BaseModel
-from pydantic.schema import model_schema
+from django.utils.termcolors import make_style
 
 from ninja.constants import NOT_SET
 from ninja.operation import Operation
-from ninja.params_models import TModel, TModels
+from ninja.params.models import TModel, TModels
+from ninja.schema import NinjaGenerateJsonSchema
 from ninja.types import DictStrAny
 from ninja.utils import normalize_path
 
 if TYPE_CHECKING:
     from ninja import NinjaAPI  # pragma: no cover
 
-REF_PREFIX: str = "#/components/schemas/"
+REF_TEMPLATE: str = "#/components/schemas/{model}"
 
 BODY_CONTENT_TYPES: Dict[str, str] = {
     "body": "application/json",
@@ -41,6 +29,9 @@ def get_schema(api: "NinjaAPI", path_prefix: str = "") -> "OpenAPISchema":
     return openapi
 
 
+bold_red_style = make_style(opts=("bold",), fg="red")
+
+
 class OpenAPISchema(dict):
     def __init__(self, api: "NinjaAPI", path_prefix: str) -> None:
         self.api = api
@@ -48,22 +39,25 @@ class OpenAPISchema(dict):
         self.schemas: DictStrAny = {}
         self.securitySchemes: DictStrAny = {}
         self.all_operation_ids: Set = set()
-        super().__init__(
-            [
-                ("openapi", "3.0.2"),
-                (
-                    "info",
-                    {
-                        "title": api.title,
-                        "version": api.version,
-                        "description": api.description,
-                    },
-                ),
-                ("paths", self.get_paths()),
-                ("components", self.get_components()),
-                ("servers", api.servers),
-            ]
-        )
+        extra_info = api.openapi_extra.get("info", {})
+        super().__init__([
+            ("openapi", "3.1.0"),
+            (
+                "info",
+                {
+                    "title": api.title,
+                    "version": api.version,
+                    "description": api.description,
+                    **extra_info,
+                },
+            ),
+            ("paths", self.get_paths()),
+            ("components", self.get_components()),
+            ("servers", api.servers),
+        ])
+        for k, v in api.openapi_extra.items():
+            if k not in self:
+                self[k] = v
 
     def get_paths(self) -> DictStrAny:
         result: DictStrAny = {}
@@ -111,8 +105,10 @@ class OpenAPISchema(dict):
     def operation_details(self, operation: Operation) -> DictStrAny:
         op_id = operation.operation_id or self.api.get_openapi_operation_id(operation)
         if op_id in self.all_operation_ids:
-            warnings.warn(
-                f'operation_id "{op_id}" is already used (func: {operation.view_func})'
+            print(
+                bold_red_style(
+                    f'Warning: operation_id "{op_id}" is already used (Try giving a different name to: {operation.view_func.__module__}.{operation.view_func.__name__})'
+                )
             )
         self.all_operation_ids.add(op_id)
         result = {
@@ -147,18 +143,23 @@ class OpenAPISchema(dict):
     def operation_parameters(self, operation: Operation) -> List[DictStrAny]:
         result = []
         for model in operation.models:
-            if model._param_source not in BODY_CONTENT_TYPES:
+            if model.__ninja_param_source__ not in BODY_CONTENT_TYPES:
                 result.extend(self._extract_parameters(model))
         return result
 
-    @classmethod
-    def _extract_parameters(cls, model: TModel) -> List[DictStrAny]:
+    def _extract_parameters(self, model: TModel) -> List[DictStrAny]:
         result = []
 
-        schema = model_schema(cast(Type[BaseModel], model), ref_prefix=REF_PREFIX)
+        schema = model.model_json_schema(
+            ref_template=REF_TEMPLATE,
+            schema_generator=NinjaGenerateJsonSchema,
+        )
 
         required = set(schema.get("required", []))
         properties = schema["properties"]
+
+        if "$defs" in schema:
+            self.add_schema_definitions(schema["$defs"])
 
         for name, details in properties.items():
             is_required = name in required
@@ -166,13 +167,13 @@ class OpenAPISchema(dict):
             p_schema: DictStrAny
             p_required: bool
             for p_name, p_schema, p_required in flatten_properties(
-                name, details, is_required, schema.get("definitions", {})
+                name, details, is_required, schema.get("$defs", {})
             ):
                 if not p_schema.get("include_in_schema", True):
                     continue
 
                 param = {
-                    "in": model._param_source,
+                    "in": model.__ninja_param_source__,
                     "name": p_name,
                     "schema": p_schema,
                     "required": p_required,
@@ -210,16 +211,18 @@ class OpenAPISchema(dict):
         by_alias: bool = True,
         remove_level: bool = True,
     ) -> Tuple[DictStrAny, bool]:
-        if hasattr(model, "_flatten_map"):
+        if hasattr(model, "__ninja_flatten_map__"):
             schema = self._flatten_schema(model)
         else:
-            schema = model_schema(
-                cast(Type[BaseModel], model), ref_prefix=REF_PREFIX, by_alias=by_alias
-            )
+            schema = model.model_json_schema(
+                ref_template=REF_TEMPLATE,
+                by_alias=by_alias,
+                schema_generator=NinjaGenerateJsonSchema,
+            ).copy()
 
         # move Schemas from definitions
-        if schema.get("definitions"):
-            self.add_schema_definitions(schema.pop("definitions"))
+        if schema.get("$defs"):
+            self.add_schema_definitions(schema.pop("$defs"))
 
         if remove_level and len(schema["properties"]) == 1:
             name, details = list(schema["properties"].items())[0]
@@ -237,26 +240,28 @@ class OpenAPISchema(dict):
         content_type = BODY_CONTENT_TYPES["file"]
 
         # get the various schemas
-        result = merge_schemas(
-            [
-                self._create_schema_from_model(model, remove_level=False)[0]
-                for model in models
-            ]
-        )
+        result = merge_schemas([
+            self._create_schema_from_model(model, remove_level=False)[0]
+            for model in models
+        ])
         result["title"] = "MultiPartBodyParams"
 
         return result, content_type
 
     def request_body(self, operation: Operation) -> DictStrAny:
-        models = [m for m in operation.models if m._param_source in BODY_CONTENT_TYPES]
+        models = [
+            m
+            for m in operation.models
+            if m.__ninja_param_source__ in BODY_CONTENT_TYPES
+        ]
         if not models:
             return {}
 
         if len(models) == 1:
             model = models[0]
-            content_type = BODY_CONTENT_TYPES[model._param_source]
+            content_type = BODY_CONTENT_TYPES[model.__ninja_param_source__]
             schema, required = self._create_schema_from_model(
-                model, remove_level=model._param_source == "body"
+                model, remove_level=model.__ninja_param_source__ == "body"
             )
         else:
             schema, content_type = self._create_multipart_schema_from_models(models)
@@ -298,7 +303,7 @@ class OpenAPISchema(dict):
                 scopes: List[DictStrAny] = []  # TODO: scopes
                 name = auth.__class__.__name__
                 result.append({name: scopes})  # TODO: check if unique
-                self.securitySchemes[name] = auth.openapi_security_schema  # type: ignore
+                self.securitySchemes[name] = auth.openapi_security_schema
         return result
 
     def get_components(self) -> DictStrAny:
@@ -331,7 +336,8 @@ def flatten_properties(
         if len(prop_details["allOf"]) == 1 and "enum" in prop_details["allOf"][0]:
             # is_required = "default" not in prop_details
             yield prop_name, prop_details, prop_required
-        else:
+        else:  # pragma: no cover
+            # TODO: this code was for pydanitc 1.7+ ... <2.9 - check if this is still needed
             for item in prop_details["allOf"]:
                 yield from flatten_properties("", item, True, definitions)
 

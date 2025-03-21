@@ -1,11 +1,27 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <link rel="shortcut icon" href="https://django-ninja.rest-framework.com/img/favicon.png">
+    <link rel="shortcut icon" href="https://django-ninja.dev/img/favicon.png">
     <title>{{ api.title }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        body {
+            margin: 0px;
+        }
+    </style>
 </head>
 <body>
-    <redoc spec-url='{{ openapi_json_url }}'></redoc>
+    <div id="redoc-ui"></div>
+
     <script src="https://cdn.jsdelivr.net/npm/redoc@2.0.0/bundles/redoc.standalone.js"></script>
+    <script type="application/json" id="redoc-settings">
+        {{ redoc_settings | safe }}
+    </script>
+    <script>
+        const configJson = document.getElementById("redoc-settings").textContent;
+        const configObject = JSON.parse(configJson);
+        const element = document.getElementById('redoc-ui');
+        Redoc.init('{{ openapi_json_url }}', configObject, element);
+    </script>
 </body>
 </html>

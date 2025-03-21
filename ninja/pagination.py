@@ -1,19 +1,25 @@
 import inspect
 from abc import ABC, abstractmethod
 from functools import partial, wraps
-from typing import Any, Callable, List, Optional, Tuple, Type
+from math import inf
+from typing import Any, AsyncGenerator, Callable, List, Optional, Tuple, Type, Union
 
 from django.db.models import QuerySet
+from django.http import HttpRequest
 from django.utils.module_loading import import_string
+from typing_extensions import get_args as get_collection_args
 
 from ninja import Field, Query, Router, Schema
-from ninja.compatibility.util import get_args as get_collection_args
 from ninja.conf import settings
 from ninja.constants import NOT_SET
 from ninja.errors import ConfigError
 from ninja.operation import Operation
 from ninja.signature.details import is_collection_type
-from ninja.types import DictStrAny
+from ninja.utils import (
+    contribute_operation_args,
+    contribute_operation_callback,
+    is_async_callable,
+)
 
 
 class PaginationBase(ABC):
@@ -36,7 +42,7 @@ class PaginationBase(ABC):
         self,
         queryset: QuerySet,
         pagination: Any,
-        **params: DictStrAny,
+        **params: Any,
     ) -> Any:
         pass  # pragma: no cover
 
@@ -52,26 +58,62 @@ class PaginationBase(ABC):
             return len(queryset)
 
 
-class LimitOffsetPagination(PaginationBase):
+class AsyncPaginationBase(PaginationBase):
+    @abstractmethod
+    async def apaginate_queryset(
+        self,
+        queryset: QuerySet,
+        pagination: Any,
+        **params: Any,
+    ) -> Any:
+        pass  # pragma: no cover
+
+    async def _aitems_count(self, queryset: QuerySet) -> int:
+        try:
+            return await queryset.all().acount()
+        except AttributeError:
+            return len(queryset)
+
+
+class LimitOffsetPagination(AsyncPaginationBase):
     class Input(Schema):
-        limit: int = Field(settings.PAGINATION_PER_PAGE, ge=1)
+        limit: int = Field(
+            settings.PAGINATION_PER_PAGE,
+            ge=1,
+            le=settings.PAGINATION_MAX_LIMIT
+            if settings.PAGINATION_MAX_LIMIT != inf
+            else None,
+        )
         offset: int = Field(0, ge=0)
 
     def paginate_queryset(
         self,
         queryset: QuerySet,
         pagination: Input,
-        **params: DictStrAny,
+        **params: Any,
     ) -> Any:
         offset = pagination.offset
-        limit: int = pagination.limit
+        limit: int = min(pagination.limit, settings.PAGINATION_MAX_LIMIT)
         return {
             "items": queryset[offset : offset + limit],
             "count": self._items_count(queryset),
         }  # noqa: E203
 
+    async def apaginate_queryset(
+        self,
+        queryset: QuerySet,
+        pagination: Input,
+        **params: Any,
+    ) -> Any:
+        offset = pagination.offset
+        limit: int = min(pagination.limit, settings.PAGINATION_MAX_LIMIT)
+        return {
+            "items": queryset[offset : offset + limit],
+            "count": await self._aitems_count(queryset),
+        }  # noqa: E203
 
-class PageNumberPagination(PaginationBase):
+
+class PageNumberPagination(AsyncPaginationBase):
     class Input(Schema):
         page: int = Field(1, ge=1)
 
@@ -85,7 +127,7 @@ class PageNumberPagination(PaginationBase):
         self,
         queryset: QuerySet,
         pagination: Input,
-        **params: DictStrAny,
+        **params: Any,
     ) -> Any:
         offset = (pagination.page - 1) * self.page_size
         return {
@@ -93,19 +135,29 @@ class PageNumberPagination(PaginationBase):
             "count": self._items_count(queryset),
         }  # noqa: E203
 
+    async def apaginate_queryset(
+        self,
+        queryset: QuerySet,
+        pagination: Input,
+        **params: Any,
+    ) -> Any:
+        offset = (pagination.page - 1) * self.page_size
+        return {
+            "items": queryset[offset : offset + self.page_size],
+            "count": await self._aitems_count(queryset),
+        }  # noqa: E203
 
-def paginate(
-    func_or_pgn_class: Any = NOT_SET, **paginator_params: DictStrAny
-) -> Callable:
+
+def paginate(func_or_pgn_class: Any = NOT_SET, **paginator_params: Any) -> Callable:
     """
     @api.get(...
-    @paginage
+    @paginate
     def my_view(request):
 
     or
 
     @api.get(...
-    @paginage(PageNumberPagination)
+    @paginate(PageNumberPagination)
     def my_view(request):
 
     """
@@ -113,7 +165,9 @@ def paginate(
     isfunction = inspect.isfunction(func_or_pgn_class)
     isnotset = func_or_pgn_class == NOT_SET
 
-    pagination_class: Type[PaginationBase] = import_string(settings.PAGINATION_CLASS)
+    pagination_class: Type[Union[PaginationBase, AsyncPaginationBase]] = import_string(
+        settings.PAGINATION_CLASS
+    )
 
     if isfunction:
         return _inject_pagination(func_or_pgn_class, pagination_class)
@@ -129,42 +183,68 @@ def paginate(
 
 def _inject_pagination(
     func: Callable,
-    paginator_class: Type[PaginationBase],
+    paginator_class: Type[Union[PaginationBase, AsyncPaginationBase]],
     **paginator_params: Any,
 ) -> Callable:
-    paginator: PaginationBase = paginator_class(**paginator_params)
+    paginator = paginator_class(**paginator_params)
+    if is_async_callable(func):
+        if not hasattr(paginator, "apaginate_queryset"):
+            raise ConfigError("Pagination class not configured for async requests")
 
-    @wraps(func)
-    def view_with_pagination(*args: Tuple[Any], **kwargs: DictStrAny) -> Any:
-        pagination_params = kwargs.pop("ninja_pagination")
-        if paginator.pass_parameter:
-            kwargs[paginator.pass_parameter] = pagination_params
+        @wraps(func)
+        async def view_with_pagination(request: HttpRequest, **kwargs: Any) -> Any:
+            pagination_params = kwargs.pop("ninja_pagination")
+            if paginator.pass_parameter:
+                kwargs[paginator.pass_parameter] = pagination_params
 
-        items = func(*args, **kwargs)
+            items = await func(request, **kwargs)
 
-        result = paginator.paginate_queryset(
-            items, pagination=pagination_params, **kwargs
-        )
-        if paginator.Output:
-            result[paginator.items_attribute] = list(result[paginator.items_attribute])
-            # ^ forcing queryset evaluation #TODO: check why pydantic did not do it here
-        return result
+            result = await paginator.apaginate_queryset(
+                items, pagination=pagination_params, request=request, **kwargs
+            )
 
-    view_with_pagination._ninja_contribute_args = [  # type: ignore
-        (
-            "ninja_pagination",
-            paginator.Input,
-            paginator.InputSource,
-        ),
-    ]
+            async def evaluate(results: Union[List, QuerySet]) -> AsyncGenerator:
+                for result in results:
+                    yield result
 
-    # def contribute_to_operation(op: Operation) -> None:
+            if paginator.Output:  # type: ignore
+                result[paginator.items_attribute] = [
+                    result
+                    async for result in evaluate(result[paginator.items_attribute])
+                ]
+            return result
 
-    #     make_response_paginated(schema, paginator, op)
+    else:
 
-    if paginator.Output:
-        view_with_pagination._ninja_contribute_to_operation = partial(  # type: ignore
-            make_response_paginated, paginator
+        @wraps(func)
+        def view_with_pagination(request: HttpRequest, **kwargs: Any) -> Any:
+            pagination_params = kwargs.pop("ninja_pagination")
+            if paginator.pass_parameter:
+                kwargs[paginator.pass_parameter] = pagination_params
+
+            items = func(request, **kwargs)
+
+            result = paginator.paginate_queryset(
+                items, pagination=pagination_params, request=request, **kwargs
+            )
+            if paginator.Output:  # type: ignore
+                result[paginator.items_attribute] = list(
+                    result[paginator.items_attribute]
+                )
+                # ^ forcing queryset evaluation #TODO: check why pydantic did not do it here
+            return result
+
+    contribute_operation_args(
+        view_with_pagination,
+        "ninja_pagination",
+        paginator.Input,
+        paginator.InputSource,
+    )
+
+    if paginator.Output:  # type: ignore
+        contribute_operation_callback(
+            view_with_pagination,
+            partial(make_response_paginated, paginator),
         )
 
     return view_with_pagination
@@ -191,7 +271,7 @@ def make_response_paginated(paginator: PaginationBase, op: Operation) -> None:
         response=List[Some]
     will be changed to:
         response=PagedSome
-    where Paged some willbe a subclass of paginator.Output:
+    where Paged some will be a subclass of paginator.Output:
         class PagedSome:
             items: List[Some]
             count: int
@@ -202,8 +282,7 @@ def make_response_paginated(paginator: PaginationBase, op: Operation) -> None:
     try:
         new_name = f"Paged{item_schema.__name__}"
     except AttributeError:
-        new_name = f"Paged{str(item_schema).replace('.', '_')}"  # typing.Any case
-
+        new_name = f"Paged{str(item_schema).replace('.', '_')}"  # typing.Any case, only for Python < 3.11
     new_schema = type(
         new_name,
         (paginator.Output,),
@@ -219,6 +298,10 @@ def make_response_paginated(paginator: PaginationBase, op: Operation) -> None:
 
 
 def _find_collection_response(op: Operation) -> Tuple[int, Any]:
+    """
+    Walks through defined operation responses and finds the first
+    that is of a collection type (e.g. List[SomeSchema])
+    """
     for code, resp_model in op.response_models.items():
         if resp_model is None or resp_model is NOT_SET:
             continue

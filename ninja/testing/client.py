@@ -1,14 +1,15 @@
-from json import dumps as json_dumps, loads as json_loads
+from json import dumps as json_dumps
+from json import loads as json_loads
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from unittest.mock import Mock
 from urllib.parse import urljoin
 
-import django
-from django.contrib.auth.models import AnonymousUser
-from django.http import HttpRequest, QueryDict, StreamingHttpResponse
+from django.http import QueryDict, StreamingHttpResponse
+from django.http.request import HttpHeaders, HttpRequest
 
 from ninja import NinjaAPI, Router
-from ninja.responses import NinjaJSONEncoder, Response as HttpResponse
+from ninja.responses import NinjaJSONEncoder
+from ninja.responses import Response as HttpResponse
 
 
 def build_absolute_uri(location: Optional[str] = None) -> str:
@@ -25,31 +26,54 @@ def build_absolute_uri(location: Optional[str] = None) -> str:
 class NinjaClientBase:
     __test__ = False  # <- skip pytest
 
-    def __init__(self, router_or_app: Union[NinjaAPI, Router]) -> None:
+    def __init__(
+        self,
+        router_or_app: Union[NinjaAPI, Router],
+        headers: Optional[Dict[str, str]] = None,
+        COOKIES: Optional[Dict[str, str]] = None,
+    ) -> None:
+        self.headers = headers or {}
+        self.cookies = COOKIES or {}
         self.router_or_app = router_or_app
 
     def get(
-        self, path: str, data: Dict = {}, **request_params: Dict
+        self, path: str, data: Optional[Dict] = None, **request_params: Any
     ) -> "NinjaResponse":
         return self.request("GET", path, data, **request_params)
 
     def post(
-        self, path: str, data: Dict = {}, json: Any = None, **request_params: Any
+        self,
+        path: str,
+        data: Optional[Dict] = None,
+        json: Any = None,
+        **request_params: Any,
     ) -> "NinjaResponse":
         return self.request("POST", path, data, json, **request_params)
 
     def patch(
-        self, path: str, data: Dict = {}, json: Any = None, **request_params: Any
+        self,
+        path: str,
+        data: Optional[Dict] = None,
+        json: Any = None,
+        **request_params: Any,
     ) -> "NinjaResponse":
         return self.request("PATCH", path, data, json, **request_params)
 
     def put(
-        self, path: str, data: Dict = {}, json: Any = None, **request_params: Any
+        self,
+        path: str,
+        data: Optional[Dict] = None,
+        json: Any = None,
+        **request_params: Any,
     ) -> "NinjaResponse":
         return self.request("PUT", path, data, json, **request_params)
 
     def delete(
-        self, path: str, data: Dict = {}, json: Any = None, **request_params: Any
+        self,
+        path: str,
+        data: Optional[Dict] = None,
+        json: Any = None,
+        **request_params: Any,
     ) -> "NinjaResponse":
         return self.request("DELETE", path, data, json, **request_params)
 
@@ -57,12 +81,24 @@ class NinjaClientBase:
         self,
         method: str,
         path: str,
-        data: Dict = {},
+        data: Optional[Dict] = None,
         json: Any = None,
         **request_params: Any,
     ) -> "NinjaResponse":
         if json is not None:
             request_params["body"] = json_dumps(json, cls=NinjaJSONEncoder)
+        if data is None:
+            data = {}
+        if self.headers or request_params.get("headers"):
+            request_params["headers"] = {
+                **self.headers,
+                **request_params.get("headers", {}),
+            }
+        if self.cookies or request_params.get("COOKIES"):
+            request_params["COOKIES"] = {
+                **self.cookies,
+                **request_params.get("COOKIES", {}),
+            }
         func, request, kwargs = self._resolve(method, path, data, request_params)
         return self._call(func, request, kwargs)  # type: ignore
 
@@ -101,24 +137,22 @@ class NinjaClientBase:
         request.is_secure.return_value = False
         request.build_absolute_uri = build_absolute_uri
 
+        request.auth = None
+        request.user = Mock()
         if "user" not in request_params:
-            request_params["user"] = AnonymousUser()
+            request.user.is_authenticated = False
+            request.user.is_staff = False
+            request.user.is_superuser = False
 
-        request.META = request_params.pop("META", {})
+        request.META = request_params.pop("META", {"REMOTE_ADDR": "127.0.0.1"})
         request.FILES = request_params.pop("FILES", {})
 
-        request.META.update(
-            dict(
-                [
-                    (f"HTTP_{k.replace('-', '_')}", v)
-                    for k, v in request_params.pop("headers", {}).items()
-                ]
-            )
-        )
-        if django.VERSION[:2] > (2, 1):
-            from ninja.compatibility.request import HttpHeaders
+        request.META.update({
+            f"HTTP_{k.replace('-', '_')}": v
+            for k, v in request_params.pop("headers", {}).items()
+        })
 
-            request.headers = HttpHeaders(request.META)  # type: ignore
+        request.headers = HttpHeaders(request.META)
 
         if isinstance(data, QueryDict):
             request.POST = data
@@ -134,7 +168,18 @@ class NinjaClientBase:
         if "?" in path:
             request.GET = QueryDict(path.split("?")[1])
         else:
-            request.GET = QueryDict()
+            query_params = request_params.pop("query_params", None)
+            if query_params:
+                query_dict = QueryDict(mutable=True)
+                for k, v in query_params.items():
+                    if isinstance(v, list):
+                        for item in v:
+                            query_dict.appendlist(k, item)
+                    else:
+                        query_dict[k] = v
+                request.GET = query_dict
+            else:
+                request.GET = QueryDict()
 
         for k, v in request_params.items():
             setattr(request, k, v)
@@ -155,7 +200,6 @@ class TestAsyncClient(NinjaClientBase):
 
 class NinjaResponse:
     def __init__(self, http_response: Union[HttpResponse, StreamingHttpResponse]):
-        # TODO: what's the type here ?
         self._response = http_response
         self.status_code = http_response.status_code
         self.streaming = http_response.streaming
@@ -163,9 +207,16 @@ class NinjaResponse:
             self.content = b"".join(http_response.streaming_content)  # type: ignore
         else:
             self.content = http_response.content  # type: ignore[union-attr]
+        self._data = None
 
     def json(self) -> Any:
         return json_loads(self.content)
+
+    @property
+    def data(self) -> Any:
+        if self._data is None:  # Recomputes if json() is None but cheap then
+            self._data = self.json()
+        return self._data
 
     def __getitem__(self, key: str) -> Any:
         return self._response[key]

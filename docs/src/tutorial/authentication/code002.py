@@ -3,6 +3,6 @@ def ip_whitelist(request):
         return "8.8.8.8"
 
 
-@api.get("/ipwhiltelist", auth=ip_whitelist)
-def ipwhiltelist(request):
+@api.get("/ipwhitelist", auth=ip_whitelist)
+def ipwhitelist(request):
     return f"Authenticated client, IP = {request.auth}"

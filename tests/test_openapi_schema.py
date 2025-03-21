@@ -37,7 +37,7 @@ class Response(Schema):
 
     class Config(Schema.Config):
         alias_generator = to_camel
-        allow_population_by_field_name = True
+        populate_by_name = True
 
 
 @api.post("/test", response=Response)
@@ -442,13 +442,13 @@ def test_schema_form(schema):
         "content": {
             "application/x-www-form-urlencoded": {
                 "schema": {
-                    "properties": {
-                        "f": {"title": "F", "type": "number"},
-                        "i": {"title": "I", "type": "integer"},
-                    },
-                    "required": ["i", "f"],
                     "title": "FormParams",
                     "type": "object",
+                    "properties": {
+                        "i": {"title": "I", "type": "integer"},
+                        "f": {"title": "F", "type": "number"},
+                    },
+                    "required": ["i", "f"],
                 }
             }
         },
@@ -532,13 +532,13 @@ def test_schema_form_file(schema):
             "multipart/form-data": {
                 "schema": {
                     "properties": {
-                        "f": {"title": "F", "type": "number"},
                         "files": {
                             "items": {"format": "binary", "type": "string"},
                             "title": "Files",
                             "type": "array",
                         },
                         "i": {"title": "I", "type": "integer"},
+                        "f": {"title": "F", "type": "number"},
                     },
                     "required": ["files", "i", "f"],
                     "title": "MultiPartBodyParams",
@@ -792,7 +792,7 @@ def test_get_openapi_urls():
         get_openapi_urls(api)
 
 
-def test_unique_operation_ids():
+def test_unique_operation_ids(capsys):
     api = NinjaAPI()
 
     @api.get("/1")
@@ -803,9 +803,9 @@ def test_unique_operation_ids():
     def same_name(request):  # noqa: F811
         pass
 
-    match = 'operation_id "test_openapi_schema_same_name" is already used'
-    with pytest.warns(UserWarning, match=match):
-        api.get_openapi_schema()
+    api.get_openapi_schema()
+    captured = capsys.readouterr()
+    assert '"test_openapi_schema_same_name" is already used ' in captured.out
 
 
 def test_docs_decorator():

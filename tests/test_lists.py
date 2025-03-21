@@ -4,7 +4,7 @@ import pytest
 from django.http import QueryDict  # noqa
 from pydantic import BaseModel, Field, conlist
 
-from ninja import Form, Query, Router, Schema
+from ninja import Body, Form, Query, Router, Schema
 from ninja.testing import TestClient
 
 router = Router()
@@ -47,7 +47,7 @@ def listview3(request, body: List[BodyModel]):
 
 
 @router.post("/list-default")
-def listviewdefault(request, body: List[int] = [1]):
+def listviewdefault(request, body: List[int] = [1]):  # noqa: B006
     # By default List[anything] is treated for body
     return {
         "body": body,
@@ -70,7 +70,7 @@ def listview4(
 
 
 class ConListSchema(Schema):
-    query: conlist(int, min_items=1)
+    query: conlist(int, min_length=1)
 
 
 class Data(Schema):
@@ -80,7 +80,7 @@ class Data(Schema):
 @router.post("/list5")
 def listview5(
     request,
-    body: conlist(int, min_items=1),
+    body: conlist(int, min_length=1) = Body(...),
     a_query: Data = Query(...),
 ):
     return {
@@ -154,7 +154,7 @@ client = TestClient(router)
             {},
             {"query": [1, 2]},
         ),
-    ]
+    ],
     # fmt: on
 )
 def test_list(path, kwargs, expected_response):

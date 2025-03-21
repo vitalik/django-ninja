@@ -21,7 +21,7 @@ class SelfReference(BaseModel):
     sibling: "SelfReference" = None
 
 
-SelfReference.update_forward_refs()
+SelfReference.model_rebuild()
 
 
 router = Router()
@@ -90,7 +90,12 @@ client = TestClient(router)
         ),
         (
             "/test2",
-            dict(json={"some": {"i": "1", "s": "foo", "f": "1.1"}, "other": {"x": 1, "y": 2}}),
+            dict(
+                json={
+                    "some": {"i": "1", "s": "foo", "f": "1.1"},
+                    "other": {"x": 1, "y": 2},
+                }
+            ),
             {"some": {"i": 1, "s": "foo", "f": 1.1}, "other": {"x": 1, "y": 2}},
         ),
         (

@@ -1,20 +1,17 @@
 from ninja import Form, Schema
-from pydantic.fields import ModelField
-from typing import Generic, TypeVar
+from typing import Annotated, TypeVar
+from pydantic import WrapValidator
+from pydantic_core import PydanticUseDefault
 
-PydanticField = TypeVar("PydanticField")
+
+def _empty_str_to_default(v, handler, info):
+    if isinstance(v, str) and v == '':
+        raise PydanticUseDefault
+    return handler(v)
 
 
-class EmptyStrToDefault(Generic[PydanticField]):
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
-
-    @classmethod
-    def validate(cls, value: PydanticField, field: ModelField) -> PydanticField:
-        if value == "":
-            return field.default
-        return value
+T = TypeVar('T')
+EmptyStrToDefault = Annotated[T, WrapValidator(_empty_str_to_default)]
 
 
 class Item(Schema):
@@ -26,5 +23,5 @@ class Item(Schema):
 
 
 @api.post("/items-blank-default")
-def update(request, item: Item=Form(...)):
+def update(request, item: Form[Item]):
     return item.dict()

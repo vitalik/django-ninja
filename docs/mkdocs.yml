@@ -1,19 +1,35 @@
 site_name: Django Ninja
 site_description: Django Ninja - Django REST framework with high performance, easy to learn, fast to code.
-site_url: https://django-ninja.rest-framework.com
+site_url: https://django-ninja.dev
 repo_name: vitalik/django-ninja
 repo_url: https://github.com/vitalik/django-ninja
 edit_uri: ""
 extra:
   analytics:
     provider: google
-    property: UA-170474207-1
+    property: G-0E3XZ663ZR
 extra_css:
   - extra.css
 theme:
   name: material
   palette:
-    primary: green
+    - media: "(prefers-color-scheme)"
+      primary: green
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: green
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)" 
+      scheme: slate
+      primary: green
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
   logo: img/docs-logo.png
   favicon: img/favicon.png
   language: en
@@ -53,6 +69,8 @@ nav:
           - guides/response/response-renderers.md
       - Splitting your API with Routers: guides/routers.md
       - guides/authentication.md
+      - guides/throttling.md
+      - guides/testing.md
       - guides/api-docs.md
       - guides/errors.md
       - guides/urls.md
@@ -70,6 +88,7 @@ nav:
       - Intro: proposals/index.md
       - proposals/cbv.md
       - proposals/v1.md
+  - What's new in V1: whatsnew_v1.md
 markdown_extensions:
   - markdown_include.include
   - markdown.extensions.codehilite:
@@ -89,5 +108,3 @@ plugins:
           setup_commands:
             - from django.conf import settings
             - settings.configure()
-      watch:
-        - ../ninja

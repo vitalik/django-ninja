@@ -1,12 +1,23 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Type, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    List,
+    Optional,
+    Pattern,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 
 from django.conf import settings
 from django.http import HttpRequest
 from pydantic import BaseModel
+from pydantic.fields import FieldInfo
 
-from ninja.compatibility import get_headers
 from ninja.errors import HttpError
 from ninja.types import DictStrAny
 
@@ -33,7 +44,7 @@ def NestedDict() -> DictStrAny:
 
 
 class ParamModel(BaseModel, ABC):
-    _param_source = None
+    __ninja_param_source__ = None
 
     @classmethod
     @abstractmethod
@@ -54,11 +65,11 @@ class ParamModel(BaseModel, ABC):
             return cls()
 
         data = cls._map_data_paths(data)
-        return cls(**data)
+        return cls.model_validate(data, context={"request": request})
 
     @classmethod
     def _map_data_paths(cls, data: DictStrAny) -> DictStrAny:
-        flatten_map = getattr(cls, "_flatten_map", None)
+        flatten_map = getattr(cls, "__ninja_flatten_map__", None)
         if not flatten_map:
             return data
 
@@ -85,7 +96,7 @@ class QueryModel(ParamModel):
     def get_request_data(
         cls, request: HttpRequest, api: "NinjaAPI", path_params: DictStrAny
     ) -> Optional[DictStrAny]:
-        list_fields = getattr(cls, "_collection_fields", [])
+        list_fields = getattr(cls, "__ninja_collection_fields__", [])
         return api.parser.parse_querydict(request.GET, list_fields, request)
 
 
@@ -98,15 +109,15 @@ class PathModel(ParamModel):
 
 
 class HeaderModel(ParamModel):
-    _flatten_map: DictStrAny
+    __ninja_flatten_map__: DictStrAny
 
     @classmethod
     def get_request_data(
         cls, request: HttpRequest, api: "NinjaAPI", path_params: DictStrAny
     ) -> Optional[DictStrAny]:
         data = {}
-        headers = get_headers(request)
-        for name in cls._flatten_map:
+        headers = request.headers
+        for name in cls.__ninja_flatten_map__:
             if name in headers:
                 data[name] = headers[name]
         return data
@@ -121,7 +132,7 @@ class CookieModel(ParamModel):
 
 
 class BodyModel(ParamModel):
-    _single_attr: str
+    __read_from_single_attr__: str
 
     @classmethod
     def get_request_data(
@@ -134,9 +145,9 @@ class BodyModel(ParamModel):
                 msg = "Cannot parse request body"
                 if settings.DEBUG:
                     msg += f" ({e})"
-                raise HttpError(400, msg)
+                raise HttpError(400, msg) from e
 
-            varname = getattr(cls, "_single_attr", None)
+            varname = getattr(cls, "__read_from_single_attr__", None)
             if varname:
                 data = {varname: data}
             return data
@@ -149,7 +160,7 @@ class FormModel(ParamModel):
     def get_request_data(
         cls, request: HttpRequest, api: "NinjaAPI", path_params: DictStrAny
     ) -> Optional[DictStrAny]:
-        list_fields = getattr(cls, "_collection_fields", [])
+        list_fields = getattr(cls, "__ninja_collection_fields__", [])
         return api.parser.parse_querydict(request.POST, list_fields, request)
 
 
@@ -158,7 +169,7 @@ class FileModel(ParamModel):
     def get_request_data(
         cls, request: HttpRequest, api: "NinjaAPI", path_params: DictStrAny
     ) -> Optional[DictStrAny]:
-        list_fields = getattr(cls, "_collection_fields", [])
+        list_fields = getattr(cls, "__ninja_collection_fields__", [])
         return api.parser.parse_querydict(request.FILES, list_fields, request)
 
 
@@ -167,20 +178,119 @@ class _HttpRequest(HttpRequest):
 
 
 class _MultiPartBodyModel(BodyModel):
-    _body_params: DictStrAny
+    __ninja_body_params__: DictStrAny
 
     @classmethod
     def get_request_data(
         cls, request: HttpRequest, api: "NinjaAPI", path_params: DictStrAny
     ) -> Optional[DictStrAny]:
         req = _HttpRequest()
-        get_request_data = super(_MultiPartBodyModel, cls).get_request_data
+        get_request_data = super().get_request_data
         results: DictStrAny = {}
-        for name, annotation in cls._body_params.items():
+        for name, annotation in cls.__ninja_body_params__.items():
             if name in request.POST:
                 data = request.POST[name]
-                if annotation == str and data[0] != '"' and data[-1] != '"':
+                if annotation is str and data[0] != '"' and data[-1] != '"':
                     data = f'"{data}"'
                 req.body = data.encode()
                 results[name] = get_request_data(req, api, path_params)
         return results
+
+
+class Param(FieldInfo):
+    def __init__(
+        self,
+        default: Any,
+        *,
+        alias: Optional[str] = None,
+        title: Optional[str] = None,
+        description: Optional[str] = None,
+        gt: Optional[float] = None,
+        ge: Optional[float] = None,
+        lt: Optional[float] = None,
+        le: Optional[float] = None,
+        min_length: Optional[int] = None,
+        max_length: Optional[int] = None,
+        example: Optional[Any] = None,
+        examples: Optional[Dict[str, Any]] = None,
+        deprecated: Optional[bool] = None,
+        include_in_schema: Optional[bool] = True,
+        pattern: Union[str, Pattern[str], None] = None,
+        # param_name: str = None,
+        # param_type: Any = None,
+        **extra: Any,
+    ):
+        self.deprecated = deprecated
+        # self.param_name: str = None
+        # self.param_type: Any = None
+        self.model_field: Optional[FieldInfo] = None
+        json_schema_extra = {}
+        if example:
+            json_schema_extra["example"] = example
+        if examples:
+            json_schema_extra["examples"] = examples
+        if deprecated:
+            json_schema_extra["deprecated"] = deprecated
+        if not include_in_schema:
+            json_schema_extra["include_in_schema"] = include_in_schema
+        if alias and not extra.get("validation_alias"):
+            extra["validation_alias"] = alias
+        if alias and not extra.get("serialization_alias"):
+            extra["serialization_alias"] = alias
+
+        super().__init__(
+            default=default,
+            alias=alias,
+            title=title,
+            description=description,
+            gt=gt,
+            ge=ge,
+            lt=lt,
+            le=le,
+            min_length=min_length,
+            max_length=max_length,
+            pattern=pattern,
+            json_schema_extra=json_schema_extra,
+            **extra,
+        )
+
+    @classmethod
+    def _param_source(cls) -> str:
+        "Openapi param.in value or body type"
+        return cls.__name__.lower()
+
+
+class Path(Param):
+    _model = PathModel
+
+
+class Query(Param):
+    _model = QueryModel
+
+
+class Header(Param):
+    _model = HeaderModel
+
+
+class Cookie(Param):
+    _model = CookieModel
+
+
+class Body(Param):
+    _model = BodyModel
+
+
+class Form(Param):
+    _model = FormModel
+
+
+class File(Param):
+    _model = FileModel
+
+
+class _MultiPartBody(Param):
+    _model = _MultiPartBodyModel
+
+    @classmethod
+    def _param_source(cls) -> str:
+        return "body"

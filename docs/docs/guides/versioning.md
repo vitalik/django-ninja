@@ -9,7 +9,7 @@ All you have to do is create two or more NinjaAPI instances with different `vers
 
 **api_v1.py**:
 
-```Python hl_lines="4"
+```python hl_lines="4"
 from ninja import NinjaAPI
 
 
@@ -24,7 +24,7 @@ def hello(request):
 
 api_**v2**.py:
 
-```Python hl_lines="4"
+```python hl_lines="4"
 from ninja import NinjaAPI
 
 
@@ -38,7 +38,7 @@ def hello(request):
 
 and then in **urls.py**:
 
-```Python hl_lines="8 9"
+```python hl_lines="8 9"
 ...
 from api_v1 import api as api_v1
 from api_v2 import api as api_v2
@@ -64,7 +64,7 @@ Now you can go to different OpenAPI docs pages for each version:
 
 In the same way, you can define a different API for different components or areas:
 
-```Python hl_lines="4 7"
+```python hl_lines="4 7"
 ...
 
 

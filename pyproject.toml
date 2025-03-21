@@ -7,7 +7,7 @@ module = "ninja"
 dist-name = "django-ninja"
 author = "Vitaliy Kucheryaviy"
 author-email = "ppr.vitaly@gmail.com"
-home-page = "https://django-ninja.rest-framework.com"
+home-page = "https://django-ninja.dev"
 classifiers = [
     "Intended Audience :: Information Technology",
     "Intended Audience :: System Administrators",
@@ -23,36 +23,32 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.6",
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3 :: Only",
     "Framework :: Django",
-    "Framework :: Django :: 2.2",
-    "Framework :: Django :: 3.0",
     "Framework :: Django :: 3.1",
     "Framework :: Django :: 3.2",
-    "Framework :: Django :: 4.0",
     "Framework :: Django :: 4.1",
     "Framework :: Django :: 4.2",
+    "Framework :: Django :: 5.0",
+    "Framework :: Django :: 5.1",
     "Framework :: AsyncIO",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Internet :: WWW/HTTP",
 ]
 
-requires = [
-    "Django >=2.2",
-    "pydantic >=1.6,<2.0.0"
-]
+requires = ["Django >=3.1", "pydantic >=2.0,<3.0.0"]
 description-file = "README.md"
 requires-python = ">=3.7"
 
 
 [tool.flit.metadata.urls]
-Documentation = "https://django-ninja.rest-framework.com"
+Documentation = "https://django-ninja.dev"
 Repository = "https://github.com/vitalik/django-ninja"
 
 
@@ -63,18 +59,46 @@ test = [
     "pytest-django",
     "pytest-asyncio",
     "psycopg2-binary",
-    "black",
-    "isort",
-    "flake8",
-    "mypy==0.931",
+    "mypy==1.7.1",
+    "ruff==0.5.7",
     "django-stubs",
 ]
-doc = [
-    "mkdocs",
-    "mkdocs-material",
-    "markdown-include",
-    "mkdocstrings",
+doc = ["mkdocs", "mkdocs-material", "markdown-include", "mkdocstrings"]
+dev = ["pre-commit"]
+
+
+[tool.ruff]
+target-version = "py37"
+
+[tool.ruff.lint]
+select = [
+    "B",    # flake8-bugbear
+    "C",    # flake8-comprehensions
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "FURB", # refurb
+    "I",    # isort
+    "PTH",  # flake8-use-pathlib
+    "UP",   # pyupgrade
+    "W",    # pycodestyle warnings
 ]
-dev = [
-    "pre-commit",
+ignore = [
+    "E501", # line too long, handled by black
+    "B008", # do not perform function calls in argument defaults
+    "C901", # too complex
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"ninja/compatibility/datastructures.py" = ["C416"]
+"ninja/utils.py" = ["B004"]
+"tests/*" = ["C408"]
+
+
+[tool.coverage.run]
+omit = ["ninja/compatibility/*"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 100
+skip_covered = true
+show_missing = true

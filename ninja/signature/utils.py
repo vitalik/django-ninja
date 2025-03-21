@@ -1,11 +1,11 @@
 import asyncio
 import inspect
 import re
-from typing import Any, Callable, Set
+from typing import Any, Callable, ForwardRef, List, Set
 
 from django.urls import register_converter
 from django.urls.converters import UUIDConverter
-from pydantic.typing import ForwardRef, evaluate_forwardref  # type: ignore
+from pydantic._internal._typing_extra import eval_type_lenient as evaluate_forwardref
 
 from ninja.types import DictStrAny
 
@@ -18,7 +18,7 @@ __all__ = [
 ]
 
 
-def get_typed_signature(call: Callable) -> inspect.Signature:
+def get_typed_signature(call: Callable[..., Any]) -> inspect.Signature:
     "Finds call signature and resolves all forwardrefs"
     signature = inspect.signature(call)
     globalns = getattr(call, "__globals__", {})
@@ -43,6 +43,10 @@ def get_typed_annotation(param: inspect.Parameter, globalns: DictStrAny) -> Any:
 
 
 def make_forwardref(annotation: str, globalns: DictStrAny) -> Any:
+    # NOTE: in future versions of pydantic, the import may be changed to:
+    # from pydantic._internal._typing_extra import try_eval_type
+    # usage:
+    # result, _ = try_eval_type(forward_ref, globalns, globalns)
     forward_ref = ForwardRef(annotation)
     return evaluate_forwardref(forward_ref, globalns, globalns)
 
@@ -52,8 +56,20 @@ def get_path_param_names(path: str) -> Set[str]:
     return {item.strip("{}").split(":")[-1] for item in re.findall("{[^}]*}", path)}
 
 
-def is_async(callable: Callable) -> bool:
+def is_async(callable: Callable[..., Any]) -> bool:
     return asyncio.iscoroutinefunction(callable)
+
+
+def has_kwargs(func: Callable[..., Any]) -> bool:
+    for param in inspect.signature(func).parameters.values():
+        if param.kind == param.VAR_KEYWORD:
+            return True
+    return False
+
+
+def get_args_names(func: Callable[..., Any]) -> List[str]:
+    "returns list of function argument names"
+    return list(inspect.signature(func).parameters.keys())
 
 
 class NinjaUUIDConverter:

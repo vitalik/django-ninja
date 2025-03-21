@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -101,11 +102,17 @@ def test_validate_test_data():
         if 0:  # pragma: nocover
             # if test cases or schema generation changes,
             #   use this block of code to regenerate the fixtures
-            with open(filename, "w") as f:
+            with Path(filename).open("w") as f:
                 json.dump(schema["paths"][path], f, indent=2)
-        with open(filename) as f:
+        with Path(filename).open() as f:
             data = json.load(f)
-            assert json.loads(json.dumps(schema["paths"][path])) == data
+            path_schema = json.dumps(schema["paths"][path])
+            if "allOf" in path_schema:
+                # special case for pydantic 1.7 ... 2.9
+                path_schema = re.sub(
+                    r'"allOf": \[\{"\$ref": "(.*?)"\}\]', r'"$ref": "\1"', path_schema
+                )
+            assert json.loads(path_schema) == data
 
 
 @pytest.mark.parametrize("path, client_args", tuple(test_client_args.items()))

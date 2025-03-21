@@ -1,7 +1,7 @@
 import json
-import os
 import tempfile
 from io import StringIO
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -26,10 +26,9 @@ def test_export_indent():
 
 def test_export_to_file():
     with tempfile.TemporaryDirectory() as tmp:
-        output_file = os.path.join(tmp, "result.json")
+        output_file = Path(tmp) / "result.json"
         call_command(ExportCmd(), output=output_file)
-        with open(output_file, "r") as f:
-            json.loads(f.read())
+        json.loads(Path(output_file).read_text())
 
 
 def test_export_custom():

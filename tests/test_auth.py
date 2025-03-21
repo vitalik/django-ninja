@@ -3,7 +3,7 @@ from unittest.mock import Mock
 import pytest
 
 from ninja import NinjaAPI
-from ninja.errors import ConfigError
+from ninja.errors import AuthorizationError, ConfigError
 from ninja.security import (
     APIKeyCookie,
     APIKeyHeader,
@@ -11,6 +11,7 @@ from ninja.security import (
     HttpBasicAuth,
     HttpBearer,
     django_auth,
+    django_auth_is_staff,
     django_auth_superuser,
 )
 from ninja.security.base import AuthBase
@@ -60,6 +61,8 @@ class BearerAuth(HttpBearer):
     def authenticate(self, request, token):
         if token == "bearertoken":
             return token
+        if token == "nottherightone":
+            raise AuthorizationError
 
 
 def demo_operation(request):
@@ -77,6 +80,7 @@ def on_custom_error(request, exc):
 for path, auth in [
     ("django_auth", django_auth),
     ("django_auth_superuser", django_auth_superuser),
+    ("django_auth_is_staff", django_auth_is_staff),
     ("callable", callable_auth),
     ("apikeyquery", KeyQuery()),
     ("apikeyheader", KeyHeader()),
@@ -94,14 +98,23 @@ client = TestClient(api)
 class MockUser(str):
     is_authenticated = True
     is_superuser = False
+    is_staff = False
 
 
 class MockSuperUser(str):
     is_authenticated = True
     is_superuser = True
+    is_staff = True
+
+
+class MockStaffUser(str):
+    is_authenticated = True
+    is_superuser = False
+    is_staff = True
 
 
 BODY_UNAUTHORIZED_DEFAULT = dict(detail="Unauthorized")
+BODY_FORBIDDEN_DEFAULT = dict(detail="Forbidden")
 
 
 @pytest.mark.parametrize(
@@ -119,6 +132,25 @@ BODY_UNAUTHORIZED_DEFAULT = dict(detail="Unauthorized")
         (
             "/django_auth_superuser",
             dict(user=MockSuperUser("admin")),
+            200,
+            dict(auth="admin"),
+        ),
+        ("/django_auth_is_staff", {}, 401, BODY_UNAUTHORIZED_DEFAULT),
+        (
+            "/django_auth_is_staff",
+            dict(user=MockUser("admin")),
+            401,
+            BODY_UNAUTHORIZED_DEFAULT,
+        ),
+        (
+            "/django_auth_is_staff",
+            dict(user=MockSuperUser("admin")),
+            200,
+            dict(auth="admin"),
+        ),
+        (
+            "/django_auth_is_staff",
+            dict(user=MockStaffUser("admin")),
             200,
             dict(auth="admin"),
         ),
@@ -178,6 +210,18 @@ BODY_UNAUTHORIZED_DEFAULT = dict(detail="Unauthorized")
             401,
             BODY_UNAUTHORIZED_DEFAULT,
         ),
+        (
+            "/bearer",
+            dict(headers={"Authorization": "Bearer nonexistingtoken"}),
+            401,
+            BODY_UNAUTHORIZED_DEFAULT,
+        ),
+        (
+            "/bearer",
+            dict(headers={"Authorization": "Bearer nottherightone"}),
+            403,
+            BODY_FORBIDDEN_DEFAULT,
+        ),
         ("/customexception", {}, 401, dict(custom=True)),
         (
             "/customexception",
@@ -206,6 +250,7 @@ def test_schema():
         "KeyQuery": {"in": "query", "name": "key", "type": "apiKey"},
         "SessionAuth": {"in": "cookie", "name": "sessionid", "type": "apiKey"},
         "SessionAuthSuperUser": {"in": "cookie", "name": "sessionid", "type": "apiKey"},
+        "SessionAuthIsStaff": {"in": "cookie", "name": "sessionid", "type": "apiKey"},
     }
     # TODO: Samename for schema check
     # TODO: check operation security attributes

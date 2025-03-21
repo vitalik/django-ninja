@@ -1,12 +1,11 @@
-from unittest import mock
+import re
 
-import pytest
 from django.conf import settings
-from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
 from ninja import NinjaAPI
-from ninja.errors import ConfigError
-from ninja.security import APIKeyCookie
+from ninja.security import APIKeyCookie, APIKeyHeader, django_auth
 from ninja.testing import TestClient as BaseTestClient
 
 
@@ -19,6 +18,9 @@ class TestClient(BaseTestClient):
 
 csrf_OFF = NinjaAPI(urls_namespace="csrf_OFF")
 csrf_ON = NinjaAPI(urls_namespace="csrf_ON", csrf=True)
+csrf_ON_with_django_auth = NinjaAPI(
+    urls_namespace="csrf_ON", csrf=True, auth=django_auth
+)
 
 
 @csrf_OFF.post("/post")
@@ -63,38 +65,122 @@ def test_csrf_on():
     assert client.post("/post/csrf_exempt", COOKIES=COOKIES).status_code == 200
 
 
-def test_raises_on_cookie_auth():
-    "It should raise if user picked Cookie based auth and csrf=False"
+def test_csrf_cookie_auth():
+    "Cookie based authtentication should have csrf check by default"
 
-    class Auth(APIKeyCookie):
+    class CookieAuth(APIKeyCookie):
         def authenticate(self, request, key):
-            return request.COOKIES[key] == "foo"
+            return key == "test"
 
-    api = NinjaAPI(auth=Auth(), csrf=False)
+    cookie_auth = CookieAuth()
+    api = NinjaAPI(auth=cookie_auth)
 
-    @api.get("/some")
-    def some_method(request):
-        pass
+    @api.post("/test")
+    def test_view(request):
+        return {"success": True}
 
-    with pytest.raises(ConfigError):
-        api._validate()
+    client = TestClient(api)
 
-    try:
-        import os
+    # No auth - access denied
+    assert client.post("/test").status_code == 403
 
-        os.environ["NINJA_SKIP_REGISTRY"] = ""
+    # Cookie auth + valid csrf
+    cookies = {"key": "test"}
+    cookies.update(COOKIES)
+    response = client.post("/test", COOKIES=cookies, headers={"X-CSRFTOKEN": TOKEN})
+    assert response.status_code == 200, response.content
 
-        # Check for wrong error reported
-        match = "Looks like you created multiple NinjaAPIs"
-        with pytest.raises(ConfigError, match=match):
-            api.urls
+    # Cookie auth + INVALID csrf
+    response = client.post(
+        "/test", COOKIES=cookies, headers={"X-CSRFTOKEN": TOKEN + "invalid"}
+    )
+    assert response.status_code == 403, response.content
 
-        # django debug server can attempt to import the urls twice when errors exist
-        # verify we get the correct error reported
-        match = "Cookie Authentication must be used with CSRF"
-        with pytest.raises(ConfigError, match=match):
-            with mock.patch("ninja.main._imported_while_running_in_debug_server", True):
-                api.urls
+    # Turning off csrf on cookie, valid key, no csrf passed
+    cookie_auth.csrf = False
+    response = client.post("/test", COOKIES={"key": "test"})
+    assert response.status_code == 200, response.content
 
-    finally:
-        os.environ["NINJA_SKIP_REGISTRY"] = "yes"
+
+def test_csrf_cookies_can_be_obtained():
+    @csrf_ON.get("/obtain_csrf_token_get")
+    @ensure_csrf_cookie
+    def obtain_csrf_token_get(request):
+        return JsonResponse(data={"success": True})
+
+    @csrf_ON.post("/obtain_csrf_token_post")
+    @ensure_csrf_cookie
+    @csrf_exempt
+    def obtain_csrf_token_post(request):
+        return JsonResponse(data={"success": True})
+
+    @csrf_ON_with_django_auth.get("/obtain_csrf_token_get", auth=None)
+    @ensure_csrf_cookie
+    def obtain_csrf_token_get_no_auth_route(request):
+        return JsonResponse(data={"success": True})
+
+    @csrf_ON_with_django_auth.post("/obtain_csrf_token_post", auth=None)
+    @ensure_csrf_cookie
+    @csrf_exempt
+    def obtain_csrf_token_post_no_auth_route(request):
+        return JsonResponse(data={"success": True})
+
+    client = TestClient(csrf_ON)
+    # can get csrf cookie through get
+    response = client.get("/obtain_csrf_token_get")
+    assert response.status_code == 200
+    assert len(response.cookies["csrftoken"].value) > 0
+    # can get csrf cookie through exempted post
+    response = client.post("/obtain_csrf_token_post")
+    assert response.status_code == 200
+    assert len(response.cookies["csrftoken"].value) > 0
+    # Now testing a route with disabled auth from a client with django_auth set globally also works
+    client = TestClient(csrf_ON_with_django_auth)
+    # can get csrf cookie through get on route with disabled auth
+    response = client.get("/obtain_csrf_token_get")
+    assert response.status_code == 200
+    assert len(response.cookies["csrftoken"].value) > 0
+    # can get csrf cookie through exempted post on route with disabled auth
+    response = client.post("/obtain_csrf_token_post")
+    assert response.status_code == 200
+    assert len(response.cookies["csrftoken"].value) > 0
+
+
+def test_docs():
+    "Testing that docs are initializing csrf headers correctly"
+
+    api = NinjaAPI(csrf=True)
+
+    client = TestClient(api)
+    resp = client.get("/docs")
+    assert resp.status_code == 200
+    csrf_token = re.findall(r'data-csrf-token="(.*?)"', resp.content.decode("utf8"))[0]
+    assert len(csrf_token) > 0
+
+    api.csrf = False
+    resp = client.get("/docs")
+    assert resp.status_code == 200
+    csrf_token = re.findall(r'data-csrf-token="(.*?)"', resp.content.decode("utf8"))[0]
+    assert len(csrf_token) == 0
+
+
+def test_docs_cookie_auth():
+    class CookieAuth(APIKeyCookie):
+        def authenticate(self, request, key):
+            return key == "test"
+
+    class HeaderAuth(APIKeyHeader):
+        def authenticate(self, request, key):
+            return key == "test"
+
+    api = NinjaAPI(csrf=False, auth=CookieAuth())
+    client = TestClient(api)
+    resp = client.get("/docs")
+    csrf_token = re.findall(r'data-csrf-token="(.*?)"', resp.content.decode("utf8"))[0]
+    assert len(csrf_token) > 0
+
+    api = NinjaAPI(csrf=False, auth=HeaderAuth())
+    client = TestClient(api)
+    resp = client.get("/docs")
+    csrf_token = re.findall(r'data-csrf-token="(.*?)"', resp.content.decode("utf8"))[0]
+    assert len(csrf_token) == 0

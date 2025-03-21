@@ -1,7 +1,7 @@
 # Path parameters
 You can declare path "parameters" with the same syntax used by Python format-strings (which luckily also matches the <a href="https://swagger.io/docs/specification/describing-parameters/#path-parameters" target="_blank">OpenAPI path parameters</a>):
 
-```Python hl_lines="1 2"
+```python hl_lines="1 2"
 {!./src/tutorial/path/code01.py!}
 ```
 
@@ -17,7 +17,7 @@ So, if you run this example and go to <a href="http://localhost:8000/api/items/f
 ### Path parameters with types
 You can declare the type of path parameter in the function using standard Python type annotations:
 
-```Python hl_lines="2"
+```python hl_lines="2"
 {!./src/tutorial/path/code02.py!}
 ```
 
@@ -58,7 +58,7 @@ On the other hand, if you go to the browser at <a href="http://localhost:8000/ap
 You can use [Django Path Converters](https://docs.djangoproject.com/en/stable/topics/http/urls/#path-converters)
 to help parse the path:
 
-```Python hl_lines="1"
+```python hl_lines="1"
 @api.get("/items/{int:item_id}")
 def read_item(request, item_id):
     return {"item_id": item_id}
@@ -72,7 +72,7 @@ match.  (e.g. if no other path matches, a *404 Not Found* will be returned)
     function above received (and returned) is `"3"`, as a Python `str` - not an integer **3**. To receive
     an `int`, simply declare `item_id` as an `int` type annotation in the function definition as normal:
 
-    ```Python hl_lines="2"
+    ```python hl_lines="2"
     @api.get("/items/{int:item_id}")
     def read_item(request, item_id:int):
         return {"item_id": item_id}
@@ -82,18 +82,18 @@ match.  (e.g. if no other path matches, a *404 Not Found* will be returned)
 
 Django's `path` converter allows you to handle path-like parameters:
 
-```Python hl_lines="1"
+```python hl_lines="1"
 @api.get('/dir/{path:value}')
 def someview(request, value: str):
-       return value
+    return value
 ```
-you can quiery this operation with `/dir/some/path/with-slashes` and your `value` will be euqual to `some/path/with-slashes`
+you can query this operation with `/dir/some/path/with-slashes` and your `value` will be equal to `some/path/with-slashes`
 
 ### Multiple parameters
 
 You can pass as many variables as you want into `path`, just remember to have unique names and don't forget to use the same names in the function arguments.
 
-```Python
+```python
 @api.get("/events/{year}/{month}/{day}")
 def events(request, year: int, month: int, day: int):
     return {"date": [year, month, day]}
@@ -105,7 +105,7 @@ def events(request, year: int, month: int, day: int):
 You can also use Schema to encapsulate path parameters that depend on each other (and validate them as a group):
 
 
-```Python hl_lines="1 2  5 6 7 8 9 10 11 15"
+```python hl_lines="1 2  5 6 7 8 9 10 11 15"
 {!./src/tutorial/path/code010.py!}
 ```
 

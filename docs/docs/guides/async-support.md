@@ -20,7 +20,7 @@ Async views work more efficiently when it comes to:
 
 Let's take an example.  We have an API operation that does some work (currently just sleeps for provided number of seconds) and returns a word:
 
-```Python hl_lines="5"
+```python hl_lines="5"
 import time
 
 @api.get("/say-after")
@@ -31,7 +31,7 @@ def say_after(request, delay: int, word: str):
 
 To make this code asynchronous, all you have to do is add the **`async`** keyword to a function (and use async aware libraries for work processing - in our case we will replace the stdlib `sleep` with `asyncio.sleep`):
 
-```Python hl_lines="1 4 5"
+```python hl_lines="1 4 5"
 import asyncio
 
 @api.get("/say-after")
@@ -66,7 +66,7 @@ uvicorn your_project.asgi:application --reload
 
 ### Test
 
-Go to your browser and open <a href="<<<<<<<http://127.0.0.1:8000/api/say-after?delay=3&word=hello>>>>>>>" target="_blank">http://127.0.0.1:8000/api/say-after?delay=3&word=hello</a> (**delay=3**)
+Go to your browser and open <a href="http://127.0.0.1:8000/api/say-after?delay=3&word=hello" target="_blank">http://127.0.0.1:8000/api/say-after?delay=3&word=hello</a> (**delay=3**)
 After a 3-second wait you should see the "hello" message.
 
 Now let's flood this operation with **100 parallel requests**:
@@ -105,7 +105,7 @@ To achieve the same concurrency with WSGI and sync operations you would need to 
 
 Keep in mind that you can use **both sync and async operations** in your project, and **Django Ninja** will route it automatically:
 
-```Python hl_lines="2 7"
+```python hl_lines="2 7"
 
 @api.get("/say-sync")
 def say_after_sync(request, delay: int, word: str):
@@ -128,7 +128,7 @@ pip install elasticsearch>=7.8.0
 
 And now instead of the `Elasticsearch` class, use the `AsyncElasticsearch` class and `await` the results:
 
-```Python hl_lines="2 7 11 12"
+```python hl_lines="2 7 11 12"
 from ninja import NinjaAPI
 from elasticsearch import AsyncElasticsearch
 
@@ -156,7 +156,7 @@ Learn more about async safety here in the <a href="https://docs.djangoproject.co
 
 So, if you do this:
 
-```Python hl_lines="3"
+```python hl_lines="3"
 @api.get("/blog/{post_id}")
 async def search(request, post_id: int):
     blog = Blog.objects.get(pk=post_id)
@@ -165,7 +165,7 @@ async def search(request, post_id: int):
 
 it throws an error. Until the async ORM is implemented, you can use the `sync_to_async()` adapter:
 
-```Python hl_lines="1 3 9"
+```python hl_lines="1 3 9"
 from asgiref.sync import sync_to_async
 
 @sync_to_async
@@ -180,16 +180,16 @@ async def search(request, post_id: int):
 
 or even shorter:
 
-```Python hl_lines="3"
+```python hl_lines="3"
 @api.get("/blog/{post_id}")
 async def search(request, post_id: int):
     blog = await sync_to_async(Blog.objects.get)(pk=post_id)
     ...
 ```
 
-There is a common **GOTCHA**: Django queryset's are lazily evaluated (database query happens only when you start iterating), so this will **not** work:
+There is a common **GOTCHA**: Django querysets are lazily evaluated (database query happens only when you start iterating), so this will **not** work:
 
-```Python
+```python
 all_blogs = await sync_to_async(Blog.objects.all)()
 # it will throw an error later when you try to iterate over all_blogs
 ...
@@ -197,7 +197,7 @@ all_blogs = await sync_to_async(Blog.objects.all)()
 
 Instead, use evaluation (with `list`):
 
-```Python
+```python
 all_blogs = await sync_to_async(list)(Blog.objects.all())
 ...
 ```
@@ -207,7 +207,7 @@ These eliminate the need to use `sync_to_async` in most cases.
 The async operations have the same names as their sync counterparts but are prepended with *a*. So using
 the example above, you can rewrite it as:
 
-```Python hl_lines="3"
+```python hl_lines="3"
 @api.get("/blog/{post_id}")
 async def search(request, post_id: int):
     blog = await Blog.objects.aget(pk=post_id)
@@ -216,7 +216,7 @@ async def search(request, post_id: int):
 
 When working with querysets, use `async for` paired with list comprehension:
 
-```Python
+```python
 all_blogs = [blog async for blog in Blog.objects.all()]
 ...
 ```

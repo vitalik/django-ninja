@@ -16,6 +16,9 @@ from ninja.signature.details import is_collection_type
         pytest.param(typing.Tuple, True, id="true_for_typing_Tuple"),
         pytest.param(tuple, True, id="true_for_native_tuple"),
         pytest.param(
+            typing.Optional[typing.List[str]], True, id="true_for_optional_list"
+        ),
+        pytest.param(
             type("Custom", (), {}),
             False,
             id="false_for_custom_type_without_typing_origin",

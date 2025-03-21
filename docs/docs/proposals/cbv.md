@@ -20,7 +20,7 @@ Let's take the following example:
 
 Model structure is something like this:
 
-```Python
+```python
 class Project(models.Model):
     title = models.CharField(max_length=100)
     owner = models.ForeignKey('auth.User', on_delete=models.CASCADE)
@@ -43,7 +43,7 @@ The code should validate that a user can only access his/her own project's tasks
 It can be something like this:
 
 
-```Python
+```python
 router = Router()
 
 @router.get('/project/{project_id}/tasks/', response=List[TaskOut])
@@ -74,7 +74,7 @@ def complete(request, task_id: int):
 
 As you can see, these lines are getting repeated pretty often to check permission:
 
-```Python hl_lines="1 2"
+```python hl_lines="1 2"
 user_projects = request.user.project_set
 project = get_object_or_404(user_projects, id=project_id))
 ```
@@ -87,7 +87,7 @@ You can extract it to a function, but it will just make it 3 lines smaller, and 
 The proposal is to have alternative called "Class Based Operation" where you can decorate the entire class with a `path` decorator:
 
 
-```Python hl_lines="7 8"
+```python hl_lines="7 8"
 from ninja import Router
 
 
@@ -119,7 +119,7 @@ class Tasks:
 
 All common initiation and permission checks are placed in the constructor:
 
-```Python hl_lines="4 5 6"
+```python hl_lines="4 5 6"
 @router.path('/project/{project_id}/tasks')
 class Tasks:
     def __init__(self, request, project_id=int):

@@ -35,13 +35,14 @@ def test_form():
 def test_schema():
     schema = api.get_openapi_schema()
     method = schema["paths"]["/api/form"]["post"]
+    print(method["requestBody"])
     assert method["requestBody"] == {
         "content": {
             "application/x-www-form-urlencoded": {
                 "schema": {
                     "properties": {
-                        "i": {"title": "I", "type": "integer"},
-                        "s": {"title": "S", "type": "string"},
+                        "i": {"type": "integer", "title": "I"},
+                        "s": {"type": "string", "title": "S"},
                     },
                     "required": ["s"],
                     "title": "FormParams",

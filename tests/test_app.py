@@ -1,4 +1,6 @@
+import contextlib
 import os
+from pathlib import Path
 from tempfile import NamedTemporaryFile
 
 import pytest
@@ -64,33 +66,29 @@ def html(request):
 def file_response(request):
     tmp = NamedTemporaryFile(delete=False)
     try:
-        with open(tmp.name, "wb") as f:
-            f.write(b"this is a file")
-        return FileResponse(open(tmp.name, "rb"))
+        p = Path(tmp.name)
+        p.write_bytes(b"this is a file")
+        return FileResponse(Path(tmp.name).open("rb"))
     finally:
-        try:
-            os.remove(tmp.name)
-        except PermissionError:
-            pass
+        with contextlib.suppress(PermissionError):
+            Path(tmp.name).unlink()
 
 
 @pytest.mark.parametrize(
-    # fmt: off
     "method,path,expected_status,expected_data,expected_streaming",
     [
-        ("get",    "/",       200, "/", False),
-        ("get",    "/get",    200, "this is GET", False),
-        ("post",   "/post",   200, "this is POST", False),
-        ("put",    "/put",    200, "this is PUT", False),
-        ("patch",  "/patch",  200, "this is PATCH", False),
+        ("get", "/", 200, "/", False),
+        ("get", "/get", 200, "this is GET", False),
+        ("post", "/post", 200, "this is POST", False),
+        ("put", "/put", 200, "this is PUT", False),
+        ("patch", "/patch", 200, "this is PATCH", False),
         ("delete", "/delete", 200, "this is DELETE", False),
-        ("get",    "/multi",  200, "this is GET", False),
-        ("post",   "/multi",  200, "this is POST", False),
-        ("patch",  "/multi",  405, b"Method not allowed", False),
-        ("get",    "/html",   200, b"html", False),
-        ("get",    "/file",   200, b"this is a file", True),
+        ("get", "/multi", 200, "this is GET", False),
+        ("post", "/multi", 200, "this is POST", False),
+        ("patch", "/multi", 405, b"Method not allowed", False),
+        ("get", "/html", 200, b"html", False),
+        ("get", "/file", 200, b"this is a file", True),
     ],
-    # fmt: on
 )
 def test_method(method, path, expected_status, expected_data, expected_streaming):
     func = getattr(client, method)
@@ -108,6 +106,6 @@ def test_validates():
     try:
         os.environ["NINJA_SKIP_REGISTRY"] = ""
         with pytest.raises(ConfigError):
-            NinjaAPI().urls
+            _urls = NinjaAPI().urls
     finally:
         os.environ["NINJA_SKIP_REGISTRY"] = "yes"

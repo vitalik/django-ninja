@@ -1,10 +1,21 @@
+import importlib
+from sys import version_info
 from typing import Any, List
 
 import pytest
+from django.test import override_settings
+from pydantic.errors import PydanticSchemaGenerationError
 
 from ninja import NinjaAPI, Schema
 from ninja.errors import ConfigError
-from ninja.pagination import PageNumberPagination, PaginationBase, paginate
+from ninja.operation import Operation
+from ninja.pagination import (
+    LimitOffsetPagination,
+    PageNumberPagination,
+    PaginationBase,
+    make_response_paginated,
+    paginate,
+)
 from ninja.testing import TestClient
 
 api = NinjaAPI()
@@ -33,7 +44,7 @@ class CustomPagination(PaginationBase):
 
 
 class NoOutputPagination(PaginationBase):
-    # only offset param, defaults to 5 per page but without Output schema
+    # Outputs items without count attribute
     class Input(Schema):
         skip: int
 
@@ -45,7 +56,7 @@ class NoOutputPagination(PaginationBase):
 
 
 class ResultsPaginator(PaginationBase):
-    "Use 'results' insted of 'items' for the output"
+    "Use 'results' instead of 'items' for the output"
 
     class Input(Schema):
         skip: int
@@ -63,6 +74,28 @@ class ResultsPaginator(PaginationBase):
             "results": items[skip : skip + 5],
             "count": self._items_count(items),
             "skip": skip,
+        }
+
+
+class NextPrevPagination(PaginationBase):
+    # only offset param, defaults to 5 per page
+    class Input(Schema):
+        skip: int
+
+    class Output(Schema):
+        items: List[Any]
+        next: str = None
+        prev: str = None
+
+    def paginate_queryset(self, items, pagination: Input, request, **params):
+        skip = pagination.skip
+        prev_skip = skip - 5
+        if prev_skip < 0:
+            prev_skip = 0
+        return {
+            "items": items[skip : skip + 5],
+            "next": request.build_absolute_uri(f"?skip={skip + 5}"),
+            "prev": request.build_absolute_uri(f"?skip={prev_skip}"),
         }
 
 
@@ -106,13 +139,19 @@ def items_6(request, **kwargs):
 @api.get("/items_7", response=List[int])
 @paginate(NoOutputPagination)
 def items_7(request):
-    return [7] * 7
+    return list(range(15))
 
 
 @api.get("/items_8", response=List[int])
 @paginate(ResultsPaginator)
 def items_8(request):
     return list(range(1000))
+
+
+@api.get("/items_9", response=List[int])
+@paginate(NextPrevPagination)
+def items_9(request):
+    return list(range(100))
 
 
 client = TestClient(api)
@@ -155,12 +194,12 @@ def test_case2():
     assert response == {"items": ITEMS[:10], "count": 100}
 
     schema = api.get_openapi_schema()["paths"]["/api/items_2"]["get"]
-    print(schema["parameters"])
+    # print(schema["parameters"])
     assert schema["parameters"] == [
         {
             "in": "query",
             "name": "someparam",
-            "schema": {"title": "Someparam", "default": 0, "type": "integer"},
+            "schema": {"default": 0, "title": "Someparam", "type": "integer"},
             "required": False,
         },
         {
@@ -193,7 +232,7 @@ def test_case3():
     assert response == {"items": ITEMS[5:10], "count": "many", "skip": 5}
 
     schema = api.get_openapi_schema()["paths"]["/api/items_3"]["get"]
-    print(schema)
+    # print(schema)
     assert schema["parameters"] == [
         {
             "in": "query",
@@ -269,8 +308,8 @@ def test_case6_pass_param_kwargs():
 
 
 def test_case7():
-    response = client.get("/items_7?skip=5").json()
-    assert response == [7, 7]
+    response = client.get("/items_7?skip=10").json()
+    assert response == [10, 11, 12, 13, 14]
 
     schema = api.get_openapi_schema()["paths"]["/api/items_7"]["get"]
     response = schema["responses"][200]["content"]["application/json"]["schema"]
@@ -285,6 +324,90 @@ def test_case7():
 def test_case8():
     response = client.get("/items_8?skip=5").json()
     assert response == {"results": [5, 6, 7, 8, 9], "count": 1000, "skip": 5}
+
+
+def test_case9():
+    response = client.get("/items_9?skip=5").json()
+    assert response == {
+        "items": [5, 6, 7, 8, 9],
+        "next": "http://testlocation/?skip=10",
+        "prev": "http://testlocation/?skip=0",
+    }
+
+
+@override_settings(NINJA_PAGINATION_MAX_LIMIT=1000)
+def test_10_max_limit_set():
+    # reload to apply django settings
+    from ninja import conf, pagination
+
+    importlib.reload(conf)
+    importlib.reload(pagination)
+    new_api = NinjaAPI()
+    new_client = TestClient(new_api)
+
+    @new_api.get("/items_10", response=List[int])
+    @paginate  # LimitOffsetPagination is set as default
+    def items_10(request, **kwargs):
+        return ITEMS
+
+    response = new_client.get("/items_10?limit=1000").json()
+    assert response == {"items": ITEMS[:1000], "count": 100}
+
+    schema = new_api.get_openapi_schema()["paths"]["/api/items_10"]["get"]
+    # print(schema)
+    assert schema["parameters"] == [
+        {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+                "title": "Limit",
+                "default": 100,
+                "minimum": 1,
+                "maximum": 1000,
+                "type": "integer",
+            },
+            "required": False,
+        },
+        {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+                "title": "Offset",
+                "default": 0,
+                "minimum": 0,
+                "type": "integer",
+            },
+            "required": False,
+        },
+    ]
+
+
+@override_settings(NINJA_PAGINATION_MAX_LIMIT=1000)
+def test_11_max_limit_set_and_exceeded():
+    # reload to apply django settings
+    from ninja import conf, pagination
+
+    importlib.reload(conf)
+    importlib.reload(pagination)
+    new_api = NinjaAPI()
+    new_client = TestClient(new_api)
+
+    @new_api.get("/items_11", response=List[int])
+    @paginate  # LimitOffsetPagination is set as default
+    def items_11(request, **kwargs):
+        return ITEMS
+
+    response = new_client.get("/items_11?limit=1001").json()
+    assert response == {
+        "detail": [
+            {
+                "ctx": {"le": 1000},
+                "loc": ["query", "limit"],
+                "msg": "Input should be less than or equal to 1000",
+                "type": "less_than_equal",
+            }
+        ]
+    }
 
 
 def test_config_error_None():
@@ -303,3 +426,17 @@ def test_config_error_NOT_SET():
         @paginate
         def invalid2(request):
             pass
+
+
+@pytest.mark.skipif(version_info < (3, 11), reason="Not needed at this Python version")
+def test_pagination_works_with_unnamed_classes():
+    """
+    This test lets you check that the typing.Any case handled in `ninja.pagination.make_response_paginated`
+    works for Python>=3.11, as a typing.Any does possess the __name__ attribute past that version
+    """
+    operation = Operation("/whatever", ["GET"], lambda: None, response=List[int])
+    operation.response_models[200].__annotations__["response"] = List[object()]
+    with pytest.raises(
+        PydanticSchemaGenerationError
+    ):  # It does fail after we passed the logic that we are testing
+        make_response_paginated(LimitOffsetPagination, operation)

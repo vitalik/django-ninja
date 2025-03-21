@@ -9,9 +9,9 @@ def test_examples():
 
     with patch("builtins.api", api, create=True):
         import docs.src.tutorial.query.code01  # noqa: F401
+        import docs.src.tutorial.query.code010  # noqa: F401
         import docs.src.tutorial.query.code02  # noqa: F401
         import docs.src.tutorial.query.code03  # noqa: F401
-        import docs.src.tutorial.query.code010  # noqa: F401
 
         client = TestClient(api)
 
@@ -98,35 +98,36 @@ def test_examples():
             }
         }
 
-        schema = api.get_openapi_schema("")
+        schema = api.get_openapi_schema(path_prefix="")
         params = schema["paths"]["/filter"]["get"]["parameters"]
+        # print(params)
         assert params == [
             {
                 "in": "query",
                 "name": "limit",
+                "schema": {"default": 100, "title": "Limit", "type": "integer"},
                 "required": False,
-                "schema": {"title": "Limit", "default": 100, "type": "integer"},
             },
             {
                 "in": "query",
                 "name": "offset",
-                "required": False,
                 "schema": {"title": "Offset", "type": "integer"},
+                "required": False,
             },
             {
                 "in": "query",
                 "name": "query",
-                "required": False,
                 "schema": {"title": "Query", "type": "string"},
+                "required": False,
             },
             {
                 "in": "query",
                 "name": "categories",
-                "required": False,
                 "schema": {
+                    "items": {"type": "string"},
                     "title": "Categories",
                     "type": "array",
-                    "items": {"type": "string"},
                 },
+                "required": False,
             },
         ]

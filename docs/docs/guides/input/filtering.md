@@ -13,9 +13,9 @@ from typing import Optional
 
 
 class BookFilterSchema(FilterSchema):
-    name: Optional[str]
-    author: Optional[str]
-    created_after: Optional[datetime]
+    name: Optional[str] = None
+    author: Optional[str] = None
+    created_after: Optional[datetime] = None
 ```
 
 
@@ -62,27 +62,34 @@ By default, the filters will behave the following way:
 * `None` values will be ignored and not filtered against;
 * Every non-`None` field will be converted into a `Q`-expression based on the `Field` definition of each field;
 * All `Q`-expressions will be merged into one using `AND` logical operator;
-* The resulting `Q`-expression is used to filter the queryset and return you a qeryset with a `.filter` clause applied.
+* The resulting `Q`-expression is used to filter the queryset and return you a queryset with a `.filter` clause applied.
 
 ## Customizing Fields
 By default, `FilterSet` will use the field names to generate Q expressions:
 ```python
 class BookFilterSchema(FilterSchema):
-    name: Optional[str]
+    name: Optional[str] = None
 ```
 The `name` field will be converted into `Q(name=...)` expression.
 
 When your database lookups are more complicated than that, you can explicitly specify them in the field definition using a `"q"` kwarg:
 ```python hl_lines="2"
 class BookFilterSchema(FilterSchema):
-    name: Optional[str] = Field(q='name__icontains') 
+    name: Optional[str] = Field(None, q='name__icontains')
 ```
 You can even specify multiple lookup keyword argument names as a list:
 ```python hl_lines="2 3 4"
 class BookFilterSchema(FilterSchema):
-    search: Optional[str] = Field(q=['name__icontains',
+    search: Optional[str] = Field(None, q=['name__icontains',
                                      'author__name__icontains',
-                                     'publisher__name__icontains']) 
+                                     'publisher__name__icontains'])
+```
+And to make generic fields, you can make the field name implicit by skipping it:
+```python hl_lines="2"
+IContainsField = Annotated[Optional[str], Field(None, q='__icontains')]
+
+class BookFilterSchema(FilterSchema):
+    name: IContainsField
 ```
 By default, field-level expressions are combined using `"OR"` connector, so with the above setup, a query parameter `?search=foobar` will search for books that have "foobar" in either of their name, author or publisher.
 
@@ -96,8 +103,8 @@ By default,
 So, with the following `FilterSchema`...
 ```python
 class BookFilterSchema(FilterSchema):
-    search: Optional[str] = Field(q=['name__icontains', 'author__name__icontains'])
-    popular: Optional[bool]
+    search: Optional[str] = Field(None, q=['name__icontains', 'author__name__icontains'])
+    popular: Optional[bool] = None
 ```
 ...and the following query parameters from the user
 ```
@@ -109,9 +116,9 @@ the `FilterSchema` instance will look for popular books that have `harry` in the
 You can customize this behavior using an `expression_connector` argument in field-level and class-level definition:
 ```python hl_lines="3 7"
 class BookFilterSchema(FilterSchema):
-    active: Optional[bool] = Field(q=['is_active', 'publisher__is_active'],
+    active: Optional[bool] = Field(None, q=['is_active', 'publisher__is_active'],
                                    expression_connector='AND')
-    name: Optional[str] = Field(q='name__icontains')
+    name: Optional[str] = Field(None, q='name__icontains')
     
     class Config:
         expression_connector = 'OR'
@@ -132,8 +139,8 @@ You can make the `FilterSchema` treat `None` as a valid value that should be fil
 This can be done on a field level with a `ignore_none` kwarg:
 ```python hl_lines="3"
 class BookFilterSchema(FilterSchema):
-    name: Optional[str] = Field(q='name__icontains')
-    tag: Optional[str] = Field(q='tag', ignore_none=False)
+    name: Optional[str] = Field(None, q='name__icontains')
+    tag: Optional[str] = Field(None, q='tag', ignore_none=False)
 ```
 
 This way when no other value for `"tag"` is provided by the user, the filtering will always include a condition `tag=None`.
@@ -141,8 +148,8 @@ This way when no other value for `"tag"` is provided by the user, the filtering 
 You can also specify this settings for all fields at the same time in the Config:
 ```python hl_lines="6"
 class BookFilterSchema(FilterSchema):
-    name: Optional[str] = Field(q='name__icontains')
-    tag: Optional[str] = Field(q='tag', ignore_none=False)
+    name: Optional[str] = Field(None, q='name__icontains')
+    tag: Optional[str] = Field(None, q='tag', ignore_none=False)
     
     class Config:
         ignore_none = False
@@ -155,8 +162,8 @@ For such cases you can implement your field filtering logic as a custom method. 
 
 ```python hl_lines="5"
 class BookFilterSchema(FilterSchema):
-    tag: Optional[str]
-    popular: Optional[bool]
+    tag: Optional[str] = None
+    popular: Optional[bool] = None
     
     def filter_popular(self, value: bool) -> Q:
         return Q(view_count__gt=1000) | Q(download_count__gt=100) if value else Q()
@@ -167,8 +174,8 @@ If that is not enough, you can implement your own custom filtering logic for the
 
 ```python hl_lines="5"
 class BookFilterSchema(FilterSchema):
-    name: Optional[str]
-    popular: Optional[bool]
+    name: Optional[str] = None
+    popular: Optional[bool] = None
 
     def custom_expression(self) -> Q:
         q = Q()

@@ -51,7 +51,7 @@ class ResponseData(Schema):
 
     class Config(Schema.Config):
         alias_generator = to_kebab
-        allow_population_by_field_name = True
+        populate_by_name = True
 
 
 test_data4_extra = dict(title="Data4 Title", description="Data4 Desc")
@@ -177,7 +177,7 @@ def test_multi_form_body(
 @router.post("/test-multi-body-form-file", response=ResponseData, by_alias=True)
 def test_multi_body_form_file(
     request,
-    file: UploadedFile = File(...),
+    file: File[UploadedFile],
     i: int = Body(...),
     s: str = Form("a-str"),
     data: TestData4 = Body(..., **test_data4_extra),
@@ -189,7 +189,7 @@ def test_multi_body_form_file(
 @router.post("/test-multi-form-body-file", response=ResponseData, by_alias=True)
 def test_multi_form_body_file(
     request,
-    file: UploadedFile = File(...),
+    file: File[UploadedFile],
     i: int = Form(...),
     s: str = Body("a-str"),
     data: TestData4 = Form(..., **test_data4_extra),

@@ -4,6 +4,7 @@
 .mypy_cache
 .coverage
 htmlcov
+/coverage.xml
 
 dist
 test.py
@@ -12,3 +13,4 @@ docs/site
 
 .DS_Store
 .idea
+.python-version

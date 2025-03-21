@@ -100,7 +100,7 @@ In your top level project folder (next to `urls.py`), create another `api.py` fi
 
 It should look like this:
 
-```Python
+```python
 from ninja import NinjaAPI
 
 api = NinjaAPI()
@@ -109,17 +109,15 @@ api = NinjaAPI()
 
 Now we import all the routers from the various apps, and include them into the main API instance:
 
-```Python hl_lines="2 3 4 8 9 10"
+```python hl_lines="2 6 7 8"
 from ninja import NinjaAPI
 from events.api import router as events_router
-from news.api import router as news_router
-from blogs.api import router as blogs_router
 
 api = NinjaAPI()
 
-api.add_router("/events/", events_router)
-api.add_router("/news/", news_router)
-api.add_router("/blogs/", blogs_router)
+api.add_router("/events/", events_router)    # You can add a router as an object
+api.add_router("/news/", "news.api.router")  #   or by Python path
+api.add_router("/blogs/", "blogs.api.router")
 ```
 
 Now, include `api` to your urls as usual and open your browser at `/api/docs`, and you should see all your routers combined into a single API:
@@ -132,12 +130,12 @@ Now, include `api` to your urls as usual and open your browser at `/api/docs`, a
 
 Use `auth` argument to apply authenticator to all operations declared by router:
 
-```Python
+```python
 api.add_router("/events/", events_router, auth=BasicAuth())
 ```
 
 or using router constructor
-```Python
+```python
 router = Router(auth=BasicAuth())
 ```
 
@@ -145,12 +143,12 @@ router = Router(auth=BasicAuth())
 
 You can use `tags` argument to apply tags to all operations declared by router:
 
-```Python
+```python
 api.add_router("/events/", events_router, tags=["events"])
 ```
 
 or using router constructor
-```Python
+```python
 router = Router(tags=["events"])
 ```
 
@@ -158,14 +156,14 @@ router = Router(tags=["events"])
 ## Nested routers
 
 There are also times when you need to split your logic up even more.
-**Django Ninja** makes it possible to include a router into another router as many times as you like, and finally include the top level router into the main api instance.
+**Django Ninja** makes it possible to include a router into another router as many times as you like, and finally include the top level router into the main `api` instance.
 
 
 Basically, what that means is that you have `add_router` both on the `api` instance and on the `router` instance:
 
 
 
-```Python hl_lines="7 8 9 32 33 34"
+```python hl_lines="7 8 9 32 33 34"
 from django.contrib import admin
 from django.urls import path
 from ninja import NinjaAPI, Router
@@ -219,3 +217,38 @@ Now you have the following endpoints:
 Great! Now go have a look at the automatically generated docs:
 
 ![Swagger UI Nested Routers](../img/nested-routers-swagger.png)
+
+### Nested url parameters
+
+You can also use url parameters in nested routers by adding `= Path(...)` to the function parameters:
+
+```python hl_lines="13 16"
+from django.contrib import admin
+from django.urls import path
+from ninja import NinjaAPI, Path, Router
+
+api = NinjaAPI()
+router = Router()
+
+@api.get("/add/{a}/{b}")
+def add(request, a: int, b: int):
+    return {"result": a + b}
+
+@router.get("/multiply/{c}")
+def multiply(request, c: int, a: int = Path(...), b: int = Path(...)):
+    return {"result": (a + b) * c}
+
+api.add_router("add/{a}/{b}", router)
+
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("api/", api.urls),
+]
+```
+
+This will generate the following endpoints:
+
+```
+/api/add/{a}/{b}
+/api/add/{a}/{b}/multiply/{c}
+```

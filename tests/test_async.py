@@ -1,6 +1,5 @@
 import asyncio
 
-import django
 import pytest
 
 from ninja import NinjaAPI
@@ -8,7 +7,6 @@ from ninja.security import APIKeyQuery
 from ninja.testing import TestAsyncClient
 
 
-@pytest.mark.skipif(django.VERSION < (3, 1), reason="requires django 3.1 or higher")
 @pytest.mark.asyncio
 async def test_asyncio_operations():
     api = NinjaAPI()

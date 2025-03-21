@@ -1,8 +1,11 @@
+from enum import Enum
+from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
 from typing import Any, FrozenSet
 
 from django.core.serializers.json import DjangoJSONEncoder
 from django.http import JsonResponse
 from pydantic import BaseModel
+from pydantic_core import Url
 
 __all__ = [
     "NinjaJSONEncoder",
@@ -18,7 +21,13 @@ __all__ = [
 class NinjaJSONEncoder(DjangoJSONEncoder):
     def default(self, o: Any) -> Any:
         if isinstance(o, BaseModel):
-            return o.dict()
+            return o.model_dump()
+        if isinstance(o, Url):
+            return str(o)
+        if isinstance(o, (IPv4Address, IPv4Network, IPv6Address, IPv6Network)):
+            return str(o)
+        if isinstance(o, Enum):
+            return str(o)
         return super().default(o)
 
 

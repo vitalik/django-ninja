@@ -12,17 +12,16 @@ router = Router()
 
 
 class EventSchema(BaseModel):
+    model_config = dict(from_attributes=True)
+
     title: str
     start_date: date
     end_date: date
 
-    class Config:
-        orm_mode = True
-
 
 @router.post("/create", url_name="event-create-url-name")
 def create_event(request, event: EventSchema):
-    Event.objects.create(**event.dict())
+    Event.objects.create(**event.model_dump())
     return event
 
 

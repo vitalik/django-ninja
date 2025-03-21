@@ -4,7 +4,7 @@
 
 Let's change our operation to accept a name from the URL's query string. To do that, just add a `name` argument to our function.
 
-```Python
+```python
 @api.get("/hello")
 def hello(request, name):
     return f"Hello {name}"
@@ -42,7 +42,7 @@ target="_blank">localhost:8000/api/hello</a>:
 
 We can specify a default for the `name` argument in case it isn't provided:
 
-```Python hl_lines="2"
+```python hl_lines="2"
 @api.get("/hello")
 def hello(request, name="world"):
     return f"Hello {name}"
@@ -54,7 +54,7 @@ def hello(request, name="world"):
 
 Let's add a second operation that does some basic math with integers.
 
-```Python hl_lines="5-7"
+```python hl_lines="5-7"
 @api.get("/hello")
 def hello(request, name: str = "world"):
     return f"Hello {name}"
@@ -80,7 +80,7 @@ You can declare path "parameters" with the same syntax used by Python format-str
 
 Any parameters found in the path string will be passed to your function as arguments, rather than expecting them from the query string.
 
-```Python hl_lines="1"
+```python hl_lines="1"
 @api.get("/math/{a}and{b}")
 def math(request, a: int, b: int):
     return {"add": a + b, "multiply": a * b}
@@ -98,7 +98,7 @@ To specify that arguments come from the body, we need to declare a Schema.
 
 *[Schema]: An extension of a Pydantic "Model"
 
-```Python hl_lines="1 5-6 8-10"
+```python hl_lines="1 5-6 8-10"
 from ninja import NinjaAPI, Schema
 
 api = NinjaAPI()

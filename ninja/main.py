@@ -1,4 +1,5 @@
 import os
+import warnings
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -9,21 +10,30 @@ from typing import (
     Sequence,
     Tuple,
     Type,
+    TypeVar,
     Union,
 )
 
 from django.http import HttpRequest, HttpResponse
 from django.urls import URLPattern, URLResolver, reverse
+from django.utils.module_loading import import_string
 
 from ninja.constants import NOT_SET, NOT_SET_TYPE
-from ninja.errors import ConfigError, set_default_exc_handlers
+from ninja.errors import (
+    ConfigError,
+    ValidationError,
+    ValidationErrorContext,
+    set_default_exc_handlers,
+)
 from ninja.openapi import get_schema
+from ninja.openapi.docs import DocsBase, Swagger
 from ninja.openapi.schema import OpenAPISchema
 from ninja.openapi.urls import get_openapi_urls, get_root_url
 from ninja.parser import Parser
 from ninja.renderers import BaseRenderer, JSONRenderer
 from ninja.router import Router
-from ninja.types import TCallable
+from ninja.throttling import BaseThrottle
+from ninja.types import DictStrAny, TCallable
 from ninja.utils import is_debug_server, normalize_path
 
 if TYPE_CHECKING:
@@ -31,8 +41,9 @@ if TYPE_CHECKING:
 
 __all__ = ["NinjaAPI"]
 
-Exc = Union[Exception, Type[Exception]]
-ExcHandler = Callable[[HttpRequest, Exc], HttpResponse]
+_E = TypeVar("_E", bound=Exception)
+Exc = Union[_E, Type[_E]]
+ExcHandler = Callable[[HttpRequest, Exc[_E]], HttpResponse]
 
 
 class NinjaAPI:
@@ -49,15 +60,18 @@ class NinjaAPI:
         version: str = "1.0.0",
         description: str = "",
         openapi_url: Optional[str] = "/openapi.json",
+        docs: DocsBase = Swagger(),
         docs_url: Optional[str] = "/docs",
-        servers: Optional[List[Dict[str, Union[str, Any]]]] = None,
         docs_decorator: Optional[Callable[[TCallable], TCallable]] = None,
+        servers: Optional[List[DictStrAny]] = None,
         urls_namespace: Optional[str] = None,
         csrf: bool = False,
         auth: Optional[Union[Sequence[Callable], Callable, NOT_SET_TYPE]] = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         renderer: Optional[BaseRenderer] = None,
         parser: Optional[Parser] = None,
         default_router: Optional[Router] = None,
+        openapi_extra: Optional[Dict[str, Any]] = None,
     ):
         """
         Args:
@@ -66,6 +80,7 @@ class NinjaAPI:
             version: The API version.
             urls_namespace: The Django URL namespace for the API. If not provided, the namespace will be ``"api-" + self.version``.
             openapi_url: The relative URL to serve the openAPI spec.
+            openapi_extra: Additional attributes for the openAPI spec.
             docs_url: The relative URL to serve the API docs.
             servers: List of target hosts used in openAPI spec.
             csrf: Require a CSRF token for unsafe request types. See <a href="../csrf">CSRF</a> docs.
@@ -77,13 +92,21 @@ class NinjaAPI:
         self.version = version
         self.description = description
         self.openapi_url = openapi_url
+        self.docs = docs
         self.docs_url = docs_url
-        self.servers = servers
         self.docs_decorator = docs_decorator
+        self.servers = servers or []
         self.urls_namespace = urls_namespace or f"api-{self.version}"
-        self.csrf = csrf
+        self.csrf = csrf  # TODO: Check if used or at least throw Deprecation warning
+        if self.csrf:
+            warnings.warn(
+                "csrf argument is deprecated, auth is handling csrf automatically now",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         self.renderer = renderer or JSONRenderer()
         self.parser = parser or Parser()
+        self.openapi_extra = openapi_extra or {}
 
         self._exception_handlers: Dict[Exc, ExcHandler] = {}
         self.set_default_exception_handlers()
@@ -95,6 +118,8 @@ class NinjaAPI:
         else:
             self.auth = auth
 
+        self.throttle = throttle
+
         self._routers: List[Tuple[str, Router]] = []
         self.default_router = default_router or Router()
         self.add_router("", self.default_router)
@@ -104,16 +129,17 @@ class NinjaAPI:
         path: str,
         *,
         auth: Any = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
-        by_alias: bool = False,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
+        by_alias: Optional[bool] = None,
+        exclude_unset: Optional[bool] = None,
+        exclude_defaults: Optional[bool] = None,
+        exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
@@ -125,6 +151,7 @@ class NinjaAPI:
         return self.default_router.get(
             path,
             auth=auth is NOT_SET and self.auth or auth,
+            throttle=throttle is NOT_SET and self.throttle or throttle,
             response=response,
             operation_id=operation_id,
             summary=summary,
@@ -145,16 +172,17 @@ class NinjaAPI:
         path: str,
         *,
         auth: Any = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
-        by_alias: bool = False,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
+        by_alias: Optional[bool] = None,
+        exclude_unset: Optional[bool] = None,
+        exclude_defaults: Optional[bool] = None,
+        exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
@@ -166,6 +194,7 @@ class NinjaAPI:
         return self.default_router.post(
             path,
             auth=auth is NOT_SET and self.auth or auth,
+            throttle=throttle is NOT_SET and self.throttle or throttle,
             response=response,
             operation_id=operation_id,
             summary=summary,
@@ -186,16 +215,17 @@ class NinjaAPI:
         path: str,
         *,
         auth: Any = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
-        by_alias: bool = False,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
+        by_alias: Optional[bool] = None,
+        exclude_unset: Optional[bool] = None,
+        exclude_defaults: Optional[bool] = None,
+        exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
@@ -207,6 +237,7 @@ class NinjaAPI:
         return self.default_router.delete(
             path,
             auth=auth is NOT_SET and self.auth or auth,
+            throttle=throttle is NOT_SET and self.throttle or throttle,
             response=response,
             operation_id=operation_id,
             summary=summary,
@@ -227,16 +258,17 @@ class NinjaAPI:
         path: str,
         *,
         auth: Any = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
-        by_alias: bool = False,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
+        by_alias: Optional[bool] = None,
+        exclude_unset: Optional[bool] = None,
+        exclude_defaults: Optional[bool] = None,
+        exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
@@ -248,6 +280,7 @@ class NinjaAPI:
         return self.default_router.patch(
             path,
             auth=auth is NOT_SET and self.auth or auth,
+            throttle=throttle is NOT_SET and self.throttle or throttle,
             response=response,
             operation_id=operation_id,
             summary=summary,
@@ -268,16 +301,17 @@ class NinjaAPI:
         path: str,
         *,
         auth: Any = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
-        by_alias: bool = False,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
+        by_alias: Optional[bool] = None,
+        exclude_unset: Optional[bool] = None,
+        exclude_defaults: Optional[bool] = None,
+        exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
@@ -289,6 +323,7 @@ class NinjaAPI:
         return self.default_router.put(
             path,
             auth=auth is NOT_SET and self.auth or auth,
+            throttle=throttle is NOT_SET and self.throttle or throttle,
             response=response,
             operation_id=operation_id,
             summary=summary,
@@ -310,16 +345,17 @@ class NinjaAPI:
         path: str,
         *,
         auth: Any = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
-        by_alias: bool = False,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
+        by_alias: Optional[bool] = None,
+        exclude_unset: Optional[bool] = None,
+        exclude_defaults: Optional[bool] = None,
+        exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
@@ -328,6 +364,7 @@ class NinjaAPI:
             methods,
             path,
             auth=auth is NOT_SET and self.auth or auth,
+            throttle=throttle is NOT_SET and self.throttle or throttle,
             response=response,
             operation_id=operation_id,
             summary=summary,
@@ -346,14 +383,23 @@ class NinjaAPI:
     def add_router(
         self,
         prefix: str,
-        router: Router,
+        router: Union[Router, str],
         *,
         auth: Any = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         tags: Optional[List[str]] = None,
-        parent_router: Router = None,
+        parent_router: Optional[Router] = None,
     ) -> None:
+        if isinstance(router, str):
+            router = import_string(router)
+            assert isinstance(router, Router)
+
         if auth is not NOT_SET:
             router.auth = auth
+
+        if throttle is not NOT_SET:
+            router.throttle = throttle
+
         if tags is not None:
             router.tags = tags
 
@@ -393,18 +439,17 @@ class NinjaAPI:
         result.append(get_root_url(self))
         return result
 
-    @property
-    def root_path(self) -> str:
+    def get_root_path(self, path_params: DictStrAny) -> str:
         name = f"{self.urls_namespace}:api-root"
-        return reverse(name)
+        return reverse(name, kwargs=path_params)
 
     def create_response(
         self,
         request: HttpRequest,
         data: Any,
         *,
-        status: int = None,
-        temporal_response: HttpResponse = None,
+        status: Optional[int] = None,
+        temporal_response: Optional[HttpResponse] = None,
     ) -> HttpResponse:
         if temporal_response:
             status = temporal_response.status_code
@@ -426,11 +471,16 @@ class NinjaAPI:
         return HttpResponse("", content_type=self.get_content_type())
 
     def get_content_type(self) -> str:
-        return "{}; charset={}".format(self.renderer.media_type, self.renderer.charset)
+        return f"{self.renderer.media_type}; charset={self.renderer.charset}"
 
-    def get_openapi_schema(self, path_prefix: Optional[str] = None) -> OpenAPISchema:
+    def get_openapi_schema(
+        self,
+        *,
+        path_prefix: Optional[str] = None,
+        path_params: Optional[DictStrAny] = None,
+    ) -> OpenAPISchema:
         if path_prefix is None:
-            path_prefix = self.root_path
+            path_prefix = self.get_root_path(path_params or {})
         return get_schema(api=self, path_prefix=path_prefix)
 
     def get_openapi_operation_id(self, operation: "Operation") -> str:
@@ -446,13 +496,15 @@ class NinjaAPI:
         return operation.view_func.__name__
 
     def add_exception_handler(
-        self, exc_class: Type[Exception], handler: ExcHandler
+        self, exc_class: Type[_E], handler: ExcHandler[_E]
     ) -> None:
         assert issubclass(exc_class, Exception)
         self._exception_handlers[exc_class] = handler
 
-    def exception_handler(self, exc_class: Type[Exception]) -> Callable:
-        def decorator(func: Callable) -> Callable:
+    def exception_handler(
+        self, exc_class: Type[Exception]
+    ) -> Callable[[TCallable], TCallable]:
+        def decorator(func: TCallable) -> TCallable:
             self.add_exception_handler(exc_class, func)
             return func
 
@@ -461,13 +513,35 @@ class NinjaAPI:
     def set_default_exception_handlers(self) -> None:
         set_default_exc_handlers(self)
 
-    def on_exception(self, request: HttpRequest, exc: Exc) -> HttpResponse:
+    def on_exception(self, request: HttpRequest, exc: Exc[_E]) -> HttpResponse:
         handler = self._lookup_exception_handler(exc)
         if handler is None:
             raise exc
         return handler(request, exc)
 
-    def _lookup_exception_handler(self, exc: Exc) -> Optional[ExcHandler]:
+    def validation_error_from_error_contexts(
+        self, error_contexts: List[ValidationErrorContext]
+    ) -> ValidationError:
+        errors: List[Dict[str, Any]] = []
+        for context in error_contexts:
+            model = context.model
+            e = context.pydantic_validation_error
+            for i in e.errors(include_url=False):
+                i["loc"] = (
+                    model.__ninja_param_source__,
+                ) + model.__ninja_flatten_map_reverse__.get(i["loc"], i["loc"])
+                # removing pydantic hints
+                del i["input"]  # type: ignore
+                if (
+                    "ctx" in i
+                    and "error" in i["ctx"]
+                    and isinstance(i["ctx"]["error"], Exception)
+                ):
+                    i["ctx"]["error"] = str(i["ctx"]["error"])
+                errors.append(dict(i))
+        return ValidationError(errors)
+
+    def _lookup_exception_handler(self, exc: Exc[_E]) -> Optional[ExcHandler[_E]]:
         for cls in type(exc).__mro__:
             if cls in self._exception_handlers:
                 return self._exception_handlers[cls]
@@ -475,9 +549,7 @@ class NinjaAPI:
         return None
 
     def _validate(self) -> None:
-        from ninja.security import APIKeyCookie
-
-        # 1) urls namespacing validation
+        # urls namespacing validation
         skip_registry = os.environ.get("NINJA_SKIP_REGISTRY", False)
         if (
             not skip_registry
@@ -493,17 +565,6 @@ Already registered: {NinjaAPI._registry}
 """
             raise ConfigError(msg.strip())
         NinjaAPI._registry.append(self.urls_namespace)
-
-        # 2) csrf
-        if self.csrf is False:
-            for _prefix, router in self._routers:
-                for path_operation in router.path_operations.values():
-                    for operation in path_operation.operations:
-                        for auth in operation.auth_callbacks:
-                            if isinstance(auth, APIKeyCookie):
-                                raise ConfigError(
-                                    "Cookie Authentication must be used with CSRF. Please use NinjaAPI(csrf=True)"
-                                )
 
 
 _imported_while_running_in_debug_server = is_debug_server()

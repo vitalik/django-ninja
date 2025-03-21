@@ -11,7 +11,7 @@ That said, there are few issues when it comes to getting FastAPI and Django to w
 
 2) The dependency injection with arguments makes your code too verbose when you rely on authentication and database sessions in your operations (which for some projects is about 99% of all operations).
 
-```Python hl_lines="25 26"
+```python hl_lines="25 26"
 ...
 
 app = FastAPI()
@@ -52,13 +52,13 @@ Working at [Code-on a Django webdesign webedevelopment studio](https://code-on.b
 
 Note: **Django Ninja is a production ready project** - my estimation is at this time already 100+ companies using it in production and 500 new developers joining every month. 
 
-Some companies already looking for developers with django ninja experince.
+Some companies are already looking for developers with django ninja experience.
 
 #### Main Features
 
-1) Since you can have multiple Django Ninja API instances - you can run [multiple API versions](/tutorial/versioning) inside one Django project.
+1) Since you can have multiple Django Ninja API instances - you can run [multiple API versions](guides/versioning.md) inside one Django project.
 
-```Python
+```python
 api_v1 = NinjaAPI(version='1.0', auth=token_auth)
 ...
 api_v2 = NinjaAPI(version='2.0', auth=token_auth)
@@ -75,9 +75,9 @@ urlpatterns = [
 ]
 ```
 
-2) The Django Ninja 'Schema' class is integrated with the ORM, so you can [serialize querysets](/tutorial/response-schema/#returning-querysets) or ORM objects:
+2) The Django Ninja 'Schema' class is integrated with the ORM, so you can [serialize querysets](guides/response/index.md#returning-querysets) or ORM objects:
 
-```Python
+```python
 @api.get("/tasks", response=List[TaskSchema])
 def tasks(request):
     return Task.objects.all()
@@ -88,6 +88,6 @@ def tasks_details(request):
     task = Task.objects.first()
     return task
 ```
-3) [Create Schema's from Django Models](/guides/response/django-pydantic/).
+3) [Create Schema's from Django Models](guides/response/django-pydantic.md).
 
-4) Instead of dependency arguments, **Django Ninja** uses `request` instance attributes (in the same way as regular Django views) - more detail at [Authentication](/guides/authentication/).
+4) Instead of dependency arguments, **Django Ninja** uses `request` instance attributes (in the same way as regular Django views) - more detail at [Authentication](guides/authentication.md).

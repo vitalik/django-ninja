@@ -30,11 +30,8 @@ make test
 Now you are ready to make your contribution
 
 
-When you done:
-
-Please make sure you made tests to cover your functionality 
-
-and finally check the resulting coverage of your contribution did not suffer
+When you're done please make sure you to test your functionality 
+and check the coverage of your contribution.
 
 ```
 pytest --cov=ninja --cov-report term-missing tests
@@ -48,16 +45,15 @@ make test-cov
  
 ## Code style
 
-Django Ninja uses `black`, `isort`, `flake8` and `mypy` for style checks.
+Django Ninja uses `ruff`, and `mypy` for style checks.
 
 Run `pre-commit install` to create a git hook to fix your styles before you commit.
 
 Alternatively, manually check your code with:
 
 ```
-black --check ninja tests
-isort --check ninja tests
-flake8 ninja tests
+ruff format --check ninja tests
+ruff check ninja tests
 mypy ninja
 ```
 
@@ -70,8 +66,8 @@ make lint
 Or reformat your code with:
 
 ```
-black ninja tests
-isort ninja tests
+ruff format ninja tests
+ruff check ninja tests --fix
 ```
 
 or using Makefile:

@@ -1,14 +1,15 @@
 from typing import List
 from unittest.mock import Mock
 
-import django
+import pydantic
 import pytest
 from django.contrib.postgres import fields as ps_fields
 from django.db import models
 from django.db.models import Manager
+from util import pydantic_ref_fix
 
 from ninja.errors import ConfigError
-from ninja.orm import create_schema
+from ninja.orm import create_schema, register_field
 from ninja.orm.shortcuts import L, S
 
 
@@ -26,17 +27,17 @@ def test_inheritance():
             app_label = "tests"
 
     Schema = create_schema(ChildModel)
-    print(Schema.schema())
+    # print(Schema.json_schema())
 
     # TODO: I guess parentmodel_ptr_id must be skipped
-    assert Schema.schema() == {
+    assert Schema.json_schema() == {
         "title": "ChildModel",
         "type": "object",
         "properties": {
-            "id": {"title": "Id", "type": "integer"},
-            "parent_field": {"title": "Parent Field", "type": "string"},
-            "parentmodel_ptr_id": {"title": "Parentmodel Ptr", "type": "integer"},
-            "child_field": {"title": "Child Field", "type": "string"},
+            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+            "parent_field": {"type": "string", "title": "Parent Field"},
+            "parentmodel_ptr_id": {"type": "integer", "title": "Parentmodel Ptr"},
+            "child_field": {"type": "string", "title": "Child Field"},
         },
         "required": ["parent_field", "parentmodel_ptr_id", "child_field"],
     }
@@ -82,76 +83,83 @@ def test_all_fields():
             app_label = "tests"
 
     SchemaCls = create_schema(AllFields)
-    print(SchemaCls.schema())
-    assert SchemaCls.schema() == {
+    # print(SchemaCls.json_schema())
+    expected_schema = {
         "title": "AllFields",
         "type": "object",
         "properties": {
-            "id": {"title": "Id", "type": "integer"},
+            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
             "bigintegerfield": {"title": "Bigintegerfield", "type": "integer"},
             "binaryfield": {
                 "title": "Binaryfield",
                 "type": "string",
                 "format": "binary",
             },
-            "booleanfield": {"title": "Booleanfield", "type": "boolean"},
-            "charfield": {"title": "Charfield", "type": "string"},
+            "booleanfield": {"type": "boolean", "title": "Booleanfield"},
+            "charfield": {"type": "string", "title": "Charfield"},
             "commaseparatedintegerfield": {
                 "title": "Commaseparatedintegerfield",
                 "type": "string",
             },
-            "datefield": {"title": "Datefield", "type": "string", "format": "date"},
+            "datefield": {"type": "string", "format": "date", "title": "Datefield"},
             "datetimefield": {
                 "title": "Datetimefield",
                 "type": "string",
                 "format": "date-time",
             },
-            "decimalfield": {"title": "Decimalfield", "type": "number"},
-            "durationfield": {
-                "title": "Durationfield",
-                "type": "number",
-                "format": "time-delta",
+            "decimalfield": {
+                "anyOf": [{"type": "number"}, {"type": "string"}],
+                "title": "Decimalfield",
             },
-            "emailfield": {"title": "Emailfield", "maxLength": 254, "type": "string"},
-            "filefield": {"title": "Filefield", "type": "string"},
-            "filepathfield": {"title": "Filepathfield", "type": "string"},
-            "floatfield": {"title": "Floatfield", "type": "number"},
+            "durationfield": {
+                "type": "string",
+                "format": "duration",
+                "title": "Durationfield",
+            },
+            "emailfield": {"type": "string", "maxLength": 254, "title": "Emailfield"},
+            "filefield": {"type": "string", "title": "Filefield"},
+            "filepathfield": {"type": "string", "title": "Filepathfield"},
+            "floatfield": {"type": "number", "title": "Floatfield"},
             "genericipaddressfield": {
-                "title": "Genericipaddressfield",
                 "type": "string",
                 "format": "ipvanyaddress",
+                "title": "Genericipaddressfield",
             },
             "ipaddressfield": {
-                "title": "Ipaddressfield",
                 "type": "string",
                 "format": "ipvanyaddress",
+                "title": "Ipaddressfield",
             },
-            "imagefield": {"title": "Imagefield", "type": "string"},
-            "integerfield": {"title": "Integerfield", "type": "integer"},
-            "nullbooleanfield": {"title": "Nullbooleanfield", "type": "boolean"},
+            "imagefield": {"type": "string", "title": "Imagefield"},
+            "integerfield": {"type": "integer", "title": "Integerfield"},
+            "nullbooleanfield": {"type": "boolean", "title": "Nullbooleanfield"},
             "positiveintegerfield": {
-                "title": "Positiveintegerfield",
                 "type": "integer",
+                "title": "Positiveintegerfield",
             },
             "positivesmallintegerfield": {
-                "title": "Positivesmallintegerfield",
                 "type": "integer",
+                "title": "Positivesmallintegerfield",
             },
-            "slugfield": {"title": "Slugfield", "type": "string"},
-            "smallintegerfield": {"title": "Smallintegerfield", "type": "integer"},
-            "textfield": {"title": "Textfield", "type": "string"},
-            "timefield": {"title": "Timefield", "type": "string", "format": "time"},
-            "urlfield": {"title": "Urlfield", "type": "string"},
-            "uuidfield": {"title": "Uuidfield", "type": "string", "format": "uuid"},
-            "arrayfield": {"title": "Arrayfield", "type": "array", "items": {}},
-            "cicharfield": {"title": "Cicharfield", "type": "string"},
+            "slugfield": {"type": "string", "title": "Slugfield"},
+            "smallintegerfield": {"type": "integer", "title": "Smallintegerfield"},
+            "textfield": {"type": "string", "title": "Textfield"},
+            "timefield": {"type": "string", "format": "time", "title": "Timefield"},
+            "urlfield": {"type": "string", "title": "Urlfield"},
+            "uuidfield": {"type": "string", "format": "uuid", "title": "Uuidfield"},
+            "arrayfield": {"type": "array", "items": {}, "title": "Arrayfield"},
+            "cicharfield": {"type": "string", "title": "Cicharfield"},
             "ciemailfield": {
-                "title": "Ciemailfield",
-                "maxLength": 254,
                 "type": "string",
+                "maxLength": 254,
+                "title": "Ciemailfield",
             },
-            "citextfield": {"title": "Citextfield", "type": "string"},
-            "hstorefield": {"title": "Hstorefield", "type": "object"},
+            "citextfield": {"type": "string", "title": "Citextfield"},
+            "hstorefield": {
+                # "additionalProperties": True, # this is added in pydantic 2.11
+                "type": "object",
+                "title": "Hstorefield",
+            },
         },
         "required": [
             "bigintegerfield",
@@ -188,26 +196,36 @@ def test_all_fields():
         ],
     }
 
+    pydantic_version = tuple(map(int, pydantic.VERSION.split(".")[:2]))
+    if pydantic_version >= (2, 11):
+        expected_schema["properties"]["hstorefield"]["additionalProperties"] = True
+    assert SchemaCls.json_schema() == expected_schema
 
-def test_bigautofield():
-    class ModelBigAuto(models.Model):
-        bigautofiled = models.BigAutoField(primary_key=True)
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        models.BigAutoField,
+        models.SmallAutoField,
+    ],
+)
+def test_altautofield(field: type):
+    class ModelAltAuto(models.Model):
+        altautofield = field(primary_key=True)
 
         class Meta:
             app_label = "tests"
 
-    SchemaCls = create_schema(ModelBigAuto)
-    print(SchemaCls.schema())
-    assert SchemaCls.schema() == {
-        "title": "ModelBigAuto",
-        "type": "object",
-        "properties": {"bigautofiled": {"title": "Bigautofiled", "type": "integer"}},
+    SchemaCls = create_schema(ModelAltAuto)
+    # print(SchemaCls.json_schema())
+    assert SchemaCls.json_schema()["properties"] == {
+        "altautofield": {
+            "anyOf": [{"type": "integer"}, {"type": "null"}],
+            "title": "Altautofield",
+        }
     }
 
 
-@pytest.mark.skipif(
-    django.VERSION < (3, 1), reason="json field introduced in django 3.1"
-)
 def test_django_31_fields():
     class ModelNewFields(models.Model):
         jsonfield = models.JSONField()
@@ -217,12 +235,12 @@ def test_django_31_fields():
             app_label = "tests"
 
     Schema = create_schema(ModelNewFields)
-    print(Schema.schema())
-    assert Schema.schema() == {
+    # print(Schema.json_schema())
+    assert Schema.json_schema() == {
         "title": "ModelNewFields",
         "type": "object",
         "properties": {
-            "id": {"title": "Id", "type": "integer"},
+            "id": {"title": "ID", "anyOf": [{"type": "integer"}, {"type": "null"}]},
             "jsonfield": {"title": "Jsonfield", "type": "object"},
             "positivebigintegerfield": {
                 "title": "Positivebigintegerfield",
@@ -256,14 +274,17 @@ def test_relational():
             app_label = "tests"
 
     SchemaCls = create_schema(TestModel, name="TestSchema")
-    print(SchemaCls.schema())
-    assert SchemaCls.schema() == {
+    # print(SchemaCls.json_schema())
+    assert SchemaCls.json_schema() == {
         "title": "TestSchema",
         "type": "object",
         "properties": {
-            "id": {"title": "Id", "type": "integer"},
+            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
             "onetoonefield_id": {"title": "Onetoonefield", "type": "integer"},
-            "foreignkey_id": {"title": "Foreignkey", "type": "integer"},
+            "foreignkey_id": {
+                "anyOf": [{"type": "integer"}, {"type": "null"}],
+                "title": "Foreignkey",
+            },
             "manytomanyfield": {
                 "title": "Manytomanyfield",
                 "type": "array",
@@ -274,34 +295,40 @@ def test_relational():
     }
 
     SchemaClsDeep = create_schema(TestModel, name="TestSchemaDeep", depth=1)
-    print(SchemaClsDeep.schema())
-    assert SchemaClsDeep.schema() == {
-        "title": "TestSchemaDeep",
+    print(SchemaClsDeep.json_schema())
+    assert SchemaClsDeep.json_schema() == {
         "type": "object",
         "properties": {
-            "id": {"title": "Id", "type": "integer"},
-            "onetoonefield": {
+            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+            "onetoonefield": pydantic_ref_fix({
                 "title": "Onetoonefield",
-                "allOf": [{"$ref": "#/definitions/Related"}],
-            },
+                "description": "",
+                "$ref": "#/$defs/Related",
+            }),
             "foreignkey": {
                 "title": "Foreignkey",
-                "allOf": [{"$ref": "#/definitions/Related"}],
+                "allOf": [{"$ref": "#/$defs/Related"}],
+                "description": "",
             },
             "manytomanyfield": {
                 "title": "Manytomanyfield",
                 "type": "array",
-                "items": {"$ref": "#/definitions/Related"},
+                "items": {"$ref": "#/$defs/Related"},
+                "description": "",
             },
         },
         "required": ["onetoonefield", "manytomanyfield"],
-        "definitions": {
+        "title": "TestSchemaDeep",
+        "$defs": {
             "Related": {
                 "title": "Related",
                 "type": "object",
                 "properties": {
-                    "id": {"title": "Id", "type": "integer"},
-                    "charfield": {"title": "Charfield", "type": "string"},
+                    "id": {
+                        "anyOf": [{"type": "integer"}, {"type": "null"}],
+                        "title": "ID",
+                    },
+                    "charfield": {"type": "string", "title": "Charfield"},
                 },
                 "required": ["charfield"],
             }
@@ -318,15 +345,15 @@ def test_default():
             app_label = "tests"
 
     Schema = create_schema(MyModel)
-    print(Schema.schema())
-    assert Schema.schema() == {
+    # print(Schema.json_schema())
+    assert Schema.json_schema() == {
         "title": "MyModel",
         "type": "object",
         "properties": {
-            "id": {"title": "Id", "type": "integer"},
+            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
             "default_static": {
-                "title": "Default Static",
                 "default": "hello",
+                "title": "Default Static",
                 "type": "string",
             },
             "default_dynamic": {"title": "Default Dynamic", "type": "string"},
@@ -344,20 +371,20 @@ def test_fields_exclude():
             app_label = "tests"
 
     Schema1 = create_schema(SampleModel, fields=["f1", "f2"])
-    print(Schema1.schema())
-    assert Schema1.schema() == {
+    # print(Schema1.json_schema())
+    assert Schema1.json_schema() == {
         "title": "SampleModel",
         "type": "object",
         "properties": {
-            "f1": {"title": "F1", "type": "string"},
-            "f2": {"title": "F2", "type": "string"},
+            "f1": {"type": "string", "title": "F1"},
+            "f2": {"type": "string", "title": "F2"},
         },
         "required": ["f1", "f2"],
     }
 
     Schema2 = create_schema(SampleModel, fields=["f3", "f2"])
-    print(Schema2.schema())
-    assert Schema2.schema() == {
+    # print(Schema2.json_schema())
+    assert Schema2.json_schema() == {
         "title": "SampleModel2",
         "type": "object",
         "properties": {
@@ -368,16 +395,16 @@ def test_fields_exclude():
     }
 
     Schema3 = create_schema(SampleModel, exclude=["f3"])
-    print(Schema3.schema())
-    assert Schema3.schema() == {
-        "title": "SampleModel3",
+    # print(Schema3.json_schema())
+    assert Schema3.json_schema() == {
         "type": "object",
         "properties": {
-            "id": {"title": "Id", "type": "integer"},
-            "f1": {"title": "F1", "type": "string"},
-            "f2": {"title": "F2", "type": "string"},
+            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+            "f1": {"type": "string", "title": "F1"},
+            "f2": {"type": "string", "title": "F2"},
         },
         "required": ["f1", "f2"],
+        "title": "SampleModel3",
     }
 
 
@@ -416,12 +443,12 @@ def test_with_relations():
     from someapp.models import Category
 
     Schema = create_schema(Category)
-    print(Schema.schema())
-    assert Schema.schema() == {
+    # print(Schema.json_schema())
+    assert Schema.json_schema() == {
         "title": "Category",
         "type": "object",
         "properties": {
-            "id": {"title": "Id", "type": "integer"},
+            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
             "title": {"title": "Title", "maxLength": 100, "type": "string"},
         },
         "required": ["title"],
@@ -471,30 +498,31 @@ def test_custom_fields():
 
     Schema1 = create_schema(SmallModel, custom_fields=[("custom", int, ...)])
 
-    assert Schema1.schema() == {
-        "title": "SmallModel",
+    # print(Schema1.json_schema())
+    assert Schema1.json_schema() == {
         "type": "object",
         "properties": {
-            "id": {"title": "Id", "type": "integer"},
-            "f1": {"title": "F1", "type": "string"},
-            "f2": {"title": "F2", "type": "string"},
-            "custom": {"title": "Custom", "type": "integer"},
+            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+            "f1": {"type": "string", "title": "F1"},
+            "f2": {"type": "string", "title": "F2"},
+            "custom": {"type": "integer", "title": "Custom"},
         },
         "required": ["f1", "f2", "custom"],
+        "title": "SmallModel",
     }
 
     Schema2 = create_schema(SmallModel, custom_fields=[("f1", int, ...)])
-    print(Schema2.schema())
+    # print(Schema2.json_schema())
 
-    assert Schema2.schema() == {
-        "title": "SmallModel2",
+    assert Schema2.json_schema() == {
         "type": "object",
         "properties": {
-            "id": {"title": "Id", "type": "integer"},
-            "f1": {"title": "F1", "type": "integer"},
-            "f2": {"title": "F2", "type": "string"},
+            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+            "f1": {"type": "integer", "title": "F1"},
+            "f2": {"type": "string", "title": "F2"},
         },
         "required": ["f1", "f2"],
+        "title": "SmallModel2",
     }
 
 
@@ -515,28 +543,68 @@ def test_duplicate_schema_names():
         data1: create_schema(TestModelDuplicate, fields=["field1"])  # noqa: F821
         data2: create_schema(TestModelDuplicate, fields=["field2"])  # noqa: F821
 
-    print(TestSchema.schema())
+    # print(TestSchema.json_schema())
 
-    assert TestSchema.schema() == {
-        "title": "TestSchema",
+    assert TestSchema.json_schema() == {
         "type": "object",
         "properties": {
-            "data1": {"$ref": "#/definitions/TestModelDuplicate"},
-            "data2": {"$ref": "#/definitions/TestModelDuplicate2"},
+            "data1": {"$ref": "#/$defs/TestModelDuplicate"},
+            "data2": {"$ref": "#/$defs/TestModelDuplicate2"},
         },
         "required": ["data1", "data2"],
-        "definitions": {
+        "title": "TestSchema",
+        "$defs": {
             "TestModelDuplicate": {
-                "title": "TestModelDuplicate",
                 "type": "object",
-                "properties": {"field1": {"title": "Field1", "type": "string"}},
+                "properties": {"field1": {"type": "string", "title": "Field1"}},
                 "required": ["field1"],
+                "title": "TestModelDuplicate",
             },
             "TestModelDuplicate2": {
-                "title": "TestModelDuplicate2",
                 "type": "object",
-                "properties": {"field2": {"title": "Field2", "type": "string"}},
+                "properties": {"field2": {"type": "string", "title": "Field2"}},
                 "required": ["field2"],
+                "title": "TestModelDuplicate2",
             },
         },
     }
+
+
+def test_optional_fields():
+    class SomeReqFieldModel(models.Model):
+        some_field = models.CharField()
+        other_field = models.IntegerField()
+        optional = models.IntegerField(null=True, blank=True)
+
+        class Meta:
+            app_label = "tests"
+
+    Schema = create_schema(SomeReqFieldModel)
+    assert Schema.json_schema()["required"] == ["some_field", "other_field"]
+
+    Schema = create_schema(SomeReqFieldModel, optional_fields=["some_field"])
+    assert Schema.json_schema()["required"] == ["other_field"]
+
+    Schema = create_schema(
+        SomeReqFieldModel, optional_fields=["some_field", "other_field", "optional"]
+    )
+    assert Schema.json_schema().get("required") is None
+
+
+def test_register_custom_field():
+    class MyCustomField(models.Field):
+        description = "MyCustomField"
+
+    class ModelWithCustomField(models.Model):
+        some_field = MyCustomField()
+
+        class Meta:
+            app_label = "tests"
+
+    with pytest.raises(ConfigError):
+        create_schema(ModelWithCustomField)
+
+    register_field("MyCustomField", int)
+    Schema = create_schema(ModelWithCustomField)
+    print(Schema.json_schema())
+    assert Schema.json_schema()["properties"]["some_field"]["type"] == "integer"

@@ -8,7 +8,7 @@ This example will show you how to implement these functions with **Django Ninja*
 Let's say you have the following Django models that you need to perform these operations on:
 
 
-```Python
+```python
 
 class Department(models.Model):
     title = models.CharField(max_length=100)
@@ -27,7 +27,7 @@ Now let's create CRUD operations for the Employee model.
 
 To create an employee lets define an INPUT schema:
 
-```Python
+```python
 from datetime import date
 from ninja import Schema
 
@@ -41,7 +41,7 @@ class EmployeeIn(Schema):
 
 This schema will be our input payload:
 
-```Python hl_lines="2"
+```python hl_lines="2"
 @api.post("/employees")
 def create_employee(request, payload: EmployeeIn):
     employee = Employee.objects.create(**payload.dict())
@@ -55,11 +55,11 @@ def create_employee(request, payload: EmployeeIn):
 
 See the recipe below for handling the file upload (when using Django models):
 
-```Python hl_lines="2"
+```python hl_lines="2"
 from ninja import UploadedFile, File
 
 @api.post("/employees")
-def create_employee(request, payload: EmployeeIn, cv: UploadedFile = File(...)):
+def create_employee(request, payload: EmployeeIn, cv: File[UploadedFile]):
     payload_dict = payload.dict()
     employee = Employee(**payload_dict)
     employee.cv.save(cv.name, cv) # will save model instance as well
@@ -68,14 +68,14 @@ def create_employee(request, payload: EmployeeIn, cv: UploadedFile = File(...)):
 
 If you just need to handle a file upload:
 
-```Python hl_lines="2"
+```python hl_lines="2"
 from django.core.files.storage import FileSystemStorage
 from ninja import UploadedFile, File
 
 STORAGE = FileSystemStorage()
 
 @api.post("/upload")
-def create_upload(request, cv: UploadedFile = File(...)):
+def create_upload(request, cv: File[UploadedFile]):
     filename = STORAGE.save(cv.name, cv)
     # Handle things further
 ```
@@ -87,7 +87,7 @@ def create_upload(request, cv: UploadedFile = File(...)):
 Now to get employee we will define a schema that will describe what our responses will look like. Here we will basically use the same schema as `EmployeeIn`, but will add an extra attribute `id`:
 
 
-```Python hl_lines="2"
+```python hl_lines="2"
 class EmployeeOut(Schema):
     id: int
     first_name: str
@@ -102,7 +102,7 @@ class EmployeeOut(Schema):
 We will use this schema as the `response` type for our `GET` employee view:
 
 
-```Python hl_lines="1"
+```python hl_lines="1"
 @api.get("/employees/{employee_id}", response=EmployeeOut)
 def get_employee(request, employee_id: int):
     employee = get_object_or_404(Employee, id=employee_id)
@@ -110,7 +110,7 @@ def get_employee(request, employee_id: int):
 ```
 
 Notice that we simply returned an employee ORM object, without a need to convert it to a dict. The `response` schema does automatic result validation and conversion to JSON:
-```Python hl_lines="4"
+```python hl_lines="4"
 @api.get("/employees/{employee_id}", response=EmployeeOut)
 def get_employee(request, employee_id: int):
     employee = get_object_or_404(Employee, id=employee_id)
@@ -120,7 +120,7 @@ def get_employee(request, employee_id: int):
 ### List of objects
 
 To output a list of employees, we can reuse the same `EmployeeOut` schema. We will just set the `response` schema to a *List* of `EmployeeOut`.
-```Python hl_lines="3"
+```python hl_lines="3"
 from typing import List
 
 @api.get("/employees", response=List[EmployeeOut])
@@ -131,7 +131,7 @@ def list_employees(request):
 
 Another cool trick - notice we just returned a Django ORM queryset:
 
-```Python hl_lines="4"
+```python hl_lines="4"
 @api.get("/employees", response=List[EmployeeOut])
 def list_employees(request):
     qs = Employee.objects.all()
@@ -145,7 +145,7 @@ It automatically gets evaluated, validated and converted to a JSON list!
 
 Update is pretty trivial. We just use the `PUT` method and also pass `employee_id`:
 
-```Python hl_lines="1"
+```python hl_lines="1"
 @api.put("/employees/{employee_id}")
 def update_employee(request, employee_id: int, payload: EmployeeIn):
     employee = get_object_or_404(Employee, id=employee_id)
@@ -163,20 +163,35 @@ Here we used the `payload.dict` method to set all object attributes:
 
 You can also do this more explicit:
 
-```Python
+```python
 employee.first_name = payload.first_name
 employee.last_name = payload.last_name
 employee.department_id = payload.department_id
 employee.birthdate = payload.birthdate
 ```
 
+**Partial updates**
+
+To allow the user to make partial updates, use `payload.dict(exclude_unset=True).items()`. This ensures that only the specified fields get updated.
+
+**Enforcing strict field validation**
+
+By default, any provided fields that don't exist in the schema will be silently ignored. To raise an error for these invalid fields, you can set `extra = "forbid"` in the schema's Config class. For example:
+
+```python hl_lines="4 5"
+class EmployeeIn(Schema):
+    # your fields here...
+
+    class Config:
+        extra = "forbid"
+```
 
 ## Delete
 
 Delete is also pretty simple. We just get employee by `id` and delete it from the DB:
 
 
-```Python hl_lines="1 2 4"
+```python hl_lines="1 2 4"
 @api.delete("/employees/{employee_id}")
 def delete_employee(request, employee_id: int):
     employee = get_object_or_404(Employee, id=employee_id)
@@ -189,7 +204,7 @@ def delete_employee(request, employee_id: int):
 Here's a full CRUD example:
 
 
-```Python
+```python
 from datetime import date
 from typing import List
 from ninja import NinjaAPI, Schema

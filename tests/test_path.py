@@ -16,9 +16,9 @@ def test_text_get():
 response_not_valid_bool = {
     "detail": [
         {
+            "type": "bool_parsing",
             "loc": ["path", "item_id"],
-            "msg": "value could not be parsed to a boolean",
-            "type": "type_error.bool",
+            "msg": "Input should be a valid boolean, unable to interpret input",
         }
     ]
 }
@@ -26,9 +26,19 @@ response_not_valid_bool = {
 response_not_valid_int = {
     "detail": [
         {
+            "type": "int_parsing",
             "loc": ["path", "item_id"],
-            "msg": "value is not a valid integer",
-            "type": "type_error.integer",
+            "msg": "Input should be a valid integer, unable to parse string as an integer",
+        }
+    ]
+}
+
+response_not_valid_int_float = {
+    "detail": [
+        {
+            "type": "int_parsing",
+            "loc": ["path", "item_id"],
+            "msg": "Input should be a valid integer, unable to parse string as an integer",
         }
     ]
 }
@@ -36,9 +46,9 @@ response_not_valid_int = {
 response_not_valid_float = {
     "detail": [
         {
+            "type": "float_parsing",
             "loc": ["path", "item_id"],
-            "msg": "value is not a valid float",
-            "type": "type_error.float",
+            "msg": "Input should be a valid number, unable to parse string as a number",
         }
     ]
 }
@@ -46,10 +56,10 @@ response_not_valid_float = {
 response_at_least_3 = {
     "detail": [
         {
+            "type": "string_too_short",
             "loc": ["path", "item_id"],
-            "msg": "ensure this value has at least 3 characters",
-            "type": "value_error.any_str.min_length",
-            "ctx": {"limit_value": 3},
+            "msg": "String should have at least 3 characters",
+            "ctx": {"min_length": 3},
         }
     ]
 }
@@ -58,10 +68,10 @@ response_at_least_3 = {
 response_at_least_2 = {
     "detail": [
         {
+            "type": "string_too_short",
             "loc": ["path", "item_id"],
-            "msg": "ensure this value has at least 2 characters",
-            "type": "value_error.any_str.min_length",
-            "ctx": {"limit_value": 2},
+            "msg": "String should have at least 2 characters",
+            "ctx": {"min_length": 2},
         }
     ]
 }
@@ -70,10 +80,10 @@ response_at_least_2 = {
 response_maximum_3 = {
     "detail": [
         {
+            "type": "string_too_long",
             "loc": ["path", "item_id"],
-            "msg": "ensure this value has at most 3 characters",
-            "type": "value_error.any_str.max_length",
-            "ctx": {"limit_value": 3},
+            "msg": "String should have at most 3 characters",
+            "ctx": {"max_length": 3},
         }
     ]
 }
@@ -82,10 +92,10 @@ response_maximum_3 = {
 response_greater_than_3 = {
     "detail": [
         {
+            "type": "greater_than",
             "loc": ["path", "item_id"],
-            "msg": "ensure this value is greater than 3",
-            "type": "value_error.number.not_gt",
-            "ctx": {"limit_value": 3},
+            "msg": "Input should be greater than 3",
+            "ctx": {"gt": 3.0},
         }
     ]
 }
@@ -94,10 +104,10 @@ response_greater_than_3 = {
 response_greater_than_0 = {
     "detail": [
         {
+            "type": "greater_than",
             "loc": ["path", "item_id"],
-            "msg": "ensure this value is greater than 0",
-            "type": "value_error.number.not_gt",
-            "ctx": {"limit_value": 0},
+            "msg": "Input should be greater than 0",
+            "ctx": {"gt": 0.0},
         }
     ]
 }
@@ -106,10 +116,10 @@ response_greater_than_0 = {
 response_greater_than_1 = {
     "detail": [
         {
+            "type": "greater_than",
             "loc": ["path", "item_id"],
-            "msg": "ensure this value is greater than 1",
-            "type": "value_error.number.not_gt",
-            "ctx": {"limit_value": 1},
+            "msg": "Input should be greater than 1",
+            "ctx": {"gt": 1},
         }
     ]
 }
@@ -118,10 +128,10 @@ response_greater_than_1 = {
 response_greater_than_equal_3 = {
     "detail": [
         {
+            "type": "greater_than_equal",
             "loc": ["path", "item_id"],
-            "msg": "ensure this value is greater than or equal to 3",
-            "type": "value_error.number.not_ge",
-            "ctx": {"limit_value": 3},
+            "msg": "Input should be greater than or equal to 3",
+            "ctx": {"ge": 3.0},
         }
     ]
 }
@@ -130,10 +140,10 @@ response_greater_than_equal_3 = {
 response_less_than_3 = {
     "detail": [
         {
+            "type": "less_than",
             "loc": ["path", "item_id"],
-            "msg": "ensure this value is less than 3",
-            "type": "value_error.number.not_lt",
-            "ctx": {"limit_value": 3},
+            "msg": "Input should be less than 3",
+            "ctx": {"lt": 3.0},
         }
     ]
 }
@@ -142,22 +152,35 @@ response_less_than_3 = {
 response_less_than_0 = {
     "detail": [
         {
+            "type": "less_than",
             "loc": ["path", "item_id"],
-            "msg": "ensure this value is less than 0",
-            "type": "value_error.number.not_lt",
-            "ctx": {"limit_value": 0},
+            "msg": "Input should be less than 0",
+            "ctx": {"lt": 0.0},
+        }
+    ]
+}
+
+response_less_than_equal_3 = {
+    "detail": [
+        {
+            "type": "less_than_equal",
+            "loc": ["path", "item_id"],
+            "msg": "Input should be less than or equal to 3",
+            "ctx": {"le": 3.0},
         }
     ]
 }
 
 
-response_less_than_equal_3 = {
+response_not_valid_pattern = {
     "detail": [
         {
+            "ctx": {
+                "pattern": "^foo",
+            },
             "loc": ["path", "item_id"],
-            "msg": "ensure this value is less than or equal to 3",
-            "type": "value_error.number.not_le",
-            "ctx": {"limit_value": 3},
+            "msg": "String should match pattern '^foo'",
+            "type": "string_pattern_mismatch",
         }
     ]
 }
@@ -173,7 +196,7 @@ response_less_than_equal_3 = {
         ("/path/int/foobar", 422, response_not_valid_int),
         ("/path/int/True", 422, response_not_valid_int),
         ("/path/int/42", 200, 42),
-        ("/path/int/42.5", 422, response_not_valid_int),
+        ("/path/int/42.5", 422, response_not_valid_int_float),
         ("/path/float/foobar", 422, response_not_valid_float),
         ("/path/float/True", 422, response_not_valid_float),
         ("/path/float/42", 200, 42),
@@ -219,31 +242,34 @@ response_less_than_equal_3 = {
         ("/path/param-le-ge/4", 422, response_less_than_equal_3),
         ("/path/param-lt-int/2", 200, 2),
         ("/path/param-lt-int/42", 422, response_less_than_3),
-        ("/path/param-lt-int/2.7", 422, response_not_valid_int),
+        ("/path/param-lt-int/2.7", 422, response_not_valid_int_float),
         ("/path/param-gt-int/42", 200, 42),
         ("/path/param-gt-int/2", 422, response_greater_than_3),
-        ("/path/param-gt-int/2.7", 422, response_not_valid_int),
+        ("/path/param-gt-int/2.7", 422, response_not_valid_int_float),
         ("/path/param-le-int/42", 422, response_less_than_equal_3),
         ("/path/param-le-int/3", 200, 3),
         ("/path/param-le-int/2", 200, 2),
-        ("/path/param-le-int/2.7", 422, response_not_valid_int),
+        ("/path/param-le-int/2.7", 422, response_not_valid_int_float),
         ("/path/param-ge-int/42", 200, 42),
         ("/path/param-ge-int/3", 200, 3),
         ("/path/param-ge-int/2", 422, response_greater_than_equal_3),
-        ("/path/param-ge-int/2.7", 422, response_not_valid_int),
+        ("/path/param-ge-int/2.7", 422, response_not_valid_int_float),
         ("/path/param-lt-gt-int/2", 200, 2),
         ("/path/param-lt-gt-int/4", 422, response_less_than_3),
         ("/path/param-lt-gt-int/0", 422, response_greater_than_1),
-        ("/path/param-lt-gt-int/2.7", 422, response_not_valid_int),
+        ("/path/param-lt-gt-int/2.7", 422, response_not_valid_int_float),
         ("/path/param-le-ge-int/2", 200, 2),
         ("/path/param-le-ge-int/1", 200, 1),
         ("/path/param-le-ge-int/3", 200, 3),
         ("/path/param-le-ge-int/4", 422, response_less_than_equal_3),
-        ("/path/param-le-ge-int/2.7", 422, response_not_valid_int),
+        ("/path/param-le-ge-int/2.7", 422, response_not_valid_int_float),
+        ("/path/param-pattern/foo", 200, "foo"),
+        ("/path/param-pattern/fo", 422, response_not_valid_pattern),
     ],
 )
 def test_get_path(path, expected_status, expected_response):
     response = client.get(path)
+    print(path, response.json())
     assert response.status_code == expected_status
     assert response.json() == expected_response
 
@@ -261,7 +287,7 @@ def test_get_path(path, expected_status, expected_response):
         ("/path/param-django-int/True", "Cannot resolve", Exception),
         ("/path/param-django-int/foobar", "Cannot resolve", Exception),
         ("/path/param-django-int/not-an-int", 200, "Found not-an-int"),
-        ("/path/param-django-int-str/42", 200, "42"),
+        # ("/path/param-django-int-str/42", 200, "42"), # https://github.com/pydantic/pydantic/issues/5993
         ("/path/param-django-int-str/42.5", "Cannot resolve", Exception),
         (
             "/path/param-django-slug/django-ninja-is-the-best",
@@ -295,11 +321,12 @@ def test_get_path(path, expected_status, expected_response):
     ],
 )
 def test_get_path_django(path, expected_status, expected_response):
-    if expected_response == Exception:
+    if expected_response is Exception:
         with pytest.raises(Exception, match=expected_status):
             client.get(path)
     else:
         response = client.get(path)
+        print(response.json())
         assert response.status_code == expected_status
         assert response.json() == expected_response
 

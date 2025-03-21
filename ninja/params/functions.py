@@ -1,15 +1,15 @@
 # Yeah, this is a bit strange
 # but the whole point of this module is to make mypy and typehints happy
-# what it basically does makes function XXX that create instance of params.XXX
+# what it basically does makes function XXX that create instance of models.XXX
 # and annotates function with result = Any
 # idea from https://github.com/tiangolo/fastapi/blob/master/fastapi/param_functions.py
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Pattern, Union
 
-from ninja import params
+from ninja.params import models
 
 
 def Path(  # noqa: N802
-    default: Any,
+    default: Any = ...,
     *,
     alias: Optional[str] = None,
     title: Optional[str] = None,
@@ -20,15 +20,15 @@ def Path(  # noqa: N802
     le: Optional[float] = None,
     min_length: Optional[int] = None,
     max_length: Optional[int] = None,
-    regex: Optional[str] = None,
+    pattern: Union[str, Pattern[str], None] = None,
     example: Any = None,
     examples: Optional[Dict[str, Any]] = None,
     deprecated: Optional[bool] = None,
     include_in_schema: bool = True,
     **extra: Any,
 ) -> Any:
-    return params.Path(
-        default=default,
+    return models.Path(
+        default,
         alias=alias,
         title=title,
         description=description,
@@ -38,7 +38,7 @@ def Path(  # noqa: N802
         le=le,
         min_length=min_length,
         max_length=max_length,
-        regex=regex,
+        pattern=pattern,
         example=example,
         examples=examples,
         deprecated=deprecated,
@@ -48,7 +48,7 @@ def Path(  # noqa: N802
 
 
 def Query(  # noqa: N802
-    default: Any,
+    default: Any = ...,
     *,
     alias: Optional[str] = None,
     title: Optional[str] = None,
@@ -59,15 +59,15 @@ def Query(  # noqa: N802
     le: Optional[float] = None,
     min_length: Optional[int] = None,
     max_length: Optional[int] = None,
-    regex: Optional[str] = None,
+    pattern: Union[str, Pattern[str], None] = None,
     example: Any = None,
     examples: Optional[Dict[str, Any]] = None,
     deprecated: Optional[bool] = None,
     include_in_schema: bool = True,
     **extra: Any,
 ) -> Any:
-    return params.Query(
-        default=default,
+    return models.Query(
+        default,
         alias=alias,
         title=title,
         description=description,
@@ -77,7 +77,7 @@ def Query(  # noqa: N802
         le=le,
         min_length=min_length,
         max_length=max_length,
-        regex=regex,
+        pattern=pattern,
         example=example,
         examples=examples,
         deprecated=deprecated,
@@ -87,7 +87,7 @@ def Query(  # noqa: N802
 
 
 def Header(  # noqa: N802
-    default: Any,
+    default: Any = ...,
     *,
     alias: Optional[str] = None,
     title: Optional[str] = None,
@@ -98,14 +98,14 @@ def Header(  # noqa: N802
     le: Optional[float] = None,
     min_length: Optional[int] = None,
     max_length: Optional[int] = None,
-    regex: Optional[str] = None,
+    pattern: Union[str, Pattern[str], None] = None,
     example: Any = None,
     examples: Optional[Dict[str, Any]] = None,
     deprecated: Optional[bool] = None,
     include_in_schema: bool = True,
     **extra: Any,
 ) -> Any:
-    return params.Header(
+    return models.Header(
         default,
         alias=alias,
         title=title,
@@ -116,7 +116,7 @@ def Header(  # noqa: N802
         le=le,
         min_length=min_length,
         max_length=max_length,
-        regex=regex,
+        pattern=pattern,
         example=example,
         examples=examples,
         deprecated=deprecated,
@@ -126,7 +126,7 @@ def Header(  # noqa: N802
 
 
 def Cookie(  # noqa: N802
-    default: Any,
+    default: Any = ...,
     *,
     alias: Optional[str] = None,
     title: Optional[str] = None,
@@ -137,14 +137,14 @@ def Cookie(  # noqa: N802
     le: Optional[float] = None,
     min_length: Optional[int] = None,
     max_length: Optional[int] = None,
-    regex: Optional[str] = None,
+    pattern: Union[str, Pattern[str], None] = None,
     example: Any = None,
     examples: Optional[Dict[str, Any]] = None,
     deprecated: Optional[bool] = None,
     include_in_schema: bool = True,
     **extra: Any,
 ) -> Any:
-    return params.Cookie(
+    return models.Cookie(
         default,
         alias=alias,
         title=title,
@@ -155,7 +155,7 @@ def Cookie(  # noqa: N802
         le=le,
         min_length=min_length,
         max_length=max_length,
-        regex=regex,
+        pattern=pattern,
         example=example,
         examples=examples,
         deprecated=deprecated,
@@ -165,7 +165,7 @@ def Cookie(  # noqa: N802
 
 
 def Body(  # noqa: N802
-    default: Any,
+    default: Any = ...,
     *,
     alias: Optional[str] = None,
     title: Optional[str] = None,
@@ -176,14 +176,14 @@ def Body(  # noqa: N802
     le: Optional[float] = None,
     min_length: Optional[int] = None,
     max_length: Optional[int] = None,
-    regex: Optional[str] = None,
+    pattern: Union[str, Pattern[str], None] = None,
     example: Any = None,
     examples: Optional[Dict[str, Any]] = None,
     deprecated: Optional[bool] = None,
     include_in_schema: bool = True,
     **extra: Any,
 ) -> Any:
-    return params.Body(
+    return models.Body(
         default,
         alias=alias,
         title=title,
@@ -194,7 +194,7 @@ def Body(  # noqa: N802
         le=le,
         min_length=min_length,
         max_length=max_length,
-        regex=regex,
+        pattern=pattern,
         example=example,
         examples=examples,
         deprecated=deprecated,
@@ -204,7 +204,7 @@ def Body(  # noqa: N802
 
 
 def Form(  # noqa: N802
-    default: Any,
+    default: Any = ...,
     *,
     alias: Optional[str] = None,
     title: Optional[str] = None,
@@ -215,14 +215,14 @@ def Form(  # noqa: N802
     le: Optional[float] = None,
     min_length: Optional[int] = None,
     max_length: Optional[int] = None,
-    regex: Optional[str] = None,
+    pattern: Union[str, Pattern[str], None] = None,
     example: Any = None,
     examples: Optional[Dict[str, Any]] = None,
     deprecated: Optional[bool] = None,
     include_in_schema: bool = True,
     **extra: Any,
 ) -> Any:
-    return params.Form(
+    return models.Form(
         default,
         alias=alias,
         title=title,
@@ -233,7 +233,7 @@ def Form(  # noqa: N802
         le=le,
         min_length=min_length,
         max_length=max_length,
-        regex=regex,
+        pattern=pattern,
         example=example,
         examples=examples,
         deprecated=deprecated,
@@ -243,7 +243,7 @@ def Form(  # noqa: N802
 
 
 def File(  # noqa: N802
-    default: Any,
+    default: Any = ...,
     *,
     alias: Optional[str] = None,
     title: Optional[str] = None,
@@ -254,14 +254,14 @@ def File(  # noqa: N802
     le: Optional[float] = None,
     min_length: Optional[int] = None,
     max_length: Optional[int] = None,
-    regex: Optional[str] = None,
+    pattern: Union[str, Pattern[str], None] = None,
     example: Any = None,
     examples: Optional[Dict[str, Any]] = None,
     deprecated: Optional[bool] = None,
     include_in_schema: bool = True,
     **extra: Any,
 ) -> Any:
-    return params.File(
+    return models.File(
         default,
         alias=alias,
         title=title,
@@ -272,7 +272,7 @@ def File(  # noqa: N802
         le=le,
         min_length=min_length,
         max_length=max_length,
-        regex=regex,
+        pattern=pattern,
         example=example,
         examples=examples,
         deprecated=deprecated,

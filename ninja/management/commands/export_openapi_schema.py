@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from typing import Any, Optional
 
 from django.core.management.base import BaseCommand, CommandError, CommandParser
@@ -32,12 +33,14 @@ class Command(BaseCommand):
             except AttributeError:
                 raise CommandError(
                     "No NinjaAPI instance found; please specify one with --api"
-                )
+                ) from None
 
         try:
             api = import_string(api_path)
         except ImportError:
-            raise CommandError(f"Module or attribute for {api_path} not found!")
+            raise CommandError(
+                f"Module or attribute for {api_path} not found!"
+            ) from None
 
         if not isinstance(api, NinjaAPI):
             raise CommandError(f"{api_path} is not instance of NinjaAPI!")
@@ -81,7 +84,7 @@ class Command(BaseCommand):
         )
 
         if options["output"]:
-            with open(options["output"], "wb") as f:
+            with Path(options["output"]).open("wb") as f:
                 f.write(result.encode())
         else:
             self.stdout.write(result)

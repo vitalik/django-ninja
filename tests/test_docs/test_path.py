@@ -18,8 +18,8 @@ def test_examples():
     api = NinjaAPI()
 
     with patch("builtins.api", api, create=True):
-        import docs.src.tutorial.path.code02  # noqa: F401
         import docs.src.tutorial.path.code010  # noqa: F401
+        import docs.src.tutorial.path.code02  # noqa: F401
 
         client = TestClient(api)
 
@@ -28,28 +28,27 @@ def test_examples():
 
         response = client.get("/events/2020/1/1")
         assert response.json() == {"date": "2020-01-01"}
-        schema = api.get_openapi_schema("")
+        schema = api.get_openapi_schema(path_prefix="")
         events_params = schema["paths"]["/events/{year}/{month}/{day}"]["get"][
             "parameters"
         ]
-        # print(events_params, "!!")
         assert events_params == [
             {
                 "in": "path",
                 "name": "year",
-                "required": True,
                 "schema": {"title": "Year", "type": "integer"},
+                "required": True,
             },
             {
                 "in": "path",
                 "name": "month",
-                "required": True,
                 "schema": {"title": "Month", "type": "integer"},
+                "required": True,
             },
             {
                 "in": "path",
                 "name": "day",
-                "required": True,
                 "schema": {"title": "Day", "type": "integer"},
+                "required": True,
             },
         ]
