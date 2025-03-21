@@ -62,13 +62,13 @@ def op5(request):
 
 @o3.get("/")
 def op_o3(request):
-    assert not hasattr(request, "auth")
+    assert request.auth is None
     return "ok"
 
 
 @o4.get("/")
 def op_o4(request):
-    assert not hasattr(request, "auth")
+    assert request.auth is None
     return "ok"
 
 
