@@ -80,9 +80,11 @@ class LimitOffsetPagination(AsyncPaginationBase):
         limit: int = Field(
             settings.PAGINATION_PER_PAGE,
             ge=1,
-            le=settings.PAGINATION_MAX_LIMIT
-            if settings.PAGINATION_MAX_LIMIT != inf
-            else None,
+            le=(
+                settings.PAGINATION_MAX_LIMIT
+                if settings.PAGINATION_MAX_LIMIT != inf
+                else None
+            ),
         )
         offset: int = Field(0, ge=0)
 
@@ -290,7 +292,8 @@ def make_response_paginated(paginator: PaginationBase, op: Operation) -> None:
     try:
         new_name = f"Paged{item_schema.__name__}"
     except AttributeError:
-        new_name = f"Paged{str(item_schema).replace('.', '_')}"  # typing.Any case, only for Python < 3.11
+        # special case for `typing.Any`, only raised for Python < 3.10
+        new_name = f"Paged{str(item_schema).replace('.', '_')}"  # pragma: no cover
     new_schema = type(
         new_name,
         (paginator.Output,),
