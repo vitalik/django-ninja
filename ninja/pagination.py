@@ -4,6 +4,7 @@ from functools import partial, wraps
 from math import inf
 from typing import Any, AsyncGenerator, Callable, List, Optional, Tuple, Type, Union
 
+from asgiref.sync import sync_to_async
 from django.db.models import QuerySet
 from django.http import HttpRequest
 from django.utils.module_loading import import_string
@@ -80,9 +81,11 @@ class LimitOffsetPagination(AsyncPaginationBase):
         limit: int = Field(
             settings.PAGINATION_PER_PAGE,
             ge=1,
-            le=settings.PAGINATION_MAX_LIMIT
-            if settings.PAGINATION_MAX_LIMIT != inf
-            else None,
+            le=(
+                settings.PAGINATION_MAX_LIMIT
+                if settings.PAGINATION_MAX_LIMIT != inf
+                else None
+            ),
         )
         offset: int = Field(0, ge=0)
 
@@ -108,7 +111,7 @@ class LimitOffsetPagination(AsyncPaginationBase):
         offset = pagination.offset
         limit: int = min(pagination.limit, settings.PAGINATION_MAX_LIMIT)
         return {
-            "items": queryset[offset : offset + limit],
+            "items": await sync_to_async(list)(queryset[offset : offset + limit]),
             "count": await self._aitems_count(queryset),
         }  # noqa: E203
 
@@ -116,11 +119,11 @@ class LimitOffsetPagination(AsyncPaginationBase):
 class PageNumberPagination(AsyncPaginationBase):
     class Input(Schema):
         page: int = Field(1, ge=1)
+        page_size: int = Field(
+            settings.PAGINATION_PER_PAGE, ge=1, le=settings.PAGINATION_MAX_PER_PAGE
+        )
 
-    def __init__(
-        self, page_size: int = settings.PAGINATION_PER_PAGE, **kwargs: Any
-    ) -> None:
-        self.page_size = page_size
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
     def paginate_queryset(
@@ -129,9 +132,9 @@ class PageNumberPagination(AsyncPaginationBase):
         pagination: Input,
         **params: Any,
     ) -> Any:
-        offset = (pagination.page - 1) * self.page_size
+        offset = (pagination.page - 1) * pagination.page_size
         return {
-            "items": queryset[offset : offset + self.page_size],
+            "items": queryset[offset : offset + pagination.page_size],
             "count": self._items_count(queryset),
         }  # noqa: E203
 
@@ -141,9 +144,11 @@ class PageNumberPagination(AsyncPaginationBase):
         pagination: Input,
         **params: Any,
     ) -> Any:
-        offset = (pagination.page - 1) * self.page_size
+        offset = (pagination.page - 1) * pagination.page_size
         return {
-            "items": queryset[offset : offset + self.page_size],
+            "items": await sync_to_async(list)(
+                queryset[offset : offset + pagination.page_size]
+            ),
             "count": await self._aitems_count(queryset),
         }  # noqa: E203
 
