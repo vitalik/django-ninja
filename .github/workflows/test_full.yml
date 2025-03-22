@@ -66,7 +66,7 @@ jobs:
         with:
           python-version: 3.9
       - name: Install Flit
-        run: pip install flit
+        run: pip install flit "django>=5.0"
       - name: Install Dependencies
         run: flit install --symlink
       - name: Ruff format
