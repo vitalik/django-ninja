@@ -1,3 +1,4 @@
+import inspect
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -204,7 +205,9 @@ class Operation:
         for callback in self.auth_callbacks:
             try:
                 if is_async_callable(callback) or getattr(callback, "is_async", False):
-                    result = async_to_sync(callback)(request)
+                    result = callback(request)
+                    if inspect.iscoroutine(result):
+                        result = async_to_sync(callback)(request)
                 else:
                     result = callback(request)
             except Exception as exc:
