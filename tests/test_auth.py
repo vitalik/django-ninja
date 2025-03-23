@@ -66,6 +66,11 @@ class BearerAuth(HttpBearer):
 
 
 class AsyncBearerAuth(HttpBearer):
+    """
+    This one is async but in fact no awaits insdie authenticate
+    which led to an await error
+    """
+
     async def authenticate(self, request, token):
         if token == "bearertoken":
             return token
