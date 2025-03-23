@@ -80,9 +80,11 @@ class LimitOffsetPagination(AsyncPaginationBase):
         limit: int = Field(
             settings.PAGINATION_PER_PAGE,
             ge=1,
-            le=settings.PAGINATION_MAX_LIMIT
-            if settings.PAGINATION_MAX_LIMIT != inf
-            else None,
+            le=(
+                settings.PAGINATION_MAX_LIMIT
+                if settings.PAGINATION_MAX_LIMIT != inf
+                else None
+            ),
         )
         offset: int = Field(0, ge=0)
 
@@ -107,8 +109,12 @@ class LimitOffsetPagination(AsyncPaginationBase):
     ) -> Any:
         offset = pagination.offset
         limit: int = min(pagination.limit, settings.PAGINATION_MAX_LIMIT)
+        if isinstance(queryset, QuerySet):
+            items = [obj async for obj in queryset[offset : offset + limit]]
+        else:
+            items = queryset[offset : offset + limit]
         return {
-            "items": queryset[offset : offset + limit],
+            "items": items,
             "count": await self._aitems_count(queryset),
         }  # noqa: E203
 
@@ -155,8 +161,14 @@ class PageNumberPagination(AsyncPaginationBase):
     ) -> Any:
         page_size = self._get_page_size(pagination.page_size)
         offset = (pagination.page - 1) * page_size
+
+        if isinstance(queryset, QuerySet):
+            items = [obj async for obj in queryset[offset : offset + page_size]]
+        else:
+            items = queryset[offset : offset + page_size]
+
         return {
-            "items": queryset[offset : offset + page_size],
+            "items": items,
             "count": await self._aitems_count(queryset),
         }  # noqa: E203
 
@@ -294,8 +306,9 @@ def make_response_paginated(paginator: PaginationBase, op: Operation) -> None:
     # Switching schema to Output schema
     try:
         new_name = f"Paged{item_schema.__name__}"
-    except AttributeError:
-        new_name = f"Paged{str(item_schema).replace('.', '_')}"  # typing.Any case, only for Python < 3.11
+    except AttributeError:  # pragma: no cover
+        # special case for `typing.Any`, only raised for Python < 3.10
+        new_name = f"Paged{str(item_schema).replace('.', '_')}"  # pragma: no cover
     new_schema = type(
         new_name,
         (paginator.Output,),

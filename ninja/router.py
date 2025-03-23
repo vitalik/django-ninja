@@ -361,8 +361,7 @@ class Router:
     def set_api_instance(
         self, api: "NinjaAPI", parent_router: Optional["Router"] = None
     ) -> None:
-        # TODO: check - parent_router seems not used
-        if self.auth is NOT_SET and parent_router and parent_router.auth:
+        if self.auth is NOT_SET and parent_router:
             self.auth = parent_router.auth
         self.api = api
         for path_view in self.path_operations.values():

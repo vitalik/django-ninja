@@ -142,10 +142,15 @@ class Operation:
         self.api = api
 
         if self.auth_param == NOT_SET:
-            if api.auth != NOT_SET:
-                self._set_auth(self.api.auth)
             if router.auth != NOT_SET:
+                # If the router auth was explicitly set, use it.
                 self._set_auth(router.auth)
+            elif api.auth != NOT_SET:
+                # Otherwise fall back to the api auth. Since this is in an else branch,
+                # it will only be used if the router auth was not explicitly set (i.e.
+                # setting the router's auth to None explicitly allows "resetting" the
+                # default auth that its operations will use).
+                self._set_auth(self.api.auth)
 
         if self.throttle_param == NOT_SET:
             if api.throttle != NOT_SET:
@@ -168,7 +173,7 @@ class Operation:
     def _set_auth(
         self, auth: Optional[Union[Sequence[Callable], Callable, object]]
     ) -> None:
-        if auth is not None and auth is not NOT_SET:  # TODO: can it even happen ?
+        if auth is not None and auth is not NOT_SET:
             self.auth_callbacks = isinstance(auth, Sequence) and auth or [auth]
 
     def _run_checks(self, request: HttpRequest) -> Optional[HttpResponse]:

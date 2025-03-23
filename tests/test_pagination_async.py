@@ -1,8 +1,10 @@
 import asyncio
 from typing import Any, List
 
+import django
 import pytest
 from django.db.models import QuerySet
+from someapp.models import Category
 
 from ninja import NinjaAPI, Schema
 from ninja.errors import ConfigError
@@ -121,3 +123,58 @@ async def test_async_page_number():
 
     response = await client.get("/items_page_number?page=11")
     assert response.json() == {"items": [{"page": 11, "page_size": None}], "count": 101}
+
+
+@pytest.mark.skipif(django.VERSION[:2] < (5, 0), reason="Requires Django 5.0+")
+@pytest.mark.django_db
+@pytest.mark.asyncio
+async def test_test_async_pagination():
+    await Category.objects.acreate(title="cat1")
+    await Category.objects.acreate(title="cat2")
+    assert await Category.objects.acount() == 2
+
+    class CatSchema(Schema):
+        title: str
+
+    api = NinjaAPI()
+
+    @api.get("/cats", response=list[CatSchema])
+    @paginate
+    async def cats_paginated_limit_offset(request):
+        return Category.objects.order_by("id")
+
+    @api.get("/cats-pages", response=list[CatSchema])
+    @paginate(PageNumberPagination)
+    async def cats_paginated_page_number(request):
+        return Category.objects.order_by("id")
+
+    client = TestAsyncClient(api)
+
+    response = await client.get("/cats")
+    assert response.status_code == 200
+    assert response.json() == {
+        "items": [{"title": "cat1"}, {"title": "cat2"}],
+        "count": 2,
+    }
+
+    response = await client.get("/cats?offset=1")
+    assert response.status_code == 200
+    print(response.json())
+    assert response.json() == {
+        "items": [{"title": "cat2"}],
+        "count": 2,
+    }
+
+    response = await client.get("/cats-pages")
+    assert response.status_code == 200
+    assert response.json() == {
+        "items": [{"title": "cat1"}, {"title": "cat2"}],
+        "count": 2,
+    }
+
+    response = await client.get("/cats-pages?page=1")
+    assert response.status_code == 200
+    assert response.json() == {
+        "items": [{"title": "cat1"}, {"title": "cat2"}],
+        "count": 2,
+    }
