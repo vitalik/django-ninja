@@ -154,6 +154,12 @@ def items_9(request):
     return list(range(100))
 
 
+@api.get("/items_10", response=List[int])
+@paginate(PageNumberPagination, page_size=10, max_page_size=20)
+def items_10(request):
+    return ITEMS
+
+
 client = TestClient(api)
 
 
@@ -260,7 +266,106 @@ def test_case4():
                 "type": "integer",
             },
             "required": False,
-        }
+        },
+        {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+                "anyOf": [{"minimum": 1, "type": "integer"}, {"type": "null"}],
+                "title": "Page Size",
+            },
+            "required": False,
+        },
+    ]
+
+
+def test_case4_page_size():
+    response = client.get("/items_4?page=2&page_size=20").json()
+    assert response == {"items": ITEMS[20:40], "count": 100}
+
+    schema = api.get_openapi_schema()["paths"]["/api/items_4"]["get"]
+    # print(schema)
+    assert schema["parameters"] == [
+        {
+            "in": "query",
+            "name": "page",
+            "schema": {
+                "title": "Page",
+                "default": 1,
+                "minimum": 1,
+                "type": "integer",
+            },
+            "required": False,
+        },
+        {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+                "anyOf": [{"minimum": 1, "type": "integer"}, {"type": "null"}],
+                "title": "Page Size",
+            },
+            "required": False,
+        },
+    ]
+
+
+def test_case4_no_page_param():
+    response = client.get("/items_4?page_size=20").json()
+    assert response == {"items": ITEMS[0:20], "count": 100}
+
+    schema = api.get_openapi_schema()["paths"]["/api/items_4"]["get"]
+    # print(schema)
+    assert schema["parameters"] == [
+        {
+            "in": "query",
+            "name": "page",
+            "schema": {
+                "title": "Page",
+                "default": 1,
+                "minimum": 1,
+                "type": "integer",
+            },
+            "required": False,
+        },
+        {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+                "anyOf": [{"minimum": 1, "type": "integer"}, {"type": "null"}],
+                "title": "Page Size",
+            },
+            "required": False,
+        },
+    ]
+
+
+def test_case4_out_of_range():
+    response = client.get("/items_4?page=2&page_size=100").json()
+    assert response == {"items": [], "count": 100}
+
+    schema = api.get_openapi_schema()["paths"]["/api/items_4"]["get"]
+    # print(schema)
+    assert schema["parameters"] == [
+        {
+            "in": "query",
+            "name": "page",
+            "schema": {
+                "title": "Page",
+                "default": 1,
+                "minimum": 1,
+                "type": "integer",
+            },
+            "required": False,
+        },
+        {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+                "anyOf": [{"minimum": 1, "type": "integer"}, {"type": "null"}],
+                "title": "Page Size",
+            },
+            "required": False,
+        },
     ]
 
 
@@ -281,14 +386,23 @@ def test_case5_no_kwargs():
                 "type": "integer",
             },
             "required": False,
-        }
+        },
+        {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+                "anyOf": [{"minimum": 1, "type": "integer"}, {"type": "null"}],
+                "title": "Page Size",
+            },
+            "required": False,
+        },
     ]
 
 
 def test_case6_pass_param_kwargs():
     page = 11
     response = client.get(f"/items_6?page={page}").json()
-    assert response == {"items": [{"page": 11}], "count": 101}
+    assert response == {"items": [{"page": 11, "page_size": None}], "count": 101}
 
     schema = api.get_openapi_schema()["paths"]["/api/items_6"]["get"]
 
@@ -303,7 +417,16 @@ def test_case6_pass_param_kwargs():
                 "type": "integer",
             },
             "required": False,
-        }
+        },
+        {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+                "anyOf": [{"minimum": 1, "type": "integer"}, {"type": "null"}],
+                "title": "Page Size",
+            },
+            "required": False,
+        },
     ]
 
 
@@ -333,6 +456,36 @@ def test_case9():
         "next": "http://testlocation/?skip=10",
         "prev": "http://testlocation/?skip=0",
     }
+
+
+def test_case10_max_page_size():
+    response = client.get("/items_10?page=2&page_size=30").json()
+    assert response == {"items": ITEMS[20:40], "count": 100}
+
+    schema = api.get_openapi_schema()["paths"]["/api/items_5"]["get"]
+
+    assert schema["parameters"] == [
+        {
+            "in": "query",
+            "name": "page",
+            "schema": {
+                "title": "Page",
+                "default": 1,
+                "minimum": 1,
+                "type": "integer",
+            },
+            "required": False,
+        },
+        {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+                "anyOf": [{"minimum": 1, "type": "integer"}, {"type": "null"}],
+                "title": "Page Size",
+            },
+            "required": False,
+        },
+    ]
 
 
 @override_settings(NINJA_PAGINATION_MAX_LIMIT=1000)

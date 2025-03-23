@@ -122,7 +122,7 @@ async def test_async_page_number():
     client = TestAsyncClient(api)
 
     response = await client.get("/items_page_number?page=11")
-    assert response.json() == {"items": [{"page": 11}], "count": 101}
+    assert response.json() == {"items": [{"page": 11, "page_size": None}], "count": 101}
 
 
 @pytest.mark.skipif(django.VERSION[:2] < (5, 0), reason="Requires Django 5.0+")
