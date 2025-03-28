@@ -19,8 +19,8 @@ from ninja import Schema
 
 
 def to_camel(string: str) -> str:
-    return ''.join(word.capitalize() for word in string.split('_'))
-
+    words = string.split('_')
+    return words[0].lower() + ''.join(word.capitalize() for word in words[1:])
 
 class CamelModelSchema(Schema):
     str_field_name: str
@@ -39,7 +39,7 @@ Keep in mind that when you want modify output for field names (like camel case) 
 class UserSchema(ModelSchema):
     class Config:
         model = User
-        model_fields = ["id", "email"]
+        model_fields = ["id", "email", "is_staff"]
         alias_generator = to_camel
         populate_by_name = True  # !!!!!! <--------
 
@@ -55,12 +55,14 @@ results:
 ```JSON
 [
   {
-    "Id": 1,
-    "Email": "tim@apple.com"
+    "id": 1,
+    "email": "tim@apple.com",
+    "isStaff": true
   },
   {
-    "Id": 2,
-    "Email": "sarah@smith.com"
+    "id": 2,
+    "email": "sarah@smith.com",
+    "isStaff": false
   }
   ...
 ]
