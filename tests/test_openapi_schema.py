@@ -28,7 +28,8 @@ class TypeB(Schema):
 
 
 def to_camel(string: str) -> str:
-    return "".join(word.capitalize() for word in string.split("_"))
+    words = string.split("_")
+    return words[0].lower() + "".join(word.capitalize() for word in words[1:])
 
 
 class Response(Schema):
