@@ -17,6 +17,7 @@ class MetaConf:
     fields: Optional[List[str]] = None
     exclude: Union[List[str], str, None] = None
     fields_optional: Union[List[str], str, None] = None
+    is_blank_nullable: bool = True
 
     @staticmethod
     def from_schema_class(name: str, namespace: dict) -> "MetaConf":
@@ -26,6 +27,7 @@ class MetaConf:
             fields = getattr(meta, "fields", None)
             exclude = getattr(meta, "exclude", None)
             optional_fields = getattr(meta, "fields_optional", None)
+            is_blank_nullable = getattr(meta, "is_blank_nullable", True)
 
         elif "Config" in namespace:
             config = namespace["Config"]
@@ -33,6 +35,7 @@ class MetaConf:
             fields = getattr(config, "model_fields", None)
             exclude = getattr(config, "model_exclude", None)
             optional_fields = getattr(config, "model_fields_optional", None)
+            is_blank_nullable = getattr(config, "is_blank_nullable", True)
 
             warnings.warn(
                 "The use of `Config` class is deprecated for ModelSchema, use 'Meta' instead",
@@ -62,6 +65,7 @@ class MetaConf:
             fields=fields,
             exclude=exclude,
             fields_optional=optional_fields,
+            is_blank_nullable=is_blank_nullable,
         )
 
 
@@ -109,6 +113,7 @@ class ModelSchemaMetaclass(ResolverMetaclass):
                     fields=meta_conf.fields,
                     exclude=meta_conf.exclude,
                     optional_fields=meta_conf.fields_optional,
+                    is_blank_nullable=meta_conf.is_blank_nullable,
                     custom_fields=custom_fields,
                     base_class=cls,
                 )

@@ -41,6 +41,7 @@ class SchemaFactory:
         fields: Optional[List[str]] = None,
         exclude: Optional[List[str]] = None,
         optional_fields: Optional[List[str]] = None,
+        is_blank_nullable: bool = True,
         custom_fields: Optional[List[Tuple[str, Any, Any]]] = None,
         base_class: Type[Schema] = Schema,
     ) -> Type[Schema]:
@@ -66,6 +67,7 @@ class SchemaFactory:
                 fld,
                 depth=depth,
                 optional=optional_fields and (fld.name in optional_fields),
+                is_blank_nullable=is_blank_nullable,
             )
             definitions[fld.name] = (python_type, field_info)
 

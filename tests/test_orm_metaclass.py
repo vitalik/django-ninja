@@ -192,6 +192,13 @@ def test_blank_nullable():
             fields = "__all__"
             fields_optional = ["field5"]
 
+    class BlankTestSchema2(ModelSchema):
+        class Meta:
+            model = BlankTestModel
+            fields = "__all__"
+            fields_optional = ["field5"]
+            is_blank_nullable = False
+
     assert BlankTestSchema1.json_schema() == {
         "title": "BlankTestSchema1",
         "type": "object",
@@ -216,6 +223,29 @@ def test_blank_nullable():
             },
         },
         "required": ["field2"],
+    }
+
+    assert BlankTestSchema2.json_schema() == {
+        "title": "BlankTestSchema2",
+        "type": "object",
+        "properties": {
+            "id": {"title": "ID", "anyOf": [{"type": "integer"}, {"type": "null"}]},
+            "field1": {"title": "Field1", "type": "string"},
+            "field2": {"title": "Field2", "type": "integer"},
+            "field3": {
+                "title": "Field3",
+                "anyOf": [{"type": "string", "format": "date"}, {"type": "null"}],
+            },
+            "field4": {
+                "title": "Field4",
+                "anyOf": [{"type": "string"}, {"type": "null"}],
+            },
+            "field5": {
+                "title": "Field5",
+                "anyOf": [{"type": "boolean"}, {"type": "null"}],
+            },
+        },
+        "required": ["field1", "field2"],
     }
 
 
