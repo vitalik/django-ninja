@@ -301,12 +301,17 @@ def test_get_path(path, expected_status, expected_response):
             "31ea378c-c052-4b4c-bf0b-679ce5cfcc2a",
         ),
         (
-            "/path/param-django-uuid/31ea378c-c052-4b4c-bf0b-679ce5cfcc2",
+            "/path/param-django-uuid/31ea378c-c052-4b4c-bf0b-679ce5cfcc2",  # invalid UUID (missing last digit)
             "Cannot resolve",
             Exception,
         ),
         (
-            "/path/param-django-uuid-str/31ea378c-c052-4b4c-bf0b-679ce5cfcc2a",
+            "/path/param-django-uuid-notype/31ea378c-c052-4b4c-bf0b-679ce5cfcc2a",
+            200,
+            "31ea378c-c052-4b4c-bf0b-679ce5cfcc2a",
+        ),
+        (
+            "/path/param-django-uuid-typestr/31ea378c-c052-4b4c-bf0b-679ce5cfcc2a",
             200,
             "31ea378c-c052-4b4c-bf0b-679ce5cfcc2a",
         ),
