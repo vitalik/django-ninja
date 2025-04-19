@@ -75,7 +75,7 @@ def get_args_names(func: Callable[..., Any]) -> List[str]:
 class UUIDStrConverter(UUIDConverter):
     """Return a path converted UUID as a str instead of the standard UUID"""
 
-    def to_python(self, value: str) -> str:
+    def to_python(self, value: str) -> str:  # type: ignore
         return value  # return string value instead of UUID
 
 
