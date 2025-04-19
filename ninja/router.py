@@ -320,7 +320,6 @@ class Router:
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> None:
-
         if "{uuid:" in path:
             # django by default convert strings to UUIDs
             # but we want to keep them as strings to let pydantic handle conversion/validation
