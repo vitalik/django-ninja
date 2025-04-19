@@ -174,7 +174,7 @@ def get_path_param_django_uuid(request, item_id: UUID):
     return item_id
 
 
-@router.get("/path/param-django-uuid-str/{uuid:item_id}")
+@router.get("/path/param-django-uuid-str/{uuidstr:item_id}")
 def get_path_param_django_uuid_str(request, item_id):
     assert isinstance(item_id, str)
     return item_id
