@@ -72,16 +72,11 @@ def get_args_names(func: Callable[..., Any]) -> List[str]:
     return list(inspect.signature(func).parameters.keys())
 
 
-class NinjaUUIDConverter:
+class UUIDStrConverter(UUIDConverter):
     """Return a path converted UUID as a str instead of the standard UUID"""
 
-    regex = UUIDConverter.regex
-
-    def to_python(self, value: str) -> str:
-        return value
-
-    def to_url(self, value: Any) -> str:
-        return str(value)
+    def to_python(self, value: str) -> str:  # type: ignore
+        return value  # return string value instead of UUID
 
 
-register_converter(NinjaUUIDConverter, "uuid")
+register_converter(UUIDStrConverter, "uuidstr")

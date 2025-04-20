@@ -174,8 +174,15 @@ def get_path_param_django_uuid(request, item_id: UUID):
     return item_id
 
 
-@router.get("/path/param-django-uuid-str/{uuid:item_id}")
-def get_path_param_django_uuid_str(request, item_id):
+@router.get("/path/param-django-uuid-notype/{uuid:item_id}")
+def get_path_param_django_uuid_notype(request, item_id):
+    # no type annotation defaults to str..............^
+    assert isinstance(item_id, str)
+    return item_id
+
+
+@router.get("/path/param-django-uuid-typestr/{uuid:item_id}")
+def get_path_param_django_uuid_typestr(request, item_id: str):
     assert isinstance(item_id, str)
     return item_id
 

@@ -289,7 +289,7 @@ def is_pydantic_model(cls: Any) -> bool:
         if get_origin(cls) in UNION_TYPES:
             return any(issubclass(arg, pydantic.BaseModel) for arg in get_args(cls))
         return issubclass(cls, pydantic.BaseModel)
-    except TypeError:
+    except TypeError:  # pragma: no cover
         return False
 
 
