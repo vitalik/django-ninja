@@ -93,11 +93,48 @@ def test_config():
         class Meta:
             app_label = "tests"
 
-    with pytest.raises(ConfigError, match="Specify either `exclude` or `fields`"):
+    with pytest.raises(ValidationError, match="Specify either `exclude` or `fields`"):
 
-        class CategorySchema(ModelSchema):
+        class CategorySchema1(ModelSchema):
             class Meta:
                 model = Category
+
+    with pytest.raises(ValidationError, match="Specify either `exclude` or `fields`"):
+
+        class CategorySchema2(ModelSchema):
+            class Meta:
+                model = Category
+                exclude = ["title"]
+                fields = ["title"]
+
+    with pytest.raises(
+        ValidationError,
+        match="Use only `optional_fields`, `fields_optional` is deprecated.",
+    ):
+
+        class CategorySchema3(ModelSchema):
+            class Meta:
+                model = Category
+                fields = "__all__"
+                fields_optional = ["title"]
+                optional_fields = ["title"]
+
+    with pytest.raises(
+        ConfigError,
+        match="'title' is defined in class body and in Meta.fields or implicitly in Meta.excluded",
+    ):
+
+        class CategorySchema4(ModelSchema):
+            title: str
+
+            class Meta:
+                model = Category
+                fields = "__all__"
+
+    class CategorySchema5(ModelSchema):
+        class Config:
+            model = Category
+            fields = "__all__"
 
 
 def test_optional():
@@ -179,15 +216,14 @@ def test_fields_all():
 
 
 def test_model_schema_without_config():
+    # do not raise on creation of class
+    class NoConfigSchema(ModelSchema):
+        x: int
+
     with pytest.raises(
         ConfigError,
         match=r"No model set for class 'NoConfigSchema'",
     ):
-        # do not raise on creation of class
-        class NoConfigSchema(ModelSchema):
-            x: int
-
-        # instead raise in instantiation
         NoConfigSchema(x=1)
 
 
