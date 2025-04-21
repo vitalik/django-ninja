@@ -2,9 +2,9 @@ from typing import Optional
 
 import pytest
 from django.db import models
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
-from ninja import ModelSchema
+from ninja import ModelSchema, Schema
 from ninja.errors import ConfigError
 
 
@@ -245,19 +245,28 @@ def test_nondjango_model_error():
 
 def test_desired_inheritance():
     class Item(models.Model):
-        id = models.PositiveIntegerField
+        id = models.PositiveIntegerField(primary_key=True)
         slug = models.CharField()
 
         class Meta:
             app_label = "tests"
 
-    class ProjectModelSchema(ModelSchema):
+    class ProjectBaseSchema(Schema):
+        # add any project wide Schema/pydantic configs
+        _omissible_serialize = (
+            "serializer_func"  # model_serializer(mode="wrap")(_omissible_serialize)
+        )
+
+    class ProjectBaseModelSchema(ModelSchema, ProjectBaseSchema):
         _pydantic_config = "config"
 
-    class ResourceModelSchema(ProjectModelSchema):
+        class Meta:
+            primary_key_optional = False
+
+    class ResourceModelSchema(ProjectBaseModelSchema):
         field1: str
 
-        class Meta:
+        class Meta(ProjectBaseModelSchema.Meta):
             model = Item
             fields = ["id"]
 
@@ -268,8 +277,14 @@ def test_desired_inheritance():
             model = Item
             fields = ["id", "slug"]
 
+    assert issubclass(ItemModelSchema, BaseModel)
+    assert ItemModelSchema.Meta.primary_key_optional is False
+
     i = ItemModelSchema(id=1, slug="slug", field1="1", field2="2")
+
     assert i._pydantic_config == "config"
+    assert i._omissible_serialize == "serializer_func"
+    assert i.model_dump_json() == '{"field1":"1","id":1,"field2":"2","slug":"slug"}'
     assert i.model_json_schema() == {
         "properties": {
             "field1": {
@@ -277,16 +292,8 @@ def test_desired_inheritance():
                 "type": "string",
             },
             "id": {
-                "anyOf": [
-                    {
-                        "type": "integer",
-                    },
-                    {
-                        "type": "null",
-                    },
-                ],
-                "default": None,
-                "title": "ID",
+                "type": "integer",
+                "title": "Id",
             },
             "field2": {
                 "title": "Field2",
@@ -299,6 +306,7 @@ def test_desired_inheritance():
         },
         "required": [
             "field1",
+            "id",
             "field2",
             "slug",
         ],
