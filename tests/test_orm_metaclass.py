@@ -1,6 +1,11 @@
+from typing import Annotated, Optional, TypeVar
+
 import pytest
+from devtools import debug
 from django.db import models
-from pydantic import ValidationError
+from pydantic import GetJsonSchemaHandler, ValidationError, model_serializer
+from pydantic.json_schema import JsonSchemaValue
+from pydantic_core import core_schema
 
 from ninja import ModelSchema, Schema
 from ninja.errors import ConfigError
@@ -202,6 +207,46 @@ def test_nondjango_model_error():
                 fields = "__all__"
 
 
+class OmissibleClass:
+    """
+    Class for the custom Omissible type to modify the JsonSchemaValue for the field.
+    """
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls, source: core_schema.CoreSchema, handler: GetJsonSchemaHandler
+    ) -> JsonSchemaValue:
+        output = handler(source)
+        # FIXME: access by static index
+        t_type = output["anyOf"][0]
+        del output["anyOf"]
+
+        assert any(i in t_type.keys() for i in ["type", "$ref"])
+
+        for key in ["type", "$ref"]:
+            val = t_type.get(key)
+            if val is not None:
+                output[key] = val
+                break
+        return output
+
+
+T = TypeVar("T")
+Omissible = Annotated[Optional[T], OmissibleClass]
+
+
+def _omissible_serialize(self, handler):
+    """Delete the key from the dump if the key is Omissible and None"""
+    dump = handler(self)
+    for key, field_info in self.model_fields.items():
+        metadata = field_info.metadata
+        for c in metadata:
+            if dump.get(key) is None and OmissibleClass == c:
+                del dump[key]
+
+    return dump
+
+
 def test_better_inheritance():
     class SomeModel(models.Model):
         field1 = models.CharField()
@@ -211,11 +256,10 @@ def test_better_inheritance():
             app_label = "tests"
 
     class ProjectBaseSchema(Schema):
-        # pydantic defaults and stuff
-        pass
+        _omissible_serialize = model_serializer(mode="wrap")(_omissible_serialize)
 
     class ProjectBaseModelSchema(ModelSchema, ProjectBaseSchema):
-        # more pydantic modelschema defaults
+        # more pydantic modelschema options
         class Meta:
             primary_key_optional = False
 
@@ -224,3 +268,63 @@ def test_better_inheritance():
         match="No model set for class 'ProjectBaseModelSchema' in the Meta hierarchy",
     ):
         ProjectBaseModelSchema()
+
+    class Intermediate(ProjectBaseModelSchema):
+        class Meta:
+            depth = 0
+
+    with pytest.raises(
+        ConfigError,
+        match="No model set for class 'Intermediate' in the Meta hierarchy",
+    ):
+        Intermediate()
+
+    class SomeModelSchema(ProjectBaseModelSchema):
+        field2: Omissible[str] = None
+        extra: Omissible[str] = None
+
+        class Meta:
+            model = SomeModel
+            fields = "__all__"
+
+    assert SomeModelSchema._omissible_serialize
+    assert not getattr(SomeModelSchema, "Meta", None)
+    assert SomeModelSchema.__ninja_meta__["model"] == SomeModel
+    assert SomeModelSchema.__ninja_meta__["fields"] == "__all__"
+    assert not SomeModelSchema.__ninja_meta__["primary_key_optional"]
+
+    assert len(SomeModelSchema.__annotations__.keys()) == 4
+    assert SomeModelSchema.__annotations__["id"] == int
+    assert SomeModelSchema.__annotations__["field2"] == Omissible[str]
+    assert SomeModelSchema.__annotations__["extra"] == Omissible[str]
+    assert SomeModelSchema.__annotations__["field1"] == str
+
+    sms = SomeModelSchema(id=1, field1="char", field2="opt")
+    debug(sms)
+    assert sms.json() == '{"field2":"opt","id":1,"field1":"char"}'
+    assert sms.json_schema() == {
+        "properties": {
+            "field2": {
+                "title": "Field2",
+                "type": "string",
+            },
+            "extra": {
+                "title": "Extra",
+                "type": "string",
+            },
+            "id": {
+                "title": "ID",
+                "type": "integer",
+            },
+            "field1": {
+                "title": "Field1",
+                "type": "string",
+            },
+        },
+        "required": [
+            "id",
+            "field1",
+        ],
+        "title": "SomeModelSchema",
+        "type": "object",
+    }

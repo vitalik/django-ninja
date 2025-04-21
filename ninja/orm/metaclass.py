@@ -32,7 +32,7 @@ class MetaConf:
     exclude: Union[List[str], str, None] = None
     optional_fields: Union[List[str], Literal["__all__"], None] = None
     depth: int = 0
-    primary_key_optional: bool = True
+    primary_key_optional: Optional[bool] = None
     # deprecated
     fields_optional: Union[
         List[str], Literal["__all__"], None, Literal["__UNSET__"]
@@ -120,9 +120,8 @@ class ModelSchemaMetaclass(ResolverMetaclass):
         namespace: dict,
         **kwargs,
     ):
-        namespace[
-            "__ninja_meta__"
-        ] = {}  # there might be a better place than __ninja_meta__?
+        # there might be a better place than __ninja_meta__?
+        namespace["__ninja_meta__"] = {}
         meta_conf = MetaConf.from_class_namepace(name, namespace)
 
         if meta_conf:
@@ -133,10 +132,17 @@ class ModelSchemaMetaclass(ResolverMetaclass):
             # update meta_conf with bases
             combined = {}
             for base in reversed(bases):
-                combined.update(getattr(base, "__ninja_meta__", {}))
-            combined.update(**meta_conf)
+                combined.update(
+                    **{
+                        k: v
+                        for k, v in getattr(base, "__ninja_meta__", {}).items()
+                        if v is not None
+                    }
+                )
+            combined.update(**{k: v for k, v in meta_conf.items() if v is not None})
             namespace["__ninja_meta__"] = combined
-            if namespace["__ninja_meta__"]["model"]:
+
+            if namespace["__ninja_meta__"].get("model"):
                 fields = factory.convert_django_fields(**namespace["__ninja_meta__"])
                 for field, val in fields.items():
                     # if the field exists on the Schema, we don't overwrite it

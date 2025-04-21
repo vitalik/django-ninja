@@ -50,9 +50,7 @@ class SchemaFactory:
         *,
         name: str = "",
         depth: int = 0,
-        fields: Optional[
-            Union[List[str], Literal["__all__"]]
-        ] = "__all__",  # should Meta mirror this?
+        fields: Optional[Union[List[str], Literal["__all__"]]] = "__all__",
         exclude: Optional[List[str]] = None,
         optional_fields: Optional[List[str]] = None,
         custom_fields: Optional[List[Tuple[str, Any, Any]]] = None,
@@ -115,9 +113,6 @@ class SchemaFactory:
         optional_fields: Optional[List[str]] = None,
         primary_key_optional: bool = True,
     ) -> Dict[str, Tuple[Any, Any]]:
-        from devtools import debug
-
-        debug(fields, exclude)
         if (fields and fields != "__all__") and exclude:
             raise ConfigError("Only one of 'fields' or 'exclude' should be set.")
 
