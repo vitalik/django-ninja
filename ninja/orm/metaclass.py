@@ -1,68 +1,114 @@
 import warnings
-from typing import Any, List, Optional, Union, no_type_check
+from dataclasses import asdict
+from typing import Any, List, Literal, Optional, Type, Union, no_type_check
 
 from django.db.models import Model as DjangoModel
 from pydantic.dataclasses import dataclass
 
 from ninja.errors import ConfigError
-from ninja.orm.factory import create_schema
+from ninja.orm.factory import factory
 from ninja.schema import ResolverMetaclass, Schema
-
-_is_modelschema_class_defined = False
 
 
 @dataclass
 class MetaConf:
-    model: Any
-    fields: Optional[List[str]] = None
+    """
+    Mirros the relevant arguments for create_schema
+
+    model: Django model being used to create the Schema
+    fields: List of field names in the model to use. Defaults to '__all__' which includes all fields
+    exclude: List of field names to exclude
+    optional_fields: List of field names which will be optional, can also take '__all__'
+    depth: If > 0 schema will also be created for the nested ForeignKeys and Many2Many (with the provided depth of lookup)
+    primary_key_optional: Defaults to True, controls if django's primary_key=True field in the provided model is required
+
+    fields_optional: same as optional_fields, deprecated in order to match `create_schema()` API
+    """
+
+    model: Optional[Type[DjangoModel]] = None
+    fields: Union[List[str], Literal["__all__"], Literal["__UNSET__"], None] = (
+        "__UNSET__"
+    )
     exclude: Union[List[str], str, None] = None
-    fields_optional: Union[List[str], str, None] = None
+    optional_fields: Union[List[str], Literal["__all__"], None] = None
+    depth: int = 0
+    primary_key_optional: bool = True
+    # deprecated
+    fields_optional: Union[
+        List[str], Literal["__all__"], None, Literal["__UNSET__"]
+    ] = "__UNSET__"
 
-    @staticmethod
-    def from_schema_class(name: str, namespace: dict) -> "MetaConf":
+    @classmethod
+    def from_class_namepace(cls, name: str, namespace: dict) -> Union["MetaConf", None]:
+        """Check namespace for Meta or Config and create MetaConf from those classes or return None"""
+        conf = None
         if "Meta" in namespace:
-            meta = namespace["Meta"]
-            model = meta.model
-            fields = getattr(meta, "fields", None)
-            exclude = getattr(meta, "exclude", None)
-            optional_fields = getattr(meta, "fields_optional", None)
-
+            conf = cls.from_meta(namespace["Meta"])
         elif "Config" in namespace:
-            config = namespace["Config"]
-            model = config.model
-            fields = getattr(config, "model_fields", None)
-            exclude = getattr(config, "model_exclude", None)
-            optional_fields = getattr(config, "model_fields_optional", None)
-
+            conf = cls.from_config(namespace["Config"])
+            if not conf:
+                # No model so this isn't a "ModelSchema" config
+                return None
             warnings.warn(
                 "The use of `Config` class is deprecated for ModelSchema, use 'Meta' instead",
                 DeprecationWarning,
                 stacklevel=2,
             )
 
-        else:
-            raise ConfigError(
-                f"ModelSchema class '{name}' requires a 'Meta' (or a 'Config') subclass"
+        if conf is None:
+            return None
+
+        if conf.model:
+            if not conf.exclude and conf.fields == "__UNSET__":
+                raise ConfigError("Specify either `exclude` or `fields`")
+            elif conf.exclude and conf.fields == "__UNSET__":
+                conf.fields = None
+
+        if conf.fields_optional != "__UNSET__":
+            if conf.optional_fields is not None:
+                raise ConfigError(
+                    "Specify either `fields_optional` or `optional_fields`. `fields_optional` is deprecated."
+                )
+            warnings.warn(
+                "The use of `fields_optional` is deprecated. Use `optional_fields` instead to match `create_schema()` API",
+                DeprecationWarning,
+                stacklevel=2,
             )
+            conf.optional_fields = conf.fields_optional
 
-        assert issubclass(model, DjangoModel)
+        return conf
 
-        if not fields and not exclude:
-            raise ConfigError(
-                "Creating a ModelSchema without either the 'fields' attribute"
-                " or the 'exclude' attribute is prohibited"
-            )
+    @staticmethod
+    def from_config(config: Any) -> Union["MetaConf", None]:
+        # FIXME: deprecate usage of Config to pass ORM options?
+        confdict = {
+            "model": getattr(config, "model", None),
+            "fields": getattr(config, "model_fields", None),
+            "exclude": getattr(config, "exclude", None),
+            "optional_fields": getattr(config, "optional_fields", None),
+            "depth": getattr(config, "depth", None),
+            "primary_key_optional": getattr(config, "primary_key_optional", None),
+            "fields_optional": getattr(config, "fields_optional", None),
+        }
+        if not confdict.get("model"):
+            # this isn't a "ModelSchema" config class
+            return None
 
-        if fields == "__all__":
-            fields = None
-            # ^ when None is passed to create_schema - all fields are selected
+        return MetaConf(**{k: v for k, v in confdict.items() if v is not None})
 
-        return MetaConf(
-            model=model,
-            fields=fields,
-            exclude=exclude,
-            fields_optional=optional_fields,
-        )
+    @staticmethod
+    def from_meta(meta: Any) -> Union["MetaConf", None]:
+        confdict = {
+            "model": getattr(meta, "model", None),
+            "fields": getattr(meta, "fields", None),
+            "exclude": getattr(meta, "exclude", None),
+            "optional_fields": getattr(meta, "optional_fields", None),
+            "depth": getattr(meta, "depth", None),
+            "primary_key_optional": getattr(meta, "primary_key_optional", None),
+            "fields_optional": getattr(meta, "fields_optional", None),
+        }
+
+        return MetaConf(**{k: v for k, v in confdict.items() if v is not None})
 
 
 class ModelSchemaMetaclass(ResolverMetaclass):
@@ -74,6 +120,39 @@ class ModelSchemaMetaclass(ResolverMetaclass):
         namespace: dict,
         **kwargs,
     ):
+        namespace[
+            "__ninja_meta__"
+        ] = {}  # there might be a better place than __ninja_meta__?
+        meta_conf = MetaConf.from_class_namepace(name, namespace)
+
+        if meta_conf:
+            meta_conf = asdict(meta_conf)
+            # fields_optional is deprecated
+            del meta_conf["fields_optional"]
+
+            # update meta_conf with bases
+            combined = {}
+            for base in reversed(bases):
+                combined.update(getattr(base, "__ninja_meta__", {}))
+            combined.update(**meta_conf)
+            namespace["__ninja_meta__"] = combined
+            if namespace["__ninja_meta__"]["model"]:
+                fields = factory.convert_django_fields(**namespace["__ninja_meta__"])
+                for field, val in fields.items():
+                    # if the field exists on the Schema, we don't overwrite it
+                    if not namespace.get("__annotations__", {}).get(field):
+                        # set type
+                        namespace.setdefault("__annotations__", {})[field] = val[0]
+                        # and default value
+                        namespace[field] = val[1]
+
+            del namespace["Meta"]  # clean up the space, might not be needed
+
+        elif name != "ModelSchema":
+            raise ConfigError(
+                f"ModelSchema class '{name}' requires a 'Meta' (or a 'Config') subclass"
+            )
+
         cls = super().__new__(
             mcs,
             name,
@@ -81,45 +160,14 @@ class ModelSchemaMetaclass(ResolverMetaclass):
             namespace,
             **kwargs,
         )
-        for base in reversed(bases):
-            if (
-                _is_modelschema_class_defined
-                and issubclass(base, ModelSchema)
-                and base == ModelSchema
-            ):
-                meta_conf = MetaConf.from_schema_class(name, namespace)
-
-                custom_fields = []
-                annotations = namespace.get("__annotations__", {})
-                for attr_name, type in annotations.items():
-                    if attr_name.startswith("_"):
-                        continue
-                    default = namespace.get(attr_name, ...)
-                    custom_fields.append((attr_name, type, default))
-
-                # # cls.__doc__ = namespace.get("__doc__", config.model.__doc__)
-                # cls.__fields__ = {}  # forcing pydantic recreate
-                # # assert False, "!! cls.model_fields"
-
-                # print(config.model, name, fields, exclude, "!!")
-
-                model_schema = create_schema(
-                    meta_conf.model,
-                    name=name,
-                    fields=meta_conf.fields,
-                    exclude=meta_conf.exclude,
-                    optional_fields=meta_conf.fields_optional,
-                    custom_fields=custom_fields,
-                    base_class=cls,
-                )
-                model_schema.__doc__ = cls.__doc__
-                return model_schema
-
         return cls
 
 
 class ModelSchema(Schema, metaclass=ModelSchemaMetaclass):
-    pass
-
-
-_is_modelschema_class_defined = True
+    @no_type_check
+    def __new__(cls, *args, **kwargs):
+        if not cls.__ninja_meta__.get("model"):
+            raise ConfigError(
+                f"No model set for class '{cls.__name__}' in the Meta hierarchy"
+            )
+        return super().__new__(cls)

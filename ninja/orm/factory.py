@@ -1,5 +1,17 @@
 import itertools
-from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Type, Union, cast
+from typing import (
+    Any,
+    Dict,
+    Iterator,
+    List,
+    Literal,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    Union,
+    cast,
+)
 
 from django.db.models import Field as DjangoField
 from django.db.models import ManyToManyRel, ManyToOneRel, Model
@@ -38,22 +50,76 @@ class SchemaFactory:
         *,
         name: str = "",
         depth: int = 0,
-        fields: Optional[List[str]] = None,
+        fields: Optional[
+            Union[List[str], Literal["__all__"]]
+        ] = "__all__",  # should Meta mirror this?
         exclude: Optional[List[str]] = None,
         optional_fields: Optional[List[str]] = None,
         custom_fields: Optional[List[Tuple[str, Any, Any]]] = None,
         base_class: Type[Schema] = Schema,
+        primary_key_optional: bool = True,
     ) -> Type[Schema]:
         name = name or model.__name__
-
-        if fields and exclude:
-            raise ConfigError("Only one of 'fields' or 'exclude' should be set.")
 
         key = self.get_key(
             model, name, depth, fields, exclude, optional_fields, custom_fields
         )
+
+        schema = self.get_schema(key)
+        if schema is not None:
+            return schema
+
+        definitions = self.convert_django_fields(
+            model,
+            depth=depth,
+            fields=fields,
+            exclude=exclude,
+            optional_fields=optional_fields,
+            primary_key_optional=primary_key_optional,
+        )
+
+        if custom_fields:
+            for fld_name, python_type, field_info in custom_fields:
+                # if not isinstance(field_info, FieldInfo):
+                #     field_info = Field(field_info)
+                definitions[fld_name] = (python_type, field_info)
+
+        if name in self.schema_names:
+            name = self._get_unique_name(name)
+
+        schema = create_pydantic_model(
+            name,
+            __config__=None,
+            __base__=base_class,
+            __module__=base_class.__module__,
+            __validators__={},
+            **definitions,
+        )  # type: ignore
+
+        self.schemas[key] = schema
+        self.schema_names.add(name)
+        return schema
+
+    def get_schema(self, key: SchemaKey) -> Union[Type[Schema], None]:
         if key in self.schemas:
             return self.schemas[key]
+        return None
+
+    def convert_django_fields(
+        self,
+        model: Type[Model],
+        *,
+        depth: int = 0,
+        fields: Optional[Union[List[str], Literal["__all__"]]] = None,
+        exclude: Optional[List[str]] = None,
+        optional_fields: Optional[List[str]] = None,
+        primary_key_optional: bool = True,
+    ) -> Dict[str, Tuple[Any, Any]]:
+        from devtools import debug
+
+        debug(fields, exclude)
+        if (fields and fields != "__all__") and exclude:
+            raise ConfigError("Only one of 'fields' or 'exclude' should be set.")
 
         model_fields_list = list(self._selected_model_fields(model, fields, exclude))
         if optional_fields:
@@ -66,44 +132,18 @@ class SchemaFactory:
                 fld,
                 depth=depth,
                 optional=optional_fields and (fld.name in optional_fields),
+                primary_key_optional=primary_key_optional,
             )
             definitions[fld.name] = (python_type, field_info)
 
-        if custom_fields:
-            for fld_name, python_type, field_info in custom_fields:
-                # if not isinstance(field_info, FieldInfo):
-                #     field_info = Field(field_info)
-                definitions[fld_name] = (python_type, field_info)
-
-        if name in self.schema_names:
-            name = self._get_unique_name(name)
-
-        schema: Type[Schema] = create_pydantic_model(
-            name,
-            __config__=None,
-            __base__=base_class,
-            __module__=base_class.__module__,
-            __validators__={},
-            **definitions,
-        )  # type: ignore
-        # __model_name: str,
-        # *,
-        # __config__: ConfigDict | None = None,
-        # __base__: None = None,
-        # __module__: str = __name__,
-        # __validators__: dict[str, AnyClassMethod] | None = None,
-        # __cls_kwargs__: dict[str, Any] | None = None,
-        # **field_definitions: Any,
-        self.schemas[key] = schema
-        self.schema_names.add(name)
-        return schema
+        return definitions
 
     def get_key(
         self,
         model: Type[Model],
         name: str,
         depth: int,
-        fields: Union[str, List[str], None],
+        fields: Optional[Union[List[str], Literal["__all__"]]],
         exclude: Optional[List[str]],
         optional_fields: Optional[Union[List[str], str]],
         custom_fields: Optional[List[Tuple[str, str, Any]]],
@@ -131,15 +171,19 @@ class SchemaFactory:
     def _selected_model_fields(
         self,
         model: Type[Model],
-        fields: Optional[List[str]] = None,
+        fields: Optional[Union[List[str], Literal["__all__"]]] = None,
         exclude: Optional[List[str]] = None,
     ) -> Iterator[DjangoField]:
         "Returns iterator for model fields based on `exclude` or `fields` arguments"
         all_fields = {f.name: f for f in self._model_fields(model)}
 
+        if fields == "__all__":
+            fields = None
+
         if not fields and not exclude:
             for f in all_fields.values():
                 yield f
+            return
 
         invalid_fields = (set(fields or []) | set(exclude or [])) - all_fields.keys()
         if invalid_fields:

@@ -1,7 +1,8 @@
 import pytest
 from django.db import models
+from pydantic import ValidationError
 
-from ninja import ModelSchema
+from ninja import ModelSchema, Schema
 from ninja.errors import ConfigError
 
 
@@ -14,9 +15,9 @@ def test_simple():
             app_label = "tests"
 
     class SampleSchema(ModelSchema):
-        class Config:
+        class Meta:
             model = User
-            model_fields = ["firstname", "lastname"]
+            fields = ["firstname", "lastname"]
 
         def hello(self):
             return f"Hello({self.firstname})"
@@ -90,7 +91,7 @@ def test_config():
         class Meta:
             app_label = "tests"
 
-    with pytest.raises(ConfigError):
+    with pytest.raises(ConfigError, match="Specify either `exclude` or `fields`"):
 
         class CategorySchema(ModelSchema):
             class Meta:
@@ -183,3 +184,43 @@ def test_model_schema_without_config():
 
         class NoConfigSchema(ModelSchema):
             x: int
+
+
+def test_nondjango_model_error():
+    class NonDjangoModel:
+        field1 = models.CharField()
+        field2 = models.CharField(blank=True, null=True)
+
+    with pytest.raises(
+        ValidationError,
+        match=r"Input should be a subclass of Model \[type=is_subclass_of, input_value=<class 'test_orm_metaclas...locals>.NonDjangoModel'>, input_type=type\]",
+    ):
+
+        class SomeSchema(ModelSchema):
+            class Meta:
+                model = NonDjangoModel
+                fields = "__all__"
+
+
+def test_better_inheritance():
+    class SomeModel(models.Model):
+        field1 = models.CharField()
+        field2 = models.CharField(blank=True, null=True)
+
+        class Meta:
+            app_label = "tests"
+
+    class ProjectBaseSchema(Schema):
+        # pydantic defaults and stuff
+        pass
+
+    class ProjectBaseModelSchema(ModelSchema, ProjectBaseSchema):
+        # more pydantic modelschema defaults
+        class Meta:
+            primary_key_optional = False
+
+    with pytest.raises(
+        ConfigError,
+        match="No model set for class 'ProjectBaseModelSchema' in the Meta hierarchy",
+    ):
+        ProjectBaseModelSchema()
