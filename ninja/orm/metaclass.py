@@ -43,13 +43,14 @@ class MetaConf(BaseModel):
 
     @model_validator(mode="after")
     def check_fields(self) -> Self:
-        if self.model:
-            if not self.exclude and not self.fields:
-                raise ConfigError("Specify either `exclude` or `fields`")
+        if self.model and (
+            (not self.exclude and not self.fields) or (self.exclude and self.fields)
+        ):
+            raise ValueError("Specify either `exclude` or `fields`")
 
         if self.fields_optional:
             if self.optional_fields is not None:
-                raise ConfigError(
+                raise ValueError(
                     "Use only `optional_fields`, `fields_optional` is deprecated."
                 )
             warnings.warn(
@@ -98,7 +99,7 @@ class ModelSchemaMetaclass(ResolverMetaclass):
                 # explicitly through `Meta.fields` or implicitly through `Meta.excluded`
                 if namespace.get("__annotations__", {}).get(field):
                     raise ConfigError(
-                        f"{name}: '{field}' is defined in class body and in Meta.fields or implicitly in Meta.excluded"
+                        f"'{field}' is defined in class body and in Meta.fields or implicitly in Meta.excluded"
                     )
                 # set type
                 namespace.setdefault("__annotations__", {})[field] = val[0]
