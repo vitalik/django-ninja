@@ -4,7 +4,6 @@ from typing import (
     Dict,
     Iterator,
     List,
-    Literal,
     Optional,
     Set,
     Tuple,
@@ -16,6 +15,7 @@ from typing import (
 from django.db.models import Field as DjangoField
 from django.db.models import ManyToManyRel, ManyToOneRel, Model
 from pydantic import create_model as create_pydantic_model
+from typing_extensions import Literal
 
 from ninja.errors import ConfigError
 from ninja.orm.fields import get_schema_field
