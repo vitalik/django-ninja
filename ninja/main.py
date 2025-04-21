@@ -14,7 +14,7 @@ from typing import (
     Union,
 )
 
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, StreamingHttpResponse
 from django.urls import URLPattern, URLResolver, reverse
 from django.utils.module_loading import import_string
 
@@ -338,6 +338,65 @@ class NinjaAPI:
             include_in_schema=include_in_schema,
             openapi_extra=openapi_extra,
         )
+
+    def event_source(
+        self,
+        path: str,
+        *,
+        auth: Any = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
+        response: Any = NOT_SET,
+        operation_id: Optional[str] = None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        deprecated: Optional[bool] = None,
+        by_alias: Optional[bool] = None,
+        exclude_unset: Optional[bool] = None,
+        exclude_defaults: Optional[bool] = None,
+        exclude_none: Optional[bool] = None,
+        url_name: Optional[str] = None,
+        include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
+    ) -> Callable[[TCallable], TCallable]:
+        """
+        `EventSource` operation.
+        """
+
+        def decorator(view_func: TCallable) -> TCallable:
+            def wrapped_view(
+                request: HttpRequest, *args: Any, **kwargs: Any
+            ) -> StreamingHttpResponse:
+                response = StreamingHttpResponse(
+                    view_func(request, *args, **kwargs),
+                    content_type="text/event-stream",
+                )
+                response["Cache-Control"] = "no-cache"
+                return response
+
+            self.default_router.add_api_operation(
+                path,
+                methods=["GET"],
+                view_func=wrapped_view,
+                auth=auth,
+                throttle=throttle,
+                response=response,
+                operation_id=operation_id,
+                summary=summary,
+                description=description,
+                tags=tags,
+                deprecated=deprecated,
+                by_alias=by_alias,
+                exclude_unset=exclude_unset,
+                exclude_defaults=exclude_defaults,
+                exclude_none=exclude_none,
+                url_name=url_name,
+                include_in_schema=include_in_schema,
+                openapi_extra=openapi_extra,
+            )
+            return view_func
+
+        return decorator
 
     def api_operation(
         self,
