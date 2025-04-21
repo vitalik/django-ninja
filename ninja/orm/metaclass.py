@@ -25,7 +25,7 @@ class MetaConf(BaseModel):
     fields_optional: same as optional_fields, deprecated in order to match `create_schema()` API
     """
 
-    model: Optional[Type[DjangoModel]]
+    model: Optional[Type[DjangoModel]] = None
     # aliased for Config
     fields: Union[List[str], Literal["__all__"], None] = Field(
         None, validation_alias=AliasChoices("fields", "model_fields")
@@ -90,7 +90,7 @@ class ModelSchemaMetaclass(ResolverMetaclass):
             }
             meta_conf = MetaConf.model_validate(conf_dict)
 
-        if meta_conf:
+        if meta_conf and meta_conf.model:
             meta_conf = meta_conf.model_dump(exclude_none=True)
 
             fields = factory.convert_django_fields(**meta_conf)
