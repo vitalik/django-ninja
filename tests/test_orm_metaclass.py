@@ -1,7 +1,6 @@
 from typing import Annotated, Optional, TypeVar
 
 import pytest
-from devtools import debug
 from django.db import models
 from pydantic import GetJsonSchemaHandler, ValidationError, model_serializer
 from pydantic.json_schema import JsonSchemaValue
@@ -300,7 +299,6 @@ def test_better_inheritance():
     assert SomeModelSchema.__annotations__["field1"] == str
 
     sms = SomeModelSchema(id=1, field1="char", field2="opt")
-    debug(sms)
     assert sms.json() == '{"field2":"opt","id":1,"field1":"char"}'
     assert sms.json_schema() == {
         "properties": {
