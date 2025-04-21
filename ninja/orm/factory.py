@@ -117,9 +117,8 @@ class SchemaFactory:
             raise ConfigError("Only one of 'fields' or 'exclude' should be set.")
 
         model_fields_list = list(self._selected_model_fields(model, fields, exclude))
-        if optional_fields:
-            if optional_fields == "__all__":
-                optional_fields = [f.name for f in model_fields_list]
+        if optional_fields and optional_fields == "__all__":
+            optional_fields = [f.name for f in model_fields_list]
 
         definitions = {}
         for fld in model_fields_list:
