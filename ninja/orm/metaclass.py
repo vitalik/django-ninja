@@ -1,9 +1,10 @@
 import warnings
 from dataclasses import asdict
-from typing import Any, List, Literal, Optional, Type, Union, no_type_check
+from typing import Any, List, Optional, Type, Union, no_type_check
 
 from django.db.models import Model as DjangoModel
 from pydantic.dataclasses import dataclass
+from typing_extensions import Literal
 
 from ninja.errors import ConfigError
 from ninja.orm.factory import factory
@@ -13,7 +14,7 @@ from ninja.schema import ResolverMetaclass, Schema
 @dataclass
 class MetaConf:
     """
-    Mirros the relevant arguments for create_schema
+    Mirrors the relevant arguments for create_schema
 
     model: Django model being used to create the Schema
     fields: List of field names in the model to use. Defaults to '__all__' which includes all fields
@@ -80,7 +81,6 @@ class MetaConf:
 
     @staticmethod
     def from_config(config: Any) -> Union["MetaConf", None]:
-        # FIXME: deprecate usage of Config to pass ORM options?
         confdict = {
             "model": getattr(config, "model", None),
             "fields": getattr(config, "model_fields", None),
