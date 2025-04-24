@@ -76,13 +76,6 @@ class ModelSchemaMetaclass(ResolverMetaclass):
 
         if "Meta" in namespace:
             conf_class = namespace["Meta"]
-        elif "Config" in namespace:
-            conf_class = namespace["Config"]
-            warnings.warn(
-                "The use of `Config` class is deprecated for ModelSchema, use 'Meta' instead",
-                DeprecationWarning,
-                stacklevel=2,
-            )
 
         if conf_class:
             conf_dict = {
