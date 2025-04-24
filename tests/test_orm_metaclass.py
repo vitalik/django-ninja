@@ -330,6 +330,7 @@ def test_specific_inheritance():
             app_label = "tests"
 
     class ItemBaseModelSchema(ModelSchema):
+        model_config = {"title": "Item Title"}
         is_favorite: Optional[bool] = None
 
         class Meta:
@@ -342,14 +343,19 @@ def test_specific_inheritance():
             ]
 
     class ItemInBasesSchema(ItemBaseModelSchema):
+        class Config:
+            allow_inf_nan = True
+
         class Meta(ItemBaseModelSchema.Meta):
             model = Item
             fields = ItemBaseModelSchema.Meta.fields + ["length_in_mn"]
 
-    class ItemInMealsSchema(ItemBaseModelSchema):
-        class Meta(ItemBaseModelSchema.Meta):
+    class ItemInMealsSchema(ItemInBasesSchema):
+        model_config = {"validate_default": True}
+
+        class Meta:
             model = Item
-            fields = ItemBaseModelSchema.Meta.fields + [
+            fields = ItemInBasesSchema.Meta.fields + [
                 "length_in_mn",
                 "special_field_for_meal",
             ]
@@ -379,6 +385,7 @@ def test_specific_inheritance():
         special_field_for_meal="char",
     )
 
+    assert ibase.model_config["title"] == "Item Title"
     assert (
         ibase.model_dump_json()
         == '{"is_favorite":false,"id":1,"slug":"slug","name":"item","image_path":"/images/image.png"}'
@@ -427,10 +434,11 @@ def test_specific_inheritance():
             "name",
             "image_path",
         ],
-        "title": "ItemBaseModelSchema",
+        "title": "Item Title",
         "type": "object",
     }
 
+    assert item_inbases.model_config["allow_inf_nan"] == True  # noqa: E712
     assert (
         item_inbases.model_dump_json()
         == '{"is_favorite":false,"id":2,"slug":"slug","name":"item","image_path":"/images/image.png","length_in_mn":2}'
@@ -484,10 +492,12 @@ def test_specific_inheritance():
             "image_path",
             "length_in_mn",
         ],
-        "title": "ItemInBasesSchema",
+        "title": "Item Title",
         "type": "object",
     }
 
+    assert item_inmeals.model_config["allow_inf_nan"] == True  # noqa: E712
+    assert item_inmeals.model_config["validate_default"] == True  # noqa: E712
     assert (
         item_inmeals.model_dump_json()
         == '{"is_favorite":false,"id":3,"slug":"slug","name":"item","image_path":"/images/image.png","length_in_mn":2,"special_field_for_meal":"char"}'
@@ -546,6 +556,41 @@ def test_specific_inheritance():
             "length_in_mn",
             "special_field_for_meal",
         ],
-        "title": "ItemInMealsSchema",
+        "title": "Item Title",
         "type": "object",
     }
+
+
+def test_pydantic_config_inheritance():
+    class User(models.Model):
+        firstname = models.CharField()
+        lastname = models.CharField(blank=True, null=True)
+
+        class Meta:
+            app_label = "tests"
+
+    class Grandparent(ModelSchema):
+        grandparent: str
+
+        class Config:
+            grandparent = "gpa"
+
+    class Parent(Grandparent):
+        parent: str
+
+        class Config:
+            parent = "parent"
+
+    class Child(Parent):
+        model_config = {"child": True}
+        child: str
+
+        class Meta:
+            model = User
+            fields = "__all__"
+
+    c = Child(firstname="user", lastname="name", grandparent="1", parent="2", child="3")
+
+    assert c.model_config["child"]
+    assert c.model_config["parent"]
+    assert c.model_config["grandparent"]
