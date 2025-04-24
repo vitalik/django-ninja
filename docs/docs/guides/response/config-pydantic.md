@@ -38,11 +38,14 @@ Keep in mind that when you want modify output for field names (like camel case) 
 ```python hl_lines="6 9"
 class UserSchema(ModelSchema):
     class Config:
-        model = User
-        model_fields = ["id", "email", "is_staff"]
+        """Pydantic config"""
         alias_generator = to_camel
         populate_by_name = True  # !!!!!! <--------
-
+    
+    class Meta:
+        """ModelSchema config"""
+        model = User
+        model_fields = ["id", "email", "is_staff"]
 
 @api.get("/users", response=list[UserSchema], by_alias=True) # !!!!!! <-------- by_alias
 def get_users(request):
@@ -84,6 +87,6 @@ BaseUserSchema = create_schema(User)
 
 class UserSchema(BaseUserSchema):
 
-    class Config(BaseUserSchema.Config):
+    class Config:
         ...
 ```

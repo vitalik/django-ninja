@@ -28,6 +28,25 @@ class UserSchema(ModelSchema):
 #     last_name: str
 ```
 
+The `Meta` class is only used for configuring the interaction between the django model and the underlying
+pydantic model. To configure the pydantic model (or `Schema` as it's been abstracted in `django-ninja`), 
+define a `class Config` or `model_config` in your `ModelSchema` class.
+
+```Python
+class UserSlimGetSchema(ModelSchema):
+    # pydantic config
+    # -- 
+    model_config = {"validate_default": True}
+    # OR
+    class Config:
+        validate_default = True
+    # --
+
+    class Meta:
+        model = User
+        fields = ["id", "name"]
+```
+
 ### Using ALL model fields
 
 To use all fields from a model - you can pass `__all__` to `fields`:
@@ -174,3 +193,29 @@ def modify_data(request, pk: int, payload: PatchDict[GroupSchema]):
 ```
 
 in this example the `payload` argument will be a type of `dict` only fields that were passed in request and validated using `GroupSchema`
+
+
+### Inheritance
+
+ModelSchemas can utilize inheritance. The `Meta` class is not inherited implicitly and must have an explicit parent if desired.
+
+```Python
+class ProjectBaseSchema(Schema):
+    # global pydantic config, hooks, etc
+    model_config = {}
+
+class ProjectBaseModelSchema(ModelSchema, ProjectBaseSchema):
+
+    class Meta:
+        primary_key_optional = False
+
+class UserSlimGetSchema(ProjectBaseModelSchema):
+    class Meta(ProjectBaseModelSchema.Meta):
+        model = User
+        fields = ["id", "username"]
+
+class UserFullGetSchema(UserSlimGetSchema):
+    class Meta(UserSlimGetSchema.Meta):
+        model = Item
+        fields = ["id", "slug"]
+```
