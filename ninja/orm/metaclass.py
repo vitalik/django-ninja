@@ -84,6 +84,12 @@ class ModelSchemaMetaclass(ResolverMetaclass):
             meta_conf = MetaConf.model_validate(conf_dict)
 
         if meta_conf and meta_conf.model:
+            existing_annotations_keys = set()
+            for base in bases:
+                existing_annotations_keys |= set(
+                    getattr(base, "__annotations__", {}).keys()
+                )
+
             meta_conf = meta_conf.model_dump(exclude_none=True)
 
             fields = factory.convert_django_fields(**meta_conf)
@@ -93,6 +99,20 @@ class ModelSchemaMetaclass(ResolverMetaclass):
                 if namespace.get("__annotations__", {}).get(field):
                     raise ConfigError(
                         f"'{field}' is defined in class body and in Meta.fields or implicitly in Meta.excluded"
+                    )
+                # NOTE: the check below disables the ability to explicitly declare all fields on Model child schemas
+                # class ItemSlimSchema(ModelSchema):
+                #     class Meta:
+                #         model = Item
+                #         fields = ["id", "name"]
+                #
+                # class ItemSchema(ItemSlimSchema):
+                #     class Meta(ItemSlimSchema.Meta):
+                #         fields = ["type", "desc"] <-- will work with inheritting from the parent.Meta, other fields already exist
+                #         fields = ["id", "name", "type", "desc"] <-- won't work, inheriting from parent.Meta or not
+                if field in existing_annotations_keys:
+                    raise ConfigError(
+                        f"Field {field} from model {meta_conf['model']} already exists in the Schema"
                     )
                 # set type
                 namespace.setdefault("__annotations__", {})[field] = val[0]

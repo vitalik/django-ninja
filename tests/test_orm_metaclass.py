@@ -274,8 +274,7 @@ def test_desired_inheritance():
         field2: str
 
         class Meta(ResourceModelSchema.Meta):
-            model = Item
-            fields = ["id", "slug"]
+            fields = ["slug"]
 
     assert issubclass(ItemModelSchema, BaseModel)
     assert ItemModelSchema.Meta.primary_key_optional is False
@@ -347,18 +346,13 @@ def test_specific_inheritance():
             allow_inf_nan = True
 
         class Meta(ItemBaseModelSchema.Meta):
-            model = Item
-            fields = ItemBaseModelSchema.Meta.fields + ["length_in_mn"]
+            fields = ["length_in_mn"]
 
     class ItemInMealsSchema(ItemInBasesSchema):
         model_config = {"validate_default": True}
 
-        class Meta:
-            model = Item
-            fields = ItemInBasesSchema.Meta.fields + [
-                "length_in_mn",
-                "special_field_for_meal",
-            ]
+        class Meta(ItemInBasesSchema.Meta):
+            fields = ["special_field_for_meal"]
 
     ibase = ItemBaseModelSchema(
         id=1,
