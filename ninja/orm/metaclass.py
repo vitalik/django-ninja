@@ -3,7 +3,14 @@ from inspect import getmembers
 from typing import List, Optional, Type, Union, no_type_check
 
 from django.db.models import Model as DjangoModel
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    model_validator,
+)
 from typing_extensions import Literal, Self
 
 from ninja.errors import ConfigError
@@ -46,11 +53,11 @@ class MetaConf(BaseModel):
         if self.model and (
             (not self.exclude and not self.fields) or (self.exclude and self.fields)
         ):
-            raise ValueError("Specify either `exclude` or `fields`")
+            raise ConfigError("Specify either `exclude` or `fields`")
 
         if self.fields_optional:
             if self.optional_fields is not None:
-                raise ValueError(
+                raise ConfigError(
                     "Use only `optional_fields`, `fields_optional` is deprecated."
                 )
             warnings.warn(
@@ -81,7 +88,10 @@ class ModelSchemaMetaclass(ResolverMetaclass):
             conf_dict = {
                 k: v for k, v in getmembers(conf_class) if not k.startswith("__")
             }
-            meta_conf = MetaConf.model_validate(conf_dict)
+            try:
+                meta_conf = MetaConf.model_validate(conf_dict)
+            except ValidationError as ve:
+                raise ConfigError(str(ve)) from ve
 
         if meta_conf and meta_conf.model:
             existing_annotations_keys = set()

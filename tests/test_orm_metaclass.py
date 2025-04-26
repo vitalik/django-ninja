@@ -2,7 +2,7 @@ from typing import Optional
 
 import pytest
 from django.db import models
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
 
 from ninja import ModelSchema, Schema
 from ninja.errors import ConfigError
@@ -93,13 +93,13 @@ def test_config():
         class Meta:
             app_label = "tests"
 
-    with pytest.raises(ValidationError, match="Specify either `exclude` or `fields`"):
+    with pytest.raises(ConfigError, match="Specify either `exclude` or `fields`"):
 
         class CategorySchema1(ModelSchema):
             class Meta:
                 model = Category
 
-    with pytest.raises(ValidationError, match="Specify either `exclude` or `fields`"):
+    with pytest.raises(ConfigError, match="Specify either `exclude` or `fields`"):
 
         class CategorySchema2(ModelSchema):
             class Meta:
@@ -108,7 +108,7 @@ def test_config():
                 fields = ["title"]
 
     with pytest.raises(
-        ValidationError,
+        ConfigError,
         match="Use only `optional_fields`, `fields_optional` is deprecated.",
     ):
 
@@ -233,7 +233,7 @@ def test_nondjango_model_error():
         field2 = models.CharField(blank=True, null=True)
 
     with pytest.raises(
-        ValidationError,
+        ConfigError,
         match=r"Input should be a subclass of Model \[type=is_subclass_of, input_value=<class 'test_orm_metaclas...locals>.NonDjangoModel'>, input_type=type\]",
     ):
 
