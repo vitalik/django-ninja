@@ -5,10 +5,25 @@ Schemas are very useful to define your validation rules and responses, but somet
 
 ## ModelSchema 
 
-`ModelSchema` is a special base class that can automatically generate schemas from your models.
+`ModelSchema` is a special base class that can automatically generate schemas from your models. Under the hood it converts your models Django fields into
+pydantic type annotations. `ModelSchema` inherits from `Schema`, and is just a `Schema` with a Django field -> pydantic field conversion step. All other `Schema`
+related configuration and inheritance is the same.
+
+### Configuration
+
+To configure a `ModelSchema` you define a `Meta` class attribute just like in Django. This `Meta` class will be validated by `ninja.orm.metaclass.MetaConf`.
+
+```Python
+class MetaConf:  # summary
+    model: Django model being used to create the Schema
+    fields: List of field names in the model to use. Defaults to '__all__' which includes all fields
+    exclude: List of field names to exclude
+    optional_fields: List of field names which will be optional, can also take '__all__'
+    depth: If > 0 schema will also be created for the nested ForeignKeys and Many2Many (with the provided depth of lookup)
+    primary_key_optional: Defaults to True, controls if django's primary_key=True field in the provided model is required
+```
 
 All you need is to set `model` and `fields` attributes on your schema `Meta`:
-
 
 ```python hl_lines="2 5 6 7"
 from django.contrib.auth.models import User
@@ -28,9 +43,11 @@ class UserSchema(ModelSchema):
 #     last_name: str
 ```
 
+### Non-Django Model Configuration
+
 The `Meta` class is only used for configuring the interaction between the django model and the underlying
-pydantic model. To configure the pydantic model (or `Schema` as it's been abstracted in `django-ninja`), 
-define a `class Config` or `model_config` in your `ModelSchema` class.
+`Schema`. To configure the pydantic model underlying the `Schema` define, `model_config` in your
+`ModelSchema` class, or [use the deprecated by pydantic `class Config`](https://docs.pydantic.dev/latest/concepts/config/).
 
 ```Python
 class UserSlimGetSchema(ModelSchema):
@@ -46,6 +63,96 @@ class UserSlimGetSchema(ModelSchema):
         model = User
         fields = ["id", "name"]
 ```
+
+### Inheritance
+
+Because a `ModelSchema` is just a child of `Schema`, which is in turn just a child of pydantic `BaseModel`, you
+can do some convenient inheritance to handle more advanced configuration scenarios.
+
+!!! Warning
+    Beware that pydantic v2 does not always respect MRO: https://github.com/pydantic/pydantic/issues/9992
+
+```python
+    from ninja import Schema, ModelSchema
+    from pydantic import model_serializer
+    from django.db import models
+
+    # <proj_schemas.py>
+    def _my_magic_serializer(self, handler):
+        dump = handler(self)
+        dump["magic"] = "shazam"
+        return dump
+
+
+    class ProjSchema(Schema):
+        # pydantic configuration
+        _my_magic_serilizer = model_serializer(mode="wrap")(_my_magic_serializer)
+        model_config = {"arbitrary_types_allowed": True}
+
+
+    class ProjModelSchema(ProjSchema, ModelSchema):
+        # ModelSchema specific configuration
+        pass
+
+
+    class ProjMeta:
+        # ModelSchema Meta defaults
+        primary_key_optional = False
+
+    # </proj_schemas.py>
+
+
+    # <models.py>
+    class Item(models.Model):
+        name = models.CharField(max_length=64)
+        type = models.CharField(max_length=64)
+        desc = models.CharField(max_length=255, blank=True, null=True)
+
+        class Meta:
+            app_label = "test"
+
+
+    class Event(models.Model):
+        name = models.CharField(max_length=64)
+        action = models.CharField(max_length=64)
+
+        class Meta:
+            app_label = "test"
+
+    # </models.py>
+
+
+    # <schemas.py>
+    # All schemas will be using the configuration defined in parent Schemas
+    class ItemSlimGetSchema(ProjModelSchema):
+        class Meta(ProjMeta):
+            model = Item
+            fields = ["id", "name"]
+
+
+    class ItemGetSchema(ItemSlimGetSchema):
+        class Meta(ItemSlimGetSchema.Meta):
+            # inherits model, and the parents fields are already set in __annotations__
+            fields = ["type", "desc"]
+
+
+    class EventGetSchema(ProjModelSchema):
+        class Meta(ProjMeta):
+            model = Event
+            fields = ["id", "name"]
+
+
+    class ItemSummarySchema(ProjSchema):
+        model_config = {
+            "title": "Item Summary"
+        }
+        name: str
+        event: EventGetSchema
+        item: ItemGetSchema
+
+    # </schemas.py>
+```
+
 
 ### Using ALL model fields
 
@@ -89,7 +196,8 @@ class UserSchema(ModelSchema):
 
 ### Overriding fields
 
-To change default annotation for some field, or to add a new field, just use annotated attributes as usual. 
+To change default annotation for some field, or to add a new field, just use annotated attributes as usual since a `ModelSchema` is
+in the end just a `Schema`.
 
 ```python hl_lines="1 2 3 4 8"
 class GroupSchema(ModelSchema):
@@ -141,10 +249,7 @@ def patch(request, pk: int, payload: PatchGroupSchema):
         setattr(obj, attr, value)
 
     obj.save()
-
-
 ```
-
 
 ### Custom fields types
 
@@ -163,7 +268,6 @@ class MyModel(models.Modle):
 from ninja.orm import register_field
 
 register_field('VectorField', list[float])
-
 ```
 
 #### PatchDict
@@ -189,7 +293,6 @@ def modify_data(request, pk: int, payload: PatchDict[GroupSchema]):
         setattr(obj, attr, value)
     
     obj.save()
-
 ```
 
 in this example the `payload` argument will be a type of `dict` only fields that were passed in request and validated using `GroupSchema`

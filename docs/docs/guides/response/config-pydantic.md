@@ -1,7 +1,10 @@
 # Overriding Pydantic Config
 
 There are many customizations available for a **Django Ninja `Schema`**, via the schema's
-[Pydantic `Config` class](https://pydantic-docs.helpmanual.io/usage/model_config/). 
+[Pydantic `Config` class/`model_config` dict attr](https://pydantic-docs.helpmanual.io/usage/model_config/). 
+
+!!! Warning
+    Using a `Config` class is [deprecated in pydantic v2](https://docs.pydantic.dev/latest/concepts/config/).
 
 !!! info
     Under the hood **Django Ninja** uses [Pydantic Models](https://pydantic-docs.helpmanual.io/usage/models/)
@@ -22,16 +25,13 @@ def to_camel(string: str) -> str:
     words = string.split('_')
     return words[0].lower() + ''.join(word.capitalize() for word in words[1:])
 
-class CamelModelSchema(Schema):
+class CamelSchema(Schema):
     str_field_name: str
     float_field_name: float
 
-    class Config(Schema.Config):
+    class Config:
         alias_generator = to_camel
 ```
-
-!!! note
-    When overriding the schema's `Config`, it is necessary to inherit from the base `Config` class. 
 
 Keep in mind that when you want modify output for field names (like camel case) - you need to set as well  `populate_by_name` and `by_alias`
 
@@ -75,9 +75,11 @@ results:
 ## Custom Config from Django Model
 
 When using [`create_schema`](django-pydantic-create-schema.md#create_schema), the resulting
-schema can be used to build another class with a custom config like:
+schema can be used to build another class with a custom config and/or more keys. However,
+the model and fields being used with the model cannot be modified as this would require
+an explicit `Meta` config class to be defined and inherited from.
 
-```python hl_lines="10"
+```python hl_lines="9"
 from django.contrib.auth.models import User
 from ninja.orm import create_schema
 
@@ -86,7 +88,7 @@ BaseUserSchema = create_schema(User)
 
 
 class UserSchema(BaseUserSchema):
-
-    class Config:
-        ...
+    model_config = ConfigDict()  # any necessary pydantic config
+    related_item: RelatedItemModelSchema
+    stringkey: str
 ```

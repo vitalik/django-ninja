@@ -1,7 +1,7 @@
 # Using create_schema
 
-Under the hood, [`ModelSchema`](django-pydantic.md#modelschema) uses the `create_schema` function.
-This is a more advanced (and less safe) method - please use it carefully.
+This is a more advanced (and less safe) method - please use it carefully. It is usually better
+to create `ModelSchema` classes with `Meta` configs explicitly.
 
 ## `create_schema`
 
@@ -18,7 +18,6 @@ def create_schema(
     custom_fields: list[tuple(str, Any, Any)] = None, # if passed - this will override default field types (or add new fields)
 )
 ```
-
 
 Take this example:
 
