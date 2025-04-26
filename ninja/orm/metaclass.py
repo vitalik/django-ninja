@@ -80,6 +80,13 @@ class ModelSchemaMetaclass(ResolverMetaclass):
     ):
         meta_conf = None
 
+        if "Config" in namespace:
+            config_keys = {k for k, _ in getmembers(namespace["Config"])}
+            if any(k in config_keys for k in MetaConf.model_fields.keys()):
+                raise ConfigError(
+                    "class `Config` cannot be used to configure ModelSchema. Use `Meta` instead"
+                )
+
         if "Meta" in namespace:
             conf_class = namespace["Meta"]
             conf_dict = {

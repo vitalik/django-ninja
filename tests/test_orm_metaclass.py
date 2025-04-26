@@ -132,9 +132,28 @@ def test_config():
                 fields = "__all__"
 
     class CategorySchema5(ModelSchema):
-        class Config:
+        class Meta:
             model = Category
             fields = "__all__"
+
+    with pytest.raises(
+        ConfigError,
+        match=f"Field title from model {Category} already exists in the Schema",
+    ):
+
+        class CategorySchema6(CategorySchema5):
+            class Meta(CategorySchema5.Meta):
+                fields = ["title"]
+
+    with pytest.raises(
+        ConfigError,
+        match="class `Config` cannot be used to configure ModelSchema. Use `Meta` instead",
+    ):
+
+        class CategorySchema7(ModelSchema):
+            class Config:
+                model = Category
+                fields = "__all__"
 
 
 def test_optional():
