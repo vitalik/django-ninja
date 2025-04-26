@@ -78,13 +78,10 @@ class ModelSchemaMetaclass(ResolverMetaclass):
         namespace: dict,
         **kwargs,
     ):
-        conf_class = None
         meta_conf = None
 
         if "Meta" in namespace:
             conf_class = namespace["Meta"]
-
-        if conf_class:
             conf_dict = {
                 k: v for k, v in getmembers(conf_class) if not k.startswith("__")
             }
@@ -110,7 +107,7 @@ class ModelSchemaMetaclass(ResolverMetaclass):
                     raise ConfigError(
                         f"'{field}' is defined in class body and in Meta.fields or implicitly in Meta.excluded"
                     )
-                # NOTE: the check below disables the ability to explicitly declare all fields on Model child schemas
+                # NOTE: the check below disables the ability to declare any already existing fields on ModelSchema children
                 # class ItemSlimSchema(ModelSchema):
                 #     class Meta:
                 #         model = Item
@@ -119,6 +116,7 @@ class ModelSchemaMetaclass(ResolverMetaclass):
                 # class ItemSchema(ItemSlimSchema):
                 #     class Meta(ItemSlimSchema.Meta):
                 #         fields = ["type", "desc"] <-- will work with inheritting from the parent.Meta, other fields already exist
+                #                                       on the underlying pydantic model
                 #         fields = ["id", "name", "type", "desc"] <-- won't work, inheriting from parent.Meta or not
                 if field in existing_annotations_keys:
                     raise ConfigError(
