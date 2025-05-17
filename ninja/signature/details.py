@@ -286,7 +286,15 @@ class ViewSignature:
 
 def is_pydantic_model(cls: Any) -> bool:
     try:
-        if get_origin(cls) in UNION_TYPES:
+        origin = get_origin(cls)
+
+        # Handle Annotated types - extract the actual type
+        if origin is Annotated:
+            args = get_args(cls)
+            return is_pydantic_model(args[0])
+
+        # Handle Union types
+        if origin in UNION_TYPES:
             return any(issubclass(arg, pydantic.BaseModel) for arg in get_args(cls))
         return issubclass(cls, pydantic.BaseModel)
     except TypeError:  # pragma: no cover
