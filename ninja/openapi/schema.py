@@ -218,6 +218,7 @@ class OpenAPISchema(dict):
                 ref_template=REF_TEMPLATE,
                 by_alias=by_alias,
                 schema_generator=NinjaGenerateJsonSchema,
+                **(dict(mode='serialization') if by_alias else {})
             ).copy()
 
         # move Schemas from definitions
