@@ -1,3 +1,4 @@
+mkdocs==1.5.3
 mkdocs-material==9.5.4
 markdown-include==0.8.1
 mkdocstrings[python]==0.24.0
