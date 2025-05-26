@@ -462,7 +462,7 @@ def test_case10_max_page_size():
     response = client.get("/items_10?page=2&page_size=30").json()
     assert response == {"items": ITEMS[20:40], "count": 100}
 
-    schema = api.get_openapi_schema()["paths"]["/api/items_5"]["get"]
+    schema = api.get_openapi_schema()["paths"]["/api/items_10"]["get"]
 
     assert schema["parameters"] == [
         {

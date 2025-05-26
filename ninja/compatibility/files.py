@@ -42,7 +42,7 @@ def fix_request_files_middleware(get_response: Any) -> Any:
                 request.META["REQUEST_METHOD"] = initial_method
                 request.method = initial_method
 
-            return get_response(request)
+            return await get_response(request)
 
         return async_middleware
     else:

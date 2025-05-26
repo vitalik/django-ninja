@@ -1,3 +1,4 @@
+import re
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -320,6 +321,12 @@ class Router:
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> None:
+        path = re.sub(r"\{uuid:(\w+)\}", r"{uuidstr:\1}", path, flags=re.IGNORECASE)
+        # django by default convert strings to UUIDs
+        # but we want to keep them as strings to let pydantic handle conversion/validation
+        # if user whants UUID object
+        # uuidstr is custom registered converter
+
         if path not in self.path_operations:
             path_view = PathView()
             self.path_operations[path] = path_view

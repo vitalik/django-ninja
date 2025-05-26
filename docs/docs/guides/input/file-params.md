@@ -101,3 +101,50 @@ def create_user(request, details: Form[UserDetails], avatar: File[UploadedFile] 
     if avatar is not None:
         set_user_avatar(user)
 ```
+
+
+
+Sure! Here’s a Django Ninja documentation-style section for the described behavior and middleware solution:
+
+⸻
+
+## Handling request.FILES in PUT/PATCH Requests
+
+**Problem**
+
+```python
+@api.put("/upload") # !!!!
+def upload(request, file: File[UploadedFile]):
+   ...
+```
+
+For some [historical reasosns Django’s](https://groups.google.com/g/django-users/c/BeBKj_6qNsc) `request.FILES` is populated only for POST requests by default. When using HTTP PUT or PATCH methods with file uploads (e.g., multipart/form-data), request.FILES will not contain uploaded files. This is a known Django behavior, not specific to Django Ninja.
+
+As a result, views expecting files in PUT or PATCH requests may not behave correctly, since request.FILES will be empty.
+
+**Solution**
+
+Django Ninja provides a built-in middleware to automatically fix this behavior:
+`ninja.compatibility.files.fix_request_files_middleware`
+
+This middleware will manually parse multipart/form-data for PUT and PATCH requests and populate request.FILES, making file uploads work as expected across all HTTP methods.
+
+**Usage**
+
+To enable the middleware, add the following to your Django settings:
+
+```python
+MIDDLEWARE = [
+    # ... your existing middleware ...
+    "ninja.compatibility.files.fix_request_files_middleware",
+]
+```
+
+**Auto-detection**
+
+When Django Ninja detects a PUT or PATCH  etc methods with multipart/form-data and expected FILES  - it will throw an error message suggesting you install the compatibility middleware:
+
+
+Note: This middleware does not interfere with normal POST behavior or any other methods.
+
+

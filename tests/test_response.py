@@ -38,7 +38,8 @@ class MyEnum(Enum):
 
 
 def to_camel(string: str) -> str:
-    return "".join(word.capitalize() for word in string.split("_"))
+    words = string.split("_")
+    return words[0].lower() + "".join(word.capitalize() for word in words[1:])
 
 
 class UserModel(BaseModel):
@@ -109,7 +110,7 @@ client = TestClient(router)
             [{"id": 1, "user_name": "John"}],
         ),  # the password is skipped
         ("/check_model", {"id": 1, "user_name": "John"}),  # the password is skipped
-        ("/check_model_alias", {"Id": 1, "UserName": "John"}),  # result is Camal Case
+        ("/check_model_alias", {"id": 1, "userName": "John"}),  # result is camelCase
         ("/check_union?q=0", 1),
         ("/check_union?q=1", {"id": 1, "user_name": "John"}),
     ],
