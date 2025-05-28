@@ -33,6 +33,8 @@ from ninja.signature import ViewSignature, is_async
 from ninja.throttling import BaseThrottle
 from ninja.types import DictStrAny
 from ninja.utils import check_csrf, is_async_callable
+from ninja.parser import Parser
+
 
 if TYPE_CHECKING:
     from ninja import NinjaAPI, Router  # pragma: no cover
@@ -62,6 +64,7 @@ class Operation:
         include_in_schema: bool = True,
         url_name: Optional[str] = None,
         openapi_extra: Optional[Dict[str, Any]] = None,
+        parser: Optional[Parser] = None,
     ) -> None:
         self.is_async = False
         self.path: str = path
@@ -74,7 +77,9 @@ class Operation:
         self.auth_param: Optional[Union[Sequence[Callable], Callable, object]] = auth
         self.auth_callbacks: Sequence[Callable] = []
         self._set_auth(auth)
-
+        
+        self.parser = parser or Parser()
+        
         if isinstance(throttle, BaseThrottle):
             throttle = [throttle]
         self.throttle_param = throttle
@@ -124,6 +129,12 @@ class Operation:
                 callback(self)
 
     def run(self, request: HttpRequest, **kw: Any) -> HttpResponseBase:
+        if request.body:
+            try:
+                self.parser.parse_body(request)
+            except Exception as e:
+                return self.api.on_exception(request, e)
+            
         error = self._run_checks(request)
         if error:
             return error
@@ -426,6 +437,7 @@ class PathView:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
+        parser: Optional[Parser] = None,
     ) -> Operation:
         if url_name:
             self.url_name = url_name
@@ -454,6 +466,7 @@ class PathView:
             include_in_schema=include_in_schema,
             url_name=url_name,
             openapi_extra=openapi_extra,
+            parser=parser,
         )
 
         self.operations.append(operation)
