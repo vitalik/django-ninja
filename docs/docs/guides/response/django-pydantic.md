@@ -5,15 +5,15 @@ Schemas are very useful to define your validation rules and responses, but somet
 
 ## ModelSchema 
 
-`ModelSchema` is a special base class that can automatically generate schemas from your models. Under the hood it converts your models Django fields into
-pydantic type annotations. `ModelSchema` inherits from `Schema`, and is just a `Schema` with a Django field -> pydantic field conversion step. All other `Schema`
+`ModelSchema` is a special base class that can automatically generate schemas from your models. Under the hood it converts your Django `Model` fields into
+type annotations. `ModelSchema` inherits from `Schema`, and is just a `Schema` with a Django field to pydantic field conversion step. All other `Schema`
 related configuration and inheritance is the same.
 
 ### Configuration
 
 To configure a `ModelSchema` you define a `Meta` class attribute just like in Django. This `Meta` class will be validated by `ninja.orm.metaclass.MetaConf`.
 
-```Python
+```
 class MetaConf:  # summary
     model: Django model being used to create the Schema
     fields: List of field names in the model to use. Defaults to '__all__' which includes all fields
@@ -45,9 +45,9 @@ class UserSchema(ModelSchema):
 
 ### Non-Django Model Configuration
 
-The `Meta` class is only used for configuring the interaction between the django model and the underlying
-`Schema`. To configure the pydantic model underlying the `Schema` define, `model_config` in your
-`ModelSchema` class, or [use the deprecated by pydantic `class Config`](https://docs.pydantic.dev/latest/concepts/config/).
+The `Meta` class is only used for configuring the interaction between the Django `Model` and the underlying
+`Schema`. To configure the pydantic model underlying the `Schema`, [define `model_config`](https://docs.pydantic.dev/latest/api/base_model/#pydantic.BaseModel.model_config)
+in your `ModelSchema` class or [use the deprecated \(by pydantic\) `class Config`](https://docs.pydantic.dev/latest/concepts/config/).
 
 ```Python
 class UserSlimGetSchema(ModelSchema):
