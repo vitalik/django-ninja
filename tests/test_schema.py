@@ -227,3 +227,26 @@ def test_schema_skips_validation_when_validate_assignment_False(
         assert schema_inst.str_var == 5
     except ValidationError as ve:
         raise AssertionError() from ve
+
+
+def test_schema_config_inheritance():
+    class Grandparent(Schema):
+        model_config = {"grandparent": "gpa"}
+        grandparent: str
+
+    class Parent(Grandparent):
+        parent: str
+
+        class Config:
+            parent = "parent"
+
+    class Child(Parent):
+        model_config = {"child": True}
+        child: str
+
+    c = Child(grandparent="1", parent="2", child="3")
+
+    assert Grandparent.model_config["from_attributes"]
+    assert c.model_config["child"] == True  # noqa: E712
+    assert c.model_config["parent"] == "parent"
+    assert c.model_config["grandparent"] == "gpa"
