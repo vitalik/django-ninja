@@ -52,7 +52,7 @@ class SchemaFactory:
         depth: int = 0,
         fields: Optional[Union[List[str], Literal["__all__"]]] = "__all__",
         exclude: Optional[List[str]] = None,
-        optional_fields: Optional[List[str]] = None,
+        optional_fields: Optional[Union[List[str], Literal["__all__"]]] = None,
         custom_fields: Optional[List[Tuple[str, Any, Any]]] = None,
         base_class: Type[Schema] = Schema,
         primary_key_optional: bool = True,
@@ -110,7 +110,7 @@ class SchemaFactory:
         depth: int = 0,
         fields: Optional[Union[List[str], Literal["__all__"]]] = None,
         exclude: Optional[List[str]] = None,
-        optional_fields: Optional[List[str]] = None,
+        optional_fields: Optional[Union[List[str], Literal["__all__"]]] = None,
         primary_key_optional: bool = True,
     ) -> Dict[str, Tuple[Any, Any]]:
         if (fields and fields != "__all__") and exclude:
@@ -139,7 +139,7 @@ class SchemaFactory:
         depth: int,
         fields: Optional[Union[List[str], Literal["__all__"]]],
         exclude: Optional[List[str]],
-        optional_fields: Optional[Union[List[str], str]],
+        optional_fields: Optional[Union[List[str], Literal["__all__"]]],
         custom_fields: Optional[List[Tuple[str, str, Any]]],
     ) -> SchemaKey:
         "returns a hashable value for all given parameters"
