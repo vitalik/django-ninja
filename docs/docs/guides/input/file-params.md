@@ -103,11 +103,6 @@ def create_user(request, details: Form[UserDetails], avatar: File[UploadedFile] 
 ```
 
 
-
-Sure! Here’s a Django Ninja documentation-style section for the described behavior and middleware solution:
-
-⸻
-
 ## Handling request.FILES in PUT/PATCH Requests
 
 **Problem**
