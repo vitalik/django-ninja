@@ -9,12 +9,12 @@ api = NinjaAPI()
 router = Router()
 
 
-@api.get("/global")
+@api.get("/global", url_name="global-op")
 def global_op(request):
     pass
 
 
-@router.get("/router")
+@router.get("/router", url_name="45")
 def router_op(request):
     pass
 
@@ -28,6 +28,16 @@ def test_api_instance():
         for path_ops in rtr.path_operations.values():
             for op in path_ops.operations:
                 assert op.api is api
+    global_op_pattern, router_op_pattern = (
+        next(
+            url_pattern
+            for url_pattern in api.urls[0]
+            if url_pattern.name == pattern_name
+        )
+        for pattern_name in ["global-op", "45"]
+    )
+    assert global_op_pattern.callback.__name__ == "global_op"
+    assert router_op_pattern.callback.__name__ == "_45"
 
 
 def test_reuse_router_error():
