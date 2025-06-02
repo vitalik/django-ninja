@@ -5,7 +5,7 @@ from django.http import HttpRequest
 
 from ninja.responses import *
 
-__all__ = ["BaseRenderer", "JSONRenderer"]
+__all__ = ["BaseRenderer", "JSONRenderer", "Message_JSONRenderer"]
 
 
 class BaseRenderer:
@@ -25,7 +25,7 @@ class JSONRenderer(BaseRenderer):
         return json.dumps(data, cls=self.encoder_class, **self.json_dumps_params)
 
 
-class Messaged_JSONRenderer(BaseRenderer):
+class Message_JSONRenderer(BaseRenderer):
     media_type = "application/json"
     encoder_class: Type[json.JSONEncoder] = NinjaJSONEncoder
     json_dumps_params: Mapping[str, Any] = {}
