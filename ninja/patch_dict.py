@@ -1,7 +1,6 @@
-from typing import TYPE_CHECKING, Any, Dict, Optional, Type
+from typing import TYPE_CHECKING, Any, Dict, Generic, Optional, Type, TypeVar
 
 from pydantic_core import core_schema
-from typing_extensions import Annotated
 
 from ninja import Body
 from ninja.utils import is_optional_type
@@ -47,6 +46,10 @@ class PatchDictUtil:
 
 
 if TYPE_CHECKING:  # pragma: nocover
-    PatchDict = Annotated[dict, "<PatchDict>"]
+    T = TypeVar("T")
+
+    class PatchDict(dict[Any, Any], Generic[T]):
+        pass
+
 else:
     PatchDict = PatchDictUtil()
