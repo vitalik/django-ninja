@@ -48,7 +48,7 @@ class PatchDictUtil:
 if TYPE_CHECKING:  # pragma: nocover
     T = TypeVar("T")
 
-    class PatchDict(dict[Any, Any], Generic[T]):
+    class PatchDict(Dict[Any, Any], Generic[T]):
         pass
 
 else:
