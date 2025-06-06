@@ -115,13 +115,13 @@ def test_responses(path, expected_status, expected_response):
 
 def test_schema():
     checks = [
-        ("/api/check_int", {200}),
-        ("/api/check_int2", {200}),
-        ("/api/check_single_with_status", {200}),
-        ("/api/check_response_schema", {400}),
-        ("/api/check_model", {200, 202}),
-        ("/api/check_list_model", {200}),
-        ("/api/check_union", {200, 400}),
+        ("/api/check_int", {200, 422}),
+        ("/api/check_int2", {200, 422}),
+        ("/api/check_single_with_status", {200, 422}),
+        ("/api/check_response_schema", {400, 422}),
+        ("/api/check_model", {200, 202, 422}),
+        ("/api/check_list_model", {200, 422}),
+        ("/api/check_union", {200, 400, 422}),
     ]
     schema = api.get_openapi_schema()
 
@@ -151,6 +151,16 @@ def test_schema():
             },
             "description": "Accepted",
         },
+        422: {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "#/components/schemas/DefaultValidationError"
+                    }
+                }
+            },
+            "description": "Validation error"
+        }
     }
 
 
@@ -165,7 +175,11 @@ def test_no_content():
 
     schema = api.get_openapi_schema()
     details = schema["paths"]["/api/check_no_content"]["get"]["responses"]
-    assert details == {204: {"description": "No Content"}}
+    assert details[204] == {"description": "No Content"}
+    assert details[422] == {
+        'content': {'application/json': {'schema': {'$ref': '#/components/schemas/DefaultValidationError'}}},
+        'description': 'Validation error'
+    }
 
 
 def test_validates():
