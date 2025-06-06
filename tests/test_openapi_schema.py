@@ -158,6 +158,16 @@ def method_test_deprecated_example_examples(
     return dict(i=param2, f=param3)
 
 
+class Payload(Schema):
+    # Duplicated Schema name with another fields
+    s: str
+
+
+@api.post("/test-duplicated-payload-name", response=Response)
+def method_duplicated_payload_name(request, data: Payload):
+    return data.dict()
+
+
 def test_schema_views(client: Client):
     assert client.get("/api/").status_code == 404
     assert client.get("/api/docs").status_code == 200
@@ -237,6 +247,42 @@ def test_schema(schema):
             "title": "TypeB",
             "type": "object",
         },
+    }
+
+
+def test_duplicated_payload_names(schema):
+    openapi_schemas = schema["components"]["schemas"]
+
+    assert openapi_schemas["Payload"] == {
+        "properties": {
+            "f": {
+                "title": "F",
+                "type": "number",
+            },
+            "i": {
+                "title": "I",
+                "type": "integer",
+            },
+        },
+        "required": [
+            "i",
+            "f",
+        ],
+        "title": "Payload",
+        "type": "object",
+    }
+    assert openapi_schemas["Payload2"] == {
+        "properties": {
+            "s": {
+                "title": "S",
+                "type": "string",
+            },
+        },
+        "required": [
+            "s",
+        ],
+        "title": "Payload2",
+        "type": "object",
     }
 
 
