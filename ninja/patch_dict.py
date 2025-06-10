@@ -1,8 +1,19 @@
-from typing import TYPE_CHECKING, Any, Dict, Generic, Optional, Type, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Generic,
+    Optional,
+    Type,
+    TypeVar,
+)
 
+from pydantic import BaseModel
 from pydantic_core import core_schema
 
 from ninja import Body
+from ninja.orm import ModelSchema
+from ninja.schema import Schema
 from ninja.utils import is_optional_type
 
 
@@ -22,10 +33,32 @@ class ModelToDict(dict):
         return input_value.model_dump(**cls._wrapped_model_dump_params)
 
 
+def get_schema_annotations(schema_cls: Type[Any]) -> Dict[str, Any]:
+    schema = schema_cls
+    schemas = []
+    excluded_bases = (
+        Schema,
+        ModelSchema,
+        BaseModel,
+    )
+    while True:
+        schemas.append(schema)
+        schema = schema.__base__
+        if schema in excluded_bases:
+            break
+
+    annotations = {}
+    for schema in reversed(schemas):
+        annotations.update(schema.__annotations__)
+
+    return annotations
+
+
 def create_patch_schema(schema_cls: Type[Any]) -> Type[ModelToDict]:
+    schema_annotations = get_schema_annotations(schema_cls)
     values, annotations = {}, {}
     for f in schema_cls.__fields__.keys():
-        t = schema_cls.__annotations__[f]
+        t = schema_annotations[f]
         if not is_optional_type(t):
             values[f] = getattr(schema_cls, f, None)
             annotations[f] = Optional[t]
