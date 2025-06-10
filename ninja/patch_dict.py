@@ -36,7 +36,7 @@ def get_schema_annotations(schema_cls: Type[Any]) -> Dict[str, Any]:
     excluded_bases = (
         "<class 'ninja.schema.Schema'>",
         "<class 'ninja.orm.ModelSchema'>",
-        "<class 'pydantic.BaseModel'>",
+        "<class 'pydantic.main.BaseModel'>",
     )
     while True:
         schemas.append(schema)
