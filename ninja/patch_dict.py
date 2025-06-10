@@ -8,9 +8,12 @@ from typing import (
     TypeVar,
 )
 
+from pydantic import BaseModel
 from pydantic_core import core_schema
 
 from ninja import Body
+from ninja.orm import ModelSchema
+from ninja.schema import Schema
 from ninja.utils import is_optional_type
 
 
@@ -34,14 +37,14 @@ def get_schema_annotations(schema_cls: Type[Any]) -> Dict[str, Any]:
     schema = schema_cls
     schemas = []
     excluded_bases = (
-        "<class 'ninja.schema.Schema'>",
-        "<class 'ninja.orm.ModelSchema'>",
-        "<class 'pydantic.main.BaseModel'>",
+        Schema,
+        ModelSchema,
+        BaseModel,
     )
     while True:
         schemas.append(schema)
         schema = schema.__base__
-        if str(schema) in excluded_bases:
+        if schema in excluded_bases:
             break
 
     annotations = {}
