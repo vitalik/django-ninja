@@ -126,6 +126,48 @@ Note: **`param_name`** is the name of the GET parameter that will be checked for
 {!./src/tutorial/authentication/apikey03.py!}
 ```
 
+### Django Session Authentication
+
+**Django Ninja** provides built-in session authentication classes that leverage Django's existing session framework:
+
+#### SessionAuth
+
+Uses Django's default session authentication - authenticates any logged-in user:
+
+```python
+from ninja.security import SessionAuth
+
+@api.get("/protected", auth=SessionAuth())
+def protected_view(request):
+    return {"user": request.auth.username}
+```
+
+#### SessionAuthSuperUser
+
+Authenticates only users with superuser privileges:
+
+```python
+from ninja.security import SessionAuthSuperUser
+
+@api.get("/admin-only", auth=SessionAuthSuperUser())
+def admin_view(request):
+    return {"message": "Hello superuser!"}
+```
+
+#### SessionAuthIsStaff
+
+Authenticates users who are either superusers or staff members:
+
+```python
+from ninja.security import SessionAuthIsStaff
+
+@api.get("/staff-area", auth=SessionAuthIsStaff())
+def staff_view(request):
+    return {"message": "Hello staff member!"}
+```
+
+These authentication classes automatically use Django's `SESSION_COOKIE_NAME` setting and check the user's authentication status through the standard Django session framework.
+
 
 
 ### HTTP Bearer
