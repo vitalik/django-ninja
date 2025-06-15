@@ -34,22 +34,13 @@ class ModelToDict(dict):
 
 
 def get_schema_annotations(schema_cls: Type[Any]) -> Dict[str, Any]:
-    schema = schema_cls
-    schemas = []
-    excluded_bases = (
-        Schema,
-        ModelSchema,
-        BaseModel,
-    )
-    while True:
-        schemas.append(schema)
-        schema = schema.__base__
-        if schema in excluded_bases:
-            break
+    annotations: Dict[str, Any] = {}
+    excluded_bases = {Schema, ModelSchema, BaseModel}
+    bases = schema_cls.mro()[:-1]
+    final_bases = reversed([b for b in bases if b not in excluded_bases])
 
-    annotations = {}
-    for schema in reversed(schemas):
-        annotations.update(schema.__annotations__)
+    for base in final_bases:
+        annotations.update(getattr(base, "__annotations__", {}))
 
     return annotations
 
