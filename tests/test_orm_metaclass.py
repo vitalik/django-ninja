@@ -1,7 +1,10 @@
+from typing import Optional
+
 import pytest
 from django.db import models
+from pydantic import BaseModel
 
-from ninja import ModelSchema
+from ninja import ModelSchema, Schema
 from ninja.errors import ConfigError
 
 
@@ -14,9 +17,9 @@ def test_simple():
             app_label = "tests"
 
     class SampleSchema(ModelSchema):
-        class Config:
+        class Meta:
             model = User
-            model_fields = ["firstname", "lastname"]
+            fields = ["firstname", "lastname"]
 
         def hello(self):
             return f"Hello({self.firstname})"
@@ -90,11 +93,67 @@ def test_config():
         class Meta:
             app_label = "tests"
 
-    with pytest.raises(ConfigError):
+    with pytest.raises(ConfigError, match="Specify either `exclude` or `fields`"):
 
-        class CategorySchema(ModelSchema):
+        class CategorySchema1(ModelSchema):
             class Meta:
                 model = Category
+
+    with pytest.raises(ConfigError, match="Specify either `exclude` or `fields`"):
+
+        class CategorySchema2(ModelSchema):
+            class Meta:
+                model = Category
+                exclude = ["title"]
+                fields = ["title"]
+
+    with pytest.raises(
+        ConfigError,
+        match="Use only `optional_fields`, `fields_optional` is deprecated.",
+    ):
+
+        class CategorySchema3(ModelSchema):
+            class Meta:
+                model = Category
+                fields = "__all__"
+                fields_optional = ["title"]
+                optional_fields = ["title"]
+
+    with pytest.raises(
+        ConfigError,
+        match="'title' is defined in class body and in Meta.fields or implicitly in Meta.excluded",
+    ):
+
+        class CategorySchema4(ModelSchema):
+            title: str
+
+            class Meta:
+                model = Category
+                fields = "__all__"
+
+    class CategorySchema5(ModelSchema):
+        class Meta:
+            model = Category
+            fields = "__all__"
+
+    with pytest.raises(
+        ConfigError,
+        match=f"Field title from model {Category} already exists in the Schema",
+    ):
+
+        class CategorySchema6(CategorySchema5):
+            class Meta(CategorySchema5.Meta):
+                fields = ["title"]
+
+    with pytest.raises(
+        ConfigError,
+        match="class `Config` cannot be used to configure ModelSchema. Use `Meta` instead",
+    ):
+
+        class CategorySchema7(ModelSchema):
+            class Config:
+                model = Category
+                fields = "__all__"
 
 
 def test_optional():
@@ -176,10 +235,375 @@ def test_fields_all():
 
 
 def test_model_schema_without_config():
+    # do not raise on creation of class
+    class NoConfigSchema(ModelSchema):
+        x: int
+
     with pytest.raises(
         ConfigError,
-        match=r"ModelSchema class 'NoConfigSchema' requires a 'Meta' \(or a 'Config'\) subclass",
+        match=r"No model set for class 'NoConfigSchema'",
+    ):
+        NoConfigSchema(x=1)
+
+
+def test_nondjango_model_error():
+    class NonDjangoModel:
+        field1 = models.CharField()
+        field2 = models.CharField(blank=True, null=True)
+
+    with pytest.raises(
+        ConfigError,
+        match=r"Input should be a subclass of Model \[type=is_subclass_of, input_value=<class 'test_orm_metaclas...locals>.NonDjangoModel'>, input_type=type\]",
     ):
 
-        class NoConfigSchema(ModelSchema):
-            x: int
+        class SomeSchema(ModelSchema):
+            class Meta:
+                model = NonDjangoModel
+                fields = "__all__"
+
+
+def test_desired_inheritance():
+    class Item(models.Model):
+        id = models.PositiveIntegerField(primary_key=True)
+        slug = models.CharField()
+
+        class Meta:
+            app_label = "tests"
+
+    class ProjectBaseSchema(Schema):
+        # add any project wide Schema/pydantic configs
+        _omissible_serialize = (
+            "serializer_func"  # model_serializer(mode="wrap")(_omissible_serialize)
+        )
+
+    class ProjectBaseModelSchema(ModelSchema, ProjectBaseSchema):
+        _pydantic_config = "config"
+
+        class Meta:
+            primary_key_optional = False
+
+    class ResourceModelSchema(ProjectBaseModelSchema):
+        field1: str
+
+        class Meta(ProjectBaseModelSchema.Meta):
+            model = Item
+            fields = ["id"]
+
+    class ItemModelSchema(ResourceModelSchema):
+        field2: str
+
+        class Meta(ResourceModelSchema.Meta):
+            fields = ["slug"]
+
+    assert issubclass(ItemModelSchema, BaseModel)
+    assert ItemModelSchema.Meta.primary_key_optional is False
+
+    i = ItemModelSchema(id=1, slug="slug", field1="1", field2="2")
+
+    assert i._pydantic_config == "config"
+    assert i._omissible_serialize == "serializer_func"
+    assert i.model_dump_json() == '{"field1":"1","id":1,"field2":"2","slug":"slug"}'
+    assert i.model_json_schema() == {
+        "properties": {
+            "field1": {
+                "title": "Field1",
+                "type": "string",
+            },
+            "id": {
+                "type": "integer",
+                "title": "Id",
+            },
+            "field2": {
+                "title": "Field2",
+                "type": "string",
+            },
+            "slug": {
+                "title": "Slug",
+                "type": "string",
+            },
+        },
+        "required": [
+            "field1",
+            "id",
+            "field2",
+            "slug",
+        ],
+        "title": "ItemModelSchema",
+        "type": "object",
+    }
+
+
+def test_specific_inheritance():
+    """https://github.com/vitalik/django-ninja/issues/347"""
+
+    class Item(models.Model):
+        id = models.PositiveIntegerField
+        slug = models.CharField()
+        name = models.CharField()
+        image_path = models.CharField()
+        length_in_mn = models.PositiveIntegerField()
+        special_field_for_meal = models.CharField()
+
+        class Meta:
+            app_label = "tests"
+
+    class ItemBaseModelSchema(ModelSchema):
+        model_config = {"title": "Item Title"}
+        is_favorite: Optional[bool] = None
+
+        class Meta:
+            model = Item
+            fields = [
+                "id",
+                "slug",
+                "name",
+                "image_path",
+            ]
+
+    class ItemInBasesSchema(ItemBaseModelSchema):
+        class Config:
+            allow_inf_nan = True
+
+        class Meta(ItemBaseModelSchema.Meta):
+            fields = ["length_in_mn"]
+
+    class ItemInMealsSchema(ItemInBasesSchema):
+        model_config = {"validate_default": True}
+
+        class Meta(ItemInBasesSchema.Meta):
+            fields = ["special_field_for_meal"]
+
+    ibase = ItemBaseModelSchema(
+        id=1,
+        slug="slug",
+        name="item",
+        image_path="/images/image.png",
+        is_favorite=False,
+    )
+    item_inbases = ItemInBasesSchema(
+        id=2,
+        slug="slug",
+        name="item",
+        image_path="/images/image.png",
+        is_favorite=False,
+        length_in_mn=2,
+    )
+    item_inmeals = ItemInMealsSchema(
+        id=3,
+        slug="slug",
+        name="item",
+        image_path="/images/image.png",
+        is_favorite=False,
+        length_in_mn=2,
+        special_field_for_meal="char",
+    )
+
+    assert ibase.model_config["title"] == "Item Title"
+    assert (
+        ibase.model_dump_json()
+        == '{"is_favorite":false,"id":1,"slug":"slug","name":"item","image_path":"/images/image.png"}'
+    )
+    assert ibase.model_json_schema() == {
+        "properties": {
+            "is_favorite": {
+                "anyOf": [
+                    {
+                        "type": "boolean",
+                    },
+                    {
+                        "type": "null",
+                    },
+                ],
+                "default": None,
+                "title": "Is Favorite",
+            },
+            "id": {
+                "anyOf": [
+                    {
+                        "type": "integer",
+                    },
+                    {
+                        "type": "null",
+                    },
+                ],
+                "default": None,
+                "title": "ID",
+            },
+            "slug": {
+                "title": "Slug",
+                "type": "string",
+            },
+            "name": {
+                "title": "Name",
+                "type": "string",
+            },
+            "image_path": {
+                "title": "Image Path",
+                "type": "string",
+            },
+        },
+        "required": [
+            "slug",
+            "name",
+            "image_path",
+        ],
+        "title": "Item Title",
+        "type": "object",
+    }
+
+    assert item_inbases.model_config["allow_inf_nan"] == True  # noqa: E712
+    assert (
+        item_inbases.model_dump_json()
+        == '{"is_favorite":false,"id":2,"slug":"slug","name":"item","image_path":"/images/image.png","length_in_mn":2}'
+    )
+    assert item_inbases.model_json_schema() == {
+        "properties": {
+            "is_favorite": {
+                "anyOf": [
+                    {
+                        "type": "boolean",
+                    },
+                    {
+                        "type": "null",
+                    },
+                ],
+                "default": None,
+                "title": "Is Favorite",
+            },
+            "id": {
+                "anyOf": [
+                    {
+                        "type": "integer",
+                    },
+                    {
+                        "type": "null",
+                    },
+                ],
+                "default": None,
+                "title": "ID",
+            },
+            "slug": {
+                "title": "Slug",
+                "type": "string",
+            },
+            "name": {
+                "title": "Name",
+                "type": "string",
+            },
+            "image_path": {
+                "title": "Image Path",
+                "type": "string",
+            },
+            "length_in_mn": {
+                "title": "Length In Mn",
+                "type": "integer",
+            },
+        },
+        "required": [
+            "slug",
+            "name",
+            "image_path",
+            "length_in_mn",
+        ],
+        "title": "Item Title",
+        "type": "object",
+    }
+
+    assert item_inmeals.model_config["allow_inf_nan"] == True  # noqa: E712
+    assert item_inmeals.model_config["validate_default"] == True  # noqa: E712
+    assert (
+        item_inmeals.model_dump_json()
+        == '{"is_favorite":false,"id":3,"slug":"slug","name":"item","image_path":"/images/image.png","length_in_mn":2,"special_field_for_meal":"char"}'
+    )
+    assert item_inmeals.model_json_schema() == {
+        "properties": {
+            "is_favorite": {
+                "anyOf": [
+                    {
+                        "type": "boolean",
+                    },
+                    {
+                        "type": "null",
+                    },
+                ],
+                "default": None,
+                "title": "Is Favorite",
+            },
+            "id": {
+                "anyOf": [
+                    {
+                        "type": "integer",
+                    },
+                    {
+                        "type": "null",
+                    },
+                ],
+                "default": None,
+                "title": "ID",
+            },
+            "slug": {
+                "title": "Slug",
+                "type": "string",
+            },
+            "name": {
+                "title": "Name",
+                "type": "string",
+            },
+            "image_path": {
+                "title": "Image Path",
+                "type": "string",
+            },
+            "length_in_mn": {
+                "title": "Length In Mn",
+                "type": "integer",
+            },
+            "special_field_for_meal": {
+                "title": "Special Field For Meal",
+                "type": "string",
+            },
+        },
+        "required": [
+            "slug",
+            "name",
+            "image_path",
+            "length_in_mn",
+            "special_field_for_meal",
+        ],
+        "title": "Item Title",
+        "type": "object",
+    }
+
+
+def test_pydantic_config_inheritance():
+    class User(models.Model):
+        firstname = models.CharField()
+        lastname = models.CharField(blank=True, null=True)
+
+        class Meta:
+            app_label = "tests"
+
+    class Grandparent(ModelSchema):
+        grandparent: str
+
+        class Config:
+            grandparent = "gpa"
+
+    class Parent(Grandparent):
+        parent: str
+
+        class Config:
+            parent = "parent"
+
+    class Child(Parent):
+        model_config = {"child": True}
+        child: str
+
+        class Meta:
+            model = User
+            fields = "__all__"
+
+    c = Child(firstname="user", lastname="name", grandparent="1", parent="2", child="3")
+
+    assert c.model_config["child"]
+    assert c.model_config["parent"]
+    assert c.model_config["grandparent"]
