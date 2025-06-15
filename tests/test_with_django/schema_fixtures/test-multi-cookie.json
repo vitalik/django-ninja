@@ -116,6 +116,16 @@
             }
           }
         }
+      },
+      "422": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/DefaultValidationError"
+            }
+          }
+        },
+        "description": "Validation error"
       }
     },
     "description": "Testing w/ Cookies requires setting the cookies by hand in the browser inspector"
