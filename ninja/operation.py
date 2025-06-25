@@ -402,7 +402,6 @@ class AsyncOperation(Operation):
 class PathView:
     def __init__(self) -> None:
         self.operations: List[Operation] = []
-        self.is_async = False  # if at least one operation is async - will become True
         self.url_name: Optional[str] = None
 
     def add_operation(
@@ -432,7 +431,6 @@ class PathView:
 
         OperationClass = Operation
         if is_async(view_func):
-            self.is_async = True
             OperationClass = AsyncOperation
 
         operation = OperationClass(
@@ -466,14 +464,28 @@ class PathView:
             op.set_api_instance(api, router)
 
     def get_view(self) -> Callable:
-        view: Callable
-        if self.is_async:
-            view = self._async_view
-        else:
-            view = self._sync_view
+        if any(op.is_async for op in self.operations):
+            # If any operation is async, return an async view
+            async def async_view(request: HttpRequest, *a: Any, **kw: Any) -> HttpResponseBase:
+                operation = self._find_operation(request)
+                if operation is None:
+                    return self._not_allowed()
+                if operation.is_async:
+                    return await operation.run(request, *a, **kw)
+                return operation.run(request, *a, **kw)
 
-        view.__func__.csrf_exempt = True  # type: ignore
-        return view
+            async_view.csrf_exempt = True  # type: ignore
+            return async_view
+        else:
+            # All operations are sync, return a sync view
+            def sync_view(request: HttpRequest, *a: Any, **kw: Any) -> HttpResponseBase:
+                operation = self._find_operation(request)
+                if operation is None:
+                    return self._not_allowed()
+                return operation.run(request, *a, **kw)
+
+            sync_view.csrf_exempt = True  # type: ignore
+            return sync_view
 
     def _sync_view(self, request: HttpRequest, *a: Any, **kw: Any) -> HttpResponseBase:
         operation = self._find_operation(request)
