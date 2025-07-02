@@ -72,6 +72,7 @@ class NinjaAPI:
         parser: Optional[Parser] = None,
         default_router: Optional[Router] = None,
         openapi_extra: Optional[Dict[str, Any]] = None,
+        middlewares: Optional[List[Callable]] = None,
     ):
         """
         Args:
@@ -107,6 +108,7 @@ class NinjaAPI:
         self.renderer = renderer or JSONRenderer()
         self.parser = parser or Parser()
         self.openapi_extra = openapi_extra or {}
+        self.middlewares = middlewares
 
         self._exception_handlers: Dict[Exc, ExcHandler] = {}
         self.set_default_exception_handlers()
@@ -410,7 +412,7 @@ class NinjaAPI:
             assert parent_prefix is not None
             prefix = normalize_path("/".join((parent_prefix, prefix))).lstrip("/")
 
-        self._routers.extend(router.build_routers(prefix))
+        self._routers.extend(router.build_routers(prefix, self.middlewares))
         router.set_api_instance(self, parent_router)
 
     @property

@@ -1,3 +1,4 @@
+import functools
 import inspect
 from typing import (
     TYPE_CHECKING,
@@ -123,14 +124,22 @@ class Operation:
             for callback in callbacks:
                 callback(self)
 
-    def run(self, request: HttpRequest, **kw: Any) -> HttpResponseBase:
+    def run(
+        self,
+        request: HttpRequest,
+        *,
+        middlewares: Optional[List[Callable]] = None,
+        **kw: Any,
+    ) -> HttpResponseBase:
         error = self._run_checks(request)
         if error:
             return error
         try:
             temporal_response = self.api.create_temporal_response(request)
             values = self._get_values(request, kw, temporal_response)
-            result = self.view_func(request, **values)
+            result = self.apply_middlewares(self.view_func, middlewares)(
+                request, **values
+            )
             return self._result_to_response(request, result, temporal_response)
         except Exception as e:
             if isinstance(e, TypeError) and "required positional argument" in str(e):
@@ -138,6 +147,19 @@ class Operation:
                 msg = f"{e.args[0]}: {msg}" if e.args else msg
                 e.args = (msg,) + e.args[1:]
             return self.api.on_exception(request, e)
+
+    def apply_middlewares(
+        self, view_func: Callable, middlewares: Optional[List[Callable]] = None
+    ) -> Callable:
+        if middlewares is None:
+            return view_func
+
+        handler = view_func
+        for middleware in reversed(middlewares):
+            handler = functools.wraps(handler)(
+                functools.partial(middleware, next_method=handler)
+            )
+        return handler
 
     def set_api_instance(self, api: "NinjaAPI", router: "Router") -> None:
         self.api = api
@@ -343,17 +365,38 @@ class AsyncOperation(Operation):
         super().__init__(*args, **kwargs)
         self.is_async = True
 
-    async def run(self, request: HttpRequest, **kw: Any) -> HttpResponseBase:  # type: ignore
+    async def run(  # type: ignore
+        self,
+        request: HttpRequest,
+        *,
+        middlewares: Optional[List[Callable]] = None,
+        **kw: Any,
+    ) -> HttpResponseBase:
         error = await self._run_checks(request)
         if error:
             return error
         try:
             temporal_response = self.api.create_temporal_response(request)
             values = self._get_values(request, kw, temporal_response)
-            result = await self.view_func(request, **values)
+            result = await self.apply_middlewares(self.view_func, middlewares)(
+                request, **values
+            )
             return self._result_to_response(request, result, temporal_response)
         except Exception as e:
             return self.api.on_exception(request, e)
+
+    def apply_middlewares(
+        self, view_func: Callable, middlewares: Optional[List[Callable]] = None
+    ) -> Callable:
+        if middlewares is None:
+            return view_func
+
+        handler = view_func
+        for middleware in reversed(middlewares):
+            handler = functools.wraps(handler)(
+                functools.partial(middleware, next_method=handler)
+            )
+        return handler
 
     async def _run_checks(self, request: HttpRequest) -> Optional[HttpResponse]:  # type: ignore
         "Runs security checks for each operation"
@@ -475,14 +518,24 @@ class PathView:
         view.__func__.csrf_exempt = True  # type: ignore
         return view
 
-    def _sync_view(self, request: HttpRequest, *a: Any, **kw: Any) -> HttpResponseBase:
+    def _sync_view(
+        self,
+        request: HttpRequest,
+        *a: Any,
+        middlewares: Optional[List[Callable]] = None,
+        **kw: Any,
+    ) -> HttpResponseBase:
         operation = self._find_operation(request)
         if operation is None:
             return self._not_allowed()
-        return operation.run(request, *a, **kw)
+        return operation.run(request, *a, middlewares=middlewares, **kw)
 
     async def _async_view(
-        self, request: HttpRequest, *a: Any, **kw: Any
+        self,
+        request: HttpRequest,
+        *a: Any,
+        middlewares: Optional[List[Callable]] = None,
+        **kw: Any,
     ) -> HttpResponseBase:
         from asgiref.sync import sync_to_async
 
@@ -490,8 +543,12 @@ class PathView:
         if operation is None:
             return self._not_allowed()
         if operation.is_async:
-            return await cast(AsyncOperation, operation).run(request, *a, **kw)
-        return await sync_to_async(operation.run)(request, *a, **kw)
+            return await cast(AsyncOperation, operation).run(
+                request, *a, middlewares=middlewares, **kw
+            )
+        return await sync_to_async(operation.run)(
+            request, *a, middlewares=middlewares, **kw
+        )
 
     def _find_operation(self, request: HttpRequest) -> Optional[Operation]:
         for op in self.operations:
