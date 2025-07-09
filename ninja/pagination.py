@@ -173,7 +173,9 @@ class PageNumberPagination(AsyncPaginationBase):
         }  # noqa: E203
 
 
-def paginate(func_or_pgn_class: Any = NOT_SET, **paginator_params: Any) -> Callable:
+def paginate(
+    func_or_pgn_class: Any = NOT_SET, **paginator_params: Any
+) -> Callable[..., Any]:
     """
     @api.get(...
     @paginate
@@ -200,17 +202,17 @@ def paginate(func_or_pgn_class: Any = NOT_SET, **paginator_params: Any) -> Calla
     if not isnotset:
         pagination_class = func_or_pgn_class
 
-    def wrapper(func: Callable) -> Any:
+    def wrapper(func: Callable[..., Any]) -> Any:
         return _inject_pagination(func, pagination_class, **paginator_params)
 
     return wrapper
 
 
 def _inject_pagination(
-    func: Callable,
+    func: Callable[..., Any],
     paginator_class: Type[Union[PaginationBase, AsyncPaginationBase]],
     **paginator_params: Any,
-) -> Callable:
+) -> Callable[..., Any]:
     paginator = paginator_class(**paginator_params)
     if is_async_callable(func):
         if not hasattr(paginator, "apaginate_queryset"):
@@ -281,7 +283,11 @@ class RouterPaginated(Router):
         self.pagination_class = import_string(settings.PAGINATION_CLASS)
 
     def add_api_operation(
-        self, path: str, methods: List[str], view_func: Callable, **kwargs: Any
+        self,
+        path: str,
+        methods: List[str],
+        view_func: Callable[..., Any],
+        **kwargs: Any,
     ) -> None:
         response = kwargs["response"]
         if is_collection_type(response):
