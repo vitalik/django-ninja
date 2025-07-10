@@ -393,11 +393,11 @@ class Router:
                 url_name = getattr(operation, "url_name", "")
                 if not url_name and self.api:
                     url_name = self.api.get_operation_url_name(operation, router=self)
-
+                view_func = path_view.get_view()
                 yield django_path(
                     route,
-                    functools.partial(
-                        path_view.get_view(), middlewares=self.middlewares
+                    functools.wraps(view_func)(
+                        functools.partial(view_func, middlewares=self.middlewares)
                     ),
                     name=url_name,
                 )
