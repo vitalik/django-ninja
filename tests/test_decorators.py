@@ -10,7 +10,7 @@ from ninja.testing import TestClient
 def some_decorator(view_func):
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
-        response = view_func(request, *args)
+        response = view_func(request, *args, **kwargs)
         response["X-Decorator"] = "some_decorator"
         return response
 

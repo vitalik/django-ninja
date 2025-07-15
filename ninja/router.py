@@ -1,3 +1,4 @@
+import functools
 import re
 from typing import (
     TYPE_CHECKING,
@@ -40,6 +41,7 @@ class Router:
         exclude_unset: Optional[bool] = None,
         exclude_defaults: Optional[bool] = None,
         exclude_none: Optional[bool] = None,
+        middlewares: Optional[List[Callable]] = None,
     ) -> None:
         self.api: Optional[NinjaAPI] = None
         self.auth = auth
@@ -49,6 +51,8 @@ class Router:
         self.exclude_unset = exclude_unset
         self.exclude_defaults = exclude_defaults
         self.exclude_none = exclude_none
+
+        self.middlewares = middlewares
 
         self.path_operations: Dict[str, PathView] = {}
         self._routers: List[Tuple[str, Router]] = []
@@ -389,8 +393,14 @@ class Router:
                 url_name = getattr(operation, "url_name", "")
                 if not url_name and self.api:
                     url_name = self.api.get_operation_url_name(operation, router=self)
-
-                yield django_path(route, path_view.get_view(), name=url_name)
+                view_func = path_view.get_view()
+                yield django_path(
+                    route,
+                    functools.wraps(view_func)(
+                        functools.partial(view_func, middlewares=self.middlewares)
+                    ),
+                    name=url_name,
+                )
 
     def add_router(
         self,
@@ -424,7 +434,9 @@ class Router:
                 router.tags = tags
             self._routers.append((prefix, router))
 
-    def build_routers(self, prefix: str) -> List[Tuple[str, "Router"]]:
+    def build_routers(
+        self, prefix: str, middlewares: Optional[List[Callable]] = None
+    ) -> List[Tuple[str, "Router"]]:
         if self.api is not None:
             from ninja.main import debug_server_url_reimport
 
@@ -433,9 +445,11 @@ class Router:
                     f"Router@'{prefix}' has already been attached to API"
                     f" {self.api.title}:{self.api.version} "
                 )
+        if middlewares:
+            self.middlewares = middlewares + (self.middlewares or [])
         internal_routes = []
         for inter_prefix, inter_router in self._routers:
             _route = normalize_path("/".join((prefix, inter_prefix))).lstrip("/")
-            internal_routes.extend(inter_router.build_routers(_route))
+            internal_routes.extend(inter_router.build_routers(_route, self.middlewares))
 
         return [(prefix, self), *internal_routes]
