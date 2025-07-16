@@ -19,6 +19,7 @@ from ninja.constants import NOT_SET, NOT_SET_TYPE
 from ninja.errors import ConfigError
 from ninja.operation import PathView
 from ninja.throttling import BaseThrottle
+from ninja.parser import Parser
 from ninja.types import TCallable
 from ninja.utils import normalize_path, replace_path_param_notation
 
@@ -72,6 +73,7 @@ class Router:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
+        parser: Optional[Parser] = None,
     ) -> Callable[[TCallable], TCallable]:
         return self.api_operation(
             ["GET"],
@@ -91,6 +93,7 @@ class Router:
             url_name=url_name,
             include_in_schema=include_in_schema,
             openapi_extra=openapi_extra,
+            parser=parser,
         )
 
     def post(
@@ -112,6 +115,7 @@ class Router:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
+        parser: Optional[Parser] = None,
     ) -> Callable[[TCallable], TCallable]:
         return self.api_operation(
             ["POST"],
@@ -131,6 +135,7 @@ class Router:
             url_name=url_name,
             include_in_schema=include_in_schema,
             openapi_extra=openapi_extra,
+            parser=parser,
         )
 
     def delete(
@@ -152,6 +157,7 @@ class Router:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
+        parser: Optional[Parser] = None,
     ) -> Callable[[TCallable], TCallable]:
         return self.api_operation(
             ["DELETE"],
@@ -171,6 +177,7 @@ class Router:
             url_name=url_name,
             include_in_schema=include_in_schema,
             openapi_extra=openapi_extra,
+            parser=parser,
         )
 
     def patch(
@@ -192,6 +199,7 @@ class Router:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
+        parser: Optional[Parser] = None,
     ) -> Callable[[TCallable], TCallable]:
         return self.api_operation(
             ["PATCH"],
@@ -211,6 +219,7 @@ class Router:
             url_name=url_name,
             include_in_schema=include_in_schema,
             openapi_extra=openapi_extra,
+            parser=parser,
         )
 
     def put(
@@ -232,6 +241,7 @@ class Router:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
+        parser: Optional[Parser] = None,
     ) -> Callable[[TCallable], TCallable]:
         return self.api_operation(
             ["PUT"],
@@ -251,6 +261,7 @@ class Router:
             url_name=url_name,
             include_in_schema=include_in_schema,
             openapi_extra=openapi_extra,
+            parser=parser,
         )
 
     def api_operation(
@@ -273,6 +284,7 @@ class Router:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
+        parser: Optional[Parser] = None,
     ) -> Callable[[TCallable], TCallable]:
         def decorator(view_func: TCallable) -> TCallable:
             self.add_api_operation(
@@ -294,6 +306,7 @@ class Router:
                 url_name=url_name,
                 include_in_schema=include_in_schema,
                 openapi_extra=openapi_extra,
+                parser=parser,
             )
             return view_func
 
@@ -320,6 +333,7 @@ class Router:
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
+        parser: Optional[Parser] = None,
     ) -> None:
         path = re.sub(r"\{uuid:(\w+)\}", r"{uuidstr:\1}", path, flags=re.IGNORECASE)
         # django by default convert strings to UUIDs
@@ -359,6 +373,7 @@ class Router:
             url_name=url_name,
             include_in_schema=include_in_schema,
             openapi_extra=openapi_extra,
+            parser=parser,
         )
         if self.api:
             path_view.set_api_instance(self.api, self)
