@@ -10,7 +10,7 @@ from .schema import Schema
 # XOR is available only in Django 4.1+: https://docs.djangoproject.com/en/4.1/ref/models/querysets/#xor
 ExpressionConnector = Literal["AND", "OR", "XOR"]
 
-DEFAULT_IGNORE_NONE = True
+DEFAULT_IGNORE_NONE: bool = True
 DEFAULT_CLASS_LEVEL_EXPRESSION_CONNECTOR: ExpressionConnector = "AND"
 DEFAULT_FIELD_LEVEL_EXPRESSION_CONNECTOR: ExpressionConnector = "OR"
 
@@ -29,8 +29,8 @@ class FilterLookup:
         self,
         q: str | List[str],
         *,
-        expression_connector: str = DEFAULT_FIELD_LEVEL_EXPRESSION_CONNECTOR,
-        ignore_none: Optional[bool] = DEFAULT_IGNORE_NONE,
+        expression_connector: ExpressionConnector = DEFAULT_FIELD_LEVEL_EXPRESSION_CONNECTOR,
+        ignore_none: bool = DEFAULT_IGNORE_NONE,
     ):
         """
         Args:
@@ -42,7 +42,7 @@ class FilterLookup:
             ignore_none: Whether to ignore None values for this field specifically. Default is True.
         """
         self.q = q
-        self.expression_connector = cast(ExpressionConnector, expression_connector)
+        self.expression_connector = expression_connector
         self.ignore_none = ignore_none
 
 
@@ -50,11 +50,6 @@ T = TypeVar("T", bound=QuerySet)
 
 
 class FilterSchema(Schema):
-    # if TYPE_CHECKING:
-    #     __config__: ClassVar[Type[FilterConfig]] = FilterConfig  # pragma: no cover
-
-    # Config = FilterConfig
-
     class Config(Schema.Config):
         ignore_none: bool = DEFAULT_IGNORE_NONE
         expression_connector: ExpressionConnector = (
@@ -97,9 +92,9 @@ class FilterSchema(Schema):
             return filter_lookups[0]
         else:
             raise ImproperlyConfigured(
-                f"Multiple FilterLookup instances found in metadata of {self.__class__.__name__}.{field_name}. "
-                f"Use at most one FilterLookup instance per field. "
-                f"If you need multiple lookups, specify them as a list in a single FilterLookup: "
+                f"Multiple FilterLookup instances found in metadata of {self.__class__.__name__}.{field_name}.\n"
+                f"Use at most one FilterLookup instance per field.\n"
+                f"If you need multiple lookups, specify them as a list in a single FilterLookup:\n"
                 f"{field_name}: Annotated[{field_info.annotation}, FilterLookup(['lookup1', 'lookup2', ...])]"
             )
 
@@ -138,11 +133,7 @@ class FilterSchema(Schema):
     ) -> bool | None:
         filter_lookup = self._get_filter_lookup(field_name, field_info)
         if filter_lookup:
-            return (
-                filter_lookup.ignore_none
-                if filter_lookup.ignore_none is not None
-                else default
-            )
+            return filter_lookup.ignore_none
 
         # Legacy approach, consider removing in future versions
         field_extra = cast(dict, field_info.json_schema_extra) or {}
@@ -187,15 +178,18 @@ class FilterSchema(Schema):
 
     def _connect_fields(self) -> Q:
         q = Q()
+        class_ignore_none = self.model_config.get("ignore_none", DEFAULT_IGNORE_NONE)
         for field_name, field_info in self.__class__.model_fields.items():
             filter_value = getattr(self, field_name)
-            ignore_none = self._get_field_ignore_none(
-                field_name,
-                field_info,
-                cast(
-                    bool | None,
-                    self.model_config.get("ignore_none", DEFAULT_IGNORE_NONE),
-                ),
+            # class-level ignore_none set to False (non-default) takes precedence over field-level ignore_none
+            ignore_none = (
+                False
+                if class_ignore_none is False
+                else self._get_field_ignore_none(
+                    field_name,
+                    field_info,
+                    DEFAULT_IGNORE_NONE,
+                )
             )
 
             # Resolve Q expression for a field even if we skip it due to None value
