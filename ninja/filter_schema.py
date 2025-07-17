@@ -1,4 +1,4 @@
-from typing import Any, TypeVar, cast
+from typing import Any, List, Optional, TypeVar, cast
 
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Q, QuerySet
@@ -7,19 +7,43 @@ from typing_extensions import Literal
 
 from .schema import Schema
 
-DEFAULT_IGNORE_NONE = True
-DEFAULT_CLASS_LEVEL_EXPRESSION_CONNECTOR = "AND"
-DEFAULT_FIELD_LEVEL_EXPRESSION_CONNECTOR = "OR"
-
 # XOR is available only in Django 4.1+: https://docs.djangoproject.com/en/4.1/ref/models/querysets/#xor
 ExpressionConnector = Literal["AND", "OR", "XOR"]
 
+DEFAULT_IGNORE_NONE = True
+DEFAULT_CLASS_LEVEL_EXPRESSION_CONNECTOR: ExpressionConnector = "AND"
+DEFAULT_FIELD_LEVEL_EXPRESSION_CONNECTOR: ExpressionConnector = "OR"
 
-# class FilterConfig(BaseConfig):
-#     ignore_none: bool = DEFAULT_IGNORE_NONE
-#     expression_connector: ExpressionConnector = cast(
-#         ExpressionConnector, DEFAULT_CLASS_LEVEL_EXPRESSION_CONNECTOR
-#     )
+
+class FilterLookup:
+    """
+    Annotation class for specifying database query lookups in FilterSchema fields.
+
+    Example usage:
+        class MyFilterSchema(FilterSchema):
+            name: Annotated[str | None, FilterLookup("name__icontains")] = None
+            search: Annotated[str | None, FilterLookup(["name__icontains", "email__icontains"])] = None
+    """
+
+    def __init__(
+        self,
+        q: str | List[str],
+        *,
+        expression_connector: str = DEFAULT_FIELD_LEVEL_EXPRESSION_CONNECTOR,
+        ignore_none: Optional[bool] = DEFAULT_IGNORE_NONE,
+    ):
+        """
+        Args:
+            q: Database lookup expression(s). Can be:
+                - A string like "name__icontains"
+                - A list of strings like ["name__icontains", "email__icontains"]
+                - Use "__" prefix for implicit field name: "__icontains" becomes "fieldname__icontains"
+            expression_connector: How to combine multiple field-level expressions ("OR", "AND", "XOR"). Default is "OR".
+            ignore_none: Whether to ignore None values for this field specifically. Default is True.
+        """
+        self.q = q
+        self.expression_connector = cast(ExpressionConnector, expression_connector)
+        self.ignore_none = ignore_none
 
 
 T = TypeVar("T", bound=QuerySet)
@@ -33,8 +57,8 @@ class FilterSchema(Schema):
 
     class Config(Schema.Config):
         ignore_none: bool = DEFAULT_IGNORE_NONE
-        expression_connector: ExpressionConnector = cast(
-            ExpressionConnector, DEFAULT_CLASS_LEVEL_EXPRESSION_CONNECTOR
+        expression_connector: ExpressionConnector = (
+            DEFAULT_CLASS_LEVEL_EXPRESSION_CONNECTOR
         )
 
     def custom_expression(self) -> Q:
@@ -55,62 +79,137 @@ class FilterSchema(Schema):
     def filter(self, queryset: T) -> T:
         return queryset.filter(self.get_filter_expression())
 
+    def _get_filter_lookup(
+        self, field_name: str, field_info: FieldInfo
+    ) -> Optional[FilterLookup]:
+        if not hasattr(field_info, "metadata") or not field_info.metadata:
+            return None
+
+        filter_lookups = [
+            metadata_item
+            for metadata_item in field_info.metadata
+            if isinstance(metadata_item, FilterLookup)
+        ]
+
+        if len(filter_lookups) == 0:
+            return None
+        elif len(filter_lookups) == 1:
+            return filter_lookups[0]
+        else:
+            raise ImproperlyConfigured(
+                f"Multiple FilterLookup instances found in metadata of {self.__class__.__name__}.{field_name}. "
+                f"Use at most one FilterLookup instance per field. "
+                f"If you need multiple lookups, specify them as a list in a single FilterLookup: "
+                f"{field_name}: Annotated[{field_info.annotation}, FilterLookup(['lookup1', 'lookup2', ...])]"
+            )
+
+    def _get_field_q_expression(
+        self,
+        field_name: str,
+        field_info: FieldInfo,
+        default: str | list[str] | None = None,
+    ) -> str | List[str] | None:
+        filter_lookup = self._get_filter_lookup(field_name, field_info)
+        if filter_lookup:
+            return filter_lookup.q if filter_lookup.q is not None else default
+
+        # Legacy approach, consider removing in future versions
+        field_extra = cast(dict, field_info.json_schema_extra) or {}
+        return cast(str | list[str] | None, field_extra.get("q", default))
+
+    def _get_field_expression_connector(
+        self,
+        field_name: str,
+        field_info: FieldInfo,
+        default: ExpressionConnector | None = None,
+    ) -> ExpressionConnector | None:
+        filter_lookup = self._get_filter_lookup(field_name, field_info)
+        if filter_lookup:
+            return filter_lookup.expression_connector or default
+
+        # Legacy approach, consider removing in future versions
+        field_extra = cast(dict, field_info.json_schema_extra) or {}
+        return cast(
+            ExpressionConnector | None, field_extra.get("expression_connector", default)
+        )
+
+    def _get_field_ignore_none(
+        self, field_name: str, field_info: FieldInfo, default: bool | None = None
+    ) -> bool | None:
+        filter_lookup = self._get_filter_lookup(field_name, field_info)
+        if filter_lookup:
+            return (
+                filter_lookup.ignore_none
+                if filter_lookup.ignore_none is not None
+                else default
+            )
+
+        # Legacy approach, consider removing in future versions
+        field_extra = cast(dict, field_info.json_schema_extra) or {}
+        return cast(bool | None, field_extra.get("ignore_none", default))
+
     def _resolve_field_expression(
-        self, field_name: str, field_value: Any, field: FieldInfo
+        self, field_name: str, field_value: Any, field_info: FieldInfo
     ) -> Q:
         func = getattr(self, f"filter_{field_name}", None)
         if callable(func):
-            return func(field_value)  # type: ignore[no-any-return]
+            return cast(Q, func(field_value))
 
-        field_extra = field.json_schema_extra or {}
+        q_expression = self._get_field_q_expression(field_name, field_info)
+        expression_connector = self._get_field_expression_connector(
+            field_name, field_info, default=DEFAULT_FIELD_LEVEL_EXPRESSION_CONNECTOR
+        )
 
-        q_expression = field_extra.get("q", None)  # type: ignore
         if not q_expression:
             return Q(**{field_name: field_value})
         elif isinstance(q_expression, str):
             if q_expression.startswith("__"):
                 q_expression = f"{field_name}{q_expression}"
             return Q(**{q_expression: field_value})
-        elif isinstance(q_expression, list):
-            expression_connector = field_extra.get(  # type: ignore
-                "expression_connector", DEFAULT_FIELD_LEVEL_EXPRESSION_CONNECTOR
-            )
+        elif isinstance(q_expression, list) and all(
+            isinstance(item, str) for item in q_expression
+        ):
             q = Q()
             for q_expression_part in q_expression:
-                q_expression_part = str(q_expression_part)
                 if q_expression_part.startswith("__"):
                     q_expression_part = f"{field_name}{q_expression_part}"
-                q = q._combine(  # type: ignore
+                q = q._combine(  # type: ignore[attr-defined]
                     Q(**{q_expression_part: field_value}),
                     expression_connector,
                 )
             return q
         else:
             raise ImproperlyConfigured(
-                f"Field {field_name} of {self.__class__.__name__} defines an invalid value under 'q' kwarg.\n"
-                f"Define a 'q' kwarg as a string or a list of strings, each string corresponding to a database lookup you wish to filter against:\n"
-                f"  {field_name}: {field.annotation} = Field(..., q='<here>')\n"
-                f"or\n"
-                f"  {field_name}: {field.annotation} = Field(..., q=['lookup1', 'lookup2', ...])\n"
-                f"You can omit the field name and make it implicit by starting the lookup directly by '__'."
+                f"Field {field_name} of {self.__class__.__name__} defines an invalid value for 'q'.\n"
+                f"Use FilterLookup annotation: {field_name}: Annotated[{field_info.annotation}, FilterLookup('lookup')]\n"
                 f"Alternatively, you can implement {self.__class__.__name__}.filter_{field_name} that must return a Q expression for that field"
             )
 
     def _connect_fields(self) -> Q:
         q = Q()
-        for field_name, field in self.model_fields.items():
+        for field_name, field_info in self.__class__.model_fields.items():
             filter_value = getattr(self, field_name)
-            field_extra = field.json_schema_extra or {}
-            ignore_none = field_extra.get(  # type: ignore
-                "ignore_none",
-                self.model_config["ignore_none"],  # type: ignore
+            ignore_none = self._get_field_ignore_none(
+                field_name,
+                field_info,
+                cast(
+                    bool | None,
+                    self.model_config.get("ignore_none", DEFAULT_IGNORE_NONE),
+                ),
             )
 
-            # Resolve q for a field even if we skip it due to None value
+            # Resolve Q expression for a field even if we skip it due to None value
             # So that improperly configured fields are easier to detect
-            field_q = self._resolve_field_expression(field_name, filter_value, field)
+            field_q = self._resolve_field_expression(
+                field_name, filter_value, field_info
+            )
             if filter_value is None and ignore_none:
                 continue
-            q = q._combine(field_q, self.model_config["expression_connector"])  # type: ignore
+            q = q._combine(  # type: ignore[attr-defined]
+                field_q,
+                self.model_config.get(
+                    "expression_connector", DEFAULT_CLASS_LEVEL_EXPRESSION_CONNECTOR
+                ),
+            )
 
         return q
