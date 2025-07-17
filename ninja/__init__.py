@@ -9,6 +9,7 @@ from ninja.files import UploadedFile
 from ninja.filter_schema import FilterSchema
 from ninja.main import NinjaAPI
 from ninja.openapi.docs import Redoc, Swagger
+from ninja.ordering_schema import OrderingSchema
 from ninja.orm import ModelSchema
 from ninja.params import (
     Body,
@@ -54,6 +55,7 @@ __all__ = [
     "Schema",
     "ModelSchema",
     "FilterSchema",
+    "OrderingSchema",
     "Swagger",
     "Redoc",
     "PatchDict",
