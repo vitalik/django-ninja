@@ -1,24 +1,11 @@
 import asyncio
 import inspect
 import re
-import sys
-from typing import Any, Callable, ForwardRef, List, Set, cast
+from typing import Any, Callable, ForwardRef, List, Set
 
 from django.urls import register_converter
 from django.urls.converters import UUIDConverter
-
-if sys.version_info < (3, 9):  # pragma: nocover
-
-    def evaluate_forwardref(type_: ForwardRef, globalns: Any, localns: Any) -> Any:
-        return type_._evaluate(globalns, localns)
-
-else:
-
-    def evaluate_forwardref(type_: ForwardRef, globalns: Any, localns: Any) -> Any:
-        # Even though it is the right signature for python 3.9, mypy complains with
-        # `error: Too many arguments for "_evaluate" of "ForwardRef"` hence the cast...
-        return cast(Any, type_)._evaluate(globalns, localns, recursive_guard=set())
-
+from pydantic._internal._typing_extra import eval_type_lenient as evaluate_forwardref
 
 from ninja.types import DictStrAny
 
@@ -56,6 +43,10 @@ def get_typed_annotation(param: inspect.Parameter, globalns: DictStrAny) -> Any:
 
 
 def make_forwardref(annotation: str, globalns: DictStrAny) -> Any:
+    # NOTE: in future versions of pydantic, the import may be changed to:
+    # from pydantic._internal._typing_extra import try_eval_type
+    # usage:
+    # result, _ = try_eval_type(forward_ref, globalns, globalns)
     forward_ref = ForwardRef(annotation)
     return evaluate_forwardref(forward_ref, globalns, globalns)
 
@@ -81,16 +72,11 @@ def get_args_names(func: Callable[..., Any]) -> List[str]:
     return list(inspect.signature(func).parameters.keys())
 
 
-class NinjaUUIDConverter:
+class UUIDStrConverter(UUIDConverter):
     """Return a path converted UUID as a str instead of the standard UUID"""
 
-    regex = UUIDConverter.regex
-
-    def to_python(self, value: str) -> str:
-        return value
-
-    def to_url(self, value: Any) -> str:
-        return str(value)
+    def to_python(self, value: str) -> str:  # type: ignore
+        return value  # return string value instead of UUID
 
 
-register_converter(NinjaUUIDConverter, "uuid")
+register_converter(UUIDStrConverter, "uuidstr")

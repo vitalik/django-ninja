@@ -39,11 +39,7 @@
               "data": {
                 "title": "Data4 Title",
                 "description": "Data4 Desc",
-                "allOf": [
-                  {
-                    "$ref": "#/components/schemas/TestData4"
-                  }
-                ]
+                "$ref": "#/components/schemas/TestData4"
               },
               "nested-data": {
                 "$ref": "#/components/schemas/TestData"

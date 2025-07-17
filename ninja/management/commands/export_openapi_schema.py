@@ -72,6 +72,13 @@ class Command(BaseCommand):
             action="store_true",
             help="Sort Json keys",
         )
+        parser.add_argument(
+            "--ensure-ascii",
+            dest="ensure_ascii",
+            default=False,
+            action="store_true",
+            help="ensure_ascii for JSON output",
+        )
 
     def handle(self, *args: Any, **options: Any) -> None:
         api = self._get_api_instance(options["api"])
@@ -81,6 +88,7 @@ class Command(BaseCommand):
             cls=NinjaJSONEncoder,
             indent=options["indent"],
             sort_keys=options["sort_keys"],
+            ensure_ascii=options["ensure_ascii"],
         )
 
         if options["output"]:

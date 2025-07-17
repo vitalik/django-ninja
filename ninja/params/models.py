@@ -1,6 +1,17 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    List,
+    Optional,
+    Pattern,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 
 from django.conf import settings
 from django.http import HttpRequest
@@ -204,6 +215,7 @@ class Param(FieldInfo):
         examples: Optional[Dict[str, Any]] = None,
         deprecated: Optional[bool] = None,
         include_in_schema: Optional[bool] = True,
+        pattern: Union[str, Pattern[str], None] = None,
         # param_name: str = None,
         # param_type: Any = None,
         **extra: Any,
@@ -237,6 +249,7 @@ class Param(FieldInfo):
             le=le,
             min_length=min_length,
             max_length=max_length,
+            pattern=pattern,
             json_schema_extra=json_schema_extra,
             **extra,
         )

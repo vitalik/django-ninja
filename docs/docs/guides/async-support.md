@@ -187,7 +187,7 @@ async def search(request, post_id: int):
     ...
 ```
 
-There is a common **GOTCHA**: Django queryset's are lazily evaluated (database query happens only when you start iterating), so this will **not** work:
+There is a common **GOTCHA**: Django querysets are lazily evaluated (database query happens only when you start iterating), so this will **not** work:
 
 ```python
 all_blogs = await sync_to_async(Blog.objects.all)()

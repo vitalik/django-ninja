@@ -72,6 +72,15 @@ class ViewSignature:
                 self.response_arg = name
                 continue
 
+            if (
+                arg.annotation is inspect.Parameter.empty
+                and isinstance(arg.default, type)
+                and issubclass(arg.default, pydantic.BaseModel)
+            ):
+                raise ConfigError(
+                    f"Looks like you are using `{name}={arg.default.__name__}` instead of `{name}: {arg.default.__name__}` (annotation)"
+                )
+
             func_param = self._get_param_type(name, arg)
             self.params.append(func_param)
 
@@ -201,7 +210,7 @@ class ViewSignature:
         if get_origin(model) in UNION_TYPES:
             # If the model is a union type, process each type in the union
             for arg in get_args(model):
-                if type(arg) is None:
+                if arg is type(None):
                     continue  # Skip NoneType
                 yield from self._model_flatten_map(arg, prefix)
         else:
@@ -258,9 +267,9 @@ class ViewSignature:
 
         # 2) if param name is a part of the path parameter
         elif name in self.path_params_names:
-            assert (
-                default == self.signature.empty
-            ), f"'{name}' is a path param, default not allowed"
+            assert default == self.signature.empty, (
+                f"'{name}' is a path param, default not allowed"
+            )
             param_source = Path(...)
 
         # 3) if param is a collection, or annotation is part of pydantic model:
@@ -284,14 +293,22 @@ class ViewSignature:
 
 def is_pydantic_model(cls: Any) -> bool:
     try:
-        if get_origin(cls) in UNION_TYPES:
+        origin = get_origin(cls)
+
+        # Handle Annotated types - extract the actual type
+        if origin is Annotated:
+            args = get_args(cls)
+            return is_pydantic_model(args[0])
+
+        # Handle Union types
+        if origin in UNION_TYPES:
             return any(
                 issubclass(arg, pydantic.BaseModel)
                 for arg in get_args(cls)
-                if (type(arg) is not None)
+                if arg is not type(None)
             )
         return issubclass(cls, pydantic.BaseModel)
-    except TypeError:
+    except TypeError:  # pragma: no cover
         return False
 
 
@@ -336,7 +353,7 @@ def detect_collection_fields(
                 # check union types
                 if get_origin(annotation_or_field) in UNION_TYPES:
                     for arg in get_args(annotation_or_field):
-                        if type(arg) is None:
+                        if arg is type(None):
                             continue  # Skip NoneType
                         if hasattr(arg, "model_fields"):
                             annotation_or_field = next(

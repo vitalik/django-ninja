@@ -1,3 +1,4 @@
+import re
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -12,6 +13,7 @@ from typing import (
 
 from django.urls import URLPattern
 from django.urls import path as django_path
+from django.utils.module_loading import import_string
 
 from ninja.constants import NOT_SET, NOT_SET_TYPE
 from ninja.errors import ConfigError
@@ -34,11 +36,20 @@ class Router:
         auth: Any = NOT_SET,
         throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         tags: Optional[List[str]] = None,
+        by_alias: Optional[bool] = None,
+        exclude_unset: Optional[bool] = None,
+        exclude_defaults: Optional[bool] = None,
+        exclude_none: Optional[bool] = None,
     ) -> None:
-        self.api: Optional["NinjaAPI"] = None
+        self.api: Optional[NinjaAPI] = None
         self.auth = auth
         self.throttle = throttle
         self.tags = tags
+        self.by_alias = by_alias
+        self.exclude_unset = exclude_unset
+        self.exclude_defaults = exclude_defaults
+        self.exclude_none = exclude_none
+
         self.path_operations: Dict[str, PathView] = {}
         self._routers: List[Tuple[str, Router]] = []
 
@@ -54,10 +65,10 @@ class Router:
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
-        by_alias: bool = False,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
+        by_alias: Optional[bool] = None,
+        exclude_unset: Optional[bool] = None,
+        exclude_defaults: Optional[bool] = None,
+        exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
@@ -94,10 +105,10 @@ class Router:
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
-        by_alias: bool = False,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
+        by_alias: Optional[bool] = None,
+        exclude_unset: Optional[bool] = None,
+        exclude_defaults: Optional[bool] = None,
+        exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
@@ -134,10 +145,10 @@ class Router:
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
-        by_alias: bool = False,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
+        by_alias: Optional[bool] = None,
+        exclude_unset: Optional[bool] = None,
+        exclude_defaults: Optional[bool] = None,
+        exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
@@ -174,10 +185,10 @@ class Router:
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
-        by_alias: bool = False,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
+        by_alias: Optional[bool] = None,
+        exclude_unset: Optional[bool] = None,
+        exclude_defaults: Optional[bool] = None,
+        exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
@@ -214,10 +225,10 @@ class Router:
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
-        by_alias: bool = False,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
+        by_alias: Optional[bool] = None,
+        exclude_unset: Optional[bool] = None,
+        exclude_defaults: Optional[bool] = None,
+        exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
@@ -255,10 +266,10 @@ class Router:
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
-        by_alias: bool = False,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
+        by_alias: Optional[bool] = None,
+        exclude_unset: Optional[bool] = None,
+        exclude_defaults: Optional[bool] = None,
+        exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
@@ -302,19 +313,33 @@ class Router:
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
-        by_alias: bool = False,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
+        by_alias: Optional[bool] = None,
+        exclude_unset: Optional[bool] = None,
+        exclude_defaults: Optional[bool] = None,
+        exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> None:
+        path = re.sub(r"\{uuid:(\w+)\}", r"{uuidstr:\1}", path, flags=re.IGNORECASE)
+        # django by default convert strings to UUIDs
+        # but we want to keep them as strings to let pydantic handle conversion/validation
+        # if user whants UUID object
+        # uuidstr is custom registered converter
+
         if path not in self.path_operations:
             path_view = PathView()
             self.path_operations[path] = path_view
         else:
             path_view = self.path_operations[path]
+
+        by_alias = by_alias is None and self.by_alias or by_alias
+        exclude_unset = exclude_unset is None and self.exclude_unset or exclude_unset
+        exclude_defaults = (
+            exclude_defaults is None and self.exclude_defaults or exclude_defaults
+        )
+        exclude_none = exclude_none is None and self.exclude_none or exclude_none
+
         path_view.add_operation(
             path=path,
             methods=methods,
@@ -343,8 +368,7 @@ class Router:
     def set_api_instance(
         self, api: "NinjaAPI", parent_router: Optional["Router"] = None
     ) -> None:
-        # TODO: check - parent_router seems not used
-        if self.auth is NOT_SET and parent_router and parent_router.auth:
+        if self.auth is NOT_SET and parent_router:
             self.auth = parent_router.auth
         self.api = api
         for path_view in self.path_operations.values():
@@ -371,12 +395,16 @@ class Router:
     def add_router(
         self,
         prefix: str,
-        router: "Router",
+        router: Union["Router", str],
         *,
         auth: Any = NOT_SET,
         throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         tags: Optional[List[str]] = None,
     ) -> None:
+        if isinstance(router, str):
+            router = import_string(router)
+            assert isinstance(router, Router)
+
         if self.api:
             # we are already attached to an api
             self.api.add_router(

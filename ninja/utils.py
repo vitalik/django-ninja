@@ -50,6 +50,13 @@ def is_async_callable(f: Callable[..., Any]) -> bool:
     )
 
 
+def is_optional_type(t: Type[Any]) -> bool:
+    try:
+        return type(None) in t.__args__
+    except AttributeError:
+        return False
+
+
 def contribute_operation_callback(
     func: Callable[..., Any], callback: Callable[..., Any]
 ) -> None:

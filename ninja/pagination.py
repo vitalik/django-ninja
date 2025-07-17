@@ -80,9 +80,11 @@ class LimitOffsetPagination(AsyncPaginationBase):
         limit: int = Field(
             settings.PAGINATION_PER_PAGE,
             ge=1,
-            le=settings.PAGINATION_MAX_LIMIT
-            if settings.PAGINATION_MAX_LIMIT != inf
-            else None,
+            le=(
+                settings.PAGINATION_MAX_LIMIT
+                if settings.PAGINATION_MAX_LIMIT != inf
+                else None
+            ),
         )
         offset: int = Field(0, ge=0)
 
@@ -107,8 +109,12 @@ class LimitOffsetPagination(AsyncPaginationBase):
     ) -> Any:
         offset = pagination.offset
         limit: int = min(pagination.limit, settings.PAGINATION_MAX_LIMIT)
+        if isinstance(queryset, QuerySet):
+            items = [obj async for obj in queryset[offset : offset + limit]]
+        else:
+            items = queryset[offset : offset + limit]
         return {
-            "items": queryset[offset : offset + limit],
+            "items": items,
             "count": await self._aitems_count(queryset),
         }  # noqa: E203
 
@@ -116,12 +122,23 @@ class LimitOffsetPagination(AsyncPaginationBase):
 class PageNumberPagination(AsyncPaginationBase):
     class Input(Schema):
         page: int = Field(1, ge=1)
+        page_size: Optional[int] = Field(None, ge=1)
 
     def __init__(
-        self, page_size: int = settings.PAGINATION_PER_PAGE, **kwargs: Any
+        self,
+        page_size: int = settings.PAGINATION_PER_PAGE,
+        max_page_size: int = settings.PAGINATION_MAX_PER_PAGE_SIZE,
+        **kwargs: Any,
     ) -> None:
         self.page_size = page_size
+        self.max_page_size = max_page_size
         super().__init__(**kwargs)
+
+    def _get_page_size(self, requested_page_size: Optional[int]) -> int:
+        if requested_page_size is None:
+            return self.page_size
+
+        return min(requested_page_size, self.max_page_size)
 
     def paginate_queryset(
         self,
@@ -129,9 +146,10 @@ class PageNumberPagination(AsyncPaginationBase):
         pagination: Input,
         **params: Any,
     ) -> Any:
-        offset = (pagination.page - 1) * self.page_size
+        page_size = self._get_page_size(pagination.page_size)
+        offset = (pagination.page - 1) * page_size
         return {
-            "items": queryset[offset : offset + self.page_size],
+            "items": queryset[offset : offset + page_size],
             "count": self._items_count(queryset),
         }  # noqa: E203
 
@@ -141,14 +159,23 @@ class PageNumberPagination(AsyncPaginationBase):
         pagination: Input,
         **params: Any,
     ) -> Any:
-        offset = (pagination.page - 1) * self.page_size
+        page_size = self._get_page_size(pagination.page_size)
+        offset = (pagination.page - 1) * page_size
+
+        if isinstance(queryset, QuerySet):
+            items = [obj async for obj in queryset[offset : offset + page_size]]
+        else:
+            items = queryset[offset : offset + page_size]
+
         return {
-            "items": queryset[offset : offset + self.page_size],
+            "items": items,
             "count": await self._aitems_count(queryset),
         }  # noqa: E203
 
 
-def paginate(func_or_pgn_class: Any = NOT_SET, **paginator_params: Any) -> Callable:
+def paginate(
+    func_or_pgn_class: Any = NOT_SET, **paginator_params: Any
+) -> Callable[..., Any]:
     """
     @api.get(...
     @paginate
@@ -175,17 +202,17 @@ def paginate(func_or_pgn_class: Any = NOT_SET, **paginator_params: Any) -> Calla
     if not isnotset:
         pagination_class = func_or_pgn_class
 
-    def wrapper(func: Callable) -> Any:
+    def wrapper(func: Callable[..., Any]) -> Any:
         return _inject_pagination(func, pagination_class, **paginator_params)
 
     return wrapper
 
 
 def _inject_pagination(
-    func: Callable,
+    func: Callable[..., Any],
     paginator_class: Type[Union[PaginationBase, AsyncPaginationBase]],
     **paginator_params: Any,
-) -> Callable:
+) -> Callable[..., Any]:
     paginator = paginator_class(**paginator_params)
     if is_async_callable(func):
         if not hasattr(paginator, "apaginate_queryset"):
@@ -256,7 +283,11 @@ class RouterPaginated(Router):
         self.pagination_class = import_string(settings.PAGINATION_CLASS)
 
     def add_api_operation(
-        self, path: str, methods: List[str], view_func: Callable, **kwargs: Any
+        self,
+        path: str,
+        methods: List[str],
+        view_func: Callable[..., Any],
+        **kwargs: Any,
     ) -> None:
         response = kwargs["response"]
         if is_collection_type(response):
@@ -281,9 +312,9 @@ def make_response_paginated(paginator: PaginationBase, op: Operation) -> None:
     # Switching schema to Output schema
     try:
         new_name = f"Paged{item_schema.__name__}"
-    except AttributeError:
-        new_name = f"Paged{str(item_schema).replace('.', '_')}"  # typing.Any case
-
+    except AttributeError:  # pragma: no cover
+        # special case for `typing.Any`, only raised for Python < 3.10
+        new_name = f"Paged{str(item_schema).replace('.', '_')}"  # pragma: no cover
     new_schema = type(
         new_name,
         (paginator.Output,),

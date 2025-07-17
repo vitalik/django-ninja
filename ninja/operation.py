@@ -1,3 +1,4 @@
+import inspect
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -18,10 +19,16 @@ from asgiref.sync import async_to_sync
 from django.http import HttpRequest, HttpResponse, HttpResponseNotAllowed
 from django.http.response import HttpResponseBase
 
+from ninja.compatibility.files import FIX_MIDDLEWARE_PATH, need_to_fix_request_files
 from ninja.constants import NOT_SET, NOT_SET_TYPE
-from ninja.errors import AuthenticationError, ConfigError, Throttled, ValidationError
+from ninja.errors import (
+    AuthenticationError,
+    ConfigError,
+    Throttled,
+    ValidationErrorContext,
+)
 from ninja.params.models import TModels
-from ninja.schema import Schema
+from ninja.schema import Schema, pydantic_version
 from ninja.signature import ViewSignature, is_async
 from ninja.throttling import BaseThrottle
 from ninja.types import DictStrAny
@@ -48,10 +55,10 @@ class Operation:
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
-        by_alias: bool = False,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
+        by_alias: Optional[bool] = None,
+        exclude_unset: Optional[bool] = None,
+        exclude_defaults: Optional[bool] = None,
+        exclude_none: Optional[bool] = None,
         include_in_schema: bool = True,
         url_name: Optional[str] = None,
         openapi_extra: Optional[Dict[str, Any]] = None,
@@ -60,7 +67,7 @@ class Operation:
         self.path: str = path
         self.methods: List[str] = methods
         self.view_func: Callable = view_func
-        self.api: "NinjaAPI" = cast("NinjaAPI", None)
+        self.api: NinjaAPI = cast("NinjaAPI", None)
         if url_name is not None:
             self.url_name = url_name
 
@@ -90,6 +97,12 @@ class Operation:
         else:
             self.response_models = {200: self._create_response_model(response)}
 
+        if need_to_fix_request_files(methods, self.models):
+            raise ConfigError(
+                f"Router '{path}' has method(s) {methods}  that require fixing request.FILES. "
+                f"Please add '{FIX_MIDDLEWARE_PATH}' to settings.MIDDLEWARE"
+            )
+
         self.operation_id = operation_id
         self.summary = summary or self.view_func.__name__.title().replace("_", " ")
         self.description = description or self.signature.docstring
@@ -99,10 +112,10 @@ class Operation:
         self.openapi_extra = openapi_extra
 
         # Exporting models params
-        self.by_alias = by_alias
-        self.exclude_unset = exclude_unset
-        self.exclude_defaults = exclude_defaults
-        self.exclude_none = exclude_none
+        self.by_alias = by_alias or False
+        self.exclude_unset = exclude_unset or False
+        self.exclude_defaults = exclude_defaults or False
+        self.exclude_none = exclude_none or False
 
         if hasattr(view_func, "_ninja_contribute_to_operation"):
             # Allow 3rd party code to contribute to the operation behavior
@@ -130,10 +143,15 @@ class Operation:
         self.api = api
 
         if self.auth_param == NOT_SET:
-            if api.auth != NOT_SET:
-                self._set_auth(self.api.auth)
             if router.auth != NOT_SET:
+                # If the router auth was explicitly set, use it.
                 self._set_auth(router.auth)
+            elif api.auth != NOT_SET:
+                # Otherwise fall back to the api auth. Since this is in an else branch,
+                # it will only be used if the router auth was not explicitly set (i.e.
+                # setting the router's auth to None explicitly allows "resetting" the
+                # default auth that its operations will use).
+                self._set_auth(self.api.auth)
 
         if self.throttle_param == NOT_SET:
             if api.throttle != NOT_SET:
@@ -156,7 +174,7 @@ class Operation:
     def _set_auth(
         self, auth: Optional[Union[Sequence[Callable], Callable, object]]
     ) -> None:
-        if auth is not None and auth is not NOT_SET:  # TODO: can it even happen ?
+        if auth is not None and auth is not NOT_SET:
             self.auth_callbacks = isinstance(auth, Sequence) and auth or [auth]
 
     def _run_checks(self, request: HttpRequest) -> Optional[HttpResponse]:
@@ -187,7 +205,9 @@ class Operation:
         for callback in self.auth_callbacks:
             try:
                 if is_async_callable(callback) or getattr(callback, "is_async", False):
-                    result = async_to_sync(callback)(request)
+                    result = callback(request)
+                    if inspect.iscoroutine(result):
+                        result = async_to_sync(callback)(request)
                 else:
                     result = callback(request)
             except Exception as exc:
@@ -261,11 +281,19 @@ class Operation:
             resp_object, context={"request": request, "response_status": status}
         )
 
+        model_dump_kwargs: Dict[str, Any] = {}
+        if pydantic_version >= [2, 7]:
+            # pydantic added support for serialization context at 2.7
+            model_dump_kwargs.update(
+                context={"request": request, "response_status": status}
+            )
+
         result = validated_object.model_dump(
             by_alias=self.by_alias,
             exclude_unset=self.exclude_unset,
             exclude_defaults=self.exclude_defaults,
             exclude_none=self.exclude_none,
+            **model_dump_kwargs,
         )["response"]
         return self.api.create_response(
             request, result, temporal_response=temporal_response
@@ -274,29 +302,21 @@ class Operation:
     def _get_values(
         self, request: HttpRequest, path_params: Any, temporal_response: HttpResponse
     ) -> DictStrAny:
-        values, errors = {}, []
+        values = {}
+        error_contexts: List[ValidationErrorContext] = []
         for model in self.models:
             try:
                 data = model.resolve(request, self.api, path_params)
                 values.update(data)
             except pydantic.ValidationError as e:
-                items = []
-                for i in e.errors(include_url=False):
-                    i["loc"] = (
-                        model.__ninja_param_source__,
-                    ) + model.__ninja_flatten_map_reverse__.get(i["loc"], i["loc"])
-                    # removing pydantic hints
-                    del i["input"]  # type: ignore
-                    if (
-                        "ctx" in i
-                        and "error" in i["ctx"]
-                        and isinstance(i["ctx"]["error"], Exception)
-                    ):
-                        i["ctx"]["error"] = str(i["ctx"]["error"])
-                    items.append(dict(i))
-                errors.extend(items)
-        if errors:
-            raise ValidationError(errors)
+                error_contexts.append(
+                    ValidationErrorContext(pydantic_validation_error=e, model=model)
+                )
+        if error_contexts:
+            validation_error = self.api.validation_error_from_error_contexts(
+                error_contexts
+            )
+            raise validation_error
         if self.signature.response_arg:
             values[self.signature.response_arg] = temporal_response
         return values
@@ -399,10 +419,10 @@ class PathView:
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
         deprecated: Optional[bool] = None,
-        by_alias: bool = False,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
+        by_alias: Optional[bool] = None,
+        exclude_unset: Optional[bool] = None,
+        exclude_defaults: Optional[bool] = None,
+        exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,

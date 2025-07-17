@@ -68,6 +68,8 @@ class FilterSchema(Schema):
         if not q_expression:
             return Q(**{field_name: field_value})
         elif isinstance(q_expression, str):
+            if q_expression.startswith("__"):
+                q_expression = f"{field_name}{q_expression}"
             return Q(**{q_expression: field_value})
         elif isinstance(q_expression, list):
             expression_connector = field_extra.get(  # type: ignore
@@ -75,8 +77,11 @@ class FilterSchema(Schema):
             )
             q = Q()
             for q_expression_part in q_expression:
+                q_expression_part = str(q_expression_part)
+                if q_expression_part.startswith("__"):
+                    q_expression_part = f"{field_name}{q_expression_part}"
                 q = q._combine(  # type: ignore
-                    Q(**{q_expression_part: field_value}),  # type: ignore
+                    Q(**{q_expression_part: field_value}),
                     expression_connector,
                 )
             return q
@@ -87,6 +92,7 @@ class FilterSchema(Schema):
                 f"  {field_name}: {field.annotation} = Field(..., q='<here>')\n"
                 f"or\n"
                 f"  {field_name}: {field.annotation} = Field(..., q=['lookup1', 'lookup2', ...])\n"
+                f"You can omit the field name and make it implicit by starting the lookup directly by '__'."
                 f"Alternatively, you can implement {self.__class__.__name__}.filter_{field_name} that must return a Q expression for that field"
             )
 

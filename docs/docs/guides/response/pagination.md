@@ -79,7 +79,14 @@ you can also set custom page_size value individually per view:
 def list_users(...
 ```
 
+In addition to the `page` parameter, you can also use the `page_size` parameter to dynamically adjust the number of records displayed per page:
 
+Example query:
+```
+/api/users?page=2&page_size=20
+```
+
+This allows you to temporarily override the page size setting in your request. The request will use the specified `page_size` value if provided. Otherwise, it will use either the value specified in the decorator or the value from `PAGINATION_MAX_PER_PAGE_SIZE` in settings.py if no decorator value is set.
 
 ## Accessing paginator parameters in view function
 
@@ -154,7 +161,7 @@ Standard **Django Ninja** pagination classes support async. If you wish to handl
 
 ### Output attribute
 
-By defult page items are placed to `'items'` attribute. To override this behaviour use `items_attribute`:
+By default page items are placed to `'items'` attribute. To override this behaviour use `items_attribute`:
 
 ```python hl_lines="4 8"
 class CustomPagination(PaginationBase):
@@ -186,7 +193,7 @@ def items(request):
     return MyModel.objects.all()
 
 @router.get("/other-items", response=List[OtherSchema])
-def ohter_items(request):
+def other_items(request):
     return OtherModel.objects.all()
 
 ```
