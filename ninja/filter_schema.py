@@ -102,7 +102,7 @@ class FilterSchema(Schema):
         self,
         field_name: str,
         field_info: FieldInfo,
-        default: Union[str, list[str], None] = None,
+        default: Union[str, List[str], None] = None,
     ) -> Union[str, List[str], None]:
         filter_lookup = self._get_filter_lookup(field_name, field_info)
         if filter_lookup:
@@ -110,7 +110,7 @@ class FilterSchema(Schema):
 
         # Legacy approach, consider removing in future versions
         field_extra = cast(dict, field_info.json_schema_extra) or {}
-        return cast(Union[str, list[str], None], field_extra.get("q", default))
+        return cast(Union[str, List[str], None], field_extra.get("q", default))
 
     def _get_field_expression_connector(
         self,
