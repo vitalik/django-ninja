@@ -72,26 +72,52 @@ class BookFilterSchema(FilterSchema):
 ```
 The `name` field will be converted into `Q(name=...)` expression.
 
-When your database lookups are more complicated than that, you can explicitly specify them in the field definition using a `"q"` kwarg:
-```python hl_lines="2"
-class BookFilterSchema(FilterSchema):
-    name: Optional[str] = Field(None, q='name__icontains')
-```
-You can even specify multiple lookup keyword argument names as a list:
-```python hl_lines="2 3 4"
-class BookFilterSchema(FilterSchema):
-    search: Optional[str] = Field(None, q=['name__icontains',
-                                     'author__name__icontains',
-                                     'publisher__name__icontains'])
-```
-And to make generic fields, you can make the field name implicit by skipping it:
-```python hl_lines="2"
-IContainsField = Annotated[Optional[str], Field(None, q='__icontains')]
+When your database lookups are more complicated than that, you can annotate your fields with an instance of `FilterLookup` where you specify how you wish your field to be looked up for filtering:
+```python hl_lines="5"
+from ninja import FilterSchema, FilterLookup
+from typing import Annotated
 
 class BookFilterSchema(FilterSchema):
-    name: IContainsField
+    name: Annotated[Optional[str], FilterLookup("name__icontains")] = None
 ```
+
+You can even specify multiple lookups as a list:
+```python hl_lines="3 4 5"
+class BookFilterSchema(FilterSchema):
+    search: Annotated[Optional[str], FilterLookup(
+        ["name__icontains",
+         "author__name__icontains",
+         "publisher__name__icontains"]
+    )]
+```
+
 By default, field-level expressions are combined using `"OR"` connector, so with the above setup, a query parameter `?search=foobar` will search for books that have "foobar" in either of their name, author or publisher.
+
+And to make generic fields, you can make the field name implicit by skipping it:
+```python hl_lines="1 4"
+IContainsField = Annotated[Optional[str], FilterLookup('__icontains')]
+
+class BookFilterSchema(FilterSchema):
+    name: IContainsField = None
+```
+
+??? note "Deprecated syntax"
+
+    In previous versions, database lookups were specified using `Field(q=...)` syntax:
+    ```python
+    from ninja import FilterSchema, Field
+    
+    class BookFilterSchema(FilterSchema):
+        name: Optional[str] = Field(None, q="name__icontains")
+    ```
+    
+    This approach is still supported, but it is considered **deprecated** and **not recommended** for new code because:
+    
+    - Poor IDE support (IDEs don't recognize custom `Field` arguments)
+    - Uses deprecated Pydantic features (`**extra`)
+    - Less type-safe and harder to maintain
+    
+    The new `FilterLookup` annotation provides better developer experience with full IDE support and type safety. Prefer using `FilterLookup` for new projects.
 
 
 ## Combining expressions
@@ -103,7 +129,9 @@ By default,
 So, with the following `FilterSchema`...
 ```python
 class BookFilterSchema(FilterSchema):
-    search: Optional[str] = Field(None, q=['name__icontains', 'author__name__icontains'])
+    search: Annotated[
+        Optional[str],
+        FilterLookup(["name__icontains", "author__name__icontains"])] = None
     popular: Optional[bool] = None
 ```
 ...and the following query parameters from the user
@@ -114,14 +142,18 @@ the `FilterSchema` instance will look for popular books that have `harry` in the
 
 
 You can customize this behavior using an `expression_connector` argument in field-level and class-level definition:
-```python hl_lines="3 7"
+```python hl_lines="6 11"
 class BookFilterSchema(FilterSchema):
-    active: Optional[bool] = Field(None, q=['is_active', 'publisher__is_active'],
-                                   expression_connector='AND')
-    name: Optional[str] = Field(None, q='name__icontains')
+    active: Annotated[
+        Optional[bool],
+        FilterLookup(
+            ["is_active", "publisher__is_active"],
+            expression_connector="AND"
+        )] = None
+    name: Annotated[Optional[str], FilterLookup("name__icontains")] = None
     
     class Config:
-        expression_connector = 'OR'
+        expression_connector = "OR"
 ```
 
 An expression connector can take the values of `"OR"`, `"AND"` and `"XOR"`, but the latter is only [supported](https://docs.djangoproject.com/en/4.1/ref/models/querysets/#xor) in Django starting with 4.1.
@@ -139,17 +171,17 @@ You can make the `FilterSchema` treat `None` as a valid value that should be fil
 This can be done on a field level with a `ignore_none` kwarg:
 ```python hl_lines="3"
 class BookFilterSchema(FilterSchema):
-    name: Optional[str] = Field(None, q='name__icontains')
-    tag: Optional[str] = Field(None, q='tag', ignore_none=False)
+    name: Annotated[Optional[str], FilterLookup("name__icontains")] = None
+    tag: Annotated[Optional[str], FilterLookup("tag", ignore_none=False)] = None
 ```
 
 This way when no other value for `"tag"` is provided by the user, the filtering will always include a condition `tag=None`.
 
-You can also specify this settings for all fields at the same time in the Config:
+You can also specify this setting for all fields at the same time in the Config:
 ```python hl_lines="6"
 class BookFilterSchema(FilterSchema):
-    name: Optional[str] = Field(None, q='name__icontains')
-    tag: Optional[str] = Field(None, q='tag', ignore_none=False)
+    name: Annotated[Optional[str], FilterLookup("name__icontains")] = None
+    tag: Optional[str] = None
     
     class Config:
         ignore_none = False
