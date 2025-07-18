@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, TypeVar, cast
+from typing import Any, List, Optional, TypeVar, Union, cast
 
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Q, QuerySet
@@ -21,13 +21,13 @@ class FilterLookup:
 
     Example usage:
         class MyFilterSchema(FilterSchema):
-            name: Annotated[str | None, FilterLookup("name__icontains")] = None
-            search: Annotated[str | None, FilterLookup(["name__icontains", "email__icontains"])] = None
+            name: Annotated[Union[str, None], FilterLookup("name__icontains")] = None
+            search: Annotated[Union[str, None], FilterLookup(["name__icontains", "email__icontains"])] = None
     """
 
     def __init__(
         self,
-        q: str | List[str],
+        q: Union[str, List[str]],
         *,
         expression_connector: ExpressionConnector = DEFAULT_FIELD_LEVEL_EXPRESSION_CONNECTOR,
         ignore_none: bool = DEFAULT_IGNORE_NONE,
@@ -102,22 +102,22 @@ class FilterSchema(Schema):
         self,
         field_name: str,
         field_info: FieldInfo,
-        default: str | list[str] | None = None,
-    ) -> str | List[str] | None:
+        default: Union[str, list[str], None] = None,
+    ) -> Union[str, List[str], None]:
         filter_lookup = self._get_filter_lookup(field_name, field_info)
         if filter_lookup:
             return filter_lookup.q if filter_lookup.q is not None else default
 
         # Legacy approach, consider removing in future versions
         field_extra = cast(dict, field_info.json_schema_extra) or {}
-        return cast(str | list[str] | None, field_extra.get("q", default))
+        return cast(Union[str, list[str], None], field_extra.get("q", default))
 
     def _get_field_expression_connector(
         self,
         field_name: str,
         field_info: FieldInfo,
-        default: ExpressionConnector | None = None,
-    ) -> ExpressionConnector | None:
+        default: Union[ExpressionConnector, None] = None,
+    ) -> Union[ExpressionConnector, None]:
         filter_lookup = self._get_filter_lookup(field_name, field_info)
         if filter_lookup:
             return filter_lookup.expression_connector or default
@@ -125,19 +125,20 @@ class FilterSchema(Schema):
         # Legacy approach, consider removing in future versions
         field_extra = cast(dict, field_info.json_schema_extra) or {}
         return cast(
-            ExpressionConnector | None, field_extra.get("expression_connector", default)
+            Union[ExpressionConnector, None],
+            field_extra.get("expression_connector", default),
         )
 
     def _get_field_ignore_none(
-        self, field_name: str, field_info: FieldInfo, default: bool | None = None
-    ) -> bool | None:
+        self, field_name: str, field_info: FieldInfo, default: Union[bool, None] = None
+    ) -> Union[bool, None]:
         filter_lookup = self._get_filter_lookup(field_name, field_info)
         if filter_lookup:
             return filter_lookup.ignore_none
 
         # Legacy approach, consider removing in future versions
         field_extra = cast(dict, field_info.json_schema_extra) or {}
-        return cast(bool | None, field_extra.get("ignore_none", default))
+        return cast(Union[bool, None], field_extra.get("ignore_none", default))
 
     def _resolve_field_expression(
         self, field_name: str, field_value: Any, field_info: FieldInfo
