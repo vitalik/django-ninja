@@ -54,9 +54,12 @@ api = NinjaAPI(auth=django_auth)
 
 #### Django `ensure_csrf_cookie` decorator
 You can use the Django [ensure_csrf_cookie](https://docs.djangoproject.com/en/4.2/ref/csrf/#django.views.decorators.csrf.ensure_csrf_cookie) decorator on an unprotected route to make it include a `Set-Cookie` header for the CSRF token. Note that:
+
 - The route decorator must be executed before (i.e. above) the [ensure_csrf_cookie](https://docs.djangoproject.com/en/4.2/ref/csrf/#django.views.decorators.csrf.ensure_csrf_cookie) decorator).
 - You must `csrf_exempt` that route.
-- The `ensure_csrf_cookie` decorator works only on a Django `HttpResponse` and not also on a dict like most Django Ninja decorators.
+- The `ensure_csrf_cookie` decorator works only on a Django `HttpResponse` (and subclasses like `JsonResponse`) and not on a dict like most Django Ninja decorators.
+- If you [set a Cookie based authentication (which includes `django_auth`) globally to your API](../guides/authentication.md), you'll have to specifically disable auth on that route (with `auth=None` in the route decorator) as Cookie based authentication would raise an Exception when applied to an unprotected route (for security reasons).
+
 ```python hl_lines="4"
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie

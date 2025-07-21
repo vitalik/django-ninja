@@ -99,10 +99,10 @@ def some_form(request, data: AuthSchema = Form(...)):
 
 
 
-with all the the autocompletion in editors
+with all the autocompletion in editors
 
 
-On the other hand the **old syntax is still supported** so you can easy port your project to a newer django-ninja version without much haste 
+On the other hand the **old syntax is still supported** so you can easily port your project to a newer django-ninja version without much haste 
 
 
 #### + Annotated
@@ -134,7 +134,7 @@ class Auth(HttpBearer):
 ## Changed CSRF Behavior
 
 
-`csrf=True` requirement is no longer required if you use cookie based authentication. Instead CSRF protection is enabled automatically. This also allow you to  mix csrf-protected authenticators and other methods that does not requrie cookies:
+`csrf=True` requirement is no longer required if you use cookie based authentication. Instead CSRF protection is enabled automatically. This also allow you to  mix csrf-protected authenticators and other methods that does not require cookies:
 
 ```Python
 api = NinjaAPI(auth=[django_auth, Auth()])
@@ -179,7 +179,7 @@ api.add_router('/app5', 'myproject.app5.router')
 
 ## Decorators
 
-When django ninja decorates a view with .get/.post etc - it wraps the result of the function (which in most cases are not HttpResponse - but some serializable object) so it's not really possible to use some built-in or 3rd-party decorators like:
+When django ninja decorates a view with .get/.post etc. - it wraps the result of the function (which in most cases are not HttpResponse - but some serializable object) so it's not really possible to use some built-in or 3rd-party decorators like:
 
 ```python hl_lines="4"
 from django.views.decorators.cache import cache_page

@@ -1,8 +1,9 @@
 import logging
 import traceback
 from functools import partial
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Generic, List, Optional, TypeVar
 
+import pydantic
 from django.conf import settings
 from django.http import Http404, HttpRequest, HttpResponse
 
@@ -10,10 +11,12 @@ from ninja.types import DictStrAny
 
 if TYPE_CHECKING:
     from ninja import NinjaAPI  # pragma: no cover
+    from ninja.params.models import ParamModel  # pragma: no cover
 
 __all__ = [
     "ConfigError",
     "AuthenticationError",
+    "AuthorizationError",
     "ValidationError",
     "HttpError",
     "set_default_exc_handlers",
@@ -27,8 +30,20 @@ class ConfigError(Exception):
     pass
 
 
-class AuthenticationError(Exception):
-    pass
+TModel = TypeVar("TModel", bound="ParamModel")
+
+
+class ValidationErrorContext(Generic[TModel]):
+    """
+    The full context of a `pydantic.ValidationError`, including all information
+    needed to produce a `ninja.errors.ValidationError`.
+    """
+
+    def __init__(
+        self, pydantic_validation_error: pydantic.ValidationError, model: TModel
+    ):
+        self.pydantic_validation_error = pydantic_validation_error
+        self.model = model
 
 
 class ValidationError(Exception):
@@ -51,6 +66,16 @@ class HttpError(Exception):
 
     def __str__(self) -> str:
         return self.message
+
+
+class AuthenticationError(HttpError):
+    def __init__(self, status_code: int = 401, message: str = "Unauthorized") -> None:
+        super().__init__(status_code=status_code, message=message)
+
+
+class AuthorizationError(HttpError):
+    def __init__(self, status_code: int = 403, message: str = "Forbidden") -> None:
+        super().__init__(status_code=status_code, message=message)
 
 
 class Throttled(HttpError):
@@ -76,10 +101,6 @@ def set_default_exc_handlers(api: "NinjaAPI") -> None:
         ValidationError,
         partial(_default_validation_error, api=api),
     )
-    api.add_exception_handler(
-        AuthenticationError,
-        partial(_default_authentication_error, api=api),
-    )
 
 
 def _default_404(request: HttpRequest, exc: Exception, api: "NinjaAPI") -> HttpResponse:
@@ -99,12 +120,6 @@ def _default_validation_error(
     request: HttpRequest, exc: ValidationError, api: "NinjaAPI"
 ) -> HttpResponse:
     return api.create_response(request, {"detail": exc.errors}, status=422)
-
-
-def _default_authentication_error(
-    request: HttpRequest, exc: AuthenticationError, api: "NinjaAPI"
-) -> HttpResponse:
-    return api.create_response(request, {"detail": "Unauthorized"}, status=401)
 
 
 def _default_exception(

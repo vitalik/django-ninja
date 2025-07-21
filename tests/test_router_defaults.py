@@ -43,7 +43,7 @@ class SomeResponse(Schema):
     ],
 )
 def test_router_defaults(oparg, retdict, assertone, asserttwo):
-    """Test that the router level settings work and can be overriden at the op level"""
+    """Test that the router level settings work and can be overridden at the op level"""
     api = NinjaAPI()
     router = Router(**{oparg: True})
     api.add_router("/", router)

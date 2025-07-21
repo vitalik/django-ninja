@@ -1,5 +1,5 @@
 from math import inf
-from typing import Dict, Optional
+from typing import Dict, Optional, Set
 
 from django.conf import settings as django_settings
 from pydantic import BaseModel, Field
@@ -11,7 +11,8 @@ class Settings(BaseModel):
         "ninja.pagination.LimitOffsetPagination", alias="NINJA_PAGINATION_CLASS"
     )
     PAGINATION_PER_PAGE: int = Field(100, alias="NINJA_PAGINATION_PER_PAGE")
-    PAGINATION_MAX_LIMIT: int = Field(inf, alias="NINJA_PAGINATION_MAX_LIMIT")
+    PAGINATION_MAX_PER_PAGE_SIZE: int = Field(100, alias="NINJA_MAX_PER_PAGE_SIZE")
+    PAGINATION_MAX_LIMIT: int = Field(inf, alias="NINJA_PAGINATION_MAX_LIMIT")  # type: ignore
 
     # Throttling
     NUM_PROXIES: Optional[int] = Field(None, alias="NINJA_NUM_PROXIES")
@@ -22,6 +23,10 @@ class Settings(BaseModel):
             "anon": "1000/day",
         },
         alias="NINJA_DEFAULT_THROTTLE_RATES",
+    )
+
+    FIX_REQUEST_FILES_METHODS: Set[str] = Field(
+        {"PUT", "PATCH", "DELETE"}, alias="NINJA_FIX_REQUEST_FILES_METHODS"
     )
 
     class Config:

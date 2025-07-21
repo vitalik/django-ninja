@@ -72,6 +72,15 @@ class ViewSignature:
                 self.response_arg = name
                 continue
 
+            if (
+                arg.annotation is inspect.Parameter.empty
+                and isinstance(arg.default, type)
+                and issubclass(arg.default, pydantic.BaseModel)
+            ):
+                raise ConfigError(
+                    f"Looks like you are using `{name}={arg.default.__name__}` instead of `{name}: {arg.default.__name__}` (annotation)"
+                )
+
             func_param = self._get_param_type(name, arg)
             self.params.append(func_param)
 
@@ -277,10 +286,18 @@ class ViewSignature:
 
 def is_pydantic_model(cls: Any) -> bool:
     try:
-        if get_origin(cls) in UNION_TYPES:
+        origin = get_origin(cls)
+
+        # Handle Annotated types - extract the actual type
+        if origin is Annotated:
+            args = get_args(cls)
+            return is_pydantic_model(args[0])
+
+        # Handle Union types
+        if origin in UNION_TYPES:
             return any(issubclass(arg, pydantic.BaseModel) for arg in get_args(cls))
         return issubclass(cls, pydantic.BaseModel)
-    except TypeError:
+    except TypeError:  # pragma: no cover
         return False
 
 

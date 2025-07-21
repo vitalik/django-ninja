@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from ninja import NinjaAPI
 from ninja.constants import NOT_SET
 from ninja.signature.details import is_pydantic_model
-from ninja.signature.utils import NinjaUUIDConverter
+from ninja.signature.utils import UUIDStrConverter
 from ninja.testing import TestClient
 
 
@@ -48,7 +48,7 @@ def test_kwargs():
 
 
 def test_uuid_converter():
-    conv = NinjaUUIDConverter()
+    conv = UUIDStrConverter()
     assert isinstance(conv.to_url(uuid.uuid4()), str)
 
 

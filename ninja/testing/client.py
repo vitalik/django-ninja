@@ -30,8 +30,10 @@ class NinjaClientBase:
         self,
         router_or_app: Union[NinjaAPI, Router],
         headers: Optional[Dict[str, str]] = None,
+        COOKIES: Optional[Dict[str, str]] = None,
     ) -> None:
         self.headers = headers or {}
+        self.cookies = COOKIES or {}
         self.router_or_app = router_or_app
 
     def get(
@@ -92,6 +94,11 @@ class NinjaClientBase:
                 **self.headers,
                 **request_params.get("headers", {}),
             }
+        if self.cookies or request_params.get("COOKIES"):
+            request_params["COOKIES"] = {
+                **self.cookies,
+                **request_params.get("COOKIES", {}),
+            }
         func, request, kwargs = self._resolve(method, path, data, request_params)
         return self._call(func, request, kwargs)  # type: ignore
 
@@ -134,16 +141,16 @@ class NinjaClientBase:
         request.user = Mock()
         if "user" not in request_params:
             request.user.is_authenticated = False
+            request.user.is_staff = False
+            request.user.is_superuser = False
 
         request.META = request_params.pop("META", {"REMOTE_ADDR": "127.0.0.1"})
         request.FILES = request_params.pop("FILES", {})
 
-        request.META.update(
-            {
-                f"HTTP_{k.replace('-', '_')}": v
-                for k, v in request_params.pop("headers", {}).items()
-            }
-        )
+        request.META.update({
+            f"HTTP_{k.replace('-', '_')}": v
+            for k, v in request_params.pop("headers", {}).items()
+        })
 
         request.headers = HttpHeaders(request.META)
 
@@ -161,7 +168,18 @@ class NinjaClientBase:
         if "?" in path:
             request.GET = QueryDict(path.split("?")[1])
         else:
-            request.GET = QueryDict()
+            query_params = request_params.pop("query_params", None)
+            if query_params:
+                query_dict = QueryDict(mutable=True)
+                for k, v in query_params.items():
+                    if isinstance(v, list):
+                        for item in v:
+                            query_dict.appendlist(k, item)
+                    else:
+                        query_dict[k] = v
+                request.GET = query_dict
+            else:
+                request.GET = QueryDict()
 
         for k, v in request_params.items():
             setattr(request, k, v)
