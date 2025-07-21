@@ -76,6 +76,13 @@ def test_validate_order_by_field__should_raise_validation_error_when_value_desc_
         DummyOrderingSchema.validate_order_by_field(order_by_value)
 
 
+def test_sort__should_return_queryset_when_no_order_by():
+    ordering_schema = OrderingSchema(order_by=[])
+    queryset = FakeQS()
+    sorted_queryset = ordering_schema.sort(queryset)
+    assert sorted_queryset is queryset
+
+
 def test_sort__should_call_order_by_on_queryset_with_expected_args():
     order_by_value = ["test_field_1", "-test_field_2"]
     ordering_schema = OrderingSchema(order_by=order_by_value)

@@ -33,4 +33,6 @@ class OrderingBaseSchema(Schema):
 
 class OrderingSchema(OrderingBaseSchema):
     def sort(self, queryset: QS) -> QS:
+        if not self.order_by:
+            return queryset
         return queryset.order_by(*self.order_by)
