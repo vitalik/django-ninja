@@ -1,7 +1,9 @@
+from typing import Optional
+
 import pytest
 from django.db import models
 
-from ninja import ModelSchema
+from ninja import Field, ModelSchema
 from ninja.errors import ConfigError
 
 
@@ -183,3 +185,103 @@ def test_model_schema_without_config():
 
         class NoConfigSchema(ModelSchema):
             x: int
+
+
+def test_field_strict_null():
+    class ModelForTestFieldStrictNull(models.Model):
+        blank_false_null_false = models.CharField(blank=False, null=False)
+        blank_false_null_true = models.CharField(blank=False, null=True)
+        blank_true_null_false = models.CharField(blank=True, null=False)
+        blank_true_null_true = models.CharField(blank=True, null=True)
+
+        class Meta:
+            app_label = "tests"
+
+    class FieldStrictNullFalseSchema(ModelSchema):
+        class Meta:
+            model = ModelForTestFieldStrictNull
+            fields = "__all__"
+
+    class FieldStrictNullTrueSchema(ModelSchema):
+        class Meta:
+            model = ModelForTestFieldStrictNull
+            fields = "__all__"
+            fields_strict_null = True
+
+    class FieldStrictNullTrueWithOptionalFieldsSchema(ModelSchema):
+        blank_true_null_false: Optional[str] = Field(None)
+
+        class Meta:
+            model = ModelForTestFieldStrictNull
+            fields = [
+                "id",
+                "blank_false_null_false",
+            ]
+            fields_strict_null = True
+            fields_optional = ["id", "blank_false_null_false"]
+
+    assert FieldStrictNullFalseSchema.json_schema() == {
+        "title": "FieldStrictNullFalseSchema",
+        "type": "object",
+        "properties": {
+            "id": {"title": "ID", "anyOf": [{"type": "integer"}, {"type": "null"}]},
+            "blank_false_null_false": {
+                "title": "Blank False Null False",
+                "type": "string",
+            },
+            "blank_false_null_true": {
+                "anyOf": [{"type": "string"}, {"type": "null"}],
+                "title": "Blank False Null True",
+            },
+            "blank_true_null_false": {
+                "anyOf": [{"type": "string"}, {"type": "null"}],
+                "title": "Blank True Null False",
+            },
+            "blank_true_null_true": {
+                "anyOf": [{"type": "string"}, {"type": "null"}],
+                "title": "Blank True Null True",
+            },
+        },
+        "required": ["blank_false_null_false"],
+    }
+
+    assert FieldStrictNullTrueSchema.json_schema() == {
+        "title": "FieldStrictNullTrueSchema",
+        "type": "object",
+        "properties": {
+            "id": {"title": "ID", "type": "integer"},
+            "blank_false_null_false": {
+                "title": "Blank False Null False",
+                "type": "string",
+            },
+            "blank_false_null_true": {
+                "anyOf": [{"type": "string"}, {"type": "null"}],
+                "title": "Blank False Null True",
+            },
+            "blank_true_null_false": {
+                "title": "Blank True Null False",
+                "type": "string",
+            },
+            "blank_true_null_true": {
+                "anyOf": [{"type": "string"}, {"type": "null"}],
+                "title": "Blank True Null True",
+            },
+        },
+        "required": ["id", "blank_false_null_false", "blank_true_null_false"],
+    }
+
+    assert FieldStrictNullTrueWithOptionalFieldsSchema.json_schema() == {
+        "title": "FieldStrictNullTrueWithOptionalFieldsSchema",
+        "type": "object",
+        "properties": {
+            "id": {"title": "ID", "anyOf": [{"type": "integer"}, {"type": "null"}]},
+            "blank_false_null_false": {
+                "anyOf": [{"type": "string"}, {"type": "null"}],
+                "title": "Blank False Null False",
+            },
+            "blank_true_null_false": {
+                "anyOf": [{"type": "string"}, {"type": "null"}],
+                "title": "Blank True Null False",
+            },
+        },
+    }

@@ -115,7 +115,11 @@ def create_m2m_link_type(type_: Type[TModel]) -> Type[TModel]:
 
 @no_type_check
 def get_schema_field(
-    field: DjangoField, *, depth: int = 0, optional: bool = False
+    field: DjangoField,
+    *,
+    depth: int = 0,
+    optional: bool = False,
+    strict_null: bool = False,
 ) -> Tuple:
     "Returns pydantic field from django's model field"
     alias = None
@@ -163,7 +167,11 @@ def get_schema_field(
             ]
             raise ConfigError("\n".join(msg)) from e
 
-        if field.primary_key or blank or null or optional:
+        if strict_null:
+            if optional or null:
+                default = None
+                nullable = True
+        elif field.primary_key or blank or null or optional:
             default = None
             nullable = True
 
