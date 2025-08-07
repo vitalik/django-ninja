@@ -466,44 +466,44 @@ class PathView:
             op.set_api_instance(api, router)
 
     def get_view(self) -> Callable:
-        view: Callable
-        if self.is_async:
-            view = self._async_view
-        else:
-            view = self._sync_view
+        is_async = self.is_async
+        operations = self.operations
+        allowed_methods = {method for op in operations for method in op.methods}
 
-        view.__func__.csrf_exempt = True  # type: ignore
+        if is_async:
+            from asgiref.sync import sync_to_async
+
+        def sync_view(request: HttpRequest, *a: Any, **kw: Any) -> HttpResponseBase:
+            operation = next(
+                (op for op in operations if request.method in op.methods), None
+            )
+            if operation is None:
+                return HttpResponseNotAllowed(
+                    allowed_methods, content=b"Method not allowed"
+                )
+            return operation.run(request, *a, **kw)
+
+        async def async_view(
+            request: HttpRequest, *a: Any, **kw: Any
+        ) -> HttpResponseBase:
+            operation = next(
+                (op for op in operations if request.method in op.methods), None
+            )
+            if operation is None:
+                return HttpResponseNotAllowed(
+                    allowed_methods, content=b"Method not allowed"
+                )
+            if operation.is_async:
+                return await cast(AsyncOperation, operation).run(request, *a, **kw)
+            return await sync_to_async(operation.run)(request, *a, **kw)
+
+        view = async_view if is_async else sync_view
+        view.csrf_exempt = True  # type: ignore
+        if self.url_name:
+            view.__name__ = "".join(c if c.isalnum() else "_" for c in self.url_name)
+            if view.__name__[0].isnumeric():
+                view.__name__ = f"_{view.__name__}"
         return view
-
-    def _sync_view(self, request: HttpRequest, *a: Any, **kw: Any) -> HttpResponseBase:
-        operation = self._find_operation(request)
-        if operation is None:
-            return self._not_allowed()
-        return operation.run(request, *a, **kw)
-
-    async def _async_view(
-        self, request: HttpRequest, *a: Any, **kw: Any
-    ) -> HttpResponseBase:
-        from asgiref.sync import sync_to_async
-
-        operation = self._find_operation(request)
-        if operation is None:
-            return self._not_allowed()
-        if operation.is_async:
-            return await cast(AsyncOperation, operation).run(request, *a, **kw)
-        return await sync_to_async(operation.run)(request, *a, **kw)
-
-    def _find_operation(self, request: HttpRequest) -> Optional[Operation]:
-        for op in self.operations:
-            if request.method in op.methods:
-                return op
-        return None
-
-    def _not_allowed(self) -> HttpResponse:
-        allowed_methods = set()
-        for op in self.operations:
-            allowed_methods.update(op.methods)
-        return HttpResponseNotAllowed(allowed_methods, content=b"Method not allowed")
 
 
 class ResponseObject:
