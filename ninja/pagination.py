@@ -41,7 +41,9 @@ class PaginationBase(ABC):
     def paginate_queryset(
         self,
         queryset: QuerySet,
+        *,
         pagination: Any,
+        request: HttpRequest,
         **params: Any,
     ) -> Any:
         pass  # pragma: no cover
@@ -63,7 +65,9 @@ class AsyncPaginationBase(PaginationBase):
     async def apaginate_queryset(
         self,
         queryset: QuerySet,
+        *,
         pagination: Any,
+        request: HttpRequest,
         **params: Any,
     ) -> Any:
         pass  # pragma: no cover
@@ -91,7 +95,9 @@ class LimitOffsetPagination(AsyncPaginationBase):
     def paginate_queryset(
         self,
         queryset: QuerySet,
+        *,
         pagination: Input,
+        request: HttpRequest,
         **params: Any,
     ) -> Any:
         offset = pagination.offset
@@ -104,7 +110,9 @@ class LimitOffsetPagination(AsyncPaginationBase):
     async def apaginate_queryset(
         self,
         queryset: QuerySet,
+        *,
         pagination: Input,
+        request: HttpRequest,
         **params: Any,
     ) -> Any:
         offset = pagination.offset
@@ -143,7 +151,9 @@ class PageNumberPagination(AsyncPaginationBase):
     def paginate_queryset(
         self,
         queryset: QuerySet,
+        *,
         pagination: Input,
+        request: HttpRequest,
         **params: Any,
     ) -> Any:
         page_size = self._get_page_size(pagination.page_size)
@@ -156,7 +166,9 @@ class PageNumberPagination(AsyncPaginationBase):
     async def apaginate_queryset(
         self,
         queryset: QuerySet,
+        *,
         pagination: Input,
+        request: HttpRequest,
         **params: Any,
     ) -> Any:
         page_size = self._get_page_size(pagination.page_size)

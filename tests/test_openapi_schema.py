@@ -926,7 +926,7 @@ def test_no_default_for_custom_items_attribute():
 
         items_attribute: str = "data"
 
-        def paginate_queryset(self, queryset, pagination, **params):
+        def paginate_queryset(self, queryset, *, pagination, request, **params):
             pass
 
     @api.get(
