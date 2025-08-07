@@ -1,68 +1,72 @@
 import warnings
-from typing import Any, List, Optional, Union, no_type_check
+from inspect import getmembers
+from typing import List, Optional, Type, Union, no_type_check
 
 from django.db.models import Model as DjangoModel
-from pydantic.dataclasses import dataclass
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    model_validator,
+)
+from typing_extensions import Literal, Self
 
 from ninja.errors import ConfigError
-from ninja.orm.factory import create_schema
+from ninja.orm.factory import factory
 from ninja.schema import ResolverMetaclass, Schema
 
-_is_modelschema_class_defined = False
 
+class MetaConf(BaseModel):
+    """
+    Mirrors the relevant arguments for create_schema
 
-@dataclass
-class MetaConf:
-    model: Any
-    fields: Optional[List[str]] = None
-    exclude: Union[List[str], str, None] = None
-    fields_optional: Union[List[str], str, None] = None
+    model: Django model being used to create the Schema
+    fields: List of field names in the model to use. Defaults to '__all__' which includes all fields
+    exclude: List of field names to exclude
+    optional_fields: List of field names which will be optional, can also take '__all__'
+    depth: If > 0 schema will also be created for the nested ForeignKeys and Many2Many (with the provided depth of lookup)
+    primary_key_optional: Defaults to True, controls if django's primary_key=True field in the provided model is required
 
-    @staticmethod
-    def from_schema_class(name: str, namespace: dict) -> "MetaConf":
-        if "Meta" in namespace:
-            meta = namespace["Meta"]
-            model = meta.model
-            fields = getattr(meta, "fields", None)
-            exclude = getattr(meta, "exclude", None)
-            optional_fields = getattr(meta, "fields_optional", None)
+    fields_optional: same as optional_fields, deprecated in order to match `create_schema()` API
+    """
 
-        elif "Config" in namespace:
-            config = namespace["Config"]
-            model = config.model
-            fields = getattr(config, "model_fields", None)
-            exclude = getattr(config, "model_exclude", None)
-            optional_fields = getattr(config, "model_fields_optional", None)
+    model: Optional[Type[DjangoModel]] = None
+    # aliased for Config
+    fields: Union[List[str], Literal["__all__"], None] = Field(
+        None, validation_alias=AliasChoices("fields", "model_fields")
+    )
+    exclude: Optional[List[str]] = None
+    optional_fields: Union[List[str], Literal["__all__"], None] = None
+    depth: int = 0
+    primary_key_optional: Optional[bool] = None
+    # deprecated
+    fields_optional: Union[List[str], Literal["__all__"], None] = Field(
+        default=None, exclude=True
+    )
 
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def check_fields(self) -> Self:
+        if self.model and (
+            (not self.exclude and not self.fields) or (self.exclude and self.fields)
+        ):
+            raise ConfigError("Specify either `exclude` or `fields`")
+
+        if self.fields_optional:
+            if self.optional_fields is not None:
+                raise ConfigError(
+                    "Use only `optional_fields`, `fields_optional` is deprecated."
+                )
             warnings.warn(
-                "The use of `Config` class is deprecated for ModelSchema, use 'Meta' instead",
+                "The use of `fields_optional` is deprecated. Use `optional_fields` instead to match `create_schema()` API",
                 DeprecationWarning,
                 stacklevel=2,
             )
-
-        else:
-            raise ConfigError(
-                f"ModelSchema class '{name}' requires a 'Meta' (or a 'Config') subclass"
-            )
-
-        assert issubclass(model, DjangoModel)
-
-        if not fields and not exclude:
-            raise ConfigError(
-                "Creating a ModelSchema without either the 'fields' attribute"
-                " or the 'exclude' attribute is prohibited"
-            )
-
-        if fields == "__all__":
-            fields = None
-            # ^ when None is passed to create_schema - all fields are selected
-
-        return MetaConf(
-            model=model,
-            fields=fields,
-            exclude=exclude,
-            fields_optional=optional_fields,
-        )
+            self.optional_fields = self.fields_optional
+        return self
 
 
 class ModelSchemaMetaclass(ResolverMetaclass):
@@ -74,6 +78,62 @@ class ModelSchemaMetaclass(ResolverMetaclass):
         namespace: dict,
         **kwargs,
     ):
+        meta_conf = None
+
+        if "Config" in namespace:
+            config_keys = {k for k, _ in getmembers(namespace["Config"])}
+            if any(k in config_keys for k in MetaConf.model_fields.keys()):
+                raise ConfigError(
+                    "class `Config` cannot be used to configure ModelSchema. Use `Meta` instead"
+                )
+
+        if "Meta" in namespace:
+            conf_class = namespace["Meta"]
+            conf_dict = {
+                k: v for k, v in getmembers(conf_class) if not k.startswith("__")
+            }
+            try:
+                meta_conf = MetaConf.model_validate(conf_dict)
+            except ValidationError as ve:
+                raise ConfigError(str(ve)) from ve
+
+        if meta_conf and meta_conf.model:
+            existing_annotations_keys = set()
+            for base in bases:
+                existing_annotations_keys |= set(
+                    getattr(base, "__annotations__", {}).keys()
+                )
+
+            meta_conf = meta_conf.model_dump(exclude_none=True)
+
+            fields = factory.convert_django_fields(**meta_conf)
+            for field, val in fields.items():
+                # do not allow field to be defined both in the class and
+                # explicitly through `Meta.fields` or implicitly through `Meta.excluded`
+                if namespace.get("__annotations__", {}).get(field):
+                    raise ConfigError(
+                        f"'{field}' is defined in class body and in Meta.fields or implicitly in Meta.excluded"
+                    )
+                # NOTE: the check below disables the ability to declare any already existing fields on ModelSchema children
+                # class ItemSlimSchema(ModelSchema):
+                #     class Meta:
+                #         model = Item
+                #         fields = ["id", "name"]
+                #
+                # class ItemSchema(ItemSlimSchema):
+                #     class Meta(ItemSlimSchema.Meta):
+                #         fields = ["type", "desc"] <-- will work with inheritting from the parent.Meta, other fields already exist
+                #                                       on the underlying pydantic model
+                #         fields = ["id", "name", "type", "desc"] <-- won't work, inheriting from parent.Meta or not
+                if field in existing_annotations_keys:
+                    raise ConfigError(
+                        f"Field {field} from model {meta_conf['model']} already exists in the Schema"
+                    )
+                # set type
+                namespace.setdefault("__annotations__", {})[field] = val[0]
+                # and default value
+                namespace[field] = val[1]
+
         cls = super().__new__(
             mcs,
             name,
@@ -81,45 +141,12 @@ class ModelSchemaMetaclass(ResolverMetaclass):
             namespace,
             **kwargs,
         )
-        for base in reversed(bases):
-            if (
-                _is_modelschema_class_defined
-                and issubclass(base, ModelSchema)
-                and base == ModelSchema
-            ):
-                meta_conf = MetaConf.from_schema_class(name, namespace)
-
-                custom_fields = []
-                annotations = namespace.get("__annotations__", {})
-                for attr_name, type in annotations.items():
-                    if attr_name.startswith("_"):
-                        continue
-                    default = namespace.get(attr_name, ...)
-                    custom_fields.append((attr_name, type, default))
-
-                # # cls.__doc__ = namespace.get("__doc__", config.model.__doc__)
-                # cls.__fields__ = {}  # forcing pydantic recreate
-                # # assert False, "!! cls.model_fields"
-
-                # print(config.model, name, fields, exclude, "!!")
-
-                model_schema = create_schema(
-                    meta_conf.model,
-                    name=name,
-                    fields=meta_conf.fields,
-                    exclude=meta_conf.exclude,
-                    optional_fields=meta_conf.fields_optional,
-                    custom_fields=custom_fields,
-                    base_class=cls,
-                )
-                model_schema.__doc__ = cls.__doc__
-                return model_schema
-
         return cls
 
 
 class ModelSchema(Schema, metaclass=ModelSchemaMetaclass):
-    pass
-
-
-_is_modelschema_class_defined = True
+    @no_type_check
+    def __new__(cls, *args, **kwargs):
+        if not getattr(getattr(cls, "Meta", {}), "model", None):
+            raise ConfigError(f"No model set for class '{cls.__name__}'")
+        return super().__new__(cls)
