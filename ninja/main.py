@@ -1,5 +1,4 @@
 import os
-import warnings
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -65,7 +64,6 @@ class NinjaAPI:
         docs_decorator: Optional[Callable[[TCallable], TCallable]] = None,
         servers: Optional[List[DictStrAny]] = None,
         urls_namespace: Optional[str] = None,
-        csrf: bool = False,
         auth: Optional[Union[Sequence[Callable], Callable, NOT_SET_TYPE]] = NOT_SET,
         throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         renderer: Optional[BaseRenderer] = None,
@@ -83,7 +81,6 @@ class NinjaAPI:
             openapi_extra: Additional attributes for the openAPI spec.
             docs_url: The relative URL to serve the API docs.
             servers: List of target hosts used in openAPI spec.
-            csrf: Require a CSRF token for unsafe request types. See <a href="../csrf">CSRF</a> docs.
             auth (Callable | Sequence[Callable] | NOT_SET | None): Authentication class
             renderer: Default response renderer
             parser: Default request parser
@@ -97,13 +94,6 @@ class NinjaAPI:
         self.docs_decorator = docs_decorator
         self.servers = servers or []
         self.urls_namespace = urls_namespace or f"api-{self.version}"
-        self.csrf = csrf  # TODO: Check if used or at least throw Deprecation warning
-        if self.csrf:
-            warnings.warn(
-                "csrf argument is deprecated, auth is handling csrf automatically now",
-                DeprecationWarning,
-                stacklevel=2,
-            )
         self.renderer = renderer or JSONRenderer()
         self.parser = parser or Parser()
         self.openapi_extra = openapi_extra or {}

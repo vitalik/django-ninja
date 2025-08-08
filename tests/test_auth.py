@@ -82,7 +82,7 @@ def demo_operation(request):
     return {"auth": request.auth}
 
 
-api = NinjaAPI(csrf=True)
+api = NinjaAPI()
 
 
 @api.exception_handler(CustomException)

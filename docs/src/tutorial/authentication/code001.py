@@ -1,7 +1,7 @@
 from ninja import NinjaAPI
 from ninja.security import django_auth
 
-api = NinjaAPI(csrf=True)
+api = NinjaAPI()
 
 
 @api.get("/pets", auth=django_auth)
