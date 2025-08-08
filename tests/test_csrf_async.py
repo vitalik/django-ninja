@@ -1,5 +1,6 @@
 import pytest
 from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
 
 from ninja import NinjaAPI
 from ninja.security import APIKeyCookie
@@ -64,4 +65,21 @@ async def test_csrf_on():
     response = await client.post(
         "/post", COOKIES=COOKIES, headers={"X-CSRFTOKEN": TOKEN}
     )
+    assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_csrf_exempt_async():
+    """Test that @csrf_exempt works with async operations"""
+    csrf_ON = NinjaAPI(urls_namespace="csrf_exempt_async", auth=AnyCookieAuth())
+
+    @csrf_ON.post("/post/csrf_exempt")
+    @csrf_exempt
+    async def post_on_with_exempt(request):
+        return {"success": True}
+
+    client = TestAsyncClient(csrf_ON)
+
+    # This should succeed even without CSRF token because of @csrf_exempt
+    response = await client.post("/post/csrf_exempt", COOKIES=COOKIES)
     assert response.status_code == 200
