@@ -68,6 +68,7 @@ class Operation:
         self.methods: List[str] = methods
         self.view_func: Callable = view_func
         self.api: NinjaAPI = cast("NinjaAPI", None)
+        self.csrf_exempt: bool = False  # Will be set later if view has csrf_exempt
         if url_name is not None:
             self.url_name = url_name
 
@@ -182,19 +183,19 @@ class Operation:
         # NOTE: if you change anything in this function - do this also in AsyncOperation
 
         # Set CSRF exempt status on request so auth handlers can check it
-        if getattr(self, "csrf_exempt", False):
+        if self.csrf_exempt:
             # _ninja_csrf_exempt is a special flag that tells auth handler to skip CSRF checks
             request._ninja_csrf_exempt = True  # type: ignore
 
         # auth:
         if self.auth_callbacks:
-            error = self._run_authentication(request)  # type: ignore
+            error = self._run_authentication(request)
             if error:
                 return error
 
         # Throttling:
         if self.throttle_objects:
-            error = self._check_throttles(request)  # type: ignore
+            error = self._check_throttles(request)
             if error:
                 return error
 
@@ -359,7 +360,7 @@ class AsyncOperation(Operation):
         # NOTE: if you change anything in this function - do this also in Sync Operation
 
         # Set CSRF exempt status on request so auth handlers can check it
-        if getattr(self, "csrf_exempt", False):
+        if self.csrf_exempt:
             request._ninja_csrf_exempt = True  # type: ignore
 
         # auth:
@@ -480,7 +481,7 @@ class PathView:
             # Create a wrapper for async view
             async def async_view_wrapper(
                 request: HttpRequest, *args: Any, **kwargs: Any
-            ) -> HttpResponse:
+            ) -> HttpResponseBase:
                 return await self._async_view(request, *args, **kwargs)
 
             # Set csrf_exempt if all operations are exempt
@@ -492,7 +493,7 @@ class PathView:
             # Create a wrapper for sync view
             def sync_view_wrapper(
                 request: HttpRequest, *args: Any, **kwargs: Any
-            ) -> HttpResponse:
+            ) -> HttpResponseBase:
                 return self._sync_view(request, *args, **kwargs)
 
             # Set csrf_exempt if all operations are exempt
