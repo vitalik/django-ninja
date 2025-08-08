@@ -68,6 +68,7 @@ nav:
           - guides/response/pagination.md
           - guides/response/response-renderers.md
       - Splitting your API with Routers: guides/routers.md
+      - guides/decorators.md
       - guides/authentication.md
       - guides/throttling.md
       - guides/testing.md
