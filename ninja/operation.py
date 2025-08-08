@@ -181,11 +181,11 @@ class Operation:
         "Runs security/throttle checks for each operation"
         # NOTE: if you change anything in this function - do this also in AsyncOperation
 
-        # csrf:
-        if self.api.csrf:
-            error = check_csrf(request, self.view_func)
-            if error:
-                return error
+        # # csrf:
+        # if self.api.csrf:
+        #     error = check_csrf(request, self.view_func)
+        #     if error:
+        #         return error
 
         # auth:
         if self.auth_callbacks:
@@ -365,11 +365,11 @@ class AsyncOperation(Operation):
             if error:
                 return error
 
-        # csrf:
-        if self.api.csrf:
-            error = check_csrf(request, self.view_func)
-            if error:
-                return error
+        # # csrf:
+        # if self.api.csrf:
+        #     error = check_csrf(request, self.view_func)
+        #     if error:
+        #         return error
 
         # Throttling:
         if self.throttle_objects:
@@ -404,6 +404,7 @@ class PathView:
         self.operations: List[Operation] = []
         self.is_async = False  # if at least one operation is async - will become True
         self.url_name: Optional[str] = None
+        self.csrf_exempt = None
 
     def add_operation(
         self,
@@ -458,6 +459,11 @@ class PathView:
 
         self.operations.append(operation)
         view_func._ninja_operation = operation  # type: ignore
+
+        if getattr(view_func, "csrf_exempt", False):
+            print("!!!!!", view_func)
+            operation.csrf_exempt = True
+
         return operation
 
     def set_api_instance(self, api: "NinjaAPI", router: "Router") -> None:
