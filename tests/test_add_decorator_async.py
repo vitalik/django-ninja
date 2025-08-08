@@ -5,7 +5,7 @@ import pytest
 
 from ninja import NinjaAPI, Router
 from ninja.constants import DecoratorMode
-from ninja.testing import TestAsyncClient
+from ninja.testing import TestAsyncClient, TestClient
 
 
 # Async test decorators
@@ -167,3 +167,70 @@ async def test_mixed_sync_async_decorators():
     response = sync_client.get("/sync")
     assert response.status_code == 200
     assert response.json() == {"type": "sync", "sync_decorated": True}
+
+
+@pytest.mark.asyncio
+async def test_mixed_sync_async_endpoints_same_router():
+    """Test router with both sync and async endpoints using the same decorator"""
+    api = NinjaAPI()
+    router = Router()
+
+    # Universal decorator that works with both sync and async functions
+    def universal_decorator(func):
+        if asyncio.iscoroutinefunction(func):
+            # Handle async functions
+            @wraps(func)
+            async def async_wrapper(request, *args, **kwargs):
+                result = await func(request, *args, **kwargs)
+                if isinstance(result, dict):
+                    result["universal_decorated"] = True
+                    result["func_type"] = "async"
+                return result
+
+            return async_wrapper
+        else:
+            # Handle sync functions
+            @wraps(func)
+            def sync_wrapper(request, *args, **kwargs):
+                result = func(request, *args, **kwargs)
+                if isinstance(result, dict):
+                    result["universal_decorated"] = True
+                    result["func_type"] = "sync"
+                return result
+
+            return sync_wrapper
+
+    router.add_decorator(universal_decorator, mode=DecoratorMode.OPERATION)
+
+    @router.get("/async")
+    async def async_endpoint(request):
+        await asyncio.sleep(0)
+        return {"endpoint": "async"}
+
+    @router.get("/sync")
+    def sync_endpoint(request):
+        return {"endpoint": "sync"}
+
+    api.add_router("/", router)
+
+    # Test both endpoints with appropriate clients
+    async_client = TestAsyncClient(api)
+    sync_client = TestClient(api)
+
+    # Test async endpoint
+    response = await async_client.get("/async")
+    assert response.status_code == 200
+    assert response.json() == {
+        "endpoint": "async",
+        "universal_decorated": True,
+        "func_type": "async",
+    }
+
+    # Test sync endpoint
+    response = sync_client.get("/sync")
+    assert response.status_code == 200
+    assert response.json() == {
+        "endpoint": "sync",
+        "universal_decorated": True,
+        "func_type": "sync",
+    }

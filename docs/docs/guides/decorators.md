@@ -230,12 +230,58 @@ api.add_router("/parent", parent_router)
 
 ## Async Support
 
-Decorators work with both sync and async views:
+Decorators work with both sync and async views. When you have mixed sync/async endpoints in the same router, you need to create universal decorators that handle both cases.
+
+### Universal Decorators for Mixed Sync/Async Routers
+
+When you have a router with both sync and async endpoints, use `asyncio.iscoroutinefunction()` to detect the function type:
 
 ```python
 import asyncio
 from functools import wraps
 
+def universal_decorator(func):
+    if asyncio.iscoroutinefunction(func):
+        # Handle async functions
+        @wraps(func)
+        async def async_wrapper(request, *args, **kwargs):
+            # Your async logic here
+            result = await func(request, *args, **kwargs)
+            if isinstance(result, dict):
+                result["decorated"] = True
+                result["type"] = "async"
+            return result
+        return async_wrapper
+    else:
+        # Handle sync functions  
+        @wraps(func)
+        def sync_wrapper(request, *args, **kwargs):
+            # Your sync logic here
+            result = func(request, *args, **kwargs)
+            if isinstance(result, dict):
+                result["decorated"] = True
+                result["type"] = "sync"
+            return result
+        return sync_wrapper
+
+router = Router()
+router.add_decorator(universal_decorator)
+
+@router.get("/async")
+async def async_endpoint(request):
+    await asyncio.sleep(0.1)
+    return {"endpoint": "async"}
+
+@router.get("/sync") 
+def sync_endpoint(request):
+    return {"endpoint": "sync"}
+```
+
+### Async-Only Decorators
+
+For routers with only async endpoints, you can use async decorators directly:
+
+```python
 def async_timing_decorator(func):
     @wraps(func)
     async def wrapper(request, *args, **kwargs):
@@ -254,6 +300,32 @@ router.add_decorator(async_timing_decorator)
 async def async_endpoint(request):
     await asyncio.sleep(1)
     return {"message": "async done"}
+```
+
+### Sync Decorators on Async Views
+
+You can also use sync decorators on async views by handling coroutines:
+
+```python
+def sync_decorator(func):
+    @wraps(func)
+    def wrapper(request, *args, **kwargs):
+        result = func(request, *args, **kwargs)
+        
+        if asyncio.iscoroutine(result):
+            # Handle async functions
+            async def async_wrapper():
+                actual_result = await result
+                if isinstance(actual_result, dict):
+                    actual_result["sync_decorated"] = True
+                return actual_result
+            return async_wrapper()
+        else:
+            # Handle sync functions
+            if isinstance(result, dict):
+                result["sync_decorated"] = True
+            return result
+    return wrapper
 ```
 
 ## When to Use Each Mode
@@ -275,7 +347,18 @@ async def async_endpoint(request):
 ## Best Practices
 
 1. **Use `functools.wraps`**: Always use `@wraps(func)` to preserve function metadata
-2. **Handle both sync and async**: Consider whether your decorator needs to support async views
-3. **Be mindful of performance**: Decorators add overhead, especially in VIEW mode
-4. **Document side effects**: Clearly document what your decorators modify
-5. **Keep decorators focused**: Each decorator should have a single responsibility
+
+2. **Handle mixed sync/async routers**: When your router has both sync and async endpoints, use `asyncio.iscoroutinefunction(func)` to create universal decorators
+
+3. **Choose the right approach for async**:
+   - **Universal decorators**: Best for mixed routers (detect with `iscoroutinefunction`)
+   - **Async-only decorators**: Best for async-only routers (simpler, cleaner) 
+   - **Sync decorators with coroutine handling**: Useful for legacy decorators
+
+4. **Be mindful of performance**: Decorators add overhead, especially in VIEW mode
+
+5. **Document side effects**: Clearly document what your decorators modify
+
+6. **Keep decorators focused**: Each decorator should have a single responsibility
+
+7. **Test both sync and async**: When using universal decorators, test both sync and async endpoints
