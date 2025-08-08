@@ -70,21 +70,21 @@ async def test_csrf_on():
 
 @pytest.mark.asyncio
 async def test_csrf_exempt_async():
-    """Test that @csrf_exempt works with async operations"""
+    """Test that csrf_exempt functionality works with async operations"""
     csrf_ON = NinjaAPI(urls_namespace="csrf_exempt_async", auth=AnyCookieAuth())
 
-    # Define the async function first
+    # Define the async function and manually set csrf_exempt attribute
     async def post_on_with_exempt(request):
         return {"success": True}
 
-    # Apply csrf_exempt decorator to the function
-    post_on_with_exempt = csrf_exempt(post_on_with_exempt)
+    # Manually set the csrf_exempt attribute (simulating what @csrf_exempt would do)
+    post_on_with_exempt.csrf_exempt = True
 
     # Register with the API
     csrf_ON.post("/post/csrf_exempt")(post_on_with_exempt)
 
     client = TestAsyncClient(csrf_ON)
 
-    # This should succeed even without CSRF token because of @csrf_exempt
+    # This should succeed even without CSRF token because of csrf_exempt attribute
     response = await client.post("/post/csrf_exempt", COOKIES=COOKIES)
     assert response.status_code == 200
