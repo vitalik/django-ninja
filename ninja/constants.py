@@ -1,6 +1,7 @@
+from enum import Enum
 from typing import Any, Dict, Optional
 
-__all__ = ["NOT_SET"]
+__all__ = ["NOT_SET", "DecoratorMode"]
 
 
 class NOT_SET_TYPE:
@@ -15,3 +16,10 @@ class NOT_SET_TYPE:
 
 
 NOT_SET = NOT_SET_TYPE()
+
+
+class DecoratorMode(str, Enum):
+    """Mode for decorator application in add_decorator method"""
+
+    OPERATION = "operation"  # Apply decorator to operation.run (after validation)
+    VIEW = "view"  # Apply decorator to Django view (before validation)
