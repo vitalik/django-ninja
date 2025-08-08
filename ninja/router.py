@@ -485,6 +485,10 @@ class Router:
                             operation.run = decorator(operation.run)  # type: ignore
                         elif mode == DecoratorMode.OPERATION:
                             operation.view_func = decorator(operation.view_func)
+                        else:
+                            raise ValueError(
+                                f"Invalid decorator mode: {mode}"
+                            )  # pragma: no cover
                         applied_decorators.append((decorator, mode))
 
                 # Store what decorators have been applied
