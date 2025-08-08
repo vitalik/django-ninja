@@ -32,7 +32,7 @@ from ninja.schema import Schema, pydantic_version
 from ninja.signature import ViewSignature, is_async
 from ninja.throttling import BaseThrottle
 from ninja.types import DictStrAny
-from ninja.utils import check_csrf, is_async_callable
+from ninja.utils import is_async_callable
 
 if TYPE_CHECKING:
     from ninja import NinjaAPI, Router  # pragma: no cover
@@ -181,11 +181,10 @@ class Operation:
         "Runs security/throttle checks for each operation"
         # NOTE: if you change anything in this function - do this also in AsyncOperation
 
-        # # csrf:
-        # if self.api.csrf:
-        #     error = check_csrf(request, self.view_func)
-        #     if error:
-        #         return error
+        # Set CSRF exempt status on request so auth handlers can check it
+        if getattr(self, "csrf_exempt", False):
+            # _ninja_csrf_exempt is a special flag that tells auth handler to skip CSRF checks
+            request._ninja_csrf_exempt = True  # type: ignore
 
         # auth:
         if self.auth_callbacks:
@@ -356,20 +355,18 @@ class AsyncOperation(Operation):
             return self.api.on_exception(request, e)
 
     async def _run_checks(self, request: HttpRequest) -> Optional[HttpResponse]:  # type: ignore
-        "Runs security checks for each operation"
+        "Runs security/throttle checks for each operation"
         # NOTE: if you change anything in this function - do this also in Sync Operation
+
+        # Set CSRF exempt status on request so auth handlers can check it
+        if getattr(self, "csrf_exempt", False):
+            request._ninja_csrf_exempt = True  # type: ignore
 
         # auth:
         if self.auth_callbacks:
             error = await self._run_authentication(request)
             if error:
                 return error
-
-        # # csrf:
-        # if self.api.csrf:
-        #     error = check_csrf(request, self.view_func)
-        #     if error:
-        #         return error
 
         # Throttling:
         if self.throttle_objects:
@@ -460,9 +457,8 @@ class PathView:
         self.operations.append(operation)
         view_func._ninja_operation = operation  # type: ignore
 
-        if getattr(view_func, "csrf_exempt", False):
-            print("!!!!!", view_func)
-            operation.csrf_exempt = True
+        # Check if the view function has csrf_exempt decorator
+        operation.csrf_exempt = getattr(view_func, "csrf_exempt", False)
 
         return operation
 
@@ -472,14 +468,38 @@ class PathView:
             op.set_api_instance(api, router)
 
     def get_view(self) -> Callable:
-        view: Callable
-        if self.is_async:
-            view = self._async_view
-        else:
-            view = self._sync_view
+        # Create a unique view function for this PathView
+        # This allows per-path CSRF configuration
 
-        view.__func__.csrf_exempt = True  # type: ignore
-        return view
+        # Determine if all operations in this path are CSRF exempt
+        all_csrf_exempt = all(
+            getattr(op, "csrf_exempt", False) for op in self.operations
+        )
+
+        if self.is_async:
+            # Create a wrapper for async view
+            async def async_view_wrapper(
+                request: HttpRequest, *args: Any, **kwargs: Any
+            ) -> HttpResponse:
+                return await self._async_view(request, *args, **kwargs)
+
+            # Set csrf_exempt if all operations are exempt
+            if all_csrf_exempt:
+                async_view_wrapper.csrf_exempt = True  # type: ignore
+
+            return async_view_wrapper
+        else:
+            # Create a wrapper for sync view
+            def sync_view_wrapper(
+                request: HttpRequest, *args: Any, **kwargs: Any
+            ) -> HttpResponse:
+                return self._sync_view(request, *args, **kwargs)
+
+            # Set csrf_exempt if all operations are exempt
+            if all_csrf_exempt:
+                sync_view_wrapper.csrf_exempt = True  # type: ignore
+
+            return sync_view_wrapper
 
     def _sync_view(self, request: HttpRequest, *a: Any, **kw: Any) -> HttpResponseBase:
         operation = self._find_operation(request)
