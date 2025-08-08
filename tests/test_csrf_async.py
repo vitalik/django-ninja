@@ -73,10 +73,15 @@ async def test_csrf_exempt_async():
     """Test that @csrf_exempt works with async operations"""
     csrf_ON = NinjaAPI(urls_namespace="csrf_exempt_async", auth=AnyCookieAuth())
 
-    @csrf_ON.post("/post/csrf_exempt")
-    @csrf_exempt
+    # Define the async function first
     async def post_on_with_exempt(request):
         return {"success": True}
+
+    # Apply csrf_exempt decorator to the function
+    post_on_with_exempt = csrf_exempt(post_on_with_exempt)
+
+    # Register with the API
+    csrf_ON.post("/post/csrf_exempt")(post_on_with_exempt)
 
     client = TestAsyncClient(csrf_ON)
 
