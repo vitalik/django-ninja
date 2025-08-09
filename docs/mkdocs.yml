@@ -99,6 +99,7 @@ markdown_extensions:
   - abbr
   - codehilite
   - admonition
+  - pymdownx.details
   - pymdownx.superfences
 plugins:
   - search
