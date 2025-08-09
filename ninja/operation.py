@@ -68,7 +68,6 @@ class Operation:
         self.methods: List[str] = methods
         self.view_func: Callable = view_func
         self.api: NinjaAPI = cast("NinjaAPI", None)
-        self.csrf_exempt: bool = False  # Will be set later if view has csrf_exempt
         if url_name is not None:
             self.url_name = url_name
 
@@ -470,12 +469,6 @@ class PathView:
 
     def get_view(self) -> Callable:
         # Create a unique view function for this PathView
-        # This allows per-path CSRF configuration
-
-        # Determine if all operations in this path are CSRF exempt
-        all_csrf_exempt = all(
-            getattr(op, "csrf_exempt", False) for op in self.operations
-        )
 
         if self.is_async:
             # Create a wrapper for async view
@@ -484,9 +477,9 @@ class PathView:
             ) -> HttpResponseBase:
                 return await self._async_view(request, *args, **kwargs)
 
-            # Set csrf_exempt if all operations are exempt
-            if all_csrf_exempt:
-                async_view_wrapper.csrf_exempt = True  # type: ignore
+            # All django-ninja views are CSRF exempt at Django middleware level
+            # Cookie-based auth (APIKeyCookie) handles CSRF checking separately
+            async_view_wrapper.csrf_exempt = True  # type: ignore
 
             return async_view_wrapper
         else:
@@ -496,9 +489,9 @@ class PathView:
             ) -> HttpResponseBase:
                 return self._sync_view(request, *args, **kwargs)
 
-            # Set csrf_exempt if all operations are exempt
-            if all_csrf_exempt:
-                sync_view_wrapper.csrf_exempt = True  # type: ignore
+            # All django-ninja views are CSRF exempt at Django middleware level
+            # Cookie-based auth (APIKeyCookie) handles CSRF checking separately
+            sync_view_wrapper.csrf_exempt = True  # type: ignore
 
             return sync_view_wrapper
 

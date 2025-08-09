@@ -170,6 +170,47 @@ def test_docs():
     assert len(csrf_token) > 0
 
 
+def test_no_auth_csrf_exempt():
+    """Test that APIs without authentication are CSRF exempt by default"""
+    from django.middleware.csrf import CsrfViewMiddleware
+    from django.test import RequestFactory
+
+    api = NinjaAPI(urls_namespace="test_no_auth_csrf")
+
+    @api.post("/create")
+    def create_item(request):
+        return {"status": "created"}
+
+    # Get the actual view function that Django will use
+    patterns = api.urls[0]
+    view_func = None
+    for pattern in patterns:
+        if hasattr(pattern, "callback") and "create" in str(pattern.pattern):
+            view_func = pattern.callback
+            break
+
+    assert view_func is not None, "Could not find view function"
+
+    # Test 1: Check if view has csrf_exempt attribute
+    has_csrf_exempt = hasattr(view_func, "csrf_exempt")
+    csrf_exempt_value = getattr(view_func, "csrf_exempt", None)
+    print(f"View has csrf_exempt: {has_csrf_exempt}, value: {csrf_exempt_value}")
+
+    # Test 2: Simulate Django's CSRF middleware check
+    factory = RequestFactory()
+    request = factory.post("/create", data="{}", content_type="application/json")
+
+    csrf_middleware = CsrfViewMiddleware(lambda r: None)
+    csrf_middleware.process_request(request)
+    csrf_response = csrf_middleware.process_view(request, view_func, (), {})
+
+    # If csrf_response is None, the request passed CSRF checks
+    # If it's not None, it's a 403 Forbidden response
+    assert (
+        csrf_response is None
+    ), f"CSRF middleware blocked the request! Regular APIs should be CSRF exempt. Response: {csrf_response}"
+
+
 def test_docs_cookie_auth():
     class CookieAuth(APIKeyCookie):
         def authenticate(self, request, key):
