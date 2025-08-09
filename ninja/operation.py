@@ -68,6 +68,7 @@ class Operation:
         self.methods: List[str] = methods
         self.view_func: Callable = view_func
         self.api: NinjaAPI = cast("NinjaAPI", None)
+        self.csrf_exempt: bool = getattr(view_func, "csrf_exempt", False)
         if url_name is not None:
             self.url_name = url_name
 
@@ -401,7 +402,6 @@ class PathView:
         self.operations: List[Operation] = []
         self.is_async = False  # if at least one operation is async - will become True
         self.url_name: Optional[str] = None
-        self.csrf_exempt = None
 
     def add_operation(
         self,
@@ -456,9 +456,6 @@ class PathView:
 
         self.operations.append(operation)
         view_func._ninja_operation = operation  # type: ignore
-
-        # Check if the view function has csrf_exempt decorator
-        operation.csrf_exempt = getattr(view_func, "csrf_exempt", False)
 
         return operation
 
