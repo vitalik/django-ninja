@@ -187,8 +187,13 @@ class ViewSignature:
         arg_names: Any = {}
         for arg in args:
             if is_pydantic_model(arg.annotation):
-                for name, path in self._model_flatten_map(arg.annotation, arg.alias):
-                    if name in flatten_map:
+                for name, path, is_union_descendant in self._model_flatten_map(
+                    arg.annotation, arg.alias
+                ):
+                    model = arg.annotation
+                    if get_origin(model) is Annotated:
+                        model = get_args(model)[0]
+                    if not is_union_descendant and name in flatten_map:
                         raise ConfigError(
                             f"Duplicated name: '{name}' in params: '{arg_names[name]}' & '{arg.name}'"
                         )
@@ -205,15 +210,26 @@ class ViewSignature:
 
         return flatten_map
 
-    def _model_flatten_map(self, model: TModel, prefix: str) -> Generator:
+    def _model_flatten_map(
+        self, model: TModel, prefix: str, is_union_descendant: bool = False
+    ) -> Generator[Tuple[str, str, bool], None, None]:
         field: FieldInfo
-        for attr, field in model.model_fields.items():
-            field_name = field.alias or attr
-            name = f"{prefix}{self.FLATTEN_PATH_SEP}{field_name}"
-            if is_pydantic_model(field.annotation):
-                yield from self._model_flatten_map(field.annotation, name)  # type: ignore
-            else:
-                yield field_name, name
+        if get_origin(model) is Annotated:
+            model = get_args(model)[0]
+        if get_origin(model) in UNION_TYPES:
+            # If the model is a union type, process each type in the union
+            for arg in get_args(model):
+                yield from self._model_flatten_map(arg, prefix, True)
+        else:
+            for attr, field in model.model_fields.items():
+                field_name = field.alias or attr
+                name = f"{prefix}{self.FLATTEN_PATH_SEP}{field_name}"
+                if is_pydantic_model(field.annotation):
+                    yield from self._model_flatten_map(
+                        field.annotation, name, is_union_descendant
+                    )  # type: ignore
+                else:
+                    yield field_name, name, is_union_descendant
 
     def _get_param_type(self, name: str, arg: inspect.Parameter) -> FuncParam:
         # _EMPTY = self.signature.empty
@@ -336,24 +352,40 @@ def detect_collection_fields(
         for path in (p for p in flatten_map.values() if len(p) > 1):
             annotation_or_field: Any = args_d[path[0]].annotation
             for attr in path[1:]:
-                if hasattr(annotation_or_field, "annotation"):
-                    annotation_or_field = annotation_or_field.annotation
-                annotation_or_field = next(
-                    (
-                        a
-                        for a in annotation_or_field.model_fields.values()
-                        if a.alias == attr
-                    ),
-                    annotation_or_field.model_fields.get(attr),
-                )  # pragma: no cover
+                if get_origin(annotation_or_field) is Annotated:
+                    annotation_or_field = get_args(annotation_or_field)[0]
 
-                annotation_or_field = getattr(
-                    annotation_or_field, "outer_type_", annotation_or_field
-                )
-
-            # if hasattr(annotation_or_field, "annotation"):
-            annotation_or_field = annotation_or_field.annotation
-
-            if is_collection_type(annotation_or_field):
-                result.append(path[-1])
+                # check union types
+                if get_origin(annotation_or_field) in UNION_TYPES:
+                    for arg in get_args(annotation_or_field):
+                        annotation_or_field = _detect_collection_fields(
+                            arg, attr, path, result
+                        )
+                else:
+                    annotation_or_field = _detect_collection_fields(
+                        annotation_or_field, attr, path, result
+                    )
     return result
+
+
+def _detect_collection_fields(
+    annotation_or_field: Any,
+    attr: str,
+    path: Tuple[str, ...],
+    result: List[Any],
+) -> Any:
+    annotation_or_field = next(
+        (a for a in annotation_or_field.model_fields.values() if a.alias == attr),
+        annotation_or_field.model_fields.get(attr),
+    )  # pragma: no cover
+
+    annotation_or_field = getattr(
+        annotation_or_field, "outer_type_", annotation_or_field
+    )
+
+    # if hasattr(annotation_or_field, "annotation"):
+    annotation_or_field = annotation_or_field.annotation
+
+    if is_collection_type(annotation_or_field):
+        return result.append(path[-1])
+    return annotation_or_field
