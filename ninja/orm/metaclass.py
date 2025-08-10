@@ -1,4 +1,3 @@
-import warnings
 from typing import Any, List, Optional, Union, no_type_check
 
 from django.db.models import Model as DjangoModel
