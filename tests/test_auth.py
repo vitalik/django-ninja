@@ -349,7 +349,7 @@ async def test_async_auth():
     async def handle_request(request):
         return {"ok": True}
 
-    api = NinjaAPI(csrf=True)
+    api = NinjaAPI()
     api.get("/foobar", auth=[AsyncAuth(), SyncAuth()])(handle_request)
 
     client = TestAsyncClient(api)
