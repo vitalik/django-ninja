@@ -48,7 +48,8 @@ def get_schema_annotations(schema_cls: Type[Any]) -> Dict[str, Any]:
 def create_patch_schema(schema_cls: Type[Any]) -> Type[ModelToDict]:
     schema_annotations = get_schema_annotations(schema_cls)
     values, annotations = {}, {}
-    for f in schema_cls.__fields__.keys():
+    # assert False, f"{schema_cls} - {schema_cls.model_fields}"
+    for f in schema_cls.model_fields.keys():
         t = schema_annotations[f]
         if not is_optional_type(t):
             values[f] = getattr(schema_cls, f, None)

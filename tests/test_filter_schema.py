@@ -110,7 +110,7 @@ def test_class_level_expression_connector():
         tag1: Optional[str] = Field(None, q="tag1")
         tag2: Optional[str] = Field(None, q="tag2")
 
-        class Config:
+        class Meta(FilterSchema.Meta):
             expression_connector = "OR"
 
     filter_instance = DummyFilterSchema(tag1="foo", tag2="bar")
@@ -126,7 +126,7 @@ def test_class_level_and_field_level_expression_connector():
         )
         tag: Optional[str] = Field(None, q="tag")
 
-        class Config:
+        class Meta(FilterSchema.Meta):
             expression_connector = "OR"
 
     filter_instance = DummyFilterSchema(name="foo", tag="bar")
@@ -150,7 +150,7 @@ def test_ignore_none_class_level():
         tag1: Optional[str] = Field(None, q="tag1")
         tag2: Optional[str] = Field(None, q="tag2")
 
-        class Config:
+        class Meta(FilterSchema.Meta):
             ignore_none = False
 
     filter_instance = DummyFilterSchema()

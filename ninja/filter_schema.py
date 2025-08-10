@@ -1,7 +1,8 @@
-from typing import Any, TypeVar, cast
+from typing import Any, Dict, TypeVar, cast
 
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Q, QuerySet
+from pydantic import ConfigDict
 from pydantic.fields import FieldInfo
 from typing_extensions import Literal
 
@@ -14,24 +15,14 @@ DEFAULT_FIELD_LEVEL_EXPRESSION_CONNECTOR = "OR"
 # XOR is available only in Django 4.1+: https://docs.djangoproject.com/en/4.1/ref/models/querysets/#xor
 ExpressionConnector = Literal["AND", "OR", "XOR"]
 
-
-# class FilterConfig(BaseConfig):
-#     ignore_none: bool = DEFAULT_IGNORE_NONE
-#     expression_connector: ExpressionConnector = cast(
-#         ExpressionConnector, DEFAULT_CLASS_LEVEL_EXPRESSION_CONNECTOR
-#     )
-
-
 T = TypeVar("T", bound=QuerySet)
 
 
 class FilterSchema(Schema):
-    # if TYPE_CHECKING:
-    #     __config__: ClassVar[Type[FilterConfig]] = FilterConfig  # pragma: no cover
+    model_config = ConfigDict(from_attributes=True)
 
-    # Config = FilterConfig
-
-    class Config(Schema.Config):
+    class Meta:
+        # TODO: filters_ignore_none, filters_expression_connector
         ignore_none: bool = DEFAULT_IGNORE_NONE
         expression_connector: ExpressionConnector = cast(
             ExpressionConnector, DEFAULT_CLASS_LEVEL_EXPRESSION_CONNECTOR
@@ -98,12 +89,13 @@ class FilterSchema(Schema):
 
     def _connect_fields(self) -> Q:
         q = Q()
-        for field_name, field in self.model_fields.items():
+        model_config = self._model_config()
+        for field_name, field in self.__class__.model_fields.items():
             filter_value = getattr(self, field_name)
             field_extra = field.json_schema_extra or {}
             ignore_none = field_extra.get(  # type: ignore
                 "ignore_none",
-                self.model_config["ignore_none"],  # type: ignore
+                model_config["ignore_none"],
             )
 
             # Resolve q for a field even if we skip it due to None value
@@ -111,6 +103,13 @@ class FilterSchema(Schema):
             field_q = self._resolve_field_expression(field_name, filter_value, field)
             if filter_value is None and ignore_none:
                 continue
-            q = q._combine(field_q, self.model_config["expression_connector"])  # type: ignore
+            q = q._combine(field_q, model_config["expression_connector"])  # type: ignore
 
         return q
+
+    @classmethod
+    def _model_config(cls) -> Dict[str, Any]:
+        return {
+            "ignore_none": cls.Meta.ignore_none,
+            "expression_connector": cls.Meta.expression_connector,
+        }

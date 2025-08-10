@@ -120,7 +120,7 @@ class BookFilterSchema(FilterSchema):
                                    expression_connector='AND')
     name: Optional[str] = Field(None, q='name__icontains')
     
-    class Config:
+    class Meta:
         expression_connector = 'OR'
 ```
 
@@ -151,7 +151,7 @@ class BookFilterSchema(FilterSchema):
     name: Optional[str] = Field(None, q='name__icontains')
     tag: Optional[str] = Field(None, q='tag', ignore_none=False)
     
-    class Config:
+    class Meta:
         ignore_none = False
 ```
 

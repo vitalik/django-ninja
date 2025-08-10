@@ -69,7 +69,7 @@ class BearerAuth(HttpBearer):
 
 class AsyncBearerAuth(HttpBearer):
     """
-    This one is async but in fact no awaits insdie authenticate
+    This one is async but in fact no awaits inside authenticate
     which led to an await error
     """
 

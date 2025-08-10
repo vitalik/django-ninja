@@ -176,14 +176,14 @@ To allow the user to make partial updates, use `payload.dict(exclude_unset=True)
 
 **Enforcing strict field validation**
 
-By default, any provided fields that don't exist in the schema will be silently ignored. To raise an error for these invalid fields, you can set `extra = "forbid"` in the schema's Config class. For example:
+By default, any provided fields that don't exist in the schema will be silently ignored. To raise an error for these invalid fields, you can set `extra = "forbid"` in the model_config. For example:
 
-```python hl_lines="4 5"
+```python hl_lines="5"
+from pydantic import ConfigDict
 class EmployeeIn(Schema):
     # your fields here...
 
-    class Config:
-        extra = "forbid"
+    model_config = ConfigDict(extra="forbid")
 ```
 
 ## Delete
