@@ -1,8 +1,9 @@
-from typing import Any, Dict, TypeVar, cast
+import warnings
+from typing import Any, Dict, Optional, TypeVar, Union, cast
 
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Q, QuerySet
-from pydantic import ConfigDict
+from pydantic import ConfigDict, Field
 from pydantic.fields import FieldInfo
 from typing_extensions import Literal
 
@@ -16,6 +17,28 @@ DEFAULT_FIELD_LEVEL_EXPRESSION_CONNECTOR = "OR"
 ExpressionConnector = Literal["AND", "OR", "XOR"]
 
 T = TypeVar("T", bound=QuerySet)
+
+
+def FilterField(
+    default: Any = ...,
+    *,
+    q: Optional[Union[str, list]] = None,
+    ignore_none: Optional[bool] = None,
+    expression_connector: Optional[ExpressionConnector] = None,
+    **kwargs: Any,
+) -> Any:
+    """Custom Field function for FilterSchema that properly handles filter-specific parameters."""
+    json_schema_extra = kwargs.get("json_schema_extra", {})
+    if isinstance(json_schema_extra, dict):
+        if q is not None:
+            json_schema_extra["q"] = q
+        if ignore_none is not None:
+            json_schema_extra["ignore_none"] = ignore_none
+        if expression_connector is not None:
+            json_schema_extra["expression_connector"] = expression_connector
+    kwargs["json_schema_extra"] = json_schema_extra
+
+    return Field(default, **kwargs)
 
 
 class FilterSchema(Schema):
@@ -54,6 +77,18 @@ class FilterSchema(Schema):
             return func(field_value)  # type: ignore[no-any-return]
 
         field_extra = field.json_schema_extra or {}
+
+        # Check if user is using pydantic Field with deprecated extra kwargs
+        # This check is for backwards compatibility during transition period
+        if hasattr(field, "extra") and field.extra:
+            warnings.warn(
+                f"Using pydantic Field with extra keyword arguments (q, ignore_none, expression_connector) "
+                f"in field '{field_name}' is deprecated. Please use ninja.FilterField instead:\n"
+                f"  from ninja import FilterField\n"
+                f"  {field_name}: Optional[...] = FilterField(..., q='...', ignore_none=...)",
+                DeprecationWarning,
+                stacklevel=4,
+            )
 
         q_expression = field_extra.get("q", None)  # type: ignore
         if not q_expression:
