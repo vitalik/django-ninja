@@ -4,7 +4,6 @@ from functools import wraps
 import pytest
 
 from ninja import NinjaAPI, Router
-from ninja.constants import DecoratorMode
 from ninja.testing import TestAsyncClient, TestClient
 
 
@@ -41,7 +40,7 @@ async def test_router_add_decorator_async_operation_mode():
     router = Router()
 
     # Add decorator to router
-    router.add_decorator(async_operation_decorator, mode=DecoratorMode.OPERATION)
+    router.add_decorator(async_operation_decorator, mode="operation")
 
     @router.get("/test")
     async def endpoint(request):
@@ -66,7 +65,7 @@ async def test_router_add_decorator_async_view_mode():
     router = Router()
 
     # Add decorator to router
-    router.add_decorator(async_view_decorator, mode=DecoratorMode.VIEW)
+    router.add_decorator(async_view_decorator, mode="view")
 
     @router.get("/test")
     async def endpoint(request):
@@ -88,7 +87,7 @@ async def test_api_add_decorator_async():
     api = NinjaAPI()
 
     # Add decorator to entire API
-    api.add_decorator(async_operation_decorator, mode=DecoratorMode.OPERATION)
+    api.add_decorator(async_operation_decorator, mode="operation")
 
     @api.get("/test1")
     async def endpoint1(request):
@@ -141,7 +140,7 @@ async def test_mixed_sync_async_decorators():
 
         return wrapper
 
-    router.add_decorator(sync_decorator, mode=DecoratorMode.OPERATION)
+    router.add_decorator(sync_decorator, mode="operation")
 
     @router.get("/async")
     async def async_endpoint(request):
@@ -200,7 +199,7 @@ async def test_mixed_sync_async_endpoints_same_router():
 
             return sync_wrapper
 
-    router.add_decorator(universal_decorator, mode=DecoratorMode.OPERATION)
+    router.add_decorator(universal_decorator, mode="operation")
 
     @router.get("/async")
     async def async_endpoint(request):

@@ -17,7 +17,8 @@ from django.http import HttpRequest, HttpResponse
 from django.urls import URLPattern, URLResolver, reverse
 from django.utils.module_loading import import_string
 
-from ninja.constants import NOT_SET, NOT_SET_TYPE, DecoratorMode
+from ninja.constants import NOT_SET, NOT_SET_TYPE
+from ninja.decorators import DecoratorMode
 from ninja.errors import (
     ConfigError,
     ValidationError,
@@ -373,15 +374,15 @@ class NinjaAPI:
     def add_decorator(
         self,
         decorator: Callable,
-        mode: DecoratorMode = DecoratorMode.OPERATION,
+        mode: DecoratorMode = "operation",
     ) -> None:
         """
         Add a decorator to be applied to all operations in the entire API.
 
         Args:
             decorator: The decorator function to apply
-            mode: DecoratorMode.OPERATION (default) applies after validation,
-                  DecoratorMode.VIEW applies before validation
+            mode: "operation" (default) applies after validation,
+                  "view" applies before validation
         """
         # Store decorator on default router - will be inherited by all routers during build
         self.default_router.add_decorator(decorator, mode)

@@ -15,7 +15,8 @@ from django.urls import URLPattern
 from django.urls import path as django_path
 from django.utils.module_loading import import_string
 
-from ninja.constants import NOT_SET, NOT_SET_TYPE, DecoratorMode
+from ninja.constants import NOT_SET, NOT_SET_TYPE
+from ninja.decorators import DecoratorMode
 from ninja.errors import ConfigError
 from ninja.operation import PathView
 from ninja.throttling import BaseThrottle
@@ -434,17 +435,17 @@ class Router:
     def add_decorator(
         self,
         decorator: Callable,
-        mode: DecoratorMode = DecoratorMode.OPERATION,
+        mode: DecoratorMode = "operation",
     ) -> None:
         """
         Add a decorator to be applied to all operations in this router.
 
         Args:
             decorator: The decorator function to apply
-            mode: DecoratorMode.OPERATION (default) applies after validation,
-                  DecoratorMode.VIEW applies before validation
+            mode: "operation" (default) applies after validation,
+                  "view" applies before validation
         """
-        if mode not in (DecoratorMode.VIEW, DecoratorMode.OPERATION):
+        if mode not in ("view", "operation"):
             raise ValueError(f"Invalid decorator mode: {mode}")
         self._decorators.append((decorator, mode))
 
@@ -481,9 +482,9 @@ class Router:
                 # Apply decorators that haven't been applied yet
                 for decorator, mode in self._decorators:
                     if (decorator, mode) not in applied_decorators:
-                        if mode == DecoratorMode.VIEW:
+                        if mode == "view":
                             operation.run = decorator(operation.run)  # type: ignore
-                        elif mode == DecoratorMode.OPERATION:
+                        elif mode == "operation":
                             operation.view_func = decorator(operation.view_func)
                         else:
                             raise ValueError(

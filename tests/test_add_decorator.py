@@ -3,7 +3,6 @@ from functools import wraps
 import pytest
 
 from ninja import NinjaAPI, Router
-from ninja.constants import DecoratorMode
 from ninja.testing import TestClient
 
 
@@ -53,7 +52,7 @@ def test_router_add_decorator_operation_mode():
     router = Router()
 
     # Add decorator to router
-    router.add_decorator(operation_decorator, mode=DecoratorMode.OPERATION)
+    router.add_decorator(operation_decorator, mode="operation")
 
     @router.get("/test")
     def endpoint(request):
@@ -73,7 +72,7 @@ def test_router_add_decorator_view_mode():
     router = Router()
 
     # Add decorator to router
-    router.add_decorator(view_decorator, mode=DecoratorMode.VIEW)
+    router.add_decorator(view_decorator, mode="view")
 
     @router.get("/test")
     def endpoint(request):
@@ -93,7 +92,7 @@ def test_api_add_decorator_operation_mode():
     api = NinjaAPI()
 
     # Add decorator to entire API
-    api.add_decorator(operation_decorator, mode=DecoratorMode.OPERATION)
+    api.add_decorator(operation_decorator, mode="operation")
 
     @api.get("/test1")
     def endpoint1(request):
@@ -120,7 +119,7 @@ def test_api_add_decorator_view_mode():
     api = NinjaAPI()
 
     # Add decorator to entire API
-    api.add_decorator(view_decorator, mode=DecoratorMode.VIEW)
+    api.add_decorator(view_decorator, mode="view")
 
     @api.get("/test")
     def endpoint(request):
@@ -139,8 +138,8 @@ def test_multiple_decorators():
     router = Router()
 
     # Add multiple decorators
-    router.add_decorator(operation_decorator, mode=DecoratorMode.OPERATION)
-    router.add_decorator(counter_decorator, mode=DecoratorMode.OPERATION)
+    router.add_decorator(operation_decorator, mode="operation")
+    router.add_decorator(counter_decorator, mode="operation")
 
     @router.get("/test")
     def endpoint(request):
@@ -207,7 +206,7 @@ def test_api_decorator_applies_to_new_routers():
     api = NinjaAPI()
 
     # Add decorator to API first
-    api.add_decorator(operation_decorator, mode=DecoratorMode.OPERATION)
+    api.add_decorator(operation_decorator, mode="operation")
 
     # Then add a router
     router = Router()
@@ -230,8 +229,8 @@ def test_mix_view_and_operation_decorators():
     router = Router()
 
     # Add both types of decorators
-    router.add_decorator(view_decorator, mode=DecoratorMode.VIEW)
-    router.add_decorator(operation_decorator, mode=DecoratorMode.OPERATION)
+    router.add_decorator(view_decorator, mode="view")
+    router.add_decorator(operation_decorator, mode="operation")
 
     @router.get("/test")
     def endpoint(request):
@@ -261,7 +260,7 @@ def test_decorator_with_path_params():
 
         return wrapper
 
-    router.add_decorator(param_decorator, mode=DecoratorMode.OPERATION)
+    router.add_decorator(param_decorator, mode="operation")
 
     @router.get("/test/{item_id}")
     def endpoint(request, item_id: int):

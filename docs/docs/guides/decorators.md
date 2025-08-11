@@ -58,7 +58,6 @@ Apply decorators to all endpoints in a router:
 
 ```python
 from ninja import Router
-from ninja.constants import DecoratorMode
 
 router = Router()
 
@@ -88,7 +87,6 @@ Apply decorators to all endpoints in your entire API:
 
 ```python
 from ninja import NinjaAPI
-from ninja.constants import DecoratorMode
 
 api = NinjaAPI()
 
@@ -100,7 +98,7 @@ def cors_headers(func):
         return response
     return wrapper
 
-api.add_decorator(cors_headers, mode=DecoratorMode.VIEW)
+api.add_decorator(cors_headers, mode="view")
 
 # Now all endpoints will have CORS headers
 @api.get("/data")
@@ -191,7 +189,7 @@ def cache_response(timeout=300):
     return decorator
 
 router = Router()
-router.add_decorator(cache_response(600), mode=DecoratorMode.VIEW)
+router.add_decorator(cache_response(600), mode="view")
 ```
 
 ## Decorator Execution Order
