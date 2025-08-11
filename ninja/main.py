@@ -18,6 +18,7 @@ from django.urls import URLPattern, URLResolver, reverse
 from django.utils.module_loading import import_string
 
 from ninja.constants import NOT_SET, NOT_SET_TYPE
+from ninja.decorators import DecoratorMode
 from ninja.errors import (
     ConfigError,
     ValidationError,
@@ -370,6 +371,22 @@ class NinjaAPI:
             openapi_extra=openapi_extra,
         )
 
+    def add_decorator(
+        self,
+        decorator: Callable,
+        mode: DecoratorMode = "operation",
+    ) -> None:
+        """
+        Add a decorator to be applied to all operations in the entire API.
+
+        Args:
+            decorator: The decorator function to apply
+            mode: "operation" (default) applies after validation,
+                  "view" applies before validation
+        """
+        # Store decorator on default router - will be inherited by all routers during build
+        self.default_router.add_decorator(decorator, mode)
+
     def add_router(
         self,
         prefix: str,
@@ -392,6 +409,10 @@ class NinjaAPI:
 
         if tags is not None:
             router.tags = tags
+
+        # Inherit API-level decorators from default router
+        # Prepend API decorators so they execute first (outer decorators)
+        router._decorators = self.default_router._decorators + router._decorators
 
         if parent_router:
             parent_prefix = next(
