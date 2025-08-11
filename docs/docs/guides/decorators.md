@@ -6,6 +6,13 @@ Django Ninja provides flexible decorator support to wrap your API operations wit
 
 Django Ninja supports two modes for applying decorators:
 
+
+### OPERATION Mode (Default)
+- Applied **after** Django Ninja's validation
+- Wraps the operation function with validated data
+- Has access to parsed and validated parameters
+- Useful for: business logic, logging with validated data, post-validation checks
+
 ### VIEW Mode
 - Applied **before** Django Ninja's validation
 - Wraps the entire Django view function
@@ -13,11 +20,6 @@ Django Ninja supports two modes for applying decorators:
 - Useful for: caching, rate limiting, Django middleware-like functionality
 - Similar to Django's standard view decorators
 
-### OPERATION Mode (Default)
-- Applied **after** Django Ninja's validation
-- Wraps the operation function with validated data
-- Has access to parsed and validated parameters
-- Useful for: business logic, logging with validated data, post-validation checks
 
 ## Using `@decorate_view`
 
