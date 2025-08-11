@@ -14,9 +14,9 @@ def test_simple():
             app_label = "tests"
 
     class SampleSchema(ModelSchema):
-        class Config:
+        class Meta:
             model = User
-            model_fields = ["firstname", "lastname"]
+            fields = ["firstname", "lastname"]
 
         def hello(self):
             return f"Hello({self.firstname})"
@@ -175,11 +175,25 @@ def test_fields_all():
     }
 
 
-def test_model_schema_without_config():
+def test_model_schema_without_meta():
     with pytest.raises(
         ConfigError,
-        match=r"ModelSchema class 'NoConfigSchema' requires a 'Meta' \(or a 'Config'\) subclass",
+        match=r"ModelSchema class 'NoMetaSchema' requires a 'Meta' subclass",
     ):
 
-        class NoConfigSchema(ModelSchema):
+        class NoMetaSchema(ModelSchema):
             x: int
+
+
+def test_model_schema_with_old_config():
+    with pytest.raises(
+        ConfigError,
+        match=r"The use of `Config` class is removed for ModelSchema, use 'Meta' instead",
+    ):
+
+        class OldConfigSchema(ModelSchema):
+            x: int
+
+            class Config:
+                model = "User"
+                model_fields = ["x"]

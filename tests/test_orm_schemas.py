@@ -202,28 +202,30 @@ def test_all_fields():
     assert SchemaCls.json_schema() == expected_schema
 
 
-@pytest.mark.parametrize(
-    "field",
-    [
-        models.BigAutoField,
-        models.SmallAutoField,
-    ],
-)
-def test_altautofield(field: type):
-    class ModelAltAuto(models.Model):
-        altautofield = field(primary_key=True)
+def test_altautofield():
+    class ModelWithBigAutoField(models.Model):
+        autofield = models.BigAutoField(primary_key=True)
 
         class Meta:
             app_label = "tests"
 
-    SchemaCls = create_schema(ModelAltAuto)
-    # print(SchemaCls.json_schema())
-    assert SchemaCls.json_schema()["properties"] == {
-        "altautofield": {
-            "anyOf": [{"type": "integer"}, {"type": "null"}],
-            "title": "Altautofield",
+    class ModelWithSmallAutoField(models.Model):
+        autofield = models.SmallAutoField(primary_key=True)
+
+        class Meta:
+            app_label = "tests"
+
+    BigSchema = create_schema(ModelWithBigAutoField)
+    SmallSchema = create_schema(ModelWithSmallAutoField)
+
+    for cls in [BigSchema, SmallSchema]:
+        print(cls.json_schema()["properties"])
+        assert cls.json_schema()["properties"] == {
+            "autofield": {
+                "anyOf": [{"type": "integer"}, {"type": "null"}],
+                "title": "Autofield",
+            }
         }
-    }
 
 
 def test_django_31_fields():
