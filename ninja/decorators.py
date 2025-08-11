@@ -1,5 +1,7 @@
 from functools import partial
-from typing import Any, Callable, Literal, Tuple
+from typing import Any, Callable, Tuple
+
+from typing_extensions import Literal
 
 from ninja.operation import Operation
 from ninja.types import TCallable
