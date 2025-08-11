@@ -1,7 +1,7 @@
 # Overriding Pydantic Config
 
 There are many customizations available for a **Django Ninja `Schema`**, via the schema's
-[Pydantic `Config` class](https://pydantic-docs.helpmanual.io/usage/model_config/). 
+[Pydantic `model_config`](https://docs.pydantic.dev/latest/api/config/). 
 
 !!! info
     Under the hood **Django Ninja** uses [Pydantic Models](https://pydantic-docs.helpmanual.io/usage/models/)
@@ -11,10 +11,11 @@ There are many customizations available for a **Django Ninja `Schema`**, via the
 
 ## Example Camel Case mode
 
-One interesting `Config` attribute is [`alias_generator`](https://pydantic-docs.helpmanual.io/usage/model_config/#alias-generator).
+One interesting config attribute is [`alias_generator`](https://docs.pydantic.dev/latest/api/config/?query=alias_generator#pydantic.config.ConfigDict.alias_generator).
 Using Pydantic's example in **Django Ninja** can look something like:
 
-```python hl_lines="12 13"
+```python hl_lines="10"
+from pydantic import ConfigDict
 from ninja import Schema
 
 
@@ -23,25 +24,25 @@ def to_camel(string: str) -> str:
     return words[0].lower() + ''.join(word.capitalize() for word in words[1:])
 
 class CamelModelSchema(Schema):
+    model_config = ConfigDict(alias_generator=to_camel)
     str_field_name: str
     float_field_name: float
-
-    class Config(Schema.Config):
-        alias_generator = to_camel
 ```
-
-!!! note
-    When overriding the schema's `Config`, it is necessary to inherit from the base `Config` class. 
 
 Keep in mind that when you want modify output for field names (like camel case) - you need to set as well  `populate_by_name` and `by_alias`
 
-```python hl_lines="6 9"
+```python hl_lines="6 14"
+from pydantic import ConfigDict
+
 class UserSchema(ModelSchema):
-    class Config:
-        model = User
-        model_fields = ["id", "email", "is_staff"]
+    model_config = ConfigDict(
         alias_generator = to_camel
-        populate_by_name = True  # !!!!!! <--------
+        populate_by_name = True,  # !!!!!! <--------
+    )
+    class Meta:
+        model = User
+        fields = ["id", "email", "is_staff"]
+
 
 
 @api.get("/users", response=list[UserSchema], by_alias=True) # !!!!!! <-------- by_alias
@@ -69,21 +70,4 @@ results:
 
 ```
 
-## Custom Config from Django Model
 
-When using [`create_schema`](django-pydantic-create-schema.md#create_schema), the resulting
-schema can be used to build another class with a custom config like:
-
-```python hl_lines="10"
-from django.contrib.auth.models import User
-from ninja.orm import create_schema
-
-
-BaseUserSchema = create_schema(User)
-
-
-class UserSchema(BaseUserSchema):
-
-    class Config(BaseUserSchema.Config):
-        ...
-```

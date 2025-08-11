@@ -15,7 +15,7 @@ from typing import (
 )
 
 import pydantic
-from asgiref.sync import async_to_sync
+from asgiref.sync import async_to_sync, sync_to_async
 from django.http import HttpRequest, HttpResponse, HttpResponseNotAllowed
 from django.http.response import HttpResponseBase
 
@@ -68,7 +68,7 @@ class Operation:
         self.methods: List[str] = methods
         self.view_func: Callable = view_func
         self.api: NinjaAPI = cast("NinjaAPI", None)
-        self.csrf_exempt: bool = False  # Will be set later if view has csrf_exempt
+        self.csrf_exempt: bool = getattr(view_func, "csrf_exempt", False)
         if url_name is not None:
             self.url_name = url_name
 
@@ -387,7 +387,7 @@ class AsyncOperation(Operation):
                     else:
                         result = await cor
                 else:
-                    result = callback(request)
+                    result = await sync_to_async(callback)(request)
             except Exception as exc:
                 return self.api.on_exception(request, exc)
 
@@ -402,7 +402,6 @@ class PathView:
         self.operations: List[Operation] = []
         self.is_async = False  # if at least one operation is async - will become True
         self.url_name: Optional[str] = None
-        self.csrf_exempt = None
 
     def add_operation(
         self,
@@ -458,9 +457,6 @@ class PathView:
         self.operations.append(operation)
         view_func._ninja_operation = operation  # type: ignore
 
-        # Check if the view function has csrf_exempt decorator
-        operation.csrf_exempt = getattr(view_func, "csrf_exempt", False)
-
         return operation
 
     def set_api_instance(self, api: "NinjaAPI", router: "Router") -> None:
@@ -470,12 +466,6 @@ class PathView:
 
     def get_view(self) -> Callable:
         # Create a unique view function for this PathView
-        # This allows per-path CSRF configuration
-
-        # Determine if all operations in this path are CSRF exempt
-        all_csrf_exempt = all(
-            getattr(op, "csrf_exempt", False) for op in self.operations
-        )
 
         if self.is_async:
             # Create a wrapper for async view
@@ -484,9 +474,9 @@ class PathView:
             ) -> HttpResponseBase:
                 return await self._async_view(request, *args, **kwargs)
 
-            # Set csrf_exempt if all operations are exempt
-            if all_csrf_exempt:
-                async_view_wrapper.csrf_exempt = True  # type: ignore
+            # All django-ninja views are CSRF exempt at Django middleware level
+            # Cookie-based auth (APIKeyCookie) handles CSRF checking separately
+            async_view_wrapper.csrf_exempt = True  # type: ignore
 
             return async_view_wrapper
         else:
@@ -496,9 +486,9 @@ class PathView:
             ) -> HttpResponseBase:
                 return self._sync_view(request, *args, **kwargs)
 
-            # Set csrf_exempt if all operations are exempt
-            if all_csrf_exempt:
-                sync_view_wrapper.csrf_exempt = True  # type: ignore
+            # All django-ninja views are CSRF exempt at Django middleware level
+            # Cookie-based auth (APIKeyCookie) handles CSRF checking separately
+            sync_view_wrapper.csrf_exempt = True  # type: ignore
 
             return sync_view_wrapper
 
@@ -511,8 +501,6 @@ class PathView:
     async def _async_view(
         self, request: HttpRequest, *a: Any, **kw: Any
     ) -> HttpResponseBase:
-        from asgiref.sync import sync_to_async
-
         operation = self._find_operation(request)
         if operation is None:
             return self._not_allowed()
