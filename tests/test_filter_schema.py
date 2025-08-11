@@ -202,3 +202,72 @@ def test_filter_called():
     queryset = FakeQS()
     queryset = filter_instance.filter(queryset)
     assert queryset.filtered
+
+
+def test_filter_field_with_non_dict_json_schema_extra():
+    """Test FilterField when json_schema_extra is not a dict"""
+    # This tests the branch where json_schema_extra is not a dict
+    field = FilterField(
+        None,
+        q="name__icontains",
+        ignore_none=False,
+        expression_connector="AND",
+        json_schema_extra="not_a_dict",  # This is not a dict
+    )
+    # The field should still be created, but filter params won't be added to json_schema_extra
+    assert field.json_schema_extra == "not_a_dict"
+
+
+def test_filter_field_with_callable_json_schema_extra():
+    """Test FilterField when json_schema_extra is a callable"""
+
+    def custom_schema():
+        return {"custom": "value"}
+
+    field = FilterField(None, q="name__icontains", json_schema_extra=custom_schema)
+    # The callable should be preserved
+    assert callable(field.json_schema_extra)
+
+
+def test_filter_field_partial_params():
+    """Test FilterField with only some parameters set"""
+    # Test with only ignore_none set (q is None)
+    field1 = FilterField(None, ignore_none=False)
+    assert field1.json_schema_extra == {"ignore_none": False}
+
+    # Test with only expression_connector set
+    field2 = FilterField(None, expression_connector="AND")
+    assert field2.json_schema_extra == {"expression_connector": "AND"}
+
+    # Test with no filter params at all
+    field3 = FilterField(None)
+    assert field3.json_schema_extra == {}
+
+
+def test_pydantic_field_with_extra_warns():
+    """Test that using pydantic Field with 'extra' attribute shows deprecation warning"""
+    import warnings
+    from unittest.mock import Mock
+
+    from pydantic.fields import FieldInfo
+
+    class DummyFilterSchema(FilterSchema):
+        name: Optional[str] = None
+
+    # Create a mock field with the 'extra' attribute to simulate old pydantic behavior
+    mock_field = Mock(spec=FieldInfo)
+    mock_field.json_schema_extra = None
+    mock_field.extra = {"q": "name__icontains"}  # Simulate old-style extra kwargs
+
+    filter_instance = DummyFilterSchema()
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        # Call the method that checks for deprecated usage
+        filter_instance._resolve_field_expression("name", "test", mock_field)
+
+        # Check that a deprecation warning was issued
+        assert len(w) == 1
+        assert issubclass(w[0].category, DeprecationWarning)
+        assert "deprecated" in str(w[0].message).lower()
+        assert "FilterField" in str(w[0].message)
