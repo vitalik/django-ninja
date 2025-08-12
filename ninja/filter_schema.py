@@ -195,19 +195,16 @@ class FilterSchema(Schema):
         class_ignore_none = self.model_config.get("ignore_none", DEFAULT_IGNORE_NONE)
         for field_name, field_info in self.__class__.model_fields.items():
             filter_value = getattr(self, field_name)
+
             # class-level ignore_none set to False (non-default) takes precedence over field-level ignore_none
-            ignore_none = (
-                False
-                if class_ignore_none is False
-                else field_ignore_none
-                if (
-                    field_ignore_none := self._get_field_ignore_none(
-                        field_name, field_info
-                    )
-                )
-                is not None
-                else DEFAULT_IGNORE_NONE
-            )
+            if class_ignore_none is False:
+                ignore_none = False
+            else:
+                field_ignore_none = self._get_field_ignore_none(field_name, field_info)
+                if field_ignore_none is not None:
+                    ignore_none = field_ignore_none
+                else:
+                    ignore_none = DEFAULT_IGNORE_NONE
 
             # Resolve Q expression for a field even if we skip it due to None value
             # So that improperly configured fields are easier to detect
