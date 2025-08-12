@@ -1,3 +1,5 @@
+from ninja import FilterConfigDict
+
 # Filtering
 
 If you want to allow the user to filter your querysets by a number of different attributes, it makes sense
@@ -7,9 +9,10 @@ parameters into database queries.
 
 Start off with defining a subclass of `FilterSchema`:
 
-```python hl_lines="6 7 8"
-from ninja import FilterSchema, Field
+```python hl_lines="6 7 8 9"
+from ninja import FilterSchema
 from typing import Optional
+from datetime import datetime
 
 
 class BookFilterSchema(FilterSchema):
@@ -34,7 +37,7 @@ defined in `BookFilterSchema` into query parameters.
 You can use a shorthand one-liner `.filter()` to apply those filters to your queryset:
 ```python hl_lines="4"
 @api.get("/books")
-def list_books(request, filters: BookFilterSchema = Query(...)):
+def list_books(request, filters: Query[BookFilterSchema]):
     books = Book.objects.all()
     books = filters.filter(books)
     return books
@@ -47,7 +50,7 @@ Alternatively to using the `.filter` method, you can get the prepared `Q`-expres
 That can be useful, when you have some additional queryset filtering on top of what you expose to the user through the API:
 ```python hl_lines="5 8"
 @api.get("/books")
-def list_books(request, filters: BookFilterSchema = Query(...)):
+def list_books(request, filters: Query[BookFilterSchema]):
 
     # Never serve books from inactive publishers and authors
     q = Q(author__is_active=True) | Q(publisher__is_active=True)
@@ -142,7 +145,9 @@ the `FilterSchema` instance will look for popular books that have `harry` in the
 
 
 You can customize this behavior using an `expression_connector` argument in field-level and class-level definition:
-```python hl_lines="6 11"
+```python hl_lines="12"
+from ninja import FilterConfigDict, FilterLookup, FilterSchema
+
 class BookFilterSchema(FilterSchema):
     active: Annotated[
         Optional[bool],
@@ -152,8 +157,7 @@ class BookFilterSchema(FilterSchema):
         )] = None
     name: Annotated[Optional[str], FilterLookup("name__icontains")] = None
     
-    class Config:
-        expression_connector = "OR"
+    model_config = FilterConfigDict(expression_connector="OR")
 ```
 
 An expression connector can take the values of `"OR"`, `"AND"` and `"XOR"`, but the latter is only [supported](https://docs.djangoproject.com/en/4.1/ref/models/querysets/#xor) in Django starting with 4.1.
@@ -177,14 +181,13 @@ class BookFilterSchema(FilterSchema):
 
 This way when no other value for `"tag"` is provided by the user, the filtering will always include a condition `tag=None`.
 
-You can also specify this setting for all fields at the same time in the Config:
-```python hl_lines="6"
+You can also specify this setting for all fields at the same time in `model_config`:
+```python hl_lines="5"
 class BookFilterSchema(FilterSchema):
     name: Annotated[Optional[str], FilterLookup("name__icontains")] = None
     tag: Optional[str] = None
     
-    class Config:
-        ignore_none = False
+    model_config = FilterConfigDict(ignore_none=False)
 ```
 
 

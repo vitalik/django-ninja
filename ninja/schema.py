@@ -33,7 +33,7 @@ import pydantic
 from django.db.models import Manager, QuerySet
 from django.db.models.fields.files import FieldFile
 from django.template import Variable, VariableDoesNotExist
-from pydantic import BaseModel, Field, ValidationInfo, model_validator, validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, model_validator
 from pydantic._internal._model_construction import ModelMetaclass
 from pydantic.functional_validators import ModelWrapValidatorHandler
 from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
@@ -45,7 +45,7 @@ from ninja.types import DictStrAny
 pydantic_version = list(map(int, pydantic.VERSION.split(".")[:2]))
 assert pydantic_version >= [2, 0], "Pydantic 2.0+ required"
 
-__all__ = ["BaseModel", "Field", "validator", "DjangoGetter", "Schema"]
+__all__ = ["BaseModel", "Field", "DjangoGetter", "Schema"]
 
 S = TypeVar("S", bound="Schema")
 
@@ -207,8 +207,7 @@ class NinjaGenerateJsonSchema(GenerateJsonSchema):
 
 
 class Schema(BaseModel, metaclass=ResolverMetaclass):
-    class Config:
-        from_attributes = True  # aka orm_mode
+    model_config = ConfigDict(from_attributes=True)
 
     @model_validator(mode="wrap")
     @classmethod

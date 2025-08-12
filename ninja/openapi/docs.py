@@ -103,8 +103,9 @@ def _render_cdn_template(
 
 
 def _csrf_needed(api: "NinjaAPI") -> bool:
-    if api.csrf:
-        return True
+    """
+    Check if any of the API's auth handlers require CSRF protection.
+    """
     if not api.auth or api.auth == NOT_SET:
         return False
 

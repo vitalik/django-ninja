@@ -2,6 +2,7 @@ from typing import Any, List, Optional, TypeVar, Union, cast
 
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Q, QuerySet
+from pydantic import ConfigDict
 from pydantic.fields import FieldInfo
 from typing_extensions import Literal
 
@@ -49,12 +50,16 @@ class FilterLookup:
 T = TypeVar("T", bound=QuerySet)
 
 
+class FilterConfigDict(ConfigDict, total=False):
+    ignore_none: bool
+    expression_connector: ExpressionConnector
+
+
 class FilterSchema(Schema):
-    class Config(Schema.Config):
-        ignore_none: bool = DEFAULT_IGNORE_NONE
-        expression_connector: ExpressionConnector = (
-            DEFAULT_CLASS_LEVEL_EXPRESSION_CONNECTOR
-        )
+    model_config = FilterConfigDict(
+        ignore_none=DEFAULT_IGNORE_NONE,
+        expression_connector=DEFAULT_CLASS_LEVEL_EXPRESSION_CONNECTOR,
+    )
 
     def custom_expression(self) -> Q:
         """

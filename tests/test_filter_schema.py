@@ -6,7 +6,7 @@ from django.db.models import Q, QuerySet
 from pydantic import Field
 from typing_extensions import Annotated
 
-from ninja import FilterLookup, FilterSchema
+from ninja import FilterConfigDict, FilterLookup, FilterSchema
 
 
 class FakeQS(QuerySet):
@@ -229,8 +229,7 @@ def test_class_level_expression_connector_deprecated():
         tag1: Optional[str] = Field(None, q="tag1")
         tag2: Optional[str] = Field(None, q="tag2")
 
-        class Config:
-            expression_connector = "OR"
+        model_config = FilterConfigDict(expression_connector="OR")
 
     filter_instance = DummyFilterSchema(tag1="foo", tag2="bar")
     q = filter_instance.get_filter_expression()
@@ -244,8 +243,7 @@ def test_class_level_expression_connector_annotated():
         tag1: Annotated[Optional[str], FilterLookup("tag1")] = None
         tag2: Annotated[Optional[str], FilterLookup("tag2")] = None
 
-        class Config:
-            expression_connector = "OR"
+        model_config = FilterConfigDict(expression_connector="OR")
 
     filter_instance = DummyFilterSchema(tag1="foo", tag2="bar")
     q = filter_instance.get_filter_expression()
@@ -262,8 +260,7 @@ def test_class_level_and_field_level_expression_connector_deprecated():
         )
         tag: Optional[str] = Field(None, q="tag")
 
-        class Config:
-            expression_connector = "OR"
+        model_config = FilterConfigDict(expression_connector="OR")
 
     filter_instance = DummyFilterSchema(name="foo", tag="bar")
     q = filter_instance.get_filter_expression()
@@ -285,8 +282,7 @@ def test_class_level_and_field_level_expression_connector_annotated():
         ] = None
         tag: Annotated[Optional[str], FilterLookup("tag")] = None
 
-        class Config:
-            expression_connector = "OR"
+        model_config = FilterConfigDict(expression_connector="OR")
 
     filter_instance = DummyFilterSchema(name="foo", tag="bar")
     q = filter_instance.get_filter_expression()
@@ -324,8 +320,7 @@ def test_ignore_none_class_level_deprecated():
         tag1: Optional[str] = Field(None, q="tag1")
         tag2: Optional[str] = Field(None, q="tag2")
 
-        class Config:
-            ignore_none = False
+        model_config = FilterConfigDict(ignore_none=False)
 
     filter_instance = DummyFilterSchema()
     q = filter_instance.get_filter_expression()
@@ -339,8 +334,7 @@ def test_ignore_none_class_level_annotated():
         tag1: Annotated[Optional[str], FilterLookup("tag1")] = None
         tag2: Annotated[Optional[str], FilterLookup("tag2")] = None
 
-        class Config:
-            ignore_none = False
+        model_config = FilterConfigDict(ignore_none=False)
 
     filter_instance = DummyFilterSchema()
     q = filter_instance.get_filter_expression()
