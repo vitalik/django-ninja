@@ -131,7 +131,7 @@ class FilterSchema(Schema):
 
         # Legacy approach, consider removing in future versions
         return cast(
-            Union[ExpressionConnector | None],
+            Union[ExpressionConnector, None],
             self._get_from_deprecated_field_extra(
                 field_name, field_info, "expression_connector"
             ),
