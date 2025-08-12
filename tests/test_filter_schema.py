@@ -401,3 +401,23 @@ def test_multiple_filter_lookup_instances_error():
     filter_instance = DummyFilterSchema(name="test")
     with pytest.raises(ImproperlyConfigured):
         filter_instance.get_filter_expression()
+
+
+def test_pydantic_field_with_extra_warns():
+    """Test that using pydantic Field with 'extra' attribute shows deprecation warning"""
+    import warnings
+
+    class DummyFilterSchema(FilterSchema):
+        name: Optional[str] = Field(None, q="name__icontains")
+
+    filter_instance = DummyFilterSchema()
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        filter_instance.get_filter_expression()
+
+        # Check that a deprecation warning was issued
+        assert len(w) == 1
+        assert issubclass(w[0].category, DeprecationWarning)
+        assert "deprecated" in str(w[0].message).lower()
+        assert "FilterLookup" in str(w[0].message)

@@ -1,3 +1,4 @@
+import warnings
 from typing import Any, List, Optional, TypeVar, Union, cast
 
 from django.core.exceptions import ImproperlyConfigured
@@ -6,6 +7,7 @@ from pydantic import ConfigDict
 from pydantic.fields import FieldInfo
 from typing_extensions import Literal
 
+from .constants import NOT_SET
 from .schema import Schema
 
 # XOR is available only in Django 4.1+: https://docs.djangoproject.com/en/4.1/ref/models/querysets/#xor
@@ -28,7 +30,7 @@ class FilterLookup:
 
     def __init__(
         self,
-        q: Union[str, List[str]],
+        q: Union[str, List[str], None],
         *,
         expression_connector: ExpressionConnector = DEFAULT_FIELD_LEVEL_EXPRESSION_CONNECTOR,
         ignore_none: bool = DEFAULT_IGNORE_NONE,
@@ -107,43 +109,48 @@ class FilterSchema(Schema):
         self,
         field_name: str,
         field_info: FieldInfo,
-        default: Union[str, List[str], None] = None,
     ) -> Union[str, List[str], None]:
         filter_lookup = self._get_filter_lookup(field_name, field_info)
         if filter_lookup:
-            return filter_lookup.q if filter_lookup.q is not None else default
+            return filter_lookup.q
 
         # Legacy approach, consider removing in future versions
-        field_extra = cast(dict, field_info.json_schema_extra) or {}
-        return cast(Union[str, List[str], None], field_extra.get("q", default))
+        return cast(
+            Union[str, List[str], None],
+            self._get_from_deprecated_field_extra(field_name, field_info, "q"),
+        )
 
     def _get_field_expression_connector(
         self,
         field_name: str,
         field_info: FieldInfo,
-        default: Union[ExpressionConnector, None] = None,
     ) -> Union[ExpressionConnector, None]:
         filter_lookup = self._get_filter_lookup(field_name, field_info)
         if filter_lookup:
-            return filter_lookup.expression_connector or default
+            return filter_lookup.expression_connector
 
         # Legacy approach, consider removing in future versions
-        field_extra = cast(dict, field_info.json_schema_extra) or {}
         return cast(
-            Union[ExpressionConnector, None],
-            field_extra.get("expression_connector", default),
+            Union[ExpressionConnector | None],
+            self._get_from_deprecated_field_extra(
+                field_name, field_info, "expression_connector"
+            ),
         )
 
     def _get_field_ignore_none(
-        self, field_name: str, field_info: FieldInfo, default: Union[bool, None] = None
+        self, field_name: str, field_info: FieldInfo
     ) -> Union[bool, None]:
         filter_lookup = self._get_filter_lookup(field_name, field_info)
         if filter_lookup:
             return filter_lookup.ignore_none
 
         # Legacy approach, consider removing in future versions
-        field_extra = cast(dict, field_info.json_schema_extra) or {}
-        return cast(Union[bool, None], field_extra.get("ignore_none", default))
+        return cast(
+            Union[bool, None],
+            self._get_from_deprecated_field_extra(
+                field_name, field_info, "ignore_none"
+            ),
+        )
 
     def _resolve_field_expression(
         self, field_name: str, field_value: Any, field_info: FieldInfo
@@ -153,8 +160,9 @@ class FilterSchema(Schema):
             return cast(Q, func(field_value))
 
         q_expression = self._get_field_q_expression(field_name, field_info)
-        expression_connector = self._get_field_expression_connector(
-            field_name, field_info, default=DEFAULT_FIELD_LEVEL_EXPRESSION_CONNECTOR
+        expression_connector = (
+            self._get_field_expression_connector(field_name, field_info)
+            or DEFAULT_FIELD_LEVEL_EXPRESSION_CONNECTOR
         )
 
         if not q_expression:
@@ -191,11 +199,14 @@ class FilterSchema(Schema):
             ignore_none = (
                 False
                 if class_ignore_none is False
-                else self._get_field_ignore_none(
-                    field_name,
-                    field_info,
-                    DEFAULT_IGNORE_NONE,
+                else field_ignore_none
+                if (
+                    field_ignore_none := self._get_field_ignore_none(
+                        field_name, field_info
+                    )
                 )
+                is not None
+                else DEFAULT_IGNORE_NONE
             )
 
             # Resolve Q expression for a field even if we skip it due to None value
@@ -213,3 +224,27 @@ class FilterSchema(Schema):
             )
 
         return q
+
+    def _get_from_deprecated_field_extra(
+        self, field_name: str, field_info: FieldInfo, attr: str
+    ) -> Union[Any, None]:
+        """
+        Backward-compatible shim which looks up filtering parameters in the Field's **extra kwargs.
+        Consider removing this method in favor of FilterLookup annotation class.
+        """
+        field_extra = cast(dict, field_info.json_schema_extra) or {}
+        value = field_extra.get(attr, NOT_SET)
+
+        if value is not NOT_SET:
+            warnings.warn(
+                f"Using Pydantic Field with extra keyword arguments ('{attr}') "
+                f"in field {self.__class__.__name__}.{field_name} is deprecated. Please use ninja.FilterLookup instead:\n"
+                f"  from typing import Annotated\n"
+                f"  from ninja import FilterLookup, FilterSchema\n\n"
+                f"  class {self.__class__.__name__}(FilterSchema):\n"
+                f"    {field_name}: Annotated[Optional[...], FilterLookup(q='...', ...)] = None",
+                DeprecationWarning,
+                stacklevel=4,
+            )
+            return value
+        return None
