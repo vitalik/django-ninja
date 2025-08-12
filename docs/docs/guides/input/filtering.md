@@ -1,5 +1,3 @@
-from ninja import FilterConfigDict
-
 # Filtering
 
 If you want to allow the user to filter your querysets by a number of different attributes, it makes sense
