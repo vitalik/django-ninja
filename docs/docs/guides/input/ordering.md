@@ -31,11 +31,11 @@ Under the hood, `OrderingSchema` expose a query parameter `order_by` that can be
 
 ## Restricting Fields
 
-By default, `OrderingSchema` will allow to pass any field name to order the queryset. If you want to restrict the fields that can be used to order the queryset, you can use the `allowed_fields` field in the `OrderingSchema.Config` class definition:
+By default, `OrderingSchema` will allow to pass any field name to order the queryset. If you want to restrict the fields that can be used to order the queryset, you can use the `allowed_fields` field in the `OrderingSchema.Meta` class definition:
 
 ```python hl_lines="3"
 class BookOrderingSchema(OrderingSchema):
-    class Config(OrderingSchema.Config):
+    class Meta:
         allowed_fields = ['name', 'created_at']  # Leaving out `author` field
 ```
 
