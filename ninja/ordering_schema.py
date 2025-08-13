@@ -13,7 +13,7 @@ class OrderingBaseSchema(Schema):
 
     order_by: List[str] = []
 
-    class Meta(Schema.Config):
+    class Meta:
         allowed_fields = "__all__"
 
     @field_validator("order_by")
