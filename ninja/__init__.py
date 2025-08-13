@@ -6,7 +6,7 @@ __version__ = "1.4.3"
 from pydantic import Field
 
 from ninja.files import UploadedFile
-from ninja.filter_schema import FilterSchema
+from ninja.filter_schema import FilterField, FilterSchema
 from ninja.main import NinjaAPI
 from ninja.openapi.docs import Redoc, Swagger
 from ninja.ordering_schema import OrderingSchema
@@ -56,6 +56,7 @@ __all__ = [
     "ModelSchema",
     "FilterSchema",
     "OrderingSchema",
+    "FilterField",
     "Swagger",
     "Redoc",
     "PatchDict",

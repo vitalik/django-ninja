@@ -1,5 +1,7 @@
 """Test App to use with Swagger UI and in unit tests"""
 
+from pydantic import ConfigDict
+
 from ninja import (
     Body,
     Cookie,
@@ -44,14 +46,15 @@ class TestData(Schema):
 
 
 class ResponseData(Schema):
+    model_config = ConfigDict(
+        alias_generator=to_kebab,
+        populate_by_name=True,
+    )
+    # fields
     i: int
     s: str
     data: TestData4
     nested_data: TestData
-
-    class Config(Schema.Config):
-        alias_generator = to_kebab
-        populate_by_name = True
 
 
 test_data4_extra = dict(title="Data4 Title", description="Data4 Desc")

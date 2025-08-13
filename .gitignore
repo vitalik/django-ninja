@@ -14,3 +14,4 @@ docs/site
 .DS_Store
 .idea
 .python-version
+*.local.md

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 
 import pytest
 
@@ -17,8 +17,18 @@ class SomeSchema(Schema):
     category: Optional[str] = None
 
 
+class OtherSchema(SomeSchema):
+    other: str
+    category: Optional[List[str]] = None
+
+
 @api.patch("/patch")
 def patch(request, payload: PatchDict[SomeSchema]):
+    return {"payload": payload, "type": str(type(payload))}
+
+
+@api.patch("/patch-inherited")
+def patch_inherited(request, payload: PatchDict[OtherSchema]):
     return {"payload": payload, "type": str(type(payload))}
 
 
@@ -54,6 +64,49 @@ def test_schema():
             },
             "category": {
                 "anyOf": [{"type": "string"}, {"type": "null"}],
+                "title": "Category",
+            },
+        },
+    }
+
+
+def test_patch_inherited():
+    input = {"other": "any", "category": ["cat1", "cat2"]}
+    expected_output = {"payload": input, "type": "<class 'dict'>"}
+
+    response = client.patch("/patch-inherited", json=input)
+    assert response.json() == expected_output
+
+
+def test_inherited_schema():
+    "Checking that json schema properties for inherithed schemas are ok"
+    schema = api.get_openapi_schema()
+    assert schema["components"]["schemas"]["OtherSchemaPatch"] == {
+        "title": "OtherSchemaPatch",
+        "type": "object",
+        "properties": {
+            "name": {
+                "anyOf": [{"type": "string"}, {"type": "null"}],
+                "title": "Name",
+            },
+            "age": {
+                "anyOf": [{"type": "integer"}, {"type": "null"}],
+                "title": "Age",
+            },
+            "other": {
+                "anyOf": [{"type": "string"}, {"type": "null"}],
+                "title": "Other",
+            },
+            "category": {
+                "anyOf": [
+                    {
+                        "items": {
+                            "type": "string",
+                        },
+                        "type": "array",
+                    },
+                    {"type": "null"},
+                ],
                 "title": "Category",
             },
         },

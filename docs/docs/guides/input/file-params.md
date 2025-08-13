@@ -113,7 +113,7 @@ def upload(request, file: File[UploadedFile]):
    ...
 ```
 
-For some [historical reasosns Django’s](https://groups.google.com/g/django-users/c/BeBKj_6qNsc) `request.FILES` is populated only for POST requests by default. When using HTTP PUT or PATCH methods with file uploads (e.g., multipart/form-data), request.FILES will not contain uploaded files. This is a known Django behavior, not specific to Django Ninja.
+For some [historical reasons Django’s](https://groups.google.com/g/django-users/c/BeBKj_6qNsc) `request.FILES` is populated only for POST requests by default. When using HTTP PUT or PATCH methods with file uploads (e.g., multipart/form-data), request.FILES will not contain uploaded files. This is a known Django behavior, not specific to Django Ninja.
 
 As a result, views expecting files in PUT or PATCH requests may not behave correctly, since request.FILES will be empty.
 

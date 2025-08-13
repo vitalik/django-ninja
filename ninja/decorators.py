@@ -1,9 +1,14 @@
 from functools import partial
 from typing import Any, Callable, Tuple
 
+from typing_extensions import Literal
+
 from ninja.operation import Operation
 from ninja.types import TCallable
 from ninja.utils import contribute_operation_callback
+
+# Type for decorator modes
+DecoratorMode = Literal["operation", "view"]
 
 # Since @api.method decorator is applied to function
 # that is not always returns a HttpResponse object

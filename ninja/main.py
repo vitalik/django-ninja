@@ -1,5 +1,4 @@
 import os
-import warnings
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -19,6 +18,7 @@ from django.urls import URLPattern, URLResolver, reverse
 from django.utils.module_loading import import_string
 
 from ninja.constants import NOT_SET, NOT_SET_TYPE
+from ninja.decorators import DecoratorMode
 from ninja.errors import (
     ConfigError,
     ValidationError,
@@ -65,7 +65,6 @@ class NinjaAPI:
         docs_decorator: Optional[Callable[[TCallable], TCallable]] = None,
         servers: Optional[List[DictStrAny]] = None,
         urls_namespace: Optional[str] = None,
-        csrf: bool = False,
         auth: Optional[Union[Sequence[Callable], Callable, NOT_SET_TYPE]] = NOT_SET,
         throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         renderer: Optional[BaseRenderer] = None,
@@ -83,7 +82,6 @@ class NinjaAPI:
             openapi_extra: Additional attributes for the openAPI spec.
             docs_url: The relative URL to serve the API docs.
             servers: List of target hosts used in openAPI spec.
-            csrf: Require a CSRF token for unsafe request types. See <a href="../csrf">CSRF</a> docs.
             auth (Callable | Sequence[Callable] | NOT_SET | None): Authentication class
             renderer: Default response renderer
             parser: Default request parser
@@ -97,13 +95,6 @@ class NinjaAPI:
         self.docs_decorator = docs_decorator
         self.servers = servers or []
         self.urls_namespace = urls_namespace or f"api-{self.version}"
-        self.csrf = csrf  # TODO: Check if used or at least throw Deprecation warning
-        if self.csrf:
-            warnings.warn(
-                "csrf argument is deprecated, auth is handling csrf automatically now",
-                DeprecationWarning,
-                stacklevel=2,
-            )
         self.renderer = renderer or JSONRenderer()
         self.parser = parser or Parser()
         self.openapi_extra = openapi_extra or {}
@@ -380,6 +371,22 @@ class NinjaAPI:
             openapi_extra=openapi_extra,
         )
 
+    def add_decorator(
+        self,
+        decorator: Callable,
+        mode: DecoratorMode = "operation",
+    ) -> None:
+        """
+        Add a decorator to be applied to all operations in the entire API.
+
+        Args:
+            decorator: The decorator function to apply
+            mode: "operation" (default) applies after validation,
+                  "view" applies before validation
+        """
+        # Store decorator on default router - will be inherited by all routers during build
+        self.default_router.add_decorator(decorator, mode)
+
     def add_router(
         self,
         prefix: str,
@@ -402,6 +409,10 @@ class NinjaAPI:
 
         if tags is not None:
             router.tags = tags
+
+        # Inherit API-level decorators from default router
+        # Prepend API decorators so they execute first (outer decorators)
+        router._decorators = self.default_router._decorators + router._decorators
 
         if parent_router:
             parent_prefix = next(
