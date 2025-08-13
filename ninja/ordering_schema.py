@@ -1,7 +1,7 @@
 from typing import Any, List, TypeVar
 
 from django.db.models import QuerySet
-from pydantic import field_validator
+from pydantic import ConfigDict, field_validator
 
 from .schema import Schema
 
@@ -9,15 +9,17 @@ QS = TypeVar("QS", bound=QuerySet)
 
 
 class OrderingBaseSchema(Schema):
+    model_config = ConfigDict(from_attributes=True)
+
     order_by: List[str] = []
 
-    class Config(Schema.Config):
+    class Meta(Schema.Config):
         allowed_fields = "__all__"
 
     @field_validator("order_by")
     @classmethod
     def validate_order_by_field(cls, value: List[str]) -> List[str]:
-        allowed_fields = cls.Config.allowed_fields
+        allowed_fields = cls.Meta.allowed_fields
         if value and allowed_fields != "__all__":
             allowed_fields_set = set(allowed_fields)
             for order_field in value:

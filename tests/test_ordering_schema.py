@@ -32,7 +32,7 @@ def test_validate_order_by_field__should_pass_when_value_in_allowed_fields_and_a
     test_field = "test_field"
 
     class DummyOrderingSchema(OrderingSchema):
-        class Config(OrderingSchema.Config):
+        class Meta(OrderingSchema.Meta):
             allowed_fields = [test_field]
 
     order_by_value = [test_field]
@@ -44,7 +44,7 @@ def test_validate_order_by_field__should_pass_when_value_in_allowed_fields_and_d
     test_field = "test_field"
 
     class DummyOrderingSchema(OrderingSchema):
-        class Config(OrderingSchema.Config):
+        class Meta(OrderingSchema.Meta):
             allowed_fields = [test_field]
 
     order_by_value = [f"-{test_field}"]
@@ -56,7 +56,7 @@ def test_validate_order_by_field__should_raise_validation_error_when_value_asc_n
     test_field = "allowed_field"
 
     class DummyOrderingSchema(OrderingSchema):
-        class Config(OrderingSchema.Config):
+        class Meta(OrderingSchema.Meta):
             allowed_fields = [test_field]
 
     order_by_value = ["not_allowed_field"]
@@ -68,7 +68,7 @@ def test_validate_order_by_field__should_raise_validation_error_when_value_desc_
     test_field = "allowed_field"
 
     class DummyOrderingSchema(OrderingSchema):
-        class Config(OrderingSchema.Config):
+        class Meta(OrderingSchema.Meta):
             allowed_fields = [test_field]
 
     order_by_value = ["-not_allowed_field"]
