@@ -52,11 +52,19 @@ class ViewSignature:
         self.has_kwargs = False
 
         self.params = []
+
+        # Get list of arguments to ignore if _ninja_ignore_args is set
+        ignore_args = getattr(view_func, "_ninja_ignore_args", [])
+
         for name, arg in self.signature.parameters.items():
             if name == "request":
                 # TODO: maybe better assert that 1st param is request or check by type?
                 # maybe even have attribute like `has_request`
                 # so that users can ignore passing request if not needed
+                continue
+
+            if name in ignore_args:
+                # Skip arguments that should be ignored
                 continue
 
             if arg.kind == arg.VAR_KEYWORD:
