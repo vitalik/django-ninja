@@ -9,7 +9,7 @@ pip install -U django-ninja
 django-ninja v1 is compatible with Python 3.7 and above.
 
 
-Django ninja seres 0.x is still supported but will receive only security updates and critical bug fixes
+Django ninja series 0.x is still supported but will receive only security updates and critical bug fixes
 
 
 
