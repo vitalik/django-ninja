@@ -1,4 +1,4 @@
-from ninja import NinjaAPI
+from ninja import NinjaAPI, Router
 
 
 def test_openapi_info_defined():
@@ -47,3 +47,43 @@ def test_openapi_extra():
             "url": "https://example.com",
         },
     }
+
+
+def test_router_openapi_extra_extends():
+    """
+    Test for #1505.
+    When adding an extra parameter to a route via openapi_extra, this should be combined with the route's own parameters.
+    """
+    api = NinjaAPI()
+    test_router = Router()
+    api.add_router("", test_router)
+
+    extra_param = {
+        "in": "header",
+        "name": "X-HelloWorld",
+        "required": False,
+        "schema": {
+            "type": "string",
+            "format": "uuid",
+        },
+    }
+
+    @test_router.get("/path/{item_id}", openapi_extra={"parameters": [extra_param]})
+    def get_path_item_id(request, item_id: int):
+        pass
+
+    schema = api.get_openapi_schema()
+
+    assert len(schema["paths"]["/api/path/{item_id}"]["get"]["parameters"]) == 2
+    assert schema["paths"]["/api/path/{item_id}"]["get"]["parameters"] == [
+        {
+            "in": "path",
+            "name": "item_id",
+            "required": True,
+            "schema": {
+                "title": "Item Id",
+                "type": "integer",
+            },
+        },
+        extra_param,
+    ]
