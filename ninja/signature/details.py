@@ -208,13 +208,20 @@ class ViewSignature:
 
     def _model_flatten_map(self, model: TModel, prefix: str) -> Generator:
         field: FieldInfo
-        for attr, field in model.model_fields.items():
-            field_name = field.alias or attr
-            name = f"{prefix}{self.FLATTEN_PATH_SEP}{field_name}"
-            if is_pydantic_model(field.annotation):
-                yield from self._model_flatten_map(field.annotation, name)  # type: ignore
-            else:
-                yield field_name, name
+        if get_origin(model) in UNION_TYPES:
+            # If the model is a union type, process each type in the union
+            for arg in get_args(model):
+                if arg is type(None):
+                    continue  # Skip NoneType
+                yield from self._model_flatten_map(arg, prefix)
+        else:
+            for attr, field in model.model_fields.items():
+                field_name = field.alias or attr
+                name = f"{prefix}{self.FLATTEN_PATH_SEP}{field_name}"
+                if is_pydantic_model(field.annotation):
+                    yield from self._model_flatten_map(field.annotation, name)  # type: ignore
+                else:
+                    yield field_name, name
 
     def _get_param_type(self, name: str, arg: inspect.Parameter) -> FuncParam:
         # _EMPTY = self.signature.empty
@@ -276,9 +283,9 @@ class ViewSignature:
 
         # 2) if param name is a part of the path parameter
         elif name in self.path_params_names:
-            assert (
-                default == self.signature.empty
-            ), f"'{name}' is a path param, default not allowed"
+            assert default == self.signature.empty, (
+                f"'{name}' is a path param, default not allowed"
+            )
             param_source = Path(...)
 
         # 3) if param is a collection, or annotation is part of pydantic model:
@@ -311,7 +318,11 @@ def is_pydantic_model(cls: Any) -> bool:
 
         # Handle Union types
         if origin in UNION_TYPES:
-            return any(issubclass(arg, pydantic.BaseModel) for arg in get_args(cls))
+            return any(
+                issubclass(arg, pydantic.BaseModel)
+                for arg in get_args(cls)
+                if arg is not type(None)
+            )
         return issubclass(cls, pydantic.BaseModel)
     except TypeError:  # pragma: no cover
         return False
@@ -354,14 +365,32 @@ def detect_collection_fields(
             for attr in path[1:]:
                 if hasattr(annotation_or_field, "annotation"):
                     annotation_or_field = annotation_or_field.annotation
-                annotation_or_field = next(
-                    (
-                        a
-                        for a in annotation_or_field.model_fields.values()
-                        if a.alias == attr
-                    ),
-                    annotation_or_field.model_fields.get(attr),
-                )  # pragma: no cover
+
+                # check union types
+                if get_origin(annotation_or_field) in UNION_TYPES:
+                    for arg in get_args(annotation_or_field):
+                        if arg is type(None):
+                            continue  # Skip NoneType
+                        if hasattr(arg, "model_fields"):
+                            annotation_or_field = next(
+                                (
+                                    a
+                                    for a in arg.model_fields.values()
+                                    if a.alias == attr
+                                ),
+                                arg.model_fields.get(attr),
+                            )  # pragma: no cover
+                        else:
+                            continue
+                else:
+                    annotation_or_field = next(
+                        (
+                            a
+                            for a in annotation_or_field.model_fields.values()
+                            if a.alias == attr
+                        ),
+                        annotation_or_field.model_fields.get(attr),
+                    )  # pragma: no cover
 
                 annotation_or_field = getattr(
                     annotation_or_field, "outer_type_", annotation_or_field
