@@ -137,7 +137,7 @@ python type. In this case you should use `register_field` method to tell django-
 ```python hl_lines="4 7 8 9"
 # models.py
 
-class MyModel(models.Modle):
+class MyModel(models.Model):
     embedding = pgvector.VectorField()
 
 # schemas.py
