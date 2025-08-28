@@ -9,6 +9,7 @@ class SomeModel(BaseModel):
     i: int
     s: str
     f: float
+    n: int | None = None
 
 
 class OtherModel(BaseModel):
@@ -86,7 +87,12 @@ client = TestClient(router)
         (
             "/test1",
             dict(json={"i": "1", "s": "foo", "f": "1.1"}),
-            {"i": 1, "s": "foo", "f": 1.1},
+            {"i": 1, "s": "foo", "f": 1.1, "n": None},
+        ),
+        (
+            "/test1",
+            dict(json={"i": "1", "s": "foo", "f": "1.1", "n": 42}),
+            {"i": 1, "s": "foo", "f": 1.1, "n": 42},
         ),
         (
             "/test2",
@@ -96,12 +102,15 @@ client = TestClient(router)
                     "other": {"x": 1, "y": 2},
                 }
             ),
-            {"some": {"i": 1, "s": "foo", "f": 1.1}, "other": {"x": 1, "y": 2}},
+            {
+                "some": {"i": 1, "s": "foo", "f": 1.1, "n": None},
+                "other": {"x": 1, "y": 2},
+            },
         ),
         (
             "/test3",
             dict(json={"i": "1", "s": "foo", "f": "1.1"}),
-            {"i": 1, "s": "foo", "f": 1.1},
+            {"i": 1, "s": "foo", "f": 1.1, "n": None},
         ),
         (
             "/test_form",
