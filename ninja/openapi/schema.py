@@ -1,14 +1,14 @@
 import itertools
 import re
 from http.client import responses
-from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Set, Tuple, Union
 
 from django.utils.termcolors import make_style
 
 from ninja.constants import NOT_SET
 from ninja.operation import Operation
 from ninja.params.models import TModel, TModels
-from ninja.schema import NinjaGenerateJsonSchema
+from ninja.schema import Schema, NinjaGenerateJsonSchema
 from ninja.types import DictStrAny
 from ninja.utils import normalize_path
 
@@ -22,6 +22,17 @@ BODY_CONTENT_TYPES: Dict[str, str] = {
     "form": "application/x-www-form-urlencoded",
     "file": "multipart/form-data",
 }
+
+http422 = 422
+
+
+class DefaultValidationError(Schema):
+    class ValidationError(Schema):
+        loc: List[Union[str, int]]
+        msg: str
+        type: str
+
+    detail: List[ValidationError]
 
 
 def get_schema(api: "NinjaAPI", path_prefix: str = "") -> "OpenAPISchema":
@@ -88,13 +99,13 @@ class OpenAPISchema(dict):
         return result
 
     def deep_dict_update(
-        self, main_dict: Dict[Any, Any], update_dict: Dict[Any, Any]
+            self, main_dict: Dict[Any, Any], update_dict: Dict[Any, Any]
     ) -> None:
         for key in update_dict:
             if (
-                key in main_dict
-                and isinstance(main_dict[key], dict)
-                and isinstance(update_dict[key], dict)
+                    key in main_dict
+                    and isinstance(main_dict[key], dict)
+                    and isinstance(update_dict[key], dict)
             ):
                 self.deep_dict_update(
                     main_dict[key], update_dict[key]
@@ -173,7 +184,7 @@ class OpenAPISchema(dict):
             p_schema: DictStrAny
             p_required: bool
             for p_name, p_schema, p_required in flatten_properties(
-                name, details, is_required, schema.get("$defs", {})
+                    name, details, is_required, schema.get("$defs", {})
             ):
                 if not p_schema.get("include_in_schema", True):
                     continue
@@ -212,10 +223,10 @@ class OpenAPISchema(dict):
         return flattened
 
     def _create_schema_from_model(
-        self,
-        model: TModel,
-        by_alias: bool = True,
-        remove_level: bool = True,
+            self,
+            model: TModel,
+            by_alias: bool = True,
+            remove_level: bool = True,
     ) -> Tuple[DictStrAny, bool]:
         if hasattr(model, "__ninja_flatten_map__"):
             schema = self._flatten_schema(model)
@@ -240,7 +251,7 @@ class OpenAPISchema(dict):
             return schema, True
 
     def _create_multipart_schema_from_models(
-        self, models: TModels
+            self, models: TModels
     ) -> Tuple[DictStrAny, str]:
         # We have File and Form or Body, so we need to use multipart (File)
         content_type = BODY_CONTENT_TYPES["file"]
@@ -297,7 +308,13 @@ class OpenAPISchema(dict):
                     self.api.renderer.media_type: {"schema": schema}
                 }
             result.update(details)
-
+        if http422 not in result:
+            model = operation._create_response_model_multiple({http422: DefaultValidationError})[http422]
+            schema = self._create_schema_from_model(model)[0]
+            result[http422] = {
+                "description": "Validation error",
+                "content": {self.api.renderer.media_type: {"schema": schema}},
+            }
         return result
 
     def operation_security(self, operation: Operation) -> Optional[List[DictStrAny]]:
@@ -328,10 +345,10 @@ class OpenAPISchema(dict):
 
 
 def flatten_properties(
-    prop_name: str,
-    prop_details: DictStrAny,
-    prop_required: bool,
-    definitions: DictStrAny,
+        prop_name: str,
+        prop_details: DictStrAny,
+        prop_required: bool,
+        definitions: DictStrAny,
 ) -> Generator[Tuple[str, DictStrAny, bool], None, None]:
     """
     extracts all nested model's properties into flat properties

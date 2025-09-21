@@ -15,19 +15,36 @@ def alias_operation(request):
 
 def test_alias():
     schema = api.get_openapi_schema()["components"]
-    print(schema)
-    assert schema == {
-        "schemas": {
-            "SchemaWithAlias": {
-                "type": "object",
-                "properties": {
-                    "foo": {"type": "string", "default": "", "title": "Foo"}
-                },
-                "title": "SchemaWithAlias",
-            }
-        }
+    assert schema['schemas']['SchemaWithAlias'] == {
+        "type": "object",
+        "properties": {
+            "foo": {"type": "string", "default": "", "title": "Foo"}
+        },
+        "title": "SchemaWithAlias",
     }
 
+    assert schema['schemas']['DefaultValidationError'] == {
+        'properties': {
+            'detail': {
+                'items': {'$ref': '#/components/schemas/ValidationError'},
+                'title': 'Detail', 'type': 'array'
+            }
+        },
+        'required': ['detail'],
+        'title': 'DefaultValidationError', 'type': 'object'
+    }
+    assert schema['schemas']['ValidationError'] == {
+        'properties': {
+            'loc': {
+                'items': {
+                    'anyOf': [{'type': 'string'}, {'type': 'integer'}]
+                }, 'title': 'Loc', 'type': 'array'
+            },
+            'msg': {'title': 'Msg', 'type': 'string'},
+            'type': {'title': 'Type', 'type': 'string'}
+        },
+        'required': ['loc', 'msg', 'type'], 'title': 'ValidationError', 'type': 'object'
+    }
 
 # TODO: check the conflicting approach
 #       when alias is used both for response and request schema
