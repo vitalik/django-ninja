@@ -187,6 +187,21 @@ class ViewSignature:
         flatten_map = {}
         arg_names: Any = {}
         for arg in args:
+            # Check if this is an optional union type with None default
+            if get_origin(arg.annotation) in UNION_TYPES:
+                union_args = get_args(arg.annotation)
+                has_none = type(None) in union_args
+                # If it's a union with None and the source default is None (like Query(None)), don't flatten it
+                if has_none and hasattr(arg.source, 'default') and arg.source.default is None:
+                    name = arg.alias
+                    if name in flatten_map:
+                        raise ConfigError(
+                            f"Duplicated name: '{name}' also in '{arg_names[name]}'"
+                        )
+                    flatten_map[name] = (name,)
+                    arg_names[name] = name
+                    continue
+            
             if is_pydantic_model(arg.annotation):
                 for name, path in self._model_flatten_map(arg.annotation, arg.alias):
                     if name in flatten_map:
@@ -218,7 +233,30 @@ class ViewSignature:
             for attr, field in model.model_fields.items():
                 field_name = field.alias or attr
                 name = f"{prefix}{self.FLATTEN_PATH_SEP}{field_name}"
-                if is_pydantic_model(field.annotation):
+                
+                # Check if this is a union type field
+                if get_origin(field.annotation) in UNION_TYPES:
+                    union_args = get_args(field.annotation)
+                    has_none = type(None) in union_args
+                    non_none_args = [arg for arg in union_args if arg is not type(None)]
+                    
+                    # If it's an optional field (Union with None) and has a default value,
+                    # don't flatten it - treat it as a single optional field
+                    if has_none and field.default is not PydanticUndefined:
+                        yield field_name, name
+                        continue
+                    
+                    # For non-optional unions or unions without defaults,
+                    # check if any of the union args are pydantic models
+                    pydantic_args = [arg for arg in non_none_args if is_pydantic_model(arg)]
+                    if pydantic_args:
+                        # Process only the pydantic model types
+                        for arg in pydantic_args:
+                            yield from self._model_flatten_map(arg, name)
+                    else:
+                        # No pydantic models in union, treat as simple field
+                        yield field_name, name
+                elif is_pydantic_model(field.annotation):
                     yield from self._model_flatten_map(field.annotation, name)  # type: ignore
                 else:
                     yield field_name, name
@@ -368,20 +406,27 @@ def detect_collection_fields(
 
                 # check union types
                 if get_origin(annotation_or_field) in UNION_TYPES:
+                    found = False
                     for arg in get_args(annotation_or_field):
                         if arg is type(None):
                             continue  # Skip NoneType
                         if hasattr(arg, "model_fields"):
-                            annotation_or_field = next(
+                            found_field = next(
                                 (
                                     a
                                     for a in arg.model_fields.values()
                                     if a.alias == attr
                                 ),
                                 arg.model_fields.get(attr),
-                            )  # pragma: no cover
-                        else:
-                            continue
+                            )
+                            if found_field is not None:
+                                annotation_or_field = found_field
+                                found = True
+                                break
+                    if not found:
+                        # No suitable field found in any union member, skip this path
+                        annotation_or_field = None
+                        break  # Break out of the attr loop
                 else:
                     annotation_or_field = next(
                         (
@@ -396,8 +441,13 @@ def detect_collection_fields(
                     annotation_or_field, "outer_type_", annotation_or_field
                 )
 
+            # Skip if annotation_or_field is None (e.g., from failed union processing)
+            if annotation_or_field is None:
+                continue
+
             # if hasattr(annotation_or_field, "annotation"):
-            annotation_or_field = annotation_or_field.annotation
+            if hasattr(annotation_or_field, "annotation"):
+                annotation_or_field = annotation_or_field.annotation
 
             if is_collection_type(annotation_or_field):
                 result.append(path[-1])
