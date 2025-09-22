@@ -385,8 +385,9 @@ class Router:
         # Ensure decorators are applied before generating URLs
         self._apply_decorators_to_operations()
 
+        all_path_operations = self._get_all_path_operations(prefix)
         prefix = replace_path_param_notation(prefix)
-        for path, path_view in self.path_operations.items():
+        for path, path_view in all_path_operations.items():
             for operation in path_view.operations:
                 path = replace_path_param_notation(path)
                 route = "/".join([i for i in (prefix, path) if i])
@@ -399,6 +400,43 @@ class Router:
                     url_name = self.api.get_operation_url_name(operation, router=self)
 
                 yield django_path(route, path_view.get_view(), name=url_name)
+
+    def _get_all_path_operations(self, prefix: str) -> Dict[str, Any]:
+        all_path_operations = dict(self.path_operations)
+
+        if not self.api:
+            return all_path_operations  # pragma: no cover
+
+        current_prefix_norm = normalize_path(prefix).lstrip("/")
+
+        for other_prefix, other_router in self.api._routers:
+            if other_router == self:
+                continue
+
+            other_prefix_norm = normalize_path(other_prefix).lstrip("/")
+            if other_prefix_norm != current_prefix_norm:
+                continue
+
+            # merge operations from router with same normalized prefix
+            for path, other_path_view in other_router.path_operations.items():
+                if path not in all_path_operations:
+                    all_path_operations[path] = other_path_view
+                    continue
+
+                # merge operations for same path
+                existing_methods = {
+                    m for op in all_path_operations[path].operations for m in op.methods
+                }
+                for operation in other_path_view.operations:
+                    if any(m in existing_methods for m in operation.methods):
+                        continue
+
+                    all_path_operations[path].operations.append(operation)
+                    all_path_operations[path].is_async = (
+                        all_path_operations[path].is_async or operation.is_async
+                    )
+
+        return all_path_operations
 
     def add_router(
         self,
