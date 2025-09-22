@@ -118,6 +118,7 @@ To create a custom pagination class you should subclass `ninja.pagination.Pagina
 Example:
 
 ```python hl_lines="7 11 16 26"
+from django.http import HttpRequest
 from ninja.pagination import paginate, PaginationBase
 from ninja import Schema
 
@@ -133,7 +134,7 @@ class CustomPagination(PaginationBase):
         total: int
         per_page: int
 
-    def paginate_queryset(self, queryset, pagination: Input, **params):
+    def paginate_queryset(self, queryset, *, pagination: Input, request: HttpRequest, **params):
         skip = pagination.skip
         return {
             'items': queryset[skip : skip + 5],
@@ -146,13 +147,6 @@ class CustomPagination(PaginationBase):
 @paginate(CustomPagination)
 def list_users(request):
     return User.objects.all()
-```
-
-Tip: You can access request object from params:
-
-```python
-def paginate_queryset(self, queryset, pagination: Input, **params):
-    request = params["request"]
 ```
 
 #### Async Pagination
