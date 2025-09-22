@@ -283,9 +283,9 @@ class ViewSignature:
 
         # 2) if param name is a part of the path parameter
         elif name in self.path_params_names:
-            assert default == self.signature.empty, (
-                f"'{name}' is a path param, default not allowed"
-            )
+            assert (
+                default == self.signature.empty
+            ), f"'{name}' is a path param, default not allowed"
             param_source = Path(...)
 
         # 3) if param is a collection, or annotation is part of pydantic model:
