@@ -1,6 +1,7 @@
 import inspect
 import warnings
 from collections import defaultdict, namedtuple
+from itertools import islice
 from typing import Any, Callable, Dict, Generator, List, Optional, Tuple
 
 import pydantic
@@ -52,12 +53,11 @@ class ViewSignature:
         self.has_kwargs = False
 
         self.params = []
-        for name, arg in self.signature.parameters.items():
-            if name == "request":
-                # TODO: maybe better assert that 1st param is request or check by type?
-                # maybe even have attribute like `has_request`
-                # so that users can ignore passing request if not needed
-                continue
+        for name, arg in islice(self.signature.parameters.items(), 1, None):
+            # skip the first param since that must be the request
+            # TODO: maybe better assert that 1st param is request or check by type?
+            # maybe even have attribute like `has_request`
+            # so that users can ignore passing request if not needed
 
             if arg.kind == arg.VAR_KEYWORD:
                 # Skipping **kwargs
