@@ -55,6 +55,7 @@ nav:
           - guides/input/path-params.md
           - guides/input/query-params.md
           - guides/input/body.md
+          - guides/input/header.md
           - guides/input/form-params.md
           - guides/input/file-params.md
           - guides/input/request-parsers.md
