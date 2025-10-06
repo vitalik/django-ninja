@@ -1,8 +1,11 @@
+from typing import List, Union
+
 import pytest
 from pydantic import BaseModel
-from typing import Union, List
 
-from ninja import Form, Query, Router
+from ninja import Form, NinjaAPI, Query, Router
+from ninja.errors import ConfigError
+from ninja.signature.details import ViewSignature
 from ninja.testing import TestClient
 
 
@@ -178,8 +181,6 @@ except Exception:
 # Test to trigger ConfigError on line 197 - duplicate name collision in union with Query(None)
 def test_union_query_name_collision():
     """Test that duplicate union parameter names with Query(None) raise ConfigError."""
-    from ninja import NinjaAPI
-    from ninja.errors import ConfigError
 
     # Create a test that should cause a name collision during flattening
     try:
@@ -201,7 +202,7 @@ def test_union_query_name_collision():
         api.add_router("/test", router_test)
 
         # This should fail during router creation due to name collision
-        assert False, "Expected ConfigError for duplicate name collision"
+        assert False, "Expected ConfigError for duplicate name collision"  # noqa: B011
 
     except ConfigError as e:
         # This is the expected behavior - line 197 should be hit
@@ -575,8 +576,6 @@ def test_invalid_body():
 
 def test_force_line_233_coverage():
     """Force line 233 to be executed by directly calling _model_flatten_map with Union[Model, None]."""
-    from ninja.signature.details import ViewSignature
-    from typing import Union
 
     # Create a test function with Union[Model, None] parameter
     def test_func(request, param: Union[SomeModel, None]):

@@ -184,7 +184,7 @@ class ViewSignature:
         return result
 
     def _args_flatten_map(self, args: List[FuncParam]) -> Dict[str, Tuple[str, ...]]:
-        flatten_map = {}
+        flatten_map: Dict[str, Tuple[str, ...]] = {}
         arg_names: Any = {}
         for arg in args:
             # Check if this is an optional union type with None default
