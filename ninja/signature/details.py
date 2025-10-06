@@ -393,32 +393,14 @@ def detect_collection_fields(
 
                 # check union types
                 if get_origin(annotation_or_field) in UNION_TYPES:
-                    found = False
-                    # This for loop is unreachable in practice because union types with missing fields
-                    # should be handled earlier in the validation process
-                    for arg in get_args(annotation_or_field):
-                        # This continue path is unreachable because NoneType handling is done earlier in union processing
-                        if arg is type(None):
-                            continue  # Skip NoneType
-                        if hasattr(arg, "model_fields"):
-                            found_field = next(
-                                (
-                                    a
-                                    for a in arg.model_fields.values()
-                                    if a.alias == attr
-                                ),
-                                arg.model_fields.get(attr),
-                            )
-                            if found_field is not None:
-                                annotation_or_field = found_field
-                                found = True
-                                break
-                    # This error condition is unreachable because union fields are pre-validated
-                    # and all union members should have compatible field structures
-                    if not found:
-                        # No suitable field found in any union member, skip this path
-                        annotation_or_field = None
-                        break  # Break out of the attr loop
+                    for arg in get_args(annotation_or_field):  # pragma: no branch
+                        found_field = next(
+                            (a for a in arg.model_fields.values() if a.alias == attr),
+                            arg.model_fields.get(attr),
+                        )
+                        if found_field is not None:
+                            annotation_or_field = found_field
+                            break
                 else:
                     annotation_or_field = next(
                         (
@@ -433,15 +415,7 @@ def detect_collection_fields(
                     annotation_or_field, "outer_type_", annotation_or_field
                 )
 
-            # This condition is unreachable because union processing failures are handled above
-            # and annotation_or_field should never be None at this point in normal operation
-            if annotation_or_field is None:
-                continue
-
-            # This condition is unreachable because annotation access is handled in the union processing
-            # and should not require additional annotation unwrapping at this point
-            if hasattr(annotation_or_field, "annotation"):
-                annotation_or_field = annotation_or_field.annotation
+            annotation_or_field = annotation_or_field.annotation
 
             if is_collection_type(annotation_or_field):
                 result.append(path[-1])
