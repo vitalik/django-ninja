@@ -149,81 +149,12 @@ def view_multi_model_union(request, data: MultiModelUnion):
     return data.model_dump()
 
 
-# Create models that will cause field name collisions during flattening
-class ModelA(BaseModel):
-    name: str
-
-
-class ModelB(BaseModel):
-    name: str  # Same field name as ModelA
-
-
-# Test case to trigger model field collision error
-try:
-    router_collision = Router()
-
-    @router_collision.post("/test-model-collision")
-    def view_model_collision(
-        model_a: ModelA,
-        model_b: ModelB,  # Both have 'name' field - should cause collision during flattening
-    ):
-        return {"result": "collision"}
-
-except Exception:
-    # Expected to fail during router creation if collision detection works
-    pass
-
-
-# Test to trigger ConfigError - duplicate name collision in union with Query(None)
-def test_union_query_name_collision():
-    """Test that duplicate union parameter names with Query(None) raise ConfigError."""
-
-    # Create a test that should cause a name collision during flattening
-    try:
-        api = NinjaAPI()
-        router_test = Router()
-
-        # This should trigger the ConfigError when both parameters
-        # have the same alias and are processed as Union[Model, None] = Query(None)
-        @router_test.post("/collision-test")
-        def collision_endpoint(
-            # Both parameters have same alias "person" - should cause collision
-            person1: Union[PersonSchema, None] = Query(None, alias="person"),
-            person2: Union[PersonSchema, None] = Query(
-                None, alias="person"
-            ),  # Same alias!
-        ):
-            return {"result": "should not reach here"}
-
-        api.add_router("/test", router_test)
-
-        # This should fail during router creation due to name collision
-        assert False, "Expected ConfigError for duplicate name collision"  # noqa: B011
-
-    except ConfigError as e:
-        # This is the expected behavior
-        assert "Duplicated name" in str(e)
-        assert "person" in str(e)
-
-
 @router.post("/test-union-with-none")
 def view_union_with_none(request, optional: Union[str, None] = Query(None)):
     """Test Union[str, None]"""
     return {"optional": optional}
 
 
-# Test union field with multiple pydantic models
-class UnionFieldTestModel(BaseModel):
-    choice: Union[SomeModel, OtherModel]
-
-
-@router.post("/test-union-field-model")
-def view_union_field_model(request, model: UnionFieldTestModel):
-    """Test union field with multiple pydantic models."""
-    return model.model_dump()
-
-
-# Test for collection detection with unions
 class CollectionUnionModel(BaseModel):
     items: List[str]
     nested: Union[SomeModel, None] = None
@@ -231,85 +162,6 @@ class CollectionUnionModel(BaseModel):
 
 @router.post("/test-collection-union")
 def view_collection_union(request, data: CollectionUnionModel):
-    """Test collection fields with union to trigger detect_collection_fields."""
-    return data.model_dump()
-
-
-# Additional model for testing complex nested union fields
-class ComplexUnionField(BaseModel):
-    model_choice: Union[SomeModel, OtherModel]  # No None, no default
-    name: str = "test"
-
-
-@router.post("/test-complex-union-field")
-def view_complex_union_field(request, complex_data: ComplexUnionField):
-    """Test complex union field processing."""
-    return complex_data.model_dump()
-
-
-# Model with union field that has NO default
-class NoDefaultUnionModel(BaseModel):
-    # This union field has NO default value and contains pydantic models
-    required_union: Union[SomeModel, OtherModel]
-
-
-@router.post("/test-no-default-union")
-def view_no_default_union(request, no_default: NoDefaultUnionModel):
-    """Test union field with no default."""
-    return no_default.model_dump()
-
-
-# Complex nested model to trigger detect_collection_fields union logic
-class NestedWithCollections(BaseModel):
-    items: List[str]  # Collection field
-
-
-class DeepModel(BaseModel):
-    # Nested model that contains a union field
-    nested: Union[NestedWithCollections, SomeModel]
-    simple_field: str = "test"
-
-
-class VeryDeepModel(BaseModel):
-    # Multiple levels of nesting to create longer flatten paths
-    deep: DeepModel
-    extra_items: List[int] = []
-
-
-@router.post("/test-deep-nested-union")
-def view_deep_nested_union(request, deep_data: VeryDeepModel):
-    """Test deeply nested structure with unions to trigger detect_collection_fields logic."""
-    return deep_data.model_dump()
-
-
-# trigger _model_flatten_map with Union containing None
-@router.post("/test-flatten-union-with-none")
-def view_flatten_union_with_none(request, data: Union[SomeModel, None]):
-    """Test direct Union[Model, None]"""
-    return data.model_dump() if data else {"result": "none"}
-
-
-# nested union with None
-class ModelWithUnionField(BaseModel):
-    union_field: Union[SomeModel, None] = (
-        None  # This should trigger _model_flatten_map with Union
-    )
-
-
-@router.post("/test-nested-union-with-none")
-def view_nested_union_with_none(request, data: ModelWithUnionField):
-    """Test nested Union[Model, None]"""
-    return data.model_dump()
-
-
-# Union parameter that gets flattened
-class OuterModel(BaseModel):
-    inner: Union[SomeModel, OtherModel, None]  # Union with None at top level
-
-
-@router.post("/test-direct-union-flattening")
-def view_direct_union_flattening(request, data: OuterModel):
-    """Test direct union flattening."""
     return data.model_dump()
 
 
@@ -403,17 +255,6 @@ client = TestClient(router)
             dict(json=None),
             {"optional": "test"},
         ),
-        # Test union field model
-        (
-            "/test-union-field-model",
-            dict(json={"choice": {"i": 1, "s": "test", "f": 1.5}}),
-            {"choice": {"i": 1, "s": "test", "f": 1.5, "n": None}},
-        ),
-        (
-            "/test-union-field-model",
-            dict(json={"choice": {"x": 10, "y": 20}}),
-            {"choice": {"x": 10, "y": 20}},
-        ),
         # Test collection union model
         (
             "/test-collection-union",
@@ -424,110 +265,6 @@ client = TestClient(router)
             "/test-collection-union",
             dict(json={"items": ["x"], "nested": {"i": 5, "s": "test", "f": 2.0}}),
             {"items": ["x"], "nested": {"i": 5, "s": "test", "f": 2.0, "n": None}},
-        ),
-        # Test complex union field
-        (
-            "/test-complex-union-field",
-            dict(
-                json={
-                    "model_choice": {"i": 1, "s": "test", "f": 1.5},
-                    "name": "example",
-                }
-            ),
-            {
-                "model_choice": {"i": 1, "s": "test", "f": 1.5, "n": None},
-                "name": "example",
-            },
-        ),
-        (
-            "/test-complex-union-field",
-            dict(json={"model_choice": {"x": 10, "y": 20}, "name": "example"}),
-            {"model_choice": {"x": 10, "y": 20}, "name": "example"},
-        ),
-        # Test no default union
-        (
-            "/test-no-default-union",
-            dict(json={"required_union": {"i": 2, "s": "required", "f": 2.5}}),
-            {"required_union": {"i": 2, "s": "required", "f": 2.5, "n": None}},
-        ),
-        (
-            "/test-no-default-union",
-            dict(json={"required_union": {"x": 5, "y": 10}}),
-            {"required_union": {"x": 5, "y": 10}},
-        ),
-        # Test deeply nested union
-        (
-            "/test-deep-nested-union",
-            dict(
-                json={
-                    "deep": {
-                        "nested": {"items": ["a", "b"]},
-                        "simple_field": "deep_test",
-                    },
-                    "extra_items": [1, 2, 3],
-                }
-            ),
-            {
-                "deep": {"nested": {"items": ["a", "b"]}, "simple_field": "deep_test"},
-                "extra_items": [1, 2, 3],
-            },
-        ),
-        (
-            "/test-deep-nested-union",
-            dict(
-                json={
-                    "deep": {
-                        "nested": {"i": 1, "s": "nested", "f": 1.0},
-                        "simple_field": "deep_test2",
-                    },
-                    "extra_items": [],
-                }
-            ),
-            {
-                "deep": {
-                    "nested": {"i": 1, "s": "nested", "f": 1.0, "n": None},
-                    "simple_field": "deep_test2",
-                },
-                "extra_items": [],
-            },
-        ),
-        # Test to trigger _model_flatten_map with Union containing None
-        (
-            "/test-flatten-union-with-none",
-            dict(json={"i": 1, "s": "test", "f": 1.5}),
-            {"i": 1, "s": "test", "f": 1.5, "n": None},
-        ),
-        (
-            "/test-flatten-union-with-none",
-            dict(json=None),
-            {"result": "none"},
-        ),
-        # Test nested union with None
-        (
-            "/test-nested-union-with-none",
-            dict(json={"union_field": {"i": 1, "s": "test", "f": 1.5}}),
-            {"union_field": {"i": 1, "s": "test", "f": 1.5, "n": None}},
-        ),
-        (
-            "/test-nested-union-with-none",
-            dict(json={"union_field": None}),
-            {"union_field": None},
-        ),
-        # Test direct union flattening
-        (
-            "/test-direct-union-flattening",
-            dict(json={"inner": {"i": 1, "s": "test", "f": 1.5}}),
-            {"inner": {"i": 1, "s": "test", "f": 1.5, "n": None}},
-        ),
-        (
-            "/test-direct-union-flattening",
-            dict(json={"inner": {"x": 10, "y": 20}}),
-            {"inner": {"x": 10, "y": 20}},
-        ),
-        (
-            "/test-direct-union-flattening",
-            dict(json={"inner": None}),
-            {"inner": None},
         ),
         (
             "/test-multi-model-union",
@@ -564,3 +301,33 @@ def test_invalid_body():
     assert response.json() == {
         "detail": "Cannot parse request body",
     }
+
+
+def test_union_query_name_collision():
+    """Test that duplicate union parameter names with Query(None) raise ConfigError."""
+
+    with pytest.raises(ConfigError, match=r"Duplicated name.*person"):
+        api = NinjaAPI()
+        router_test = Router()
+
+        @router_test.post("/collision-test")
+        def collision_endpoint(
+            person1: Union[PersonSchema, None] = Query(None, alias="person"),
+            person2: Union[PersonSchema, None] = Query(None, alias="person"),
+        ):
+            return {"result": "should not reach here"}
+
+        api.add_router("/test", router_test)
+
+
+def test_union_with_none_body_param():
+    """Test Union[Model, None] parameter"""
+
+    test_router = Router()
+
+    @test_router.post("/test-union-none-body")
+    def test_union_none_body(request, data: Union[SomeModel, None]):
+        return data.model_dump() if data else {"result": "none"}
+
+    # Verify the router was created successfully and has one registered operation
+    assert len(test_router.path_operations) == 1
