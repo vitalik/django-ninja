@@ -230,47 +230,17 @@ class ViewSignature:
         if get_origin(model) in UNION_TYPES:
             # If the model is a union type, process each type in the union
             for arg in get_args(model):
-                if arg is type(None):
-                    continue  # Skip NoneType
                 yield from self._model_flatten_map(arg, prefix)
         else:
             for attr, field in model.model_fields.items():
                 field_name = field.alias or attr
                 name = f"{prefix}{self.FLATTEN_PATH_SEP}{field_name}"
 
-                # Check if this is a union type field
-                if get_origin(field.annotation) in UNION_TYPES:
-                    union_args = get_args(field.annotation)
-                    has_none = type(None) in union_args
-                    non_none_args = [arg for arg in union_args if arg is not type(None)]
-
-                    # If it's an optional field (Union with None) and has a default value,
-                    # don't flatten it - treat it as a single optional field
-                    if has_none and field.default is not PydanticUndefined:
-                        yield field_name, name
-                        continue
-
-                    # For non-optional unions or unions without defaults,
-                    # check if any of the union args are pydantic models
-                    pydantic_args = [
-                        arg for arg in non_none_args if is_pydantic_model(arg)
-                    ]
-                    if pydantic_args:
-                        # This branch is unreachable because union fields with pydantic models
-                        # are flattened during earlier processing stages
-                        for arg in pydantic_args:  # pragma: no cover
-                            yield from self._model_flatten_map(
-                                arg, name
-                            )  # pragma: no cover
-                    else:
-                        # No pydantic models in union, treat as simple field
-                        yield field_name, name
-                # This else branch is unreachable because union fields are always processed above.
-                # Any field that reaches this point would have been handled by the union logic.
-                elif is_pydantic_model(field.annotation):  # pragma: no cover
-                    yield from self._model_flatten_map(field.annotation, name)  # type: ignore  # pragma: no cover
-                else:
-                    yield field_name, name
+                if get_origin(
+                    field.annotation
+                ) not in UNION_TYPES and is_pydantic_model(field.annotation):
+                    yield from self._model_flatten_map(field.annotation, name)  # type: ignore
+                yield field_name, name
 
     def _get_param_type(self, name: str, arg: inspect.Parameter) -> FuncParam:
         # _EMPTY = self.signature.empty
@@ -332,9 +302,9 @@ class ViewSignature:
 
         # 2) if param name is a part of the path parameter
         elif name in self.path_params_names:
-            assert (
-                default == self.signature.empty
-            ), f"'{name}' is a path param, default not allowed"
+            assert default == self.signature.empty, (
+                f"'{name}' is a path param, default not allowed"
+            )
             param_source = Path(...)
 
         # 3) if param is a collection, or annotation is part of pydantic model:
@@ -426,11 +396,11 @@ def detect_collection_fields(
                     found = False
                     # This for loop is unreachable in practice because union types with missing fields
                     # should be handled earlier in the validation process
-                    for arg in get_args(annotation_or_field):  # pragma: no cover
+                    for arg in get_args(annotation_or_field):
                         # This continue path is unreachable because NoneType handling is done earlier in union processing
-                        if arg is type(None):  # pragma: no cover
-                            continue  # Skip NoneType  # pragma: no cover
-                        if hasattr(arg, "model_fields"):  # pragma: no cover
+                        if arg is type(None):
+                            continue  # Skip NoneType
+                        if hasattr(arg, "model_fields"):
                             found_field = next(
                                 (
                                     a
@@ -445,10 +415,10 @@ def detect_collection_fields(
                                 break
                     # This error condition is unreachable because union fields are pre-validated
                     # and all union members should have compatible field structures
-                    if not found:  # pragma: no cover
-                        # No suitable field found in any union member, skip this path  # pragma: no cover
-                        annotation_or_field = None  # pragma: no cover
-                        break  # Break out of the attr loop  # pragma: no cover
+                    if not found:
+                        # No suitable field found in any union member, skip this path
+                        annotation_or_field = None
+                        break  # Break out of the attr loop
                 else:
                     annotation_or_field = next(
                         (
@@ -457,7 +427,7 @@ def detect_collection_fields(
                             if a.alias == attr
                         ),
                         annotation_or_field.model_fields.get(attr),
-                    )  # pragma: no cover
+                    )
 
                 annotation_or_field = getattr(
                     annotation_or_field, "outer_type_", annotation_or_field
@@ -465,13 +435,13 @@ def detect_collection_fields(
 
             # This condition is unreachable because union processing failures are handled above
             # and annotation_or_field should never be None at this point in normal operation
-            if annotation_or_field is None:  # pragma: no cover
-                continue  # pragma: no cover
+            if annotation_or_field is None:
+                continue
 
             # This condition is unreachable because annotation access is handled in the union processing
             # and should not require additional annotation unwrapping at this point
-            if hasattr(annotation_or_field, "annotation"):  # pragma: no cover
-                annotation_or_field = annotation_or_field.annotation  # pragma: no cover
+            if hasattr(annotation_or_field, "annotation"):
+                annotation_or_field = annotation_or_field.annotation
 
             if is_collection_type(annotation_or_field):
                 result.append(path[-1])

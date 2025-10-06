@@ -5,7 +5,6 @@ from pydantic import BaseModel
 
 from ninja import Form, NinjaAPI, Query, Router
 from ninja.errors import ConfigError
-from ninja.signature.details import ViewSignature
 from ninja.testing import TestClient
 
 
@@ -572,24 +571,3 @@ def test_invalid_body():
     assert response.json() == {
         "detail": "Cannot parse request body",
     }
-
-
-def test_force_line_233_coverage():
-    """Force line 233 to be executed by directly calling _model_flatten_map with Union[Model, None]."""
-
-    # Create a test function with Union[Model, None] parameter
-    def test_func(request, param: Union[SomeModel, None]):
-        return param
-
-    # Create ViewSignature which will call _model_flatten_map
-    vs = ViewSignature("/test", test_func)
-
-    # Force the _model_flatten_map to process Union[SomeModel, None] directly
-    # This should trigger line 233: if arg is type(None): continue
-    try:
-        result = list(vs._model_flatten_map(Union[SomeModel, None], "test_prefix"))
-        # The result should contain flattened fields from SomeModel but skip None
-        assert len(result) > 0  # Should have some fields from SomeModel
-    except Exception:
-        # Even if it fails, we want to ensure line 233 gets executed
-        pass
