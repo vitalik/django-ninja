@@ -57,7 +57,7 @@ def get_path_param_names(path: str) -> Set[str]:
 
 
 def is_async(callable: Callable[..., Any]) -> bool:
-    return asyncio.iscoroutinefunction(callable)
+    return inspect.iscoroutinefunction(callable)
 
 
 def has_kwargs(func: Callable[..., Any]) -> bool:
