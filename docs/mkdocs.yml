@@ -10,6 +10,8 @@ extra:
     property: G-0E3XZ663ZR
 extra_css:
   - extra.css
+extra_javascript:
+  - javascripts/ask-ai-button.js
 theme:
   name: material
   palette:

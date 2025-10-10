@@ -1,4 +1,6 @@
-# Demo
+# Ask AI
+
+Please feel free to share any questions or describe any problems you're encountering. Simply enter your text in the chat, and I'll be happy to assist you.
 
 <style>
 .serenity_chat__powered { display: none !important; }
