@@ -2,6 +2,15 @@
 
 <style>
 .serenity_chat__powered { display: none !important; }
+.md-sidebar--secondary { display: none !important; }
+.serenity_widget__container {
+    max-width: 1200px !important;
+}
+
+.serenity_app {
+    --serenity-answer-code-bg: #fafafa;
+    --serenity-widget-bg: #ffffff;
+}
 </style>
 
 <div id="serenity"></div>
