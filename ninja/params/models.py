@@ -65,6 +65,11 @@ class ParamModel(BaseModel, ABC):
             return cls()
 
         data = cls._map_data_paths(data)
+        # Convert defaultdict to dict for pydantic 2.12+ compatibility
+        # In pydantic 2.12+, accessing missing keys in defaultdict creates nested
+        # defaultdicts which then fail validation
+        if isinstance(data, defaultdict):
+            data = dict(data)
         return cls.model_validate(data, context={"request": request})
 
     @classmethod
