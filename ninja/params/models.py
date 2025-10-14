@@ -202,7 +202,7 @@ class _MultiPartBodyModel(BodyModel):
         return results
 
 
-class Param(FieldInfo):
+class Param(FieldInfo):  # type: ignore[misc]
     def __init__(
         self,
         default: Any,
@@ -265,35 +265,35 @@ class Param(FieldInfo):
         return cls.__name__.lower()
 
 
-class Path(Param):
+class Path(Param):  # type: ignore[misc]
     _model = PathModel
 
 
-class Query(Param):
+class Query(Param):  # type: ignore[misc]
     _model = QueryModel
 
 
-class Header(Param):
+class Header(Param):  # type: ignore[misc]
     _model = HeaderModel
 
 
-class Cookie(Param):
+class Cookie(Param):  # type: ignore[misc]
     _model = CookieModel
 
 
-class Body(Param):
+class Body(Param):  # type: ignore[misc]
     _model = BodyModel
 
 
-class Form(Param):
+class Form(Param):  # type: ignore[misc]
     _model = FormModel
 
 
-class File(Param):
+class File(Param):  # type: ignore[misc]
     _model = FileModel
 
 
-class _MultiPartBody(Param):
+class _MultiPartBody(Param):  # type: ignore[misc]
     _model = _MultiPartBodyModel
 
     @classmethod
