@@ -43,8 +43,8 @@ jobs:
             django-version: '<4.3'
           - python-version: '3.14'
             django-version: '<5.1'
-          - python-version: '3.14'
-            django-version: '<5.2'
+          # - python-version: '3.14'
+          #   django-version: '<5.2'
     
     steps:
       - uses: actions/checkout@v3
