@@ -16,20 +16,31 @@ jobs:
         exclude:
           - python-version: '3.7'
             django-version: '<5.1'
+          
           - python-version: '3.8'
             django-version: '<5.1'
+          
           - python-version: '3.9'
             django-version: '<5.1'
+          
           - python-version: '3.12'
             django-version: '<3.2'
           - python-version: '3.12'
             django-version: '<3.3'
+          
           - python-version: '3.13'
             django-version: '<3.2'
           - python-version: '3.13'
+            django-version: '<3.3'
+          
+          - python-version: '3.14'
+            django-version: '<3.2'
+          - python-version: '3.14'
             django-version: '<3.3'
           - python-version: '3.14'
             django-version: '<4.2'
+          - python-version: '3.14'
+            django-version: '<4.3'
     
     steps:
       - uses: actions/checkout@v3
