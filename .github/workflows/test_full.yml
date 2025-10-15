@@ -29,9 +29,8 @@ jobs:
           - python-version: '3.13'
             django-version: '<3.3'
           - python-version: '3.14'
-            django-version: '<3.2'
-          - python-version: '3.14'
-            django-version: '<3.3'
+            django-version: '<4.2'
+    
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python
