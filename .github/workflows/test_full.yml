@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
-        django-version: ['<3.2', '<3.3', '<4.2', '<4.3', '<5.1', '<5.2', '<5.3']
+        django-version: ['<3.3', '<4.2', '<4.3', '<5.1', '<5.2', '<5.3'] # '<3.2', 
         exclude:
           - python-version: '3.7'
             django-version: '<5.1'
@@ -41,6 +41,10 @@ jobs:
             django-version: '<4.2'
           - python-version: '3.14'
             django-version: '<4.3'
+          - python-version: '3.14'
+            django-version: '<5.1'
+          - python-version: '3.14'
+            django-version: '<5.2'
     
     steps:
       - uses: actions/checkout@v3
