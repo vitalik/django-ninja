@@ -99,6 +99,26 @@ class NextPrevPagination(PaginationBase):
         }
 
 
+class CustomItemsLimitOffsetPagination(LimitOffsetPagination):
+    """Minimal LimitOffsetPagination with custom items_attribute."""
+
+    items_attribute = "results"
+
+    class Output(Schema):
+        results: List[int]
+        count: int
+
+
+class CustomItemsPageNumberPagination(PageNumberPagination):
+    """Minimal PageNumberPagination with custom items_attribute."""
+
+    items_attribute = "results"
+
+    class Output(Schema):
+        results: List[int]
+        count: int
+
+
 @api.get("/items_1", response=List[int])
 @paginate  # WITHOUT brackets (should use default pagination)
 def items_1(request, **kwargs):
@@ -158,6 +178,18 @@ def items_9(request):
 @paginate(PageNumberPagination, page_size=10, max_page_size=20)
 def items_10(request):
     return ITEMS
+
+
+@api.get("/items_11", response=List[int])
+@paginate(CustomItemsLimitOffsetPagination)
+def items_11(request):
+    return list(range(100))
+
+
+@api.get("/items_12", response=List[int])
+@paginate(CustomItemsPageNumberPagination)
+def items_12(request):
+    return list(range(100))
 
 
 client = TestClient(api)
@@ -561,6 +593,16 @@ def test_11_max_limit_set_and_exceeded():
             }
         ]
     }
+
+
+def test_case11():
+    response = client.get("/items_11").json()
+    assert response == {"results": list(range(100)), "count": 100}
+
+
+def test_case12():
+    response = client.get("/items_12").json()
+    assert response == {"results": list(range(100)), "count": 100}
 
 
 def test_config_error_None():
