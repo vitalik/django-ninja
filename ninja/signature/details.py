@@ -224,7 +224,10 @@ class ViewSignature:
             args = get_args(annotation)
             if isinstance(args[-1], Param):
                 prev_default = default
-                annotation, default = args[0], args[-1]
+                if len(args) == 2:
+                    annotation, default = args
+                else:
+                    annotation, default = Annotated[*args[:-1]], args[-1]
                 if prev_default != self.signature.empty:
                     default.default = prev_default
 
