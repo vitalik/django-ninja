@@ -65,6 +65,29 @@ class AsyncNoOutputPagination(AsyncPaginationBase):
             return len(queryset)
 
 
+class AsyncNoPagination(AsyncPaginationBase):
+    """
+    Async pagination class that returns all records without slicing.
+    Does not define its own Input - uses empty PaginationBase.Input.
+    This tests the bug fix from https://github.com/vitalik/django-ninja/issues/1564
+    """
+
+    async def apaginate_queryset(
+        self, items, pagination: PaginationBase.Input, **params
+    ):
+        await asyncio.sleep(0)
+        return {
+            "count": await self._aitems_count(items),
+            "items": items,
+        }
+
+    def paginate_queryset(self, items, pagination: PaginationBase.Input, **params):
+        return {
+            "count": self._items_count(items),
+            "items": items,
+        }
+
+
 @pytest.mark.asyncio
 async def test_async_config_error():
     api = NinjaAPI()
@@ -178,3 +201,38 @@ async def test_test_async_pagination():
         "items": [{"title": "cat1"}, {"title": "cat2"}],
         "count": 2,
     }
+
+
+@pytest.mark.asyncio
+async def test_async_no_pagination_without_query_params():
+    """
+    Test that AsyncNoPagination works without any query parameters.
+    Tests the async branch of the bug fix from https://github.com/vitalik/django-ninja/issues/1564
+
+    AsyncNoPagination doesn't define any Input fields (uses empty PaginationBase.Input),
+    so it should NOT require any query parameters.
+    """
+    api = NinjaAPI()
+
+    @api.get("/items_no_pagination_async", response=List[int])
+    @paginate(AsyncNoPagination)
+    async def items_no_pagination_async(request):
+        await asyncio.sleep(0)
+        return ITEMS
+
+    client = TestAsyncClient(api)
+
+    response = await client.get("/items_no_pagination_async")
+    assert response.status_code == 200
+    result = response.json()
+    assert result == {"count": 100, "items": ITEMS}
+
+    # Check OpenAPI schema - should have no required parameters
+    schema = api.get_openapi_schema()["paths"]["/api/items_no_pagination_async"]["get"]
+    params = schema.get("parameters", [])
+
+    # If there are any parameters, they should all be optional
+    for param in params:
+        assert (
+            param.get("required", False) is False
+        ), f"Parameter {param['name']} should not be required"
