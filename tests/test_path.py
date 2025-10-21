@@ -33,6 +33,17 @@ response_not_valid_int = {
     ]
 }
 
+response_not_valid_custom = {
+    "detail": [
+        {
+            "ctx": {"error": "Input should pass this custom validator"},
+            "loc": ["path", "item_id"],
+            "msg": "Value error, Input should pass this custom validator",
+            "type": "value_error",
+        }
+    ]
+}
+
 response_not_valid_int_float = {
     "detail": [
         {
@@ -210,6 +221,9 @@ response_not_valid_pattern = {
         ("/path/bool/true", 200, True),
         ("/path/bool/False", 200, False),
         ("/path/bool/false", 200, False),
+        ("/path/param_ex/True", 422, response_not_valid_int),
+        ("/path/param_ex/0", 422, response_not_valid_custom),
+        ("/path/param_ex/42", 200, 42),
         ("/path/param/foo", 200, "foo"),
         ("/path/param-required/foo", 200, "foo"),
         ("/path/param-minlength/foo", 200, "foo"),

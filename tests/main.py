@@ -1,9 +1,10 @@
-from typing import List, Optional
+from typing import Annotated, List, Optional
 from uuid import UUID
 
+import pydantic
 from django.urls import register_converter
 
-from ninja import Field, Path, Query, Router, Schema
+from ninja import Field, P, Path, PathEx, Query, Router, Schema
 
 router = Router()
 
@@ -35,6 +36,29 @@ def get_float_id(request, item_id: float):
 
 @router.get("/path/bool/{item_id}")
 def get_bool_id(request, item_id: bool):
+    return item_id
+
+
+def custom_validator(value: int) -> int:
+    if value != 42:
+        raise ValueError("Input should pass this custom validator")
+    return value
+
+
+CustomValidatedInt = Annotated[
+    int,
+    pydantic.AfterValidator(custom_validator),
+    pydantic.WithJsonSchema({
+        "type": "int",
+        "example": "42",
+    }),
+]
+
+
+@router.get("/path/param_ex/{item_id}")
+def get_path_param_ex_id(
+    request, item_id: PathEx[CustomValidatedInt, P(description="path_ex description")]
+):
     return item_id
 
 
