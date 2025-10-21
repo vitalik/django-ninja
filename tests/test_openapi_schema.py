@@ -1,13 +1,24 @@
 import sys
-from typing import Any, List, Union
+from typing import Annotated, Any, List, Union
 from unittest.mock import Mock
 
+import pydantic
 import pytest
 from django.contrib.admin.views.decorators import staff_member_required
 from django.test import Client, override_settings
-from pydantic import ConfigDict
 
-from ninja import Body, Field, File, Form, NinjaAPI, Query, Schema, UploadedFile
+from ninja import (
+    Body,
+    Field,
+    File,
+    Form,
+    NinjaAPI,
+    P,
+    PathEx,
+    Query,
+    Schema,
+    UploadedFile,
+)
 from ninja.openapi.urls import get_openapi_urls
 from ninja.pagination import PaginationBase, paginate
 from ninja.renderers import JSONRenderer
@@ -28,13 +39,22 @@ class TypeB(Schema):
     b: str
 
 
+AnnotatedStr = Annotated[
+    str,
+    pydantic.WithJsonSchema({
+        "type": "string",
+        "example": "example_string",
+    }),
+]
+
+
 def to_camel(string: str) -> str:
     words = string.split("_")
     return words[0].lower() + "".join(word.capitalize() for word in words[1:])
 
 
 class Response(Schema):
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+    model_config = pydantic.ConfigDict(alias_generator=to_camel, populate_by_name=True)
     i: int
     f: float = Field(..., title="f title", description="f desc")
 
@@ -64,8 +84,16 @@ def method_body_schema(request, data: Payload):
     return dict(i=data.i, f=data.f)
 
 
-@api.get("/test-path/{int:i}/{f}", response=Response)
-def method_path(request, i: int, f: float):
+@api.get("/test-path/{int:i}/{f}/{path_ex}", response=Response)
+def method_path(
+    request,
+    i: int,
+    f: float,
+    path_ex: PathEx[
+        AnnotatedStr,
+        P(description="path_ex description"),
+    ],
+):
     return dict(i=i, f=f)
 
 
@@ -403,7 +431,7 @@ def test_schema_body_schema(schema):
 
 
 def test_schema_path(schema):
-    method_list = schema["paths"]["/api/test-path/{i}/{f}"]["get"]
+    method_list = schema["paths"]["/api/test-path/{i}/{f}/{path_ex}"]["get"]
 
     assert "requestBody" not in method_list
 
@@ -419,6 +447,19 @@ def test_schema_path(schema):
             "name": "f",
             "schema": {"title": "F", "type": "number"},
             "required": True,
+        },
+        {
+            "in": "path",
+            "name": "path_ex",
+            "schema": {
+                "title": "Path Ex",
+                "type": "string",
+                "description": "path_ex description",
+                "example": "example_string",
+            },
+            "required": True,
+            "example": "example_string",
+            "description": "path_ex description",
         },
     ]
 
