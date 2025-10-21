@@ -10,6 +10,7 @@ __all__ = [
     "is_debug_server",
     "normalize_path",
     "contribute_operation_callback",
+    "ignore_args",
 ]
 
 
@@ -71,3 +72,9 @@ def contribute_operation_args(
     if not hasattr(func, "_ninja_contribute_args"):
         func._ninja_contribute_args = []  # type: ignore
     func._ninja_contribute_args.append((arg_name, arg_type, arg_source))  # type: ignore
+
+
+def ignore_args(func: Callable[..., Any], *arg_names: str) -> None:
+    if not hasattr(func, "_ninja_ignore_args"):
+        func._ninja_ignore_args = []  # type: ignore
+    func._ninja_ignore_args.extend(arg_names)  # type: ignore
