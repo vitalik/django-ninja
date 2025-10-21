@@ -43,6 +43,7 @@ AnnotatedStr = Annotated[
     str,
     pydantic.WithJsonSchema({
         "type": "string",
+        "format": "custom-format",
         "example": "example_string",
     }),
 ]
@@ -454,6 +455,7 @@ def test_schema_path(schema):
             "schema": {
                 "title": "Path Ex",
                 "type": "string",
+                "format": "custom-format",
                 "description": "path_ex description",
                 "example": "example_string",
             },
