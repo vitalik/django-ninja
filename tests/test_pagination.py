@@ -117,6 +117,18 @@ class CustomItemsPageNumberPagination(PageNumberPagination):
     class Output(Schema):
         results: List[int]
         count: int
+class NoPagination(PaginationBase):
+    """
+    Pagination class that returns all records without slicing.
+    Does not define its own Input - uses empty PaginationBase.Input.
+    This reproduces bug from https://github.com/vitalik/django-ninja/issues/1564
+    """
+
+    def paginate_queryset(self, items, pagination: PaginationBase.Input, **params):
+        return {
+            "count": self._items_count(items),
+            "items": items,
+        }
 
 
 @api.get("/items_1", response=List[int])
@@ -190,6 +202,12 @@ def items_11(request):
 @paginate(CustomItemsPageNumberPagination)
 def items_12(request):
     return list(range(100))
+
+
+@api.get("/items_no_pagination", response=List[int])
+@paginate(NoPagination)
+def items_no_pagination(request):
+    return ITEMS
 
 
 client = TestClient(api)
@@ -635,3 +653,30 @@ def test_pagination_works_with_unnamed_classes():
         PydanticSchemaGenerationError
     ):  # It does fail after we passed the logic that we are testing
         make_response_paginated(LimitOffsetPagination, operation)
+
+
+def test_no_pagination_without_query_params():
+    """
+    Test that NoPagination works without any query parameters.
+    Reproduces bug from https://github.com/vitalik/django-ninja/issues/1564
+
+    NoPagination doesn't define any Input fields (uses empty PaginationBase.Input),
+    so it should NOT require any query parameters.
+    """
+    response = client.get("/items_no_pagination")
+    if response.status_code != 200:
+        print(f"Status: {response.status_code}")
+        print(f"Response: {response.json()}")
+    assert response.status_code == 200
+    result = response.json()
+    assert result == {"count": 100, "items": ITEMS}
+
+    # Check OpenAPI schema - should have no required parameters
+    schema = api.get_openapi_schema()["paths"]["/api/items_no_pagination"]["get"]
+    params = schema.get("parameters", [])
+
+    # If there are any parameters, they should all be optional
+    for param in params:
+        assert (
+            param.get("required", False) is False
+        ), f"Parameter {param['name']} should not be required"
