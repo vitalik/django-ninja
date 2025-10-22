@@ -1,6 +1,7 @@
 import sys
-from typing import Annotated, Any, List, Union
+from typing import Any, List, Union
 from unittest.mock import Mock
+from typing_extensions import Annotated
 
 import pydantic
 import pytest

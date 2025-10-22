@@ -1,6 +1,7 @@
 import inspect
 import warnings
 from collections import defaultdict, namedtuple
+from sys import version_info
 from typing import Any, Callable, Dict, Generator, List, Optional, Tuple
 
 import pydantic
@@ -8,7 +9,6 @@ from django.http import HttpResponse
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 from typing_extensions import Annotated, get_args, get_origin
-from sys import version_info
 
 from ninja import UploadedFile
 from ninja.compatibility.util import UNION_TYPES

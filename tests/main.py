@@ -1,8 +1,9 @@
-from typing import Annotated, List, Optional
+from typing import List, Optional
 from uuid import UUID
 
 import pydantic
 from django.urls import register_converter
+from typing_extensions import Annotated
 
 from ninja import Field, P, Path, PathEx, Query, Router, Schema
 
