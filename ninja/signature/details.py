@@ -8,6 +8,7 @@ from django.http import HttpResponse
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 from typing_extensions import Annotated, get_args, get_origin
+from sys import version_info
 
 from ninja import UploadedFile
 from ninja.compatibility.util import UNION_TYPES
@@ -220,7 +221,10 @@ class ViewSignature:
         annotation = arg.annotation
         default = arg.default
 
-        if get_origin(annotation) is Annotated:
+        # TODO: Remove version check once support for <=3.8 is dropped.
+        # Annotated[] is only available in 3.9+ per
+        # https://docs.python.org/3/library/typing.html#typing.Annotated
+        if get_origin(annotation) is Annotated and version_info >= (3, 9):
             args = get_args(annotation)
             if isinstance(args[-1], Param):
                 prev_default = default
