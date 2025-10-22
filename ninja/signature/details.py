@@ -227,7 +227,11 @@ class ViewSignature:
                 if len(args) == 2:
                     annotation, default = args
                 else:
-                    annotation, default = Annotated[*args[:-1]], args[-1]
+                    # NOTE: Annotated[args[:-1]] seems to have the same runtime
+                    # behavior as Annotated[*args[:-1]], but the latter is
+                    # invalid in Python < 3.11 because star expressions
+                    # were not allowed in index expressions.
+                    annotation, default = Annotated[args[:-1]], args[-1]
                 if prev_default != self.signature.empty:
                     default.default = prev_default
 
