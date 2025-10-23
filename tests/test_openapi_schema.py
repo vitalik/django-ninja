@@ -43,13 +43,11 @@ class TypeB(Schema):
 
 AnnotatedStr = Annotated[
     str,
-    pydantic.WithJsonSchema(
-        {
-            "type": "string",
-            "format": "custom-format",
-            "example": "example_string",
-        }
-    ),
+    pydantic.WithJsonSchema({
+        "type": "string",
+        "format": "custom-format",
+        "example": "example_string",
+    }),
 ]
 
 
