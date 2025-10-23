@@ -221,21 +221,26 @@ class ViewSignature:
         annotation = arg.annotation
         default = arg.default
 
-        # TODO: Remove version check once support for <=3.8 is dropped.
-        # Annotated[] is only available in 3.9+ per
-        # https://docs.python.org/3/library/typing.html#typing.Annotated
-        if get_origin(annotation) is Annotated and version_info >= (3, 9):
+        if get_origin(annotation) is Annotated:
             args = get_args(annotation)
             if isinstance(args[-1], Param):
                 prev_default = default
                 if len(args) == 2:
                     annotation, default = args
                 else:
-                    # NOTE: Annotated[args[:-1]] seems to have the same runtime
-                    # behavior as Annotated[*args[:-1]], but the latter is
-                    # invalid in Python < 3.11 because star expressions
-                    # were not allowed in index expressions.
-                    annotation, default = Annotated[args[:-1]], args[-1]
+                    # TODO: Remove version check once support for <=3.8 is dropped.
+                    # Annotated[] is only available at runtime in 3.9+ per
+                    # https://docs.python.org/3/library/typing.html#typing.Annotated
+                    if version_info >= (3, 9):
+                        # NOTE: Annotated[args[:-1]] seems to have the same runtime
+                        # behavior as Annotated[*args[:-1]], but the latter is
+                        # invalid in Python < 3.11 because star expressions
+                        # were not allowed in index expressions.
+                        annotation, default = Annotated[args[:-1]], args[-1]
+                    else:
+                        raise NotImplementedError(
+                            "This definition requires Python version 3.9+"
+                        )
                 if prev_default != self.signature.empty:
                     default.default = prev_default
 

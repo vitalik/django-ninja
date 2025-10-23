@@ -1,3 +1,5 @@
+from sys import version_info
+
 import pytest
 from main import router
 
@@ -221,9 +223,6 @@ response_not_valid_pattern = {
         ("/path/bool/true", 200, True),
         ("/path/bool/False", 200, False),
         ("/path/bool/false", 200, False),
-        ("/path/param_ex/True", 422, response_not_valid_int),
-        ("/path/param_ex/0", 422, response_not_valid_custom),
-        ("/path/param_ex/42", 200, 42),
         ("/path/param/foo", 200, "foo"),
         ("/path/param-required/foo", 200, "foo"),
         ("/path/param-minlength/foo", 200, "foo"),
@@ -282,6 +281,25 @@ response_not_valid_pattern = {
     ],
 )
 def test_get_path(path, expected_status, expected_response):
+    response = client.get(path)
+    print(path, response.json())
+    assert response.status_code == expected_status
+    assert response.json() == expected_response
+
+
+@pytest.mark.skipif(
+    version_info < (3, 9),
+    reason="requires py3.9+ for Annotated[] at the route definition site",
+)
+@pytest.mark.parametrize(
+    "path,expected_status,expected_response",
+    [
+        ("/path/param_ex/True", 422, response_not_valid_int),
+        ("/path/param_ex/0", 422, response_not_valid_custom),
+        ("/path/param_ex/42", 200, 42),
+    ],
+)
+def test_get_pathex(path, expected_status, expected_response):
     response = client.get(path)
     print(path, response.json())
     assert response.status_code == expected_status

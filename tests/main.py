@@ -1,7 +1,9 @@
+from sys import version_info
 from typing import List, Optional
 from uuid import UUID
 
 import pydantic
+import pytest
 from django.urls import register_converter
 from typing_extensions import Annotated
 
@@ -55,12 +57,29 @@ CustomValidatedInt = Annotated[
     }),
 ]
 
+# TODO: Remove this condition once support for <= 3.8 is dropped
+if version_info >= (3, 9):
 
-@router.get("/path/param_ex/{item_id}")
-def get_path_param_ex_id(
-    request, item_id: PathEx[CustomValidatedInt, P(description="path_ex description")]
-):
-    return item_id
+    @router.get("/path/param_ex/{item_id}")
+    def get_path_param_ex_id(
+        request,
+        item_id: PathEx[CustomValidatedInt, P(description="path_ex description")],
+    ):
+        return item_id
+
+else:
+
+    def test_annotated_path_ex_unsupported():
+        with pytest.raises(NotImplementedError, match="3.9+"):
+
+            @router.get("/path/param_ex/{item_id}")
+            def get_path_param_ex_id(
+                request,
+                item_id: PathEx[
+                    CustomValidatedInt, P(description="path_ex description")
+                ],
+            ):
+                return item_id
 
 
 @router.get("/path/param/{item_id}")

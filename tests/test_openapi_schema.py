@@ -1,12 +1,13 @@
 import sys
+from sys import version_info
 from typing import Any, List, Union
 from unittest.mock import Mock
-from typing_extensions import Annotated
 
 import pydantic
 import pytest
 from django.contrib.admin.views.decorators import staff_member_required
 from django.test import Client, override_settings
+from typing_extensions import Annotated
 
 from ninja import (
     Body,
@@ -42,11 +43,13 @@ class TypeB(Schema):
 
 AnnotatedStr = Annotated[
     str,
-    pydantic.WithJsonSchema({
-        "type": "string",
-        "format": "custom-format",
-        "example": "example_string",
-    }),
+    pydantic.WithJsonSchema(
+        {
+            "type": "string",
+            "format": "custom-format",
+            "example": "example_string",
+        }
+    ),
 ]
 
 
@@ -86,17 +89,41 @@ def method_body_schema(request, data: Payload):
     return dict(i=data.i, f=data.f)
 
 
-@api.get("/test-path/{int:i}/{f}/{path_ex}", response=Response)
+@api.get("/test-path/{int:i}/{f}", response=Response)
 def method_path(
     request,
     i: int,
     f: float,
-    path_ex: PathEx[
-        AnnotatedStr,
-        P(description="path_ex description"),
-    ],
 ):
     return dict(i=i, f=f)
+
+
+# This definition is only possible in Python 3.9+
+# TODO: Drop this condition once support for <= 3.8 is dropped
+if version_info >= (3, 9):
+
+    @api.get("/test-pathex/{path_ex}", response=AnnotatedStr)
+    def method_pathex(
+        request,
+        path_ex: PathEx[
+            AnnotatedStr,
+            P(description="path_ex description"),
+        ],
+    ):
+        return path_ex
+
+else:
+    with pytest.raises(NotImplementedError, match="3.9+"):
+
+        @api.get("/test-pathex/{path_ex}", response=AnnotatedStr)
+        def method_pathex(
+            request,
+            path_ex: PathEx[
+                AnnotatedStr,
+                P(description="path_ex description"),
+            ],
+        ):
+            return path_ex
 
 
 @api.post("/test-form", response=Response)
@@ -433,7 +460,7 @@ def test_schema_body_schema(schema):
 
 
 def test_schema_path(schema):
-    method_list = schema["paths"]["/api/test-path/{i}/{f}/{path_ex}"]["get"]
+    method_list = schema["paths"]["/api/test-path/{i}/{f}"]["get"]
 
     assert "requestBody" not in method_list
 
@@ -450,6 +477,30 @@ def test_schema_path(schema):
             "schema": {"title": "F", "type": "number"},
             "required": True,
         },
+    ]
+
+    assert method_list["responses"] == {
+        200: {
+            "content": {
+                "application/json": {
+                    "schema": {"$ref": "#/components/schemas/Response"},
+                },
+            },
+            "description": "OK",
+        }
+    }
+
+
+@pytest.mark.skipif(
+    version_info < (3, 9),
+    reason="requires py3.9+ for Annotated[] at the route definition site",
+)
+def test_schema_pathex(schema):
+    method_list = schema["paths"]["/api/test-pathex/{path_ex}"]["get"]
+
+    assert "requestBody" not in method_list
+
+    assert method_list["parameters"] == [
         {
             "in": "path",
             "name": "path_ex",
@@ -470,7 +521,12 @@ def test_schema_path(schema):
         200: {
             "content": {
                 "application/json": {
-                    "schema": {"$ref": "#/components/schemas/Response"},
+                    "schema": {
+                        "example": "example_string",
+                        "format": "custom-format",
+                        "title": "Response",
+                        "type": "string",
+                    },
                 },
             },
             "description": "OK",
@@ -650,7 +706,7 @@ def test_schema_title_description(schema):
                 "schema": {
                     "properties": {
                         "file": {
-                            "description": "file " "param " "desc",
+                            "description": "file param desc",
                             "format": "binary",
                             "title": "File",
                             "type": "string",
