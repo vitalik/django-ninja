@@ -237,7 +237,7 @@ class ViewSignature:
                         # invalid in Python < 3.11 because star expressions
                         # were not allowed in index expressions.
                         annotation, default = Annotated[args[:-1]], args[-1]
-                    else: # pragma: no cover -- requires specific Python versions
+                    else:  # pragma: no cover -- requires specific Python versions
                         raise NotImplementedError(
                             "This definition requires Python version 3.9+"
                         )
