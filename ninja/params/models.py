@@ -65,11 +65,6 @@ class ParamModel(BaseModel, ABC):
             return cls()
 
         data = cls._map_data_paths(data)
-        # Convert defaultdict to dict for pydantic 2.12+ compatibility
-        # In pydantic 2.12+, accessing missing keys in defaultdict creates nested
-        # defaultdicts which then fail validation
-        if isinstance(data, defaultdict):
-            data = dict(data)
         return cls.model_validate(data, context={"request": request})
 
     @classmethod
@@ -84,8 +79,7 @@ class ParamModel(BaseModel, ABC):
                 cls._map_data_path(mapped_data, data[k], flatten_map[k])
             else:
                 cls._map_data_path(mapped_data, None, flatten_map[k])
-
-        return mapped_data
+        return cls._convert_nested_defaultdicts(mapped_data)
 
     @classmethod
     def _map_data_path(cls, data: DictStrAny, value: Any, path: Tuple) -> None:
@@ -94,6 +88,22 @@ class ParamModel(BaseModel, ABC):
                 data[path[0]] = value
         else:
             cls._map_data_path(data[path[0]], value, path[1:])
+
+    @classmethod
+    def _convert_nested_defaultdicts(cls, value: Any) -> Any:
+        if isinstance(value, defaultdict):
+            return {
+                key: cls._convert_nested_defaultdicts(item)
+                for key, item in value.items()
+            }
+        if isinstance(value, list):
+            return [cls._convert_nested_defaultdicts(item) for item in value]
+        if isinstance(value, dict):
+            return {
+                key: cls._convert_nested_defaultdicts(item)
+                for key, item in value.items()
+            }
+        return value
 
 
 class QueryModel(ParamModel):
