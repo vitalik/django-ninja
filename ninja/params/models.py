@@ -91,18 +91,13 @@ class ParamModel(BaseModel, ABC):
 
     @classmethod
     def _convert_nested_defaultdicts(cls, value: Any) -> Any:
-        if isinstance(value, defaultdict):
+        if isinstance(value, (defaultdict, dict)):
             return {
                 key: cls._convert_nested_defaultdicts(item)
                 for key, item in value.items()
             }
         if isinstance(value, list):
             return [cls._convert_nested_defaultdicts(item) for item in value]
-        if isinstance(value, dict):
-            return {
-                key: cls._convert_nested_defaultdicts(item)
-                for key, item in value.items()
-            }
         return value
 
 
