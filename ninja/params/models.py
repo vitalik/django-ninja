@@ -79,7 +79,7 @@ class ParamModel(BaseModel, ABC):
                 cls._map_data_path(mapped_data, data[k], flatten_map[k])
             else:
                 cls._map_data_path(mapped_data, None, flatten_map[k])
-        return cls._convert_nested_defaultdicts(mapped_data)
+        return cls._convert_nested_defaultdicts(mapped_data)  # type: ignore[no-any-return]
 
     @classmethod
     def _map_data_path(cls, data: DictStrAny, value: Any, path: Tuple) -> None:
