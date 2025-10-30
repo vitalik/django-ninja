@@ -61,7 +61,7 @@ def is_async(callable: Callable[..., Any]) -> bool:
     if sys.version_info >= (3, 12):
         return inspect.iscoroutinefunction(callable)
     else:
-        return asyncio.iscoroutinefunction(callable)
+        return asyncio.iscoroutinefunction(callable)  # pragma: no cover
 
 
 def has_kwargs(func: Callable[..., Any]) -> bool:
