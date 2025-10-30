@@ -1,0 +1,161 @@
+name: Close Old Issues
+
+on:
+  workflow_dispatch:
+    inputs:
+      days_old:
+        description: 'Close issues older than N days'
+        required: true
+        default: '365'
+        type: number
+      dry_run:
+        description: 'Dry run mode (preview only, do not close)'
+        required: true
+        default: true
+        type: boolean
+      comment_on_close:
+        description: 'Add comment when closing issues'
+        required: true
+        default: true
+        type: boolean
+
+jobs:
+  close-old-issues:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+      - name: Close or list old issues
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const daysOld = ${{ inputs.days_old }};
+            const dryRun = ${{ inputs.dry_run }};
+            const addComment = ${{ inputs.comment_on_close }};
+            const cutoffDate = new Date();
+            cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+
+            console.log(`Looking for issues older than ${daysOld} days (before ${cutoffDate.toISOString()})`);
+            console.log(`Dry run mode: ${dryRun ? 'YES (no changes will be made)' : 'NO (issues will be closed)'}`);
+            console.log('---');
+
+            let page = 1;
+            let issuesClosed = 0;
+            let issuesToClose = [];
+
+            while (true) {
+              const issues = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                sort: 'created',
+                direction: 'asc',
+                per_page: 100,
+                page: page
+              });
+
+              if (issues.data.length === 0) {
+                break;
+              }
+
+              for (const issue of issues.data) {
+                // Skip pull requests
+                if (issue.pull_request) {
+                  continue;
+                }
+
+                const createdAt = new Date(issue.created_at);
+                const updatedAt = new Date(issue.updated_at);
+
+                // Check if issue is old enough based on last update
+                if (updatedAt < cutoffDate) {
+                  const daysOldCalculated = Math.floor((Date.now() - updatedAt.getTime()) / (1000 * 60 * 60 * 24));
+
+                  issuesToClose.push({
+                    number: issue.number,
+                    title: issue.title,
+                    created_at: createdAt.toISOString().split('T')[0],
+                    updated_at: updatedAt.toISOString().split('T')[0],
+                    days_old: daysOldCalculated,
+                    url: issue.html_url
+                  });
+                }
+              }
+
+              page++;
+            }
+
+            console.log(`\nFound ${issuesToClose.length} issue(s) to close:\n`);
+
+            for (const issue of issuesToClose) {
+              console.log(`#${issue.number}: ${issue.title}`);
+              console.log(`  Created: ${issue.created_at}`);
+              console.log(`  Last updated: ${issue.updated_at} (${issue.days_old} days ago)`);
+              console.log(`  URL: ${issue.url}`);
+              console.log('');
+
+              if (!dryRun) {
+                try {
+                  // Add a comment before closing (if enabled)
+                  if (addComment) {
+                    await github.rest.issues.createComment({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      issue_number: issue.number,
+                      body: `This issue has been automatically closed due to inactivity (no updates for ${issue.days_old} days). If you believe this issue is still relevant, please feel free to reopen it or create a new issue.`
+                    });
+                  }
+
+                  // Close the issue
+                  await github.rest.issues.update({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    state: 'closed',
+                    state_reason: 'not_planned'
+                  });
+
+                  issuesClosed++;
+                  console.log(`  ✓ Closed issue #${issue.number}`);
+                } catch (error) {
+                  console.error(`  ✗ Failed to close issue #${issue.number}: ${error.message}`);
+                }
+              }
+            }
+
+            console.log('\n---');
+            if (dryRun) {
+              console.log(`DRY RUN: Would close ${issuesToClose.length} issue(s)`);
+              console.log('To actually close these issues, run this workflow again with dry_run set to false');
+            } else {
+              console.log(`Successfully closed ${issuesClosed} out of ${issuesToClose.length} issue(s)`);
+            }
+
+            // Set output for summary
+            core.summary
+              .addHeading(dryRun ? 'Dry Run Results' : 'Close Old Issues Results')
+              .addRaw(`**Mode:** ${dryRun ? '🔍 Dry Run (Preview Only)' : '✅ Live Run'}\n`)
+              .addRaw(`**Cutoff Date:** Issues last updated before ${cutoffDate.toISOString().split('T')[0]}\n`)
+              .addRaw(`**Days Old Threshold:** ${daysOld} days\n`)
+              .addRaw(`**Issues ${dryRun ? 'Found' : 'Closed'}:** ${dryRun ? issuesToClose.length : issuesClosed}\n\n`);
+
+            if (issuesToClose.length > 0) {
+              core.summary.addHeading('Issues', 3);
+              const tableData = issuesToClose.map(issue => [
+                `#${issue.number}`,
+                issue.title.substring(0, 80) + (issue.title.length > 80 ? '...' : ''),
+                issue.updated_at,
+                `${issue.days_old} days`,
+                `[View](${issue.url})`
+              ]);
+
+              core.summary.addTable([
+                ['Issue', 'Title', 'Last Updated', 'Age', 'Link'],
+                ...tableData
+              ]);
+            } else {
+              core.summary.addRaw('\nNo issues found matching the criteria.');
+            }
+
+            await core.summary.write();

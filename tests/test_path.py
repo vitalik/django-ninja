@@ -1,3 +1,5 @@
+from sys import version_info
+
 import pytest
 from main import router
 
@@ -29,6 +31,17 @@ response_not_valid_int = {
             "type": "int_parsing",
             "loc": ["path", "item_id"],
             "msg": "Input should be a valid integer, unable to parse string as an integer",
+        }
+    ]
+}
+
+response_not_valid_custom = {
+    "detail": [
+        {
+            "ctx": {"error": "Input should pass this custom validator"},
+            "loc": ["path", "item_id"],
+            "msg": "Value error, Input should pass this custom validator",
+            "type": "value_error",
         }
     ]
 }
@@ -268,6 +281,25 @@ response_not_valid_pattern = {
     ],
 )
 def test_get_path(path, expected_status, expected_response):
+    response = client.get(path)
+    print(path, response.json())
+    assert response.status_code == expected_status
+    assert response.json() == expected_response
+
+
+@pytest.mark.skipif(
+    version_info < (3, 9),
+    reason="requires py3.9+ for Annotated[] at the route definition site",
+)
+@pytest.mark.parametrize(
+    "path,expected_status,expected_response",
+    [
+        ("/path/param_ex/True", 422, response_not_valid_int),
+        ("/path/param_ex/0", 422, response_not_valid_custom),
+        ("/path/param_ex/42", 200, 42),
+    ],
+)
+def test_get_pathex(path, expected_status, expected_response):
     response = client.get(path)
     print(path, response.json())
     assert response.status_code == expected_status

@@ -42,6 +42,7 @@ class PaginationBase(ABC):
         self,
         queryset: QuerySet,
         pagination: Any,
+        request: HttpRequest,
         **params: Any,
     ) -> Any:
         pass  # pragma: no cover
@@ -64,6 +65,7 @@ class AsyncPaginationBase(PaginationBase):
         self,
         queryset: QuerySet,
         pagination: Any,
+        request: HttpRequest,
         **params: Any,
     ) -> Any:
         pass  # pragma: no cover
@@ -92,6 +94,7 @@ class LimitOffsetPagination(AsyncPaginationBase):
         self,
         queryset: QuerySet,
         pagination: Input,
+        request: HttpRequest,
         **params: Any,
     ) -> Any:
         offset = pagination.offset
@@ -105,6 +108,7 @@ class LimitOffsetPagination(AsyncPaginationBase):
         self,
         queryset: QuerySet,
         pagination: Input,
+        request: HttpRequest,
         **params: Any,
     ) -> Any:
         offset = pagination.offset
@@ -144,6 +148,7 @@ class PageNumberPagination(AsyncPaginationBase):
         self,
         queryset: QuerySet,
         pagination: Input,
+        request: HttpRequest,
         **params: Any,
     ) -> Any:
         page_size = self._get_page_size(pagination.page_size)
@@ -157,6 +162,7 @@ class PageNumberPagination(AsyncPaginationBase):
         self,
         queryset: QuerySet,
         pagination: Input,
+        request: HttpRequest,
         **params: Any,
     ) -> Any:
         page_size = self._get_page_size(pagination.page_size)
@@ -214,13 +220,20 @@ def _inject_pagination(
     **paginator_params: Any,
 ) -> Callable[..., Any]:
     paginator = paginator_class(**paginator_params)
+
+    # Check if Input schema has any fields
+    # If it has no fields, we should make it optional to support Pydantic 2.12+
+    has_input_fields = bool(paginator.Input.model_fields)
+
     if is_async_callable(func):
         if not hasattr(paginator, "apaginate_queryset"):
             raise ConfigError("Pagination class not configured for async requests")
 
         @wraps(func)
         async def view_with_pagination(request: HttpRequest, **kwargs: Any) -> Any:
-            pagination_params = kwargs.pop("ninja_pagination")
+            pagination_params = kwargs.pop("ninja_pagination", None)
+            if pagination_params is None:
+                pagination_params = paginator.Input()
             if paginator.pass_parameter:
                 kwargs[paginator.pass_parameter] = pagination_params
 
@@ -245,7 +258,9 @@ def _inject_pagination(
 
         @wraps(func)
         def view_with_pagination(request: HttpRequest, **kwargs: Any) -> Any:
-            pagination_params = kwargs.pop("ninja_pagination")
+            pagination_params = kwargs.pop("ninja_pagination", None)
+            if pagination_params is None:
+                pagination_params = paginator.Input()
             if paginator.pass_parameter:
                 kwargs[paginator.pass_parameter] = pagination_params
 
@@ -261,12 +276,15 @@ def _inject_pagination(
                 # ^ forcing queryset evaluation #TODO: check why pydantic did not do it here
             return result
 
-    contribute_operation_args(
-        view_with_pagination,
-        "ninja_pagination",
-        paginator.Input,
-        paginator.InputSource,
-    )
+    # Only contribute args if Input has fields
+    # For empty Input schemas, don't add the parameter at all to support Pydantic 2.12+
+    if has_input_fields:
+        contribute_operation_args(
+            view_with_pagination,
+            "ninja_pagination",
+            paginator.Input,
+            paginator.InputSource,
+        )
 
     if paginator.Output:  # type: ignore
         contribute_operation_callback(
