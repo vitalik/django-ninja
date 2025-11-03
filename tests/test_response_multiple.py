@@ -4,11 +4,33 @@ import pytest
 from pydantic import ValidationError
 
 from ninja import NinjaAPI, Schema
-from ninja.errors import ConfigError
+from ninja.errors import ConfigError, HttpError
 from ninja.responses import codes_2xx, codes_3xx
 from ninja.testing import TestClient
 
 api = NinjaAPI()
+
+
+class RequestErrorResponse(Schema):
+    detail: str
+    reason: list[str]
+
+
+class ServerErrorResponse(Schema):
+    detail: str
+
+
+class BasicHttpError(HttpError): ...
+
+
+class RequestError(HttpError[RequestErrorResponse]):
+    status_code = 400
+    message = "Request Error"
+
+
+class ServerError(HttpError[ServerErrorResponse]):
+    status_code = 500
+    message = "Server Error"
 
 
 @api.get("/check_int", response={200: int})
@@ -43,6 +65,35 @@ def check_no_content(request, return_code: bool):
     response={codes_2xx: int, codes_3xx: str, ...: float},
 )
 def check_multiple_codes(request, code: int):
+    return code, "1"
+
+
+@api.get(
+    "/excs_in_responses",
+    response={codes_2xx: str, 400: RequestError, 404: BasicHttpError, 500: ServerError},
+)
+def excs_in_responses(request, code: int):
+    if code == 400:
+        raise RequestError
+    if code == 500:
+        raise ServerError
+    return code, "1"
+
+
+@api.get(
+    "/errors_in_docstring",
+    # response={400: RequestError, 500: ServerError},  # <-- not needed
+)
+def errors_in_docstring(request, code: int):
+    """
+    Raises:
+        RequestError: you made a mistake in the request
+        ServerError: unexpected error on our server
+    """
+    if code == 400:
+        raise RequestError
+    if code == 500:
+        raise ServerError
     return code, "1"
 
 
@@ -87,6 +138,11 @@ def check_union(request, q: int):
 client = TestClient(api)
 
 
+@pytest.fixture
+def schema():
+    return api.get_openapi_schema()
+
+
 @pytest.mark.parametrize(
     "path,expected_status,expected_response",
     [
@@ -113,7 +169,7 @@ def test_responses(path, expected_status, expected_response):
     assert response.json() == expected_response
 
 
-def test_schema():
+def test_schema(schema):
     checks = [
         ("/api/check_int", {200}),
         ("/api/check_int2", {200}),
@@ -151,6 +207,106 @@ def test_schema():
             },
             "description": "Accepted",
         },
+    }
+
+
+def test_excs_as_responses(schema):
+    responses = schema["paths"]["/api/excs_in_responses"]["get"]["responses"]
+    schemas = schema["components"]["schemas"]
+
+    assert responses == {
+        200: {
+            "content": {
+                "application/json": {"schema": {"title": "Response", "type": "string"}}
+            },
+            "description": "OK",
+        },
+        201: {
+            "content": {
+                "application/json": {"schema": {"title": "Response", "type": "string"}}
+            },
+            "description": "Created",
+        },
+        202: {
+            "content": {
+                "application/json": {"schema": {"title": "Response", "type": "string"}}
+            },
+            "description": "Accepted",
+        },
+        203: {
+            "content": {
+                "application/json": {"schema": {"title": "Response", "type": "string"}}
+            },
+            "description": "Non-Authoritative Information",
+        },
+        204: {
+            "content": {
+                "application/json": {"schema": {"title": "Response", "type": "string"}}
+            },
+            "description": "No Content",
+        },
+        205: {
+            "content": {
+                "application/json": {"schema": {"title": "Response", "type": "string"}}
+            },
+            "description": "Reset Content",
+        },
+        206: {
+            "content": {
+                "application/json": {"schema": {"title": "Response", "type": "string"}}
+            },
+            "description": "Partial Content",
+        },
+        400: {
+            "content": {
+                "application/json": {
+                    "schema": {"$ref": "#/components/schemas/RequestErrorResponse"}
+                }
+            },
+            "description": "Bad Request",
+        },
+        404: {
+            "content": {
+                "application/json": {
+                    "schema": {"$ref": "#/components/schemas/HttpErrorResponse"}
+                }
+            },
+            "description": "Not Found",
+        },
+        500: {
+            "content": {
+                "application/json": {
+                    "schema": {"$ref": "#/components/schemas/ServerErrorResponse"}
+                }
+            },
+            "description": "Internal Server Error",
+        },
+    }
+
+    assert "RequestErrorResponse" in schemas
+    assert "HttpErrorResponse" in schemas
+    assert "ServerErrorResponse" in schemas
+
+    assert schemas["RequestErrorResponse"] == {
+        "properties": {
+            "detail": {"title": "Detail", "type": "string"},
+            "reason": {"items": {"type": "string"}, "title": "Reason", "type": "array"},
+        },
+        "required": ["detail", "reason"],
+        "title": "RequestErrorResponse",
+        "type": "object",
+    }
+    assert schemas["HttpErrorResponse"] == {
+        "properties": {"detail": {"title": "Detail", "type": "string"}},
+        "required": ["detail"],
+        "title": "HttpErrorResponse",
+        "type": "object",
+    }
+    assert schemas["ServerErrorResponse"] == {
+        "properties": {"detail": {"title": "Detail", "type": "string"}},
+        "required": ["detail"],
+        "title": "ServerErrorResponse",
+        "type": "object",
     }
 
 
