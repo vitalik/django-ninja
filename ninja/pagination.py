@@ -100,7 +100,7 @@ class LimitOffsetPagination(AsyncPaginationBase):
         offset = pagination.offset
         limit: int = min(pagination.limit, settings.PAGINATION_MAX_LIMIT)
         return {
-            "items": queryset[offset : offset + limit],
+            self.items_attribute: queryset[offset : offset + limit],
             "count": self._items_count(queryset),
         }  # noqa: E203
 
@@ -118,7 +118,7 @@ class LimitOffsetPagination(AsyncPaginationBase):
         else:
             items = queryset[offset : offset + limit]
         return {
-            "items": items,
+            self.items_attribute: items,
             "count": await self._aitems_count(queryset),
         }  # noqa: E203
 
@@ -154,7 +154,7 @@ class PageNumberPagination(AsyncPaginationBase):
         page_size = self._get_page_size(pagination.page_size)
         offset = (pagination.page - 1) * page_size
         return {
-            "items": queryset[offset : offset + page_size],
+            self.items_attribute: queryset[offset : offset + page_size],
             "count": self._items_count(queryset),
         }  # noqa: E203
 
@@ -174,7 +174,7 @@ class PageNumberPagination(AsyncPaginationBase):
             items = queryset[offset : offset + page_size]
 
         return {
-            "items": items,
+            self.items_attribute: items,
             "count": await self._aitems_count(queryset),
         }  # noqa: E203
 
