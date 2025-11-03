@@ -117,6 +117,8 @@ class CustomItemsPageNumberPagination(PageNumberPagination):
     class Output(Schema):
         results: List[int]
         count: int
+
+
 class NoPagination(PaginationBase):
     """
     Pagination class that returns all records without slicing.
