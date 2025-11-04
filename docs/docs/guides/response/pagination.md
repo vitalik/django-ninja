@@ -88,6 +88,67 @@ Example query:
 
 This allows you to temporarily override the page size setting in your request. The request will use the specified `page_size` value if provided. Otherwise, it will use either the value specified in the decorator or the value from `PAGINATION_MAX_PER_PAGE_SIZE` in settings.py if no decorator value is set.
 
+### CursorPagination
+
+Cursor-based pagination provides stable pagination for datasets that may change frequently. Cursor pagination uses base64 encoded tokens to mark positions in the dataset, ensuring consistent results even when items are added or removed.
+
+```python hl_lines="1 4"
+from ninja.pagination import paginate, CursorPagination
+
+@api.get('/events', response=List[EventSchema])
+@paginate(CursorPagination)
+def list_events(request):
+    return Event.objects.all()
+```
+
+Example query:
+
+```
+/api/events?cursor=eyJwIjoiMjAyNC0wMS0wMSIsInIiOmZhbHNlLCJvIjowfQ==
+```
+
+this class has two input parameters:
+
+- `cursor` - base64 token representing the current position (optional, starts from beginning if not provided)
+- `page_size` - number of items per page (optional)
+
+You can specify the `page_size` value to temporarily override in the request:
+
+```
+/api/events?cursor=eyJwIjoiMjAyNC0wMS0wMSIsInIiOmZhbHNlLCJvIjowfQ==&page_size=5
+```
+
+This class has a few parameters, which determine how the cursor position is ascertained and the parameter encoded:
+
+- `ordering` - tuple of field names to order the queryset. Use `-` prefix for descending order. The first one of which will be used to encode the position. The ordering field should be unique if possible. A string representation of this field will be used to point to the current position of the cursor. Timestamps work well if each item in the collection is created independently. The paginator can handle some non-uniqueness by adding an offset. Defaults to `("-created",)`, change in `NINJA_PAGINATION_DEFAULT_ORDERING`
+
+- `page_size` - default page size for endpoint. Defaults to `100`, change in `NINJA_PAGINATION_PER_PAGE`
+- `max_page_size` - maximum allowed page size for endpoint. Defaults to `100`, change in `NINJA_PAGINATION_MAX_PER_PAGE_SIZE`
+
+Finally, there is a `NINJA_PAGINATION_MAX_OFFSET` setting to limit malicious cursor requests. It defaults to `100`.
+
+The class parameters can be set globally via settings as well as per view:
+
+```python hl_lines="2"
+@api.get("/events")
+@paginate(CursorPagination, ordering=("start_date", "end_date"), page_size=20, max_page_size=100)
+def list_events(request):
+    return Event.objects.all()
+```
+
+The response includes navigation links and results:
+
+```json
+{
+  "next": "http://api.example.com/events?cursor=eyJwIjoiMjAyNC0wMS0wMiIsInIiOmZhbHNlLCJvIjowfQ==",
+  "previous": "http://api.example.com/events?cursor=eyJwIjoiMjAyNC0wMS0wMSIsInIiOnRydWUsIm8iOjB9",
+  "results": [
+    { "id": 1, "title": "Event 1", "start_date": "2024-01-01" },
+    { "id": 2, "title": "Event 2", "start_date": "2024-01-02" }
+  ]
+}
+```
+
 ## Accessing paginator parameters in view function
 
 If you need access to `Input` parameters used for pagination in your view function - use `pass_parameter` argument
