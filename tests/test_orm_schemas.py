@@ -108,7 +108,10 @@ def test_all_fields():
                 "format": "date-time",
             },
             "decimalfield": {
-                "anyOf": [{"type": "number"}, {"type": "string"}],
+                "anyOf": [
+                    {"type": "number"},
+                    {"type": "string"},
+                ],
                 "title": "Decimalfield",
             },
             "durationfield": {
@@ -199,6 +202,11 @@ def test_all_fields():
     pydantic_version = tuple(map(int, pydantic.VERSION.split(".")[:2]))
     if pydantic_version >= (2, 11):
         expected_schema["properties"]["hstorefield"]["additionalProperties"] = True
+    if pydantic_version >= (2, 12):
+        # Pydantic 2.12 added pattern validation for decimal strings
+        expected_schema["properties"]["decimalfield"]["anyOf"][1]["pattern"] = (
+            r"^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$"
+        )
     assert SchemaCls.json_schema() == expected_schema
 
 

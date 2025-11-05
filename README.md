@@ -95,8 +95,16 @@ Now go to <a href="http://127.0.0.1:8000/api/docs" target="_blank">http://127.0.
 
 You will see the automatic interactive API documentation (provided by <a href="https://github.com/swagger-api/swagger-ui" target="_blank">Swagger UI</a> or <a href="https://github.com/Redocly/redoc" target="_blank">Redoc</a>):
 
-
 ![Swagger UI](docs/docs/img/index-swagger-ui.png)
+
+
+## Sponsors
+
+<a href="https://www.sendcloud.com/"><img width="50%" alt="sendcloud-logo" src="https://github.com/user-attachments/assets/69a246d2-3dda-4473-a45c-9f0fc2f37c8c" /></a>
+
+<a href="mailto:ppr.vitaly@gmail.com">Become a sponsor</a>
+
+
 
 ## What next?
 
