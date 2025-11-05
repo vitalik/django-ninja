@@ -56,7 +56,6 @@ __all__ = [
     "ModelSchema",
     "FilterSchema",
     "OrderingSchema",
-    "FilterField",
     "FilterLookup",
     "FilterConfigDict",
     "Swagger",
