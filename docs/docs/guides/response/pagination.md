@@ -120,7 +120,7 @@ You can specify the `page_size` value to temporarily override in the request:
 
 This class has a few parameters, which determine how the cursor position is ascertained and the parameter encoded:
 
-- `ordering` - tuple of field names to order the queryset. Use `-` prefix for descending order. The first one of which will be used to encode the position. The ordering field should be unique if possible. A string representation of this field will be used to point to the current position of the cursor. Timestamps work well if each item in the collection is created independently. The paginator can handle some non-uniqueness by adding an offset. Defaults to `("-created",)`, change in `NINJA_PAGINATION_DEFAULT_ORDERING`
+- `ordering` - tuple of field names to order the queryset. Use `-` prefix for descending order. The first one of which will be used to encode the position. The ordering field should be unique if possible. A string representation of this field will be used to point to the current position of the cursor. Timestamps work well if each item in the collection is created independently. The paginator can handle some non-uniqueness by adding an offset. Defaults to `("-pk",)`, change in `NINJA_PAGINATION_DEFAULT_ORDERING`
 
 - `page_size` - default page size for endpoint. Defaults to `100`, change in `NINJA_PAGINATION_PER_PAGE`
 - `max_page_size` - maximum allowed page size for endpoint. Defaults to `100`, change in `NINJA_PAGINATION_MAX_PER_PAGE_SIZE`

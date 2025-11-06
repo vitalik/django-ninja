@@ -311,7 +311,7 @@ class CursorPagination(AsyncPaginationBase):
         Flip ordering direction for backward pagination.
 
         Example:
-            ("-created", "id") becomes ("created", "-id")
+            ("-created", "pk") becomes ("created", "-pk")
             ("name", "-updated") becomes ("-name", "updated")
         """
         return tuple(

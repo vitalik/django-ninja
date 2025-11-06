@@ -12,7 +12,7 @@ class Settings(BaseModel):
         "ninja.pagination.LimitOffsetPagination", alias="NINJA_PAGINATION_CLASS"
     )
     PAGINATION_DEFAULT_ORDERING: tuple[str, ...] = Field(
-        ("-created",), alias="NINJA_PAGINATION_DEFAULT_ORDERING"
+        ("-pk",), alias="NINJA_PAGINATION_DEFAULT_ORDERING"
     )
     PAGINATION_MAX_OFFSET: int = Field(100, alias="NINJA_PAGINATION_MAX_OFFSET")
     PAGINATION_PER_PAGE: int = Field(100, alias="NINJA_PAGINATION_PER_PAGE")
