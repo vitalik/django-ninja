@@ -1,5 +1,5 @@
 from math import inf
-from typing import Dict, Optional, Set
+from typing import Dict, Optional, Set, Tuple
 
 from django.conf import settings as django_settings
 from pydantic import BaseModel, ConfigDict, Field
@@ -11,7 +11,7 @@ class Settings(BaseModel):
     PAGINATION_CLASS: str = Field(
         "ninja.pagination.LimitOffsetPagination", alias="NINJA_PAGINATION_CLASS"
     )
-    PAGINATION_DEFAULT_ORDERING: tuple[str, ...] = Field(
+    PAGINATION_DEFAULT_ORDERING: Tuple[str, ...] = Field(
         ("-pk",), alias="NINJA_PAGINATION_DEFAULT_ORDERING"
     )
     PAGINATION_MAX_OFFSET: int = Field(100, alias="NINJA_PAGINATION_MAX_OFFSET")
