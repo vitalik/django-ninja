@@ -5,7 +5,6 @@ from base64 import b64decode, b64encode
 from functools import partial, wraps
 from math import inf
 from typing import (
-    Annotated,
     Any,
     AsyncGenerator,
     Callable,
@@ -202,7 +201,7 @@ class CursorPagination(AsyncPaginationBase):
     def __init__(
         self,
         *,
-        ordering: tuple[str, ...] = settings.PAGINATION_DEFAULT_ORDERING,
+        ordering: Tuple[str, ...] = settings.PAGINATION_DEFAULT_ORDERING,
         page_size: int = settings.PAGINATION_PER_PAGE,
         max_page_size: int = settings.PAGINATION_MAX_PER_PAGE_SIZE,
         **kwargs: Any,
@@ -221,13 +220,13 @@ class CursorPagination(AsyncPaginationBase):
         super().__init__(**kwargs)
 
     class Input(Schema):
-        page_size: int | None = None
-        cursor: str | None = None
+        page_size: Optional[int] = None
+        cursor: Optional[str] = None
 
     class Output(Schema):
-        previous: str | None
-        next: str | None
-        results: list[Any]
+        previous: Optional[str]
+        next: Optional[str]
+        results: List[Any]
 
     class Cursor(BaseModel):
         """
@@ -237,31 +236,28 @@ class CursorPagination(AsyncPaginationBase):
 
         """
 
-        p: Annotated[
-            str | None,
-            Field(
-                title="position",
-                description="String identifier for the current position in the dataset",
-            ),
-        ] = None
-        r: Annotated[
-            bool,
-            Field(
-                title="reverse", description="Whether to reverse the ordering direction"
-            ),
-        ] = False
+        p: Optional[str] = Field(
+            None,
+            title="position",
+            description="String identifier for the current position in the dataset",
+        )
+
+        r: bool = Field(
+            False,
+            title="reverse",
+            description="Whether to reverse the ordering direction",
+        )
+
         # offset enables the use of a non-unique ordering field
         # e.g. if created time of two items is exactly the same, we can use the offset
         # to figure out the position exactly
-        o: Annotated[
-            int,
-            Field(
-                ge=0,
-                lt=settings.PAGINATION_MAX_OFFSET,
-                title="offset",
-                description="Number of items to skip from the current position",
-            ),
-        ] = 0
+        o: int = Field(
+            0,
+            ge=0,
+            lt=settings.PAGINATION_MAX_OFFSET,
+            title="offset",
+            description="Number of items to skip from the current position",
+        )
 
         @field_validator("*", mode="before")
         @classmethod
@@ -278,7 +274,7 @@ class CursorPagination(AsyncPaginationBase):
 
         @classmethod
         def from_encoded_param(
-            cls, encoded_param: str | None, context: Any = None
+            cls, encoded_param: Optional[str], context: Any = None
         ) -> "CursorPagination.Cursor":
             """
             Deserialize cursor from URL-safe base64 token.
@@ -306,7 +302,7 @@ class CursorPagination(AsyncPaginationBase):
             return b64encode(query_string.encode("ascii")).decode("ascii")
 
     @staticmethod
-    def _reverse_order(order: tuple[str, ...]) -> tuple[str, ...]:
+    def _reverse_order(order: Tuple[str, ...]) -> Tuple[str, ...]:
         """
         Flip ordering direction for backward pagination.
 
@@ -326,7 +322,7 @@ class CursorPagination(AsyncPaginationBase):
         """
         return str(getattr(item, self._order_attribute))
 
-    def _get_page_size(self, requested_page_size: int | None) -> int:
+    def _get_page_size(self, requested_page_size: Optional[int]) -> int:
         """
         Determine the actual page size to use, respecting configured limits.
 
@@ -341,9 +337,9 @@ class CursorPagination(AsyncPaginationBase):
     def _build_next_cursor(
         self,
         current_cursor: Cursor,
-        results: list[Any],
-        additional_position: str | None = None,
-    ) -> Cursor | None:
+        results: List[Any],
+        additional_position: Optional[str] = None,
+    ) -> Optional[Cursor]:
         """
         Build cursor for next page
         """
@@ -376,9 +372,9 @@ class CursorPagination(AsyncPaginationBase):
     def _build_previous_cursor(
         self,
         current_cursor: Cursor,
-        results: list[Any],
-        additional_position: str | None = None,
-    ) -> Cursor | None:
+        results: List[Any],
+        additional_position: Optional[str] = None,
+    ) -> Optional[Cursor]:
         """
         Build cursor for previous page
         """
@@ -418,7 +414,7 @@ class CursorPagination(AsyncPaginationBase):
         return self.Cursor(o=offset, r=True, p=previous_position)
 
     @staticmethod
-    def _add_cursor_to_URL(url: str, cursor: Cursor | None) -> str | None:
+    def _add_cursor_to_URL(url: str, cursor: Optional[Cursor]) -> Optional[str]:
         """
         Build pagination URLs with an encoded cursor.
 
