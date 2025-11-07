@@ -2,8 +2,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <link rel="icon" href="{% static 'ninja/favicon.svg' %}" type="image/svg+xml">
-    <link rel="icon" href="{% static 'ninja/favicon.png' %}" type="image/png">
+    {% include "ninja/favicons.html" %}
     <title>{{ api.title }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
