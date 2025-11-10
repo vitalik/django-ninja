@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from collections import defaultdict
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -39,10 +38,6 @@ TModel = TypeVar("TModel", bound="ParamModel")
 TModels = List[TModel]
 
 
-def NestedDict() -> DictStrAny:
-    return defaultdict(NestedDict)
-
-
 class ParamModel(BaseModel, ABC):
     __ninja_param_source__ = None
 
@@ -65,11 +60,6 @@ class ParamModel(BaseModel, ABC):
             return cls()
 
         data = cls._map_data_paths(data)
-        # Convert defaultdict to dict for pydantic 2.12+ compatibility
-        # In pydantic 2.12+, accessing missing keys in defaultdict creates nested
-        # defaultdicts which then fail validation
-        if isinstance(data, defaultdict):
-            data = dict(data)
         return cls.model_validate(data, context={"request": request})
 
     @classmethod
@@ -78,22 +68,20 @@ class ParamModel(BaseModel, ABC):
         if not flatten_map:
             return data
 
-        mapped_data: DictStrAny = NestedDict()
-        for k in flatten_map:
-            if k in data:
-                cls._map_data_path(mapped_data, data[k], flatten_map[k])
-            else:
-                cls._map_data_path(mapped_data, None, flatten_map[k])
-
+        mapped_data: DictStrAny = {}
+        for key, path in flatten_map.items():
+            cls._map_data_path(mapped_data, data.get(key), path)
         return mapped_data
 
     @classmethod
-    def _map_data_path(cls, data: DictStrAny, value: Any, path: Tuple) -> None:
-        if len(path) == 1:
-            if value is not None:
-                data[path[0]] = value
-        else:
-            cls._map_data_path(data[path[0]], value, path[1:])
+    def _map_data_path(
+        cls, data: DictStrAny, value: Any, path: Tuple[str, ...]
+    ) -> None:
+        current = data
+        for key in path[:-1]:
+            current = current.setdefault(key, {})
+        if value is not None:
+            current[path[-1]] = value
 
 
 class QueryModel(ParamModel):
