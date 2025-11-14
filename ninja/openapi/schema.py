@@ -99,6 +99,12 @@ class OpenAPISchema(dict):
                 self.deep_dict_update(
                     main_dict[key], update_dict[key]
                 )  # pragma: no cover
+            elif (
+                key in main_dict
+                and isinstance(main_dict[key], list)
+                and isinstance(update_dict[key], list)
+            ):
+                main_dict[key].extend(update_dict[key])
             else:
                 main_dict[key] = update_dict[key]
 

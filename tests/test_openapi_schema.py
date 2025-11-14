@@ -1,12 +1,26 @@
 import sys
+from sys import version_info
 from typing import Any, List, Union
 from unittest.mock import Mock
 
+import pydantic
 import pytest
 from django.contrib.admin.views.decorators import staff_member_required
 from django.test import Client, override_settings
+from typing_extensions import Annotated
 
-from ninja import Body, Field, File, Form, NinjaAPI, Query, Schema, UploadedFile
+from ninja import (
+    Body,
+    Field,
+    File,
+    Form,
+    NinjaAPI,
+    P,
+    PathEx,
+    Query,
+    Schema,
+    UploadedFile,
+)
 from ninja.openapi.urls import get_openapi_urls
 from ninja.pagination import PaginationBase, paginate
 from ninja.renderers import JSONRenderer
@@ -27,18 +41,25 @@ class TypeB(Schema):
     b: str
 
 
+AnnotatedStr = Annotated[
+    str,
+    pydantic.WithJsonSchema({
+        "type": "string",
+        "format": "custom-format",
+        "example": "example_string",
+    }),
+]
+
+
 def to_camel(string: str) -> str:
     words = string.split("_")
     return words[0].lower() + "".join(word.capitalize() for word in words[1:])
 
 
 class Response(Schema):
+    model_config = pydantic.ConfigDict(alias_generator=to_camel, populate_by_name=True)
     i: int
     f: float = Field(..., title="f title", description="f desc")
-
-    class Config(Schema.Config):
-        alias_generator = to_camel
-        populate_by_name = True
 
 
 @api.post("/test", response=Response)
@@ -67,8 +88,40 @@ def method_body_schema(request, data: Payload):
 
 
 @api.get("/test-path/{int:i}/{f}", response=Response)
-def method_path(request, i: int, f: float):
+def method_path(
+    request,
+    i: int,
+    f: float,
+):
     return dict(i=i, f=f)
+
+
+# This definition is only possible in Python 3.9+
+# TODO: Drop this condition once support for <= 3.8 is dropped
+if version_info >= (3, 9):
+
+    @api.get("/test-pathex/{path_ex}", response=AnnotatedStr)
+    def method_pathex(
+        request,
+        path_ex: PathEx[
+            AnnotatedStr,
+            P(description="path_ex description"),
+        ],
+    ):
+        return path_ex
+
+else:
+    with pytest.raises(NotImplementedError, match="3.9+"):
+
+        @api.get("/test-pathex/{path_ex}", response=AnnotatedStr)
+        def method_pathex(
+            request,
+            path_ex: PathEx[
+                AnnotatedStr,
+                P(description="path_ex description"),
+            ],
+        ):
+            return path_ex
 
 
 @api.post("/test-form", response=Response)
@@ -436,6 +489,49 @@ def test_schema_path(schema):
     }
 
 
+@pytest.mark.skipif(
+    version_info < (3, 9),
+    reason="requires py3.9+ for Annotated[] at the route definition site",
+)
+def test_schema_pathex(schema):
+    method_list = schema["paths"]["/api/test-pathex/{path_ex}"]["get"]
+
+    assert "requestBody" not in method_list
+
+    assert method_list["parameters"] == [
+        {
+            "in": "path",
+            "name": "path_ex",
+            "schema": {
+                "title": "Path Ex",
+                "type": "string",
+                "format": "custom-format",
+                "description": "path_ex description",
+                "example": "example_string",
+            },
+            "required": True,
+            "example": "example_string",
+            "description": "path_ex description",
+        },
+    ]
+
+    assert method_list["responses"] == {
+        200: {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "example": "example_string",
+                        "format": "custom-format",
+                        "title": "Response",
+                        "type": "string",
+                    },
+                },
+            },
+            "description": "OK",
+        }
+    }
+
+
 def test_schema_form(schema):
     method_list = schema["paths"]["/api/test-form"]["post"]
 
@@ -608,7 +704,7 @@ def test_schema_title_description(schema):
                 "schema": {
                     "properties": {
                         "file": {
-                            "description": "file " "param " "desc",
+                            "description": "file param desc",
                             "format": "binary",
                             "title": "File",
                             "type": "string",

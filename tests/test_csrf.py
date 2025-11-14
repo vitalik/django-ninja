@@ -9,7 +9,21 @@ from ninja.security import APIKeyCookie, APIKeyHeader, django_auth
 from ninja.testing import TestClient as BaseTestClient
 
 
+class AnyCookieAuth(APIKeyCookie):
+    """A mock authentication class that accepts any cookie value.
+    To test CSRF functionality without specific authentication logic.
+    """
+
+    def authenticate(self, request, key):
+        return True
+
+
 class TestClient(BaseTestClient):
+    """
+    A mock authentication class that accepts any cookie value.
+    To test CSRF functionality without specific authentication logic.
+    """
+
     def _build_request(self, *args, **kwargs):
         request = super()._build_request(*args, **kwargs)
         request._dont_enforce_csrf_checks = False
@@ -17,10 +31,8 @@ class TestClient(BaseTestClient):
 
 
 csrf_OFF = NinjaAPI(urls_namespace="csrf_OFF")
-csrf_ON = NinjaAPI(urls_namespace="csrf_ON", csrf=True)
-csrf_ON_with_django_auth = NinjaAPI(
-    urls_namespace="csrf_ON", csrf=True, auth=django_auth
-)
+csrf_ON = NinjaAPI(urls_namespace="csrf_ON", auth=AnyCookieAuth())  # , csrf=True
+csrf_ON_with_django_auth = NinjaAPI(urls_namespace="csrf_ON", auth=django_auth)
 
 
 @csrf_OFF.post("/post")
@@ -149,7 +161,7 @@ def test_csrf_cookies_can_be_obtained():
 def test_docs():
     "Testing that docs are initializing csrf headers correctly"
 
-    api = NinjaAPI(csrf=True)
+    api = NinjaAPI(auth=AnyCookieAuth())
 
     client = TestClient(api)
     resp = client.get("/docs")
@@ -157,11 +169,46 @@ def test_docs():
     csrf_token = re.findall(r'data-csrf-token="(.*?)"', resp.content.decode("utf8"))[0]
     assert len(csrf_token) > 0
 
-    api.csrf = False
-    resp = client.get("/docs")
-    assert resp.status_code == 200
-    csrf_token = re.findall(r'data-csrf-token="(.*?)"', resp.content.decode("utf8"))[0]
-    assert len(csrf_token) == 0
+
+def test_no_auth_csrf_exempt():
+    """Test that APIs without authentication are CSRF exempt by default"""
+    from django.middleware.csrf import CsrfViewMiddleware
+    from django.test import RequestFactory
+
+    api = NinjaAPI(urls_namespace="test_no_auth_csrf")
+
+    @api.post("/create")
+    def create_item(request):
+        return {"status": "created"}
+
+    # Get the actual view function that Django will use
+    patterns = api.urls[0]
+    view_func = None
+    for pattern in patterns:
+        if hasattr(pattern, "callback") and "create" in str(pattern.pattern):
+            view_func = pattern.callback
+            break
+
+    assert view_func is not None, "Could not find view function"
+
+    # Test 1: Check if view has csrf_exempt attribute
+    has_csrf_exempt = hasattr(view_func, "csrf_exempt")
+    csrf_exempt_value = getattr(view_func, "csrf_exempt", None)
+    print(f"View has csrf_exempt: {has_csrf_exempt}, value: {csrf_exempt_value}")
+
+    # Test 2: Simulate Django's CSRF middleware check
+    factory = RequestFactory()
+    request = factory.post("/create", data="{}", content_type="application/json")
+
+    csrf_middleware = CsrfViewMiddleware(lambda r: None)
+    csrf_middleware.process_request(request)
+    csrf_response = csrf_middleware.process_view(request, view_func, (), {})
+
+    # If csrf_response is None, the request passed CSRF checks
+    # If it's not None, it's a 403 Forbidden response
+    assert (
+        csrf_response is None
+    ), f"CSRF middleware blocked the request! Regular APIs should be CSRF exempt. Response: {csrf_response}"
 
 
 def test_docs_cookie_auth():
@@ -173,13 +220,13 @@ def test_docs_cookie_auth():
         def authenticate(self, request, key):
             return key == "test"
 
-    api = NinjaAPI(csrf=False, auth=CookieAuth())
+    api = NinjaAPI(auth=CookieAuth())
     client = TestClient(api)
     resp = client.get("/docs")
     csrf_token = re.findall(r'data-csrf-token="(.*?)"', resp.content.decode("utf8"))[0]
     assert len(csrf_token) > 0
 
-    api = NinjaAPI(csrf=False, auth=HeaderAuth())
+    api = NinjaAPI(auth=HeaderAuth())
     client = TestClient(api)
     resp = client.get("/docs")
     csrf_token = re.findall(r'data-csrf-token="(.*?)"', resp.content.decode("utf8"))[0]

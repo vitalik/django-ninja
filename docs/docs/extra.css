@@ -1,3 +1,59 @@
 .doc-module code {
   white-space: nowrap;
 }
+
+/* Ask AI Button Styles */
+.ask-ai-button-container {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  margin-right: 1rem;
+}
+
+.ask-ai-button {
+  background-color: white !important;
+  color: #4caf50 !important;  /* Material green-500 */
+  padding: 0.4rem 0.5rem !important;
+  border-radius: 0.25rem;
+  font-weight: 500;
+  text-decoration: none;
+  font-size: 0.9rem;
+  border: 2px solid #4caf50;
+  transition: all 0.2s ease-in-out;
+  white-space: nowrap;
+  margin-left: 8px;
+}
+
+.ask-ai-button:hover {
+  background-color: #4caf50 !important;
+  color: white !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Dark mode support */
+[data-md-color-scheme="slate"] .ask-ai-button {
+  background-color: white !important;
+  color: #4caf50 !important;
+}
+
+[data-md-color-scheme="slate"] .ask-ai-button:hover {
+  background-color: #4caf50 !important;
+  color: white !important;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 76.1875em) {
+  .ask-ai-button-container {
+    margin-right: 0.5rem;
+  }
+  .ask-ai-button {
+    padding: 0.4rem 0.8rem !important;
+    font-size: 0.85rem;
+  }
+}
+
+@media screen and (max-width: 60em) {
+  .ask-ai-button-container {
+    display: none;  /* Hide on mobile to save space */
+  }
+}

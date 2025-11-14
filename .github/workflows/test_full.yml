@@ -11,23 +11,42 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12', '3.13']
+        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
         django-version: ['<3.2', '<3.3', '<4.2', '<4.3', '<5.1', '<5.2', '<5.3']
         exclude:
           - python-version: '3.7'
             django-version: '<5.1'
+          
           - python-version: '3.8'
             django-version: '<5.1'
+          
           - python-version: '3.9'
             django-version: '<5.1'
+          
           - python-version: '3.12'
             django-version: '<3.2'
           - python-version: '3.12'
             django-version: '<3.3'
+          
           - python-version: '3.13'
             django-version: '<3.2'
           - python-version: '3.13'
             django-version: '<3.3'
+          
+          # as of oct 2025 looks like django < 5.2 does not support python 3.14
+          - python-version: '3.14'
+            django-version: '<3.2'
+          - python-version: '3.14'
+            django-version: '<3.3'
+          - python-version: '3.14'
+            django-version: '<4.2'
+          - python-version: '3.14'
+            django-version: '<4.3'
+          - python-version: '3.14'
+            django-version: '<5.1'
+          - python-version: '3.14'
+            django-version: '<5.2'
+    
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python
@@ -35,7 +54,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install core
-        run: pip install --pre "Django${{ matrix.django-version }}" "pydantic<3"
+        run: pip install "Django${{ matrix.django-version }}" "pydantic<3"
       - name: Install tests
         run: pip install pytest pytest-asyncio pytest-django psycopg2-binary
       - name: Test
@@ -49,7 +68,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: 3.12
       - name: Install Flit
         run: pip install flit "django>=5.2"
       - name: Install Dependencies
@@ -64,7 +83,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.9
+          python-version: 3.12
       - name: Install Flit
         run: pip install flit
       - name: Install Dependencies

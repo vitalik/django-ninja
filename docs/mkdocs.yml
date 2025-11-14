@@ -10,6 +10,8 @@ extra:
     property: G-0E3XZ663ZR
 extra_css:
   - extra.css
+extra_javascript:
+  - javascripts/ask-ai-button.js
 theme:
   name: material
   palette:
@@ -68,6 +70,7 @@ nav:
           - guides/response/pagination.md
           - guides/response/response-renderers.md
       - Splitting your API with Routers: guides/routers.md
+      - guides/decorators.md
       - guides/authentication.md
       - guides/throttling.md
       - guides/testing.md
@@ -99,6 +102,7 @@ markdown_extensions:
   - abbr
   - codehilite
   - admonition
+  - pymdownx.details
   - pymdownx.superfences
 plugins:
   - search

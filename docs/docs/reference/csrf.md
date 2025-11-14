@@ -14,26 +14,14 @@ Using an authentication method that does not automatically gets embedded, such a
 In case you are using the default Django authentication, which uses cookies, you must also use the default [Django CSRF protection](https://docs.djangoproject.com/en/4.2/ref/csrf/).
 
 
-By default, **Django Ninja** has CSRF protection turned **OFF** for all operations.
-To turn it on you need to use the `csrf` argument of the NinjaAPI class:
-
-```python hl_lines="3"
-from ninja import NinjaAPI
-
-api = NinjaAPI(csrf=True)
-```
-
-<span style="color: red;">Warning</span>: It is not secure to use API's with cookie-based authentication! (like `CookieKey`, or `django_auth`) when csrf is turned OFF.
-
-
-**Django Ninja** will automatically enable csrf for Cookie based authentication
+By default, **Django Ninja** has CSRF protection turned **OFF** for all operations, but will automatically enable csrf **for Cookie based** authentication:
 
 
 ```python hl_lines="8"
 from ninja import NinjaAPI
 from ninja.security import APIKeyCookie
 
-class CookieAuth(APIKeyCookie):
+class CookieAuth(APIKeyCookie):å
     def authenticate(self, request, key):
         return key == "test"
 

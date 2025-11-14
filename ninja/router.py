@@ -16,6 +16,7 @@ from django.urls import path as django_path
 from django.utils.module_loading import import_string
 
 from ninja.constants import NOT_SET, NOT_SET_TYPE
+from ninja.decorators import DecoratorMode
 from ninja.errors import ConfigError
 from ninja.operation import PathView
 from ninja.throttling import BaseThrottle
@@ -52,6 +53,7 @@ class Router:
 
         self.path_operations: Dict[str, PathView] = {}
         self._routers: List[Tuple[str, Router]] = []
+        self._decorators: List[Tuple[Callable, DecoratorMode]] = []
 
     def get(
         self,
@@ -327,6 +329,8 @@ class Router:
         # if user whants UUID object
         # uuidstr is custom registered converter
 
+        # No decoration here - will be done in build_routers
+
         if path not in self.path_operations:
             path_view = PathView()
             self.path_operations[path] = path_view
@@ -371,12 +375,16 @@ class Router:
         if self.auth is NOT_SET and parent_router:
             self.auth = parent_router.auth
         self.api = api
+
         for path_view in self.path_operations.values():
             path_view.set_api_instance(self.api, self)
         for _, router in self._routers:
             router.set_api_instance(api, self)
 
     def urls_paths(self, prefix: str) -> Iterator[URLPattern]:
+        # Ensure decorators are applied before generating URLs
+        self._apply_decorators_to_operations()
+
         prefix = replace_path_param_notation(prefix)
         for path, path_view in self.path_operations.items():
             for operation in path_view.operations:
@@ -424,6 +432,23 @@ class Router:
                 router.tags = tags
             self._routers.append((prefix, router))
 
+    def add_decorator(
+        self,
+        decorator: Callable,
+        mode: DecoratorMode = "operation",
+    ) -> None:
+        """
+        Add a decorator to be applied to all operations in this router.
+
+        Args:
+            decorator: The decorator function to apply
+            mode: "operation" (default) applies after validation,
+                  "view" applies before validation
+        """
+        if mode not in ("view", "operation"):
+            raise ValueError(f"Invalid decorator mode: {mode}")
+        self._decorators.append((decorator, mode))
+
     def build_routers(self, prefix: str) -> List[Tuple[str, "Router"]]:
         if self.api is not None:
             from ninja.main import debug_server_url_reimport
@@ -433,9 +458,39 @@ class Router:
                     f"Router@'{prefix}' has already been attached to API"
                     f" {self.api.title}:{self.api.version} "
                 )
+
+        # Apply decorators to all operations in this router
+        self._apply_decorators_to_operations()
+
         internal_routes = []
         for inter_prefix, inter_router in self._routers:
+            # Inherit decorators from parent router
+            # Prepend parent decorators so they execute first (outer decorators)
+            inter_router._decorators = self._decorators + inter_router._decorators
             _route = normalize_path("/".join((prefix, inter_prefix))).lstrip("/")
             internal_routes.extend(inter_router.build_routers(_route))
 
         return [(prefix, self), *internal_routes]
+
+    def _apply_decorators_to_operations(self) -> None:
+        """Apply all stored decorators to operations in this router"""
+        for path_view in self.path_operations.values():
+            for operation in path_view.operations:
+                # Track what decorators have already been applied to avoid duplicates
+                applied_decorators = getattr(operation, "_applied_decorators", [])
+
+                # Apply decorators that haven't been applied yet
+                for decorator, mode in self._decorators:
+                    if (decorator, mode) not in applied_decorators:
+                        if mode == "view":
+                            operation.run = decorator(operation.run)  # type: ignore
+                        elif mode == "operation":
+                            operation.view_func = decorator(operation.view_func)
+                        else:
+                            raise ValueError(
+                                f"Invalid decorator mode: {mode}"
+                            )  # pragma: no cover
+                        applied_decorators.append((decorator, mode))
+
+                # Store what decorators have been applied
+                operation._applied_decorators = applied_decorators  # type: ignore[attr-defined]

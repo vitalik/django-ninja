@@ -1,12 +1,12 @@
 """Django Ninja - Fast Django REST framework"""
 
-__version__ = "1.4.3"
+__version__ = "1.5.0"
 
 
 from pydantic import Field
 
 from ninja.files import UploadedFile
-from ninja.filter_schema import FilterSchema
+from ninja.filter_schema import FilterConfigDict, FilterLookup, FilterSchema
 from ninja.main import NinjaAPI
 from ninja.openapi.docs import Redoc, Swagger
 from ninja.orm import ModelSchema
@@ -54,6 +54,8 @@ __all__ = [
     "Schema",
     "ModelSchema",
     "FilterSchema",
+    "FilterLookup",
+    "FilterConfigDict",
     "Swagger",
     "Redoc",
     "PatchDict",
