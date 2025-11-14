@@ -1,6 +1,7 @@
 import asyncio
 import inspect
 import re
+from sys import version_info
 from typing import Any, Callable, ForwardRef, List, Set
 
 from django.urls import register_converter
@@ -57,7 +58,11 @@ def get_path_param_names(path: str) -> Set[str]:
 
 
 def is_async(callable: Callable[..., Any]) -> bool:
-    return asyncio.iscoroutinefunction(callable)
+    # TODO: Drop this condition once support for <= 3.11 is dropped
+    if version_info >= (3, 12):
+        return inspect.iscoroutinefunction(callable)
+    else:
+        return asyncio.iscoroutinefunction(callable)  # pragma: no cover
 
 
 def has_kwargs(func: Callable[..., Any]) -> bool:
