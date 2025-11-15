@@ -287,7 +287,7 @@ class Operation:
                 context={"request": request, "response_status": status}
             )
 
-        if isinstance(result, Schema):
+        if isinstance(result, pydantic.BaseModel):
             # if the result is already a Schema, just return it
             return self.api.create_response(
                 request,
