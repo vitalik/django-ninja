@@ -1,8 +1,10 @@
 from typing import List, Optional
 
 import pytest
+from pydantic import BeforeValidator
+from typing_extensions import Annotated
 
-from ninja import NinjaAPI, Schema
+from ninja import Field, NinjaAPI, Schema
 from ninja.patch_dict import PatchDict
 from ninja.testing import TestClient
 
@@ -15,6 +17,8 @@ class SomeSchema(Schema):
     name: str
     age: int
     category: Optional[str] = None
+    identifier: str = Field(max_length=32)
+    code: Annotated[str, BeforeValidator(lambda v: v.strip()), Field(min_length=2)]
 
 
 class OtherSchema(SomeSchema):
@@ -47,6 +51,12 @@ def test_patch_calls(input: dict, output: dict):
     assert response.json() == {"payload": output, "type": "<class 'dict'>"}
 
 
+@pytest.mark.parametrize("input", [{"identifier": "0" * 100}, {"code": "0"}])
+def test_patch_calls_bad_request(input: dict):
+    response = client.patch("/patch", json=input)
+    assert response.status_code == 422
+
+
 def test_schema():
     "Checking that json schema properties are all optional"
     schema = api.get_openapi_schema()
@@ -65,6 +75,18 @@ def test_schema():
             "category": {
                 "anyOf": [{"type": "string"}, {"type": "null"}],
                 "title": "Category",
+            },
+            "identifier": {
+                "anyOf": [
+                    {"maxLength": 32, "type": "string"},
+                    {"type": "null"},
+                ],
+                "title": "Identifier",
+            },
+            "code": {
+                "anyOf": [{"type": "string"}, {"type": "null"}],
+                "minLength": 2,
+                "title": "Code",
             },
         },
     }
@@ -92,6 +114,18 @@ def test_inherited_schema():
             "age": {
                 "anyOf": [{"type": "integer"}, {"type": "null"}],
                 "title": "Age",
+            },
+            "identifier": {
+                "anyOf": [
+                    {"maxLength": 32, "type": "string"},
+                    {"type": "null"},
+                ],
+                "title": "Identifier",
+            },
+            "code": {
+                "anyOf": [{"type": "string"}, {"type": "null"}],
+                "minLength": 2,
+                "title": "Code",
             },
             "other": {
                 "anyOf": [{"type": "string"}, {"type": "null"}],
