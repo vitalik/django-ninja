@@ -82,9 +82,9 @@ class Operation:
         self.throttle_objects: List[BaseThrottle] = []
         if throttle is not NOT_SET:
             for th in throttle:  # type: ignore
-                assert isinstance(
-                    th, BaseThrottle
-                ), "Throttle should be an instance of BaseThrottle"
+                assert isinstance(th, BaseThrottle), (
+                    "Throttle should be an instance of BaseThrottle"
+                )
                 self.throttle_objects.append(th)
 
         self.signature = ViewSignature(self.path, self.view_func)
@@ -164,9 +164,9 @@ class Operation:
             if router.throttle != NOT_SET:
                 _t = router.throttle
                 self.throttle_objects = isinstance(_t, BaseThrottle) and [_t] or _t  # type: ignore
-            assert all(
-                isinstance(th, BaseThrottle) for th in self.throttle_objects
-            ), "Throttle should be an instance of BaseThrottle"
+            assert all(isinstance(th, BaseThrottle) for th in self.throttle_objects), (
+                "Throttle should be an instance of BaseThrottle"
+            )
 
         if self.tags is None:
             if router.tags is not None:
@@ -275,12 +275,12 @@ class Operation:
             # Empty response.
             return temporal_response
 
-        model_dump_kwargs: Dict[str, Any] = dict(
-            by_alias=self.by_alias,
-            exclude_unset=self.exclude_unset,
-            exclude_defaults=self.exclude_defaults,
-            exclude_none=self.exclude_none,
-        )
+        model_dump_kwargs: Dict[str, Any] = {
+            "by_alias": self.by_alias,
+            "exclude_unset": self.exclude_unset,
+            "exclude_defaults": self.exclude_defaults,
+            "exclude_none": self.exclude_none,
+        }
         if pydantic_version >= [2, 7]:
             # pydantic added support for serialization context at 2.7
             model_dump_kwargs.update(
