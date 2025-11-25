@@ -115,3 +115,19 @@ class MyDocsViewer(DocsBase):
 api = NinjaAPI(docs=MyDocsViewer())
 
 ```
+
+## Using a custom favicon
+
+The django-ninja OpenAPI docs contain a default favicon, the ninja star.
+To use your own, overwrite the `ninja/favicon.html` django template.
+
+```html
+<!-- templates/ninja/favicons.html -->
+{% load static %}
+
+{% block favicons %}
+    <link rel="icon" type="image/png" href="{% static 'path/to/your/favicon.png' %}">
+{% endblock %}
+```
+
+for more information, see the [Django documentation on overriding templates](https://docs.djangoproject.com/en/5.2/howto/overriding-templates/).
