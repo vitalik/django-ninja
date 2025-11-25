@@ -33,7 +33,7 @@ theme:
         icon: material/weather-sunny
         name: Switch to light mode
   logo: img/docs-logo.png
-  favicon: img/favicon.png
+  favicon: img/favicon.svg
   language: en
   features:
     - navigation.expand
