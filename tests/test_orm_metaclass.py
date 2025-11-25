@@ -182,13 +182,13 @@ def test_model_as_string_valid():
         class Meta:
             app_label = "someapp"
 
-    class SomeSchema(ModelSchema):
+    class SomeStringModelSchema(ModelSchema):
         class Meta:
             model = "someapp.SomeModel"
             fields = ["field1"]
 
-    assert SomeSchema.json_schema() == {
-        "title": "SomeSchema",
+    assert SomeStringModelSchema.json_schema() == {
+        "title": "SomeStringModelSchema",
         "type": "object",
         "properties": {"field1": {"title": "Field1", "type": "string"}},
         "required": ["field1"],
