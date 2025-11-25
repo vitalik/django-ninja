@@ -21,7 +21,7 @@ By default, **Django Ninja** has CSRF protection turned **OFF** for all operatio
 from ninja import NinjaAPI
 from ninja.security import APIKeyCookie
 
-class CookieAuth(APIKeyCookie):å
+class CookieAuth(APIKeyCookie):
     def authenticate(self, request, key):
         return key == "test"
 
