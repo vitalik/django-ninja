@@ -2,10 +2,12 @@ import sys
 from sys import version_info
 from typing import Any, List, Union
 from unittest.mock import Mock
+from uuid import uuid4
 
 import pydantic
 import pytest
 from django.contrib.admin.views.decorators import staff_member_required
+from django.db import models
 from django.test import Client, override_settings
 from typing_extensions import Annotated
 
@@ -14,6 +16,7 @@ from ninja import (
     Field,
     File,
     Form,
+    ModelSchema,
     NinjaAPI,
     P,
     PathEx,
@@ -1039,3 +1042,66 @@ def test_no_default_for_custom_items_attribute():
     paged_employee_out = schema["components"]["schemas"]["PagedEmployeeOut"]
     # a default value shouldn't be specified automatically
     assert "default" not in paged_employee_out["properties"]["data"]
+
+
+def test_by_alias_uses_serialization_alias_simple():
+    """Test the serialization_alias on the Field is used when by_alias=True is set on the route"""
+    api = NinjaAPI()
+
+    class PersonOut(Schema):
+        uuid: str = Field(..., serialization_alias="id")
+        name: str = Field(..., serialization_alias="fullName")
+
+    @api.get("/person", response={200: PersonOut}, by_alias=True)
+    def get_user(request):
+        return {"uuid": uuid4(), "fullname": "John Snow"}
+
+    schema = api.get_openapi_schema()
+    user_alias_schema = schema["components"]["schemas"]["PersonOut"]
+    assert user_alias_schema == {
+        "title": "PersonOut",
+        "type": "object",
+        "properties": {
+            "id": {"title": "Id", "type": "string"},
+            "fullName": {"type": "string", "title": "Fullname"},
+        },
+        "required": ["id", "fullName"],
+    }
+
+
+@pytest.mark.django_db
+def test_by_alias_uses_serialization_alias_model():
+    """Test the serialization_alias on the Field is used when by_alias=True is set on the route"""
+    api = NinjaAPI()
+
+    class Person(models.Model):
+        uuid = models.CharField(
+            max_length=36, unique=True, default=lambda: str(uuid4()), editable=False
+        )
+        created = models.DateTimeField(auto_now_add=True)
+
+        class Meta:
+            app_label = "tests"
+
+    class PersonModelOut(ModelSchema):
+        uuid: str = Field(..., serialization_alias="id")
+
+        class Meta:
+            model = Person
+            fields = ["created"]
+
+    @api.get("/person", response={200: PersonModelOut}, by_alias=True)
+    def get_user(request):
+        return Person(fullname="John Snow")
+
+    schema = api.get_openapi_schema()
+    user_alias_schema = schema["components"]["schemas"]["PersonModelOut"]
+    assert user_alias_schema == {
+        "title": "PersonModelOut",
+        "type": "object",
+        "properties": {
+            "id": {"title": "Id", "type": "string"},
+            "created": {"type": "string", "format": "date-time", "title": "Created"},
+        },
+        "required": ["id", "created"],
+    }

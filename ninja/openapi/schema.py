@@ -224,6 +224,7 @@ class OpenAPISchema(dict):
                 ref_template=REF_TEMPLATE,
                 by_alias=by_alias,
                 schema_generator=NinjaGenerateJsonSchema,
+                mode="serialization",
             ).copy()
 
         # move Schemas from definitions
