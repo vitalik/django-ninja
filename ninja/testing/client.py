@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from json import dumps as json_dumps
 from json import loads as json_loads
 from typing import (
@@ -12,6 +13,7 @@ from typing import (
     TypeVar,
     Union,
     cast,
+    override,
 )
 from unittest.mock import Mock
 from urllib.parse import urljoin
@@ -37,7 +39,7 @@ def build_absolute_uri(location: Optional[str] = None) -> str:
 
 # TODO: this should be changed
 # maybe add here urlconf object and add urls from here
-class NinjaClientBase(Generic[ResponseT]):
+class NinjaClientBase(Generic[ResponseT], ABC):
     __test__ = False  # <- skip pytest
 
     def __init__(
@@ -114,7 +116,10 @@ class NinjaClientBase(Generic[ResponseT]):
                 **request_params.get("COOKIES", {}),
             }
         func, request, kwargs = self._resolve(method, path, data, request_params)
-        return self._call(func, request, kwargs)  # type: ignore
+        return self._call(func, request, kwargs)
+
+    @abstractmethod
+    def _call(self, func: Callable, request: Mock, kwargs: Dict) -> ResponseT: ...
 
     @property
     def urls(self) -> List:
@@ -201,11 +206,13 @@ class NinjaClientBase(Generic[ResponseT]):
 
 
 class TestClient(NinjaClientBase["NinjaResponse"]):
+    @override
     def _call(self, func: Callable, request: Mock, kwargs: Dict) -> "NinjaResponse":
         return NinjaResponse(func(request, **kwargs))
 
 
 class TestAsyncClient(NinjaClientBase[Awaitable["NinjaResponse"]]):
+    @override
     async def _call(
         self, func: Callable, request: Mock, kwargs: Dict
     ) -> "NinjaResponse":
