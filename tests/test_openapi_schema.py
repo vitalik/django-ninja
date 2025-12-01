@@ -146,9 +146,9 @@ def method_form_file(request, files: List[UploadedFile], data: Payload = Form(..
 
 @api.post("/test-body-file", response=Response)
 def method_body_file(
-    request,
-    files: List[UploadedFile],
-    body: Payload = Body(...),
+        request,
+        files: List[UploadedFile],
+        body: Payload = Body(...),
 ):
     return dict(i=body.i, f=body.f)
 
@@ -178,35 +178,35 @@ if sys.version_info >= (3, 10):
     response=Response,
 )
 def method_test_title_description(
-    request,
-    param1: int = Query(..., title="param 1 title"),
-    param2: str = Query("A Default", description="param 2 desc"),
-    file: UploadedFile = File(..., description="file param desc"),
+        request,
+        param1: int = Query(..., title="param 1 title"),
+        param2: str = Query("A Default", description="param 2 desc"),
+        file: UploadedFile = File(..., description="file param desc"),
 ):
     return dict(i=param1, f=param2)
 
 
 @api.post("/test-deprecated-example-examples/")
 def method_test_deprecated_example_examples(
-    request,
-    param1: int = Query(None, deprecated=True),
-    param2: str = Query(..., example="Example Value"),
-    param3: str = Query(
-        ...,
-        max_length=5,
-        examples={
-            "normal": {
-                "summary": "A normal example",
-                "description": "A **normal** string works correctly.",
-                "value": "Foo",
+        request,
+        param1: int = Query(None, deprecated=True),
+        param2: str = Query(..., example="Example Value"),
+        param3: str = Query(
+            ...,
+            max_length=5,
+            examples={
+                "normal": {
+                    "summary": "A normal example",
+                    "description": "A **normal** string works correctly.",
+                    "value": "Foo",
+                },
+                "invalid": {
+                    "summary": "Invalid data is rejected with an error",
+                    "value": "MoreThan5Length",
+                },
             },
-            "invalid": {
-                "summary": "Invalid data is rejected with an error",
-                "value": "MoreThan5Length",
-            },
-        },
-    ),
-    param4: int = Query(None, deprecated=True, include_in_schema=False),
+        ),
+        param4: int = Query(None, deprecated=True, include_in_schema=False),
 ):
     return dict(i=param2, f=param3)
 
@@ -253,6 +253,16 @@ def test_schema(schema):
                 }
             },
             "description": "OK",
+        },
+        422: {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "#/components/schemas/DefaultValidationError"
+                    }
+                }
+            },
+            "description": "Validation error"
         }
     }
     assert schema.schemas == {
@@ -264,6 +274,55 @@ def test_schema(schema):
                 "f": {"description": "f desc", "title": "f title", "type": "number"},
             },
             "required": ["i", "f"],
+        },
+        "DefaultValidationError": {
+            "properties": {
+                "detail": {
+                    "items": {
+                        "$ref": "#/components/schemas/ValidationError"
+                    },
+                    "title": "Detail",
+                    "type": "array"
+                }
+            },
+            "required": [
+                "detail"
+            ],
+            "title": "DefaultValidationError",
+            "type": "object"
+        },
+        "ValidationError": {
+            "properties": {
+                "loc": {
+                    "items": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "integer"
+                            }
+                        ]
+                    },
+                    "title": "Loc",
+                    "type": "array"
+                },
+                "msg": {
+                    "title": "Msg",
+                    "type": "string"
+                },
+                "type": {
+                    "title": "Type",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "loc",
+                "msg",
+                "type"
+            ],
+            "title": "ValidationError",
+            "type": "object"
         },
         "Payload": {
             "title": "Payload",
@@ -310,7 +369,18 @@ def test_schema_alias(schema):
                 }
             },
             "description": "OK",
+        },
+        422: {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "#/components/schemas/DefaultValidationError"
+                    }
+                }
+            },
+            "description": "Validation error"
         }
+
     }
     # ::TODO:: this is currently broken if not all responses for same schema use the same by_alias
     """
@@ -364,6 +434,16 @@ def test_schema_list(schema):
                 }
             },
             "description": "OK",
+        },
+        422: {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "#/components/schemas/DefaultValidationError"
+                    }
+                }
+            },
+            "description": "Validation error"
         }
     }
 
@@ -402,6 +482,55 @@ def test_schema_list(schema):
             "title": "Response",
             "type": "object",
         },
+        "DefaultValidationError": {
+            "properties": {
+                "detail": {
+                    "items": {
+                        "$ref": "#/components/schemas/ValidationError"
+                    },
+                    "title": "Detail",
+                    "type": "array"
+                }
+            },
+            "required": [
+                "detail"
+            ],
+            "title": "DefaultValidationError",
+            "type": "object"
+        },
+        "ValidationError": {
+            "properties": {
+                "loc": {
+                    "items": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "integer"
+                            }
+                        ]
+                    },
+                    "title": "Loc",
+                    "type": "array"
+                },
+                "msg": {
+                    "title": "Msg",
+                    "type": "string"
+                },
+                "type": {
+                    "title": "Type",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "loc",
+                "msg",
+                "type"
+            ],
+            "title": "ValidationError",
+            "type": "object"
+        }
     }
 
 
@@ -432,6 +561,16 @@ def test_schema_body(schema):
                 }
             },
             "description": "OK",
+        },
+        422: {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "#/components/schemas/DefaultValidationError"
+                    }
+                }
+            },
+            "description": "Validation error"
         }
     }
 
@@ -453,6 +592,16 @@ def test_schema_body_schema(schema):
                 }
             },
             "description": "OK",
+        },
+        422: {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "#/components/schemas/DefaultValidationError"
+                    }
+                }
+            },
+            "description": "Validation error"
         }
     }
 
@@ -485,6 +634,16 @@ def test_schema_path(schema):
                 },
             },
             "description": "OK",
+        },
+        422: {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "#/components/schemas/DefaultValidationError"
+                    }
+                }
+            },
+            "description": "Validation error"
         }
     }
 
@@ -559,6 +718,16 @@ def test_schema_form(schema):
                     "schema": {"$ref": "#/components/schemas/Response"}
                 }
             },
+        },
+        422: {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "#/components/schemas/DefaultValidationError"
+                    }
+                }
+            },
+            "description": "Validation error"
         }
     }
 
@@ -587,6 +756,16 @@ def test_schema_single(schema):
                     "schema": {"$ref": "#/components/schemas/Response"}
                 }
             },
+        },
+        422: {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "#/components/schemas/DefaultValidationError"
+                    }
+                }
+            },
+            "description": "Validation error"
         }
     }
 
@@ -617,6 +796,16 @@ def test_schema_form_body(schema):
                     "schema": {"$ref": "#/components/schemas/Response"}
                 }
             },
+        },
+        422: {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "#/components/schemas/DefaultValidationError"
+                    }
+                }
+            },
+            "description": "Validation error"
         }
     }
 
@@ -653,6 +842,16 @@ def test_schema_form_file(schema):
                     "schema": {"$ref": "#/components/schemas/Response"}
                 }
             },
+        },
+        422: {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "#/components/schemas/DefaultValidationError"
+                    }
+                }
+            },
+            "description": "Validation error"
         }
     }
 
@@ -688,6 +887,16 @@ def test_schema_body_file(schema):
                     "schema": {"$ref": "#/components/schemas/Response"}
                 }
             },
+        },
+        422: {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "#/components/schemas/DefaultValidationError"
+                    }
+                }
+            },
+            "description": "Validation error"
         }
     }
 
@@ -748,6 +957,16 @@ def test_schema_title_description(schema):
                 }
             },
             "description": "OK",
+        },
+        422: {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "#/components/schemas/DefaultValidationError"
+                    }
+                }
+            },
+            "description": "Validation error"
         }
     }
 
@@ -807,6 +1026,16 @@ def test_schema_deprecated_example_examples(schema):
     assert method_list["responses"] == {
         200: {
             "description": "OK",
+        },
+        422: {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "#/components/schemas/DefaultValidationError"
+                    }
+                }
+            },
+            "description": "Validation error"
         }
     }
 
@@ -833,7 +1062,6 @@ def test_union_payload_type(schema):
 def test_union_payload_simple(schema):
     method = schema["paths"]["/api/test-union-type-with-simple"]["post"]
 
-    print(method["requestBody"])
     assert method["requestBody"] == {
         "content": {
             "application/json": {
@@ -884,7 +1112,7 @@ def test_get_openapi_urls():
 
     api = NinjaAPI(openapi_url="/path", docs_url="/path")
     with pytest.raises(
-        AssertionError, match="Please use different urls for openapi_url and docs_url"
+            AssertionError, match="Please use different urls for openapi_url and docs_url"
     ):
         get_openapi_urls(api)
 
@@ -921,6 +1149,57 @@ def test_docs_decorator():
         assert result.status_code == 302
 
 
+def test_default_error_schema():
+    api = NinjaAPI()
+
+    @api.get("/1")
+    def some_name(request):
+        pass
+
+    schema = api.get_openapi_schema()
+    responses = schema['paths']['/api/1']['get']['responses']
+    assert responses == {
+        200: {
+            "description": "OK",
+        },
+        422: {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "#/components/schemas/DefaultValidationError"
+                    }
+                }
+            },
+            "description": "Validation error"
+        }
+    }
+
+
+def test_override_default_error_schema():
+    api = NinjaAPI()
+
+    class ValidationError(Schema):
+        error: str
+
+    @api.get("/1", response={422: ValidationError})
+    def some_name(request):
+        pass
+
+    schema = api.get_openapi_schema()
+    responses = schema['paths']['/api/1']['get']['responses']
+    assert responses == {
+        422:{
+            'content': {
+                'application/json': {
+                    'schema': {
+                        '$ref': '#/components/schemas/ValidationError'
+                    }
+                }
+            }, 'description': 'Unprocessable Entity'
+        }
+    }
+
+
 class TestRenderer(JSONRenderer):
     media_type = "custom/type"
 
@@ -930,7 +1209,7 @@ def test_renderer_media_type():
 
     @api.get("/1", response=TypeA)
     def same_name(
-        request,
+            request,
     ):
         pass
 
@@ -942,6 +1221,16 @@ def test_renderer_media_type():
                 "custom/type": {"schema": {"$ref": "#/components/schemas/TypeA"}}
             },
             "description": "OK",
+        },
+        422: {
+            "content": {
+                "custom/type": {
+                    "schema": {
+                        "$ref": "#/components/schemas/DefaultValidationError"
+                    }
+                }
+            },
+            "description": "Validation error"
         }
     }
 
@@ -951,13 +1240,13 @@ def test_all_paths_rendered():
 
     @api.post("/1")
     def some_name_create(
-        request,
+            request,
     ):
         pass
 
     @api.get("/1")
     def some_name_list(
-        request,
+            request,
     ):
         pass
 
@@ -981,13 +1270,13 @@ def test_all_paths_typed_params_rendered():
 
     @api.post("/1")
     def some_name_create(
-        request,
+            request,
     ):
         pass
 
     @api.get("/1")
     def some_name_list(
-        request,
+            request,
     ):
         pass
 
