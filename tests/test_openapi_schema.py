@@ -1069,6 +1069,31 @@ def test_by_alias_uses_serialization_alias_simple():
     }
 
 
+def test_by_alias_uses_validation_alias_simple():
+    """Test the serialization_alias on the Field is used when by_alias=True is set on the route"""
+    api = NinjaAPI()
+
+    class PersonIn(Schema):
+        uuid: str = Field(..., validation_alias="id")
+        name: str = Field(..., validation_alias="fullName")
+
+    @api.get("/person", by_alias=True)
+    def get_user(request, param: PersonIn):
+        return {"uuid": uuid4(), "fullname": "John Snow"}
+
+    schema = api.get_openapi_schema()
+    user_alias_schema = schema["components"]["schemas"]["PersonIn"]
+    assert user_alias_schema == {
+        "title": "PersonIn",
+        "type": "object",
+        "properties": {
+            "id": {"title": "Id", "type": "string"},
+            "fullName": {"type": "string", "title": "Fullname"},
+        },
+        "required": ["id", "fullName"],
+    }
+
+
 @pytest.mark.django_db
 def test_by_alias_uses_serialization_alias_model():
     """Test the serialization_alias on the Field is used when by_alias=True is set on the route"""
