@@ -237,13 +237,13 @@ class CursorPagination(AsyncPaginationBase):
         """
 
         p: Optional[str] = Field(
-            None,
+            default=None,
             title="position",
             description="String identifier for the current position in the dataset",
         )
 
         r: bool = Field(
-            False,
+            default=False,
             title="reverse",
             description="Whether to reverse the ordering direction",
         )
@@ -252,7 +252,7 @@ class CursorPagination(AsyncPaginationBase):
         # e.g. if created time of two items is exactly the same, we can use the offset
         # to figure out the position exactly
         o: int = Field(
-            0,
+            default=0,
             ge=0,
             lt=settings.PAGINATION_MAX_OFFSET,
             title="offset",
