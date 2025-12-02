@@ -219,6 +219,9 @@ def _inject_pagination(
     paginator_class: Type[Union[PaginationBase, AsyncPaginationBase]],
     **paginator_params: Any,
 ) -> Callable[..., Any]:
+    if getattr(func, "_ninja_is_paginated", False):
+        return func  # ^ user changed pagination manually on function already
+
     paginator = paginator_class(**paginator_params)
 
     # Check if Input schema has any fields
@@ -292,6 +295,7 @@ def _inject_pagination(
             partial(make_response_paginated, paginator),
         )
 
+    view_with_pagination._ninja_is_paginated = True  # type: ignore
     return view_with_pagination
 
 
