@@ -1,5 +1,4 @@
 import contextlib
-import os
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
@@ -102,10 +101,7 @@ def test_method(method, path, expected_status, expected_data, expected_streaming
     assert data == expected_data
 
 
-def test_validates():
-    try:
-        os.environ["NINJA_SKIP_REGISTRY"] = ""
-        with pytest.raises(ConfigError):
-            _urls = NinjaAPI().urls
-    finally:
-        os.environ["NINJA_SKIP_REGISTRY"] = "yes"
+def test_validates(settings):
+    delattr(settings, "NINJA_SKIP_REGISTRY")
+    with pytest.raises(ConfigError):
+        _urls = NinjaAPI().urls
