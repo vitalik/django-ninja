@@ -1,7 +1,9 @@
 import pytest
 from django.http import Http404
+from pydantic import ValidationError
 
 from ninja import NinjaAPI, Schema
+from ninja.errors import ConfigError
 from ninja.testing import TestAsyncClient, TestClient
 
 api = NinjaAPI()
@@ -96,4 +98,34 @@ def test_no_handlers():
     client = TestClient(api)
 
     with pytest.raises(RuntimeError):
+        client.get("/error")
+
+
+def test_improper_response_body_from_exception_handler():
+    @api.exception_handler(RuntimeError)
+    def on_runtime_error(request, exc):
+        return 418, {"payload": "non-proper"}
+
+    @api.get("/error", response={418: Payload})
+    def thrower(request):
+        raise RuntimeError
+
+    client = TestClient(api)
+
+    with pytest.raises(ValidationError):
+        client.get("/error")
+
+
+def test_non_configured_status_code_from_exception_handler():
+    @api.exception_handler(RuntimeError)
+    def on_runtime_error(request, exc):
+        return 410, Payload(test=1234)
+
+    @api.get("/error", response={418: Payload})
+    def thrower(request):
+        raise RuntimeError
+
+    client = TestClient(api)
+
+    with pytest.raises(ConfigError):
         client.get("/error")
