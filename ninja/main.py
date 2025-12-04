@@ -1,4 +1,3 @@
-import os
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -13,6 +12,7 @@ from typing import (
     Union,
 )
 
+from django.conf import settings
 from django.http import HttpRequest, HttpResponse
 from django.urls import URLPattern, URLResolver, reverse
 from django.utils.module_loading import import_string
@@ -561,7 +561,7 @@ class NinjaAPI:
 
     def _validate(self) -> None:
         # urls namespacing validation
-        skip_registry = os.environ.get("NINJA_SKIP_REGISTRY", False)
+        skip_registry = getattr(settings, "NINJA_SKIP_REGISTRY", False)
         if (
             not skip_registry
             and self.urls_namespace in NinjaAPI._registry
