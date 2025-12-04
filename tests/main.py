@@ -51,10 +51,12 @@ def custom_validator(value: int) -> int:
 CustomValidatedInt = Annotated[
     int,
     pydantic.AfterValidator(custom_validator),
-    pydantic.WithJsonSchema({
-        "type": "int",
-        "example": "42",
-    }),
+    pydantic.WithJsonSchema(
+        {
+            "type": "int",
+            "example": "42",
+        }
+    ),
 ]
 
 # TODO: Remove this condition once support for <= 3.8 is dropped
@@ -255,6 +257,14 @@ def get_query_type(request, query: int):
 
 @router.get("/query/int/optional")
 def get_query_type_optional(request, query: int = None):
+    if query is None:
+        return "foo bar"
+    return f"foo bar {query}"
+
+
+@router.get("/query/str/optional")
+def get_query_str_optional(request, query: str = None):
+    """Test for issue #1607 - str type with None default should be optional."""
     if query is None:
         return "foo bar"
     return f"foo bar {query}"
