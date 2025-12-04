@@ -51,12 +51,10 @@ def custom_validator(value: int) -> int:
 CustomValidatedInt = Annotated[
     int,
     pydantic.AfterValidator(custom_validator),
-    pydantic.WithJsonSchema(
-        {
-            "type": "int",
-            "example": "42",
-        }
-    ),
+    pydantic.WithJsonSchema({
+        "type": "int",
+        "example": "42",
+    }),
 ]
 
 # TODO: Remove this condition once support for <= 3.8 is dropped
