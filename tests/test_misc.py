@@ -15,8 +15,12 @@ def test_is_pydantic_model():
     class Model(BaseModel):
         x: int
 
+    class ModelNone(BaseModel):
+        x: int | None
+
     assert is_pydantic_model(Model)
     assert is_pydantic_model("instance") is False
+    assert is_pydantic_model(ModelNone)
 
 
 def test_client():
