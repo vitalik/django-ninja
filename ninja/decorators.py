@@ -24,15 +24,18 @@ DecoratorMode = Literal["operation", "view"]
 #
 
 
-def decorate_view(*decorators: Callable[..., Any]) -> Callable[[TCallable], TCallable]:
+def decorate_view(
+    *decorators: Callable[..., Any],
+    mode: DecoratorMode = "view",  # 'view' mode is used by default for backward compatibility
+) -> Callable[[TCallable], TCallable]:
     def outer_wrapper(op_func: TCallable) -> TCallable:
         if hasattr(op_func, "_ninja_operation"):
             # Means user used decorate_view on top of @api.method
-            _apply_decorators(decorators, op_func._ninja_operation)  # type: ignore
+            apply_decorators(decorators, mode, op_func._ninja_operation)  # type: ignore
         else:
             # Means user used decorate_view after(bottom) of @api.method
             contribute_operation_callback(
-                op_func, partial(_apply_decorators, decorators)
+                op_func, partial(apply_decorators, decorators, mode)
             )
 
         return op_func
@@ -40,8 +43,19 @@ def decorate_view(*decorators: Callable[..., Any]) -> Callable[[TCallable], TCal
     return outer_wrapper
 
 
-def _apply_decorators(
-    decorators: Tuple[Callable[..., Any]], operation: Operation
+def apply_decorators(
+    decorators: Tuple[Callable[..., Any]], mode: DecoratorMode, operation: Operation
 ) -> None:
     for deco in decorators:
-        operation.run = deco(operation.run)  # type: ignore
+        apply_decorator(deco, mode, operation)
+
+
+def apply_decorator(
+    decorator: Callable[..., Any], mode: DecoratorMode, operation: Operation
+) -> None:
+    if mode == "view":
+        operation.run = decorator(operation.run)  # type: ignore
+    elif mode == "operation":
+        operation.view_func = decorator(operation.view_func)
+    else:
+        raise ValueError(f"Invalid decorator mode: {mode}")  # pragma: no cover

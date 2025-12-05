@@ -16,7 +16,7 @@ from django.urls import path as django_path
 from django.utils.module_loading import import_string
 
 from ninja.constants import NOT_SET, NOT_SET_TYPE
-from ninja.decorators import DecoratorMode
+from ninja.decorators import DecoratorMode, apply_decorator
 from ninja.errors import ConfigError
 from ninja.operation import PathView
 from ninja.throttling import BaseThrottle
@@ -482,14 +482,7 @@ class Router:
                 # Apply decorators that haven't been applied yet
                 for decorator, mode in self._decorators:
                     if (decorator, mode) not in applied_decorators:
-                        if mode == "view":
-                            operation.run = decorator(operation.run)  # type: ignore
-                        elif mode == "operation":
-                            operation.view_func = decorator(operation.view_func)
-                        else:
-                            raise ValueError(
-                                f"Invalid decorator mode: {mode}"
-                            )  # pragma: no cover
+                        apply_decorator(decorator, mode, operation)
                         applied_decorators.append((decorator, mode))
 
                 # Store what decorators have been applied

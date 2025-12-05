@@ -7,11 +7,12 @@ Django Ninja provides flexible decorator support to wrap your API operations wit
 Django Ninja supports two modes for applying decorators:
 
 
-### OPERATION Mode (Default)
+### OPERATION Mode
 - Applied **after** Django Ninja's validation
 - Wraps the operation function with validated data
 - Has access to parsed and validated parameters
 - Useful for: business logic, logging with validated data, post-validation checks
+- Default mode in `api.add_decorator` and `router.add_decorator`
 
 ### VIEW Mode
 - Applied **before** Django Ninja's validation
@@ -19,6 +20,7 @@ Django Ninja supports two modes for applying decorators:
 - Has access to the raw Django request
 - Useful for: caching, rate limiting, Django middleware-like functionality
 - Similar to Django's standard view decorators
+- Default mode in `@decorate_view`
 
 
 ## Using `@decorate_view`
@@ -33,7 +35,7 @@ from ninja.decorators import decorate_view
 api = NinjaAPI()
 
 @api.get("/cached")
-@decorate_view(cache_page(60 * 15))  # Cache for 15 minutes
+@decorate_view(cache_page(60 * 15))  # Cache for 15 minutes. VIEW mode by default
 def cached_endpoint(request):
     return {"data": "This response is cached"}
 ```
@@ -45,7 +47,7 @@ from django.views.decorators.cache import cache_page
 from django.views.decorators.vary import vary_on_headers
 
 @api.get("/multi")
-@decorate_view(cache_page(300), vary_on_headers("User-Agent"))
+@decorate_view(cache_page(300), vary_on_headers("User-Agent"), mode="view")
 def multi_decorated(request):
     return {"data": "Multiple decorators applied"}
 ```
@@ -348,17 +350,19 @@ def sync_decorator(func):
 
 1. **Use `functools.wraps`**: Always use `@wraps(func)` to preserve function metadata
 
-2. **Handle mixed sync/async routers**: When your router has both sync and async endpoints, use `asyncio.iscoroutinefunction(func)` to create universal decorators
+2. **Use `mode`**: Always specify decorator mode to make code clear and explicit
 
-3. **Choose the right approach for async**:
-   - **Universal decorators**: Best for mixed routers (detect with `iscoroutinefunction`)
-   - **Async-only decorators**: Best for async-only routers (simpler, cleaner) 
-   - **Sync decorators with coroutine handling**: Useful for legacy decorators
+3. **Handle mixed sync/async routers**: When your router has both sync and async endpoints, use `asyncio.iscoroutinefunction(func)` to create universal decorators
 
-4. **Be mindful of performance**: Decorators add overhead, especially in VIEW mode
+4. **Choose the right approach for async**:
+    - **Universal decorators**: Best for mixed routers (detect with `iscoroutinefunction`)
+    - **Async-only decorators**: Best for async-only routers (simpler, cleaner) 
+    - **Sync decorators with coroutine handling**: Useful for legacy decorators
 
-5. **Document side effects**: Clearly document what your decorators modify
+5. **Be mindful of performance**: Decorators add overhead, especially in VIEW mode
 
-6. **Keep decorators focused**: Each decorator should have a single responsibility
+6. **Document side effects**: Clearly document what your decorators modify
 
-7. **Test both sync and async**: When using universal decorators, test both sync and async endpoints
+7. **Keep decorators focused**: Each decorator should have a single responsibility
+
+8. **Test both sync and async**: When using universal decorators, test both sync and async endpoints
