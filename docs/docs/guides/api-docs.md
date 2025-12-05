@@ -53,6 +53,12 @@ In case you do not need to display interactive documentation - set `docs_url` ar
 api = NinjaAPI(docs_url=None)
 ```
 
+Note: Even if you set `docs_url` to `None`, your whole schema will still be public on `/api/openapi.json`. This is usually undesirable in production. To hide your schema set `openapi_url` argument to `None` as well
+
+```python
+api = NinjaAPI(docs_url=None, openapi_url=None)
+```
+
 ## Protecting docs
 
 To protect docs with authentication (or decorate for some other use case) use `docs_decorator` argument:
