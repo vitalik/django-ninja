@@ -410,9 +410,14 @@ class NinjaAPI:
         if tags is not None:
             router.tags = tags
 
-        # Inherit API-level decorators from default router
         # Prepend API decorators so they execute first (outer decorators)
-        router._decorators = self.default_router._decorators + router._decorators
+        if parent_router:
+            # Inherit Parent-level decorators from parent router.
+            # It has already included API-level decorators from default router
+            router._decorators = parent_router._decorators + router._decorators
+        else:
+            # Inherit API-level decorators from default router
+            router._decorators = self.default_router._decorators + router._decorators
 
         if parent_router:
             parent_prefix = next(
