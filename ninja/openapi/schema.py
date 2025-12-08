@@ -4,6 +4,7 @@ from http.client import responses
 from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Set, Tuple
 
 from django.utils.termcolors import make_style
+from pydantic.json_schema import JsonSchemaMode
 
 from ninja.constants import NOT_SET
 from ninja.operation import Operation
@@ -216,6 +217,7 @@ class OpenAPISchema(dict):
         model: TModel,
         by_alias: bool = True,
         remove_level: bool = True,
+        mode: JsonSchemaMode = "validation",
     ) -> Tuple[DictStrAny, bool]:
         if hasattr(model, "__ninja_flatten_map__"):
             schema = self._flatten_schema(model)
@@ -224,6 +226,7 @@ class OpenAPISchema(dict):
                 ref_template=REF_TEMPLATE,
                 by_alias=by_alias,
                 schema_generator=NinjaGenerateJsonSchema,
+                mode=mode,
             ).copy()
 
         # move Schemas from definitions
@@ -240,7 +243,9 @@ class OpenAPISchema(dict):
             return schema, True
 
     def _create_multipart_schema_from_models(
-        self, models: TModels
+        self,
+        models: TModels,
+        mode: JsonSchemaMode = "validation",
     ) -> Tuple[DictStrAny, str]:
         # We have File and Form or Body, so we need to use multipart (File)
         content_type = BODY_CONTENT_TYPES["file"]
@@ -267,10 +272,14 @@ class OpenAPISchema(dict):
             model = models[0]
             content_type = BODY_CONTENT_TYPES[model.__ninja_param_source__]
             schema, required = self._create_schema_from_model(
-                model, remove_level=model.__ninja_param_source__ == "body"
+                model,
+                remove_level=model.__ninja_param_source__ == "body",
+                mode="validation",
             )
         else:
-            schema, content_type = self._create_multipart_schema_from_models(models)
+            schema, content_type = self._create_multipart_schema_from_models(
+                models, mode="validation"
+            )
             required = True
 
         return {
@@ -291,7 +300,7 @@ class OpenAPISchema(dict):
             if model not in [None, NOT_SET]:
                 # ::TODO:: test this: by_alias == True
                 schema = self._create_schema_from_model(
-                    model, by_alias=operation.by_alias
+                    model, by_alias=operation.by_alias, mode="serialization"
                 )[0]
                 details[status]["content"] = {
                     self.api.renderer.media_type: {"schema": schema}
