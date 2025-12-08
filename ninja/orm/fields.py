@@ -118,66 +118,28 @@ def get_schema_field(
     field: DjangoField, *, depth: int = 0, optional: bool = False
 ) -> Tuple:
     "Returns pydantic field from django's model field"
+
     alias = None
-    default = ...
-    default_factory = None
-    description = None
-    title = None
     max_length = None
-    nullable = False
-    python_type = None
 
     if field.is_relation:
-        if depth > 0:
-            return get_related_field_schema(field, depth=depth)
+        result = _handle_relation_field(field, depth=depth, optional=optional)
 
-        internal_type = field.related_model._meta.pk.get_internal_type()
-
-        if not field.concrete and field.auto_created or field.null or optional:
-            default = None
-            nullable = True
-
-        alias = getattr(field, "get_attname", None) and field.get_attname()
-
-        pk_type = TYPES.get(internal_type, int)
-        if field.one_to_many or field.many_to_many:
-            m2m_type = create_m2m_link_type(pk_type)
-            python_type = List[m2m_type]  # type: ignore
+        if isinstance(result, tuple) and len(result) == 5:
+            python_type, default, default_factory, nullable, alias = result
         else:
-            python_type = pk_type
+            return result
 
     else:
-        _f_name, _f_path, _f_pos, field_options = field.deconstruct()
-        blank = field_options.get("blank", False)
-        null = field_options.get("null", False)
-        max_length = field_options.get("max_length")
-
-        internal_type = field.get_internal_type()
-        try:
-            python_type = TYPES[internal_type]
-        except KeyError as e:
-            msg = [
-                f"Do not know how to convert django field '{internal_type}'.",
-                "Try from ninja.orm import register_field",
-                f"register_field('{internal_type}', <your-python-type>)",
-            ]
-            raise ConfigError("\n".join(msg)) from e
-
-        if field.primary_key or blank or null or optional:
-            default = None
-            nullable = True
-
-        if field.has_default():
-            if callable(field.default):
-                default_factory = field.default
-            else:
-                default = field.default
+        python_type, default, default_factory, nullable, max_length = _handle_normal_field(
+            field, optional=optional
+        )
 
     if default_factory:
         default = PydanticUndefined
 
     if nullable:
-        python_type = Union[python_type, None]  # aka Optional in 3.7+
+        python_type = Union[python_type, None]
 
     description = field.help_text or None
     title = title_if_lower(field.verbose_name)
@@ -195,6 +157,78 @@ def get_schema_field(
             max_length=max_length,
         ),
     )
+
+
+def _get_python_type(internal_type: str):
+    try:
+        return TYPES[internal_type]
+    except KeyError as e:
+        msg = [
+            f"Do not know how to convert django field '{internal_type}'.",
+            "Try from ninja.orm import register_field",
+            f"register_field('{internal_type}', <your-python-type>)",
+        ]
+        raise ConfigError("\n".join(msg)) from e
+
+
+def _should_be_nullable(*flags: bool) -> bool:
+    return any(flags)
+
+
+def _handle_relation_field(field, *, depth: int, optional: bool):
+    if depth > 0:
+        return get_related_field_schema(field, depth=depth)
+
+    default = ...
+    default_factory = None
+    nullable = False
+    alias = None
+
+    internal_type = field.related_model._meta.pk.get_internal_type()
+
+    if not field.concrete and field.auto_created or field.null or optional:
+        default = None
+        nullable = True
+
+    alias = getattr(field, "get_attname", None) and field.get_attname()
+
+    pk_type = _get_python_type(internal_type)
+
+    if field.one_to_many or field.many_to_many:
+        m2m_type = create_m2m_link_type(pk_type)
+        python_type = List[m2m_type]  # type: ignore
+    else:
+        python_type = pk_type
+
+    return python_type, default, default_factory, nullable, alias
+
+
+def _handle_normal_field(field, *, optional: bool):
+    default = ...
+    default_factory = None
+    nullable = False
+
+    _f_name, _f_path, _f_pos, field_options = field.deconstruct()
+
+    blank = field_options.get("blank", False)
+    null = field_options.get("null", False)
+    max_length = field_options.get("max_length")
+
+    internal_type = field.get_internal_type()
+    python_type = _get_python_type(internal_type)
+
+    if _should_be_nullable(field.primary_key, blank, null, optional):
+        default = None
+        nullable = True
+
+    if field.has_default():
+        if callable(field.default):
+            default_factory = field.default
+        else:
+            default = field.default
+
+    return python_type, default, default_factory, nullable, max_length
+
 
 
 @no_type_check

@@ -1,4 +1,3 @@
-import os
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -14,9 +13,12 @@ from typing import (
 )
 
 from django.http import HttpRequest, HttpResponse
-from django.urls import URLPattern, URLResolver, reverse
-from django.utils.module_loading import import_string
+from django.urls import URLPattern, URLResolver
 
+from ninja.api_exceptions import ExceptionRegistry
+from ninja.api_registry import ApiRegistry
+from ninja.api_responses import ResponseFactory
+from ninja.api_routing import RouterManager
 from ninja.constants import NOT_SET, NOT_SET_TYPE
 from ninja.decorators import DecoratorMode
 from ninja.errors import (
@@ -28,13 +30,12 @@ from ninja.errors import (
 from ninja.openapi import get_schema
 from ninja.openapi.docs import DocsBase, Swagger
 from ninja.openapi.schema import OpenAPISchema
-from ninja.openapi.urls import get_openapi_urls, get_root_url
 from ninja.parser import Parser
 from ninja.renderers import BaseRenderer, JSONRenderer
 from ninja.router import Router
 from ninja.throttling import BaseThrottle
 from ninja.types import DictStrAny, TCallable
-from ninja.utils import is_debug_server, normalize_path
+from ninja.utils import is_debug_server
 
 if TYPE_CHECKING:
     from .operation import Operation  # pragma: no cover
@@ -52,6 +53,8 @@ class NinjaAPI:
     """
 
     _registry: List[str] = []
+
+    print("Teste pra Arquitetura de Software")
 
     def __init__(
         self,
@@ -96,10 +99,12 @@ class NinjaAPI:
         self.servers = servers or []
         self.urls_namespace = urls_namespace or f"api-{self.version}"
         self.renderer = renderer or JSONRenderer()
+        self.response_factory = ResponseFactory(self.renderer)
         self.parser = parser or Parser()
         self.openapi_extra = openapi_extra or {}
 
-        self._exception_handlers: Dict[Exc, ExcHandler] = {}
+        self.exceptions = ExceptionRegistry()
+
         self.set_default_exception_handlers()
 
         self.auth: Optional[Union[Sequence[Callable], NOT_SET_TYPE]]
@@ -110,10 +115,12 @@ class NinjaAPI:
             self.auth = auth
 
         self.throttle = throttle
+        
 
-        self._routers: List[Tuple[str, Router]] = []
-        self.default_router = default_router or Router()
-        self.add_router("", self.default_router)
+        self.routing = RouterManager(self, default_router=default_router)
+        self.default_router = self.routing.default_router
+        self._routers = self.routing._routers
+
 
     def get(
         self,
@@ -386,7 +393,7 @@ class NinjaAPI:
         """
         # Store decorator on default router - will be inherited by all routers during build
         self.default_router.add_decorator(decorator, mode)
-
+    
     def add_router(
         self,
         prefix: str,
@@ -397,32 +404,15 @@ class NinjaAPI:
         tags: Optional[List[str]] = None,
         parent_router: Optional[Router] = None,
     ) -> None:
-        if isinstance(router, str):
-            router = import_string(router)
-            assert isinstance(router, Router)
+        self.routing.add_router(
+            prefix=prefix,
+            router=router,
+            auth=auth,
+            throttle=throttle,
+            tags=tags,
+            parent_router=parent_router,
+        )
 
-        if auth is not NOT_SET:
-            router.auth = auth
-
-        if throttle is not NOT_SET:
-            router.throttle = throttle
-
-        if tags is not None:
-            router.tags = tags
-
-        # Inherit API-level decorators from default router
-        # Prepend API decorators so they execute first (outer decorators)
-        router._decorators = self.default_router._decorators + router._decorators
-
-        if parent_router:
-            parent_prefix = next(
-                (path for path, r in self._routers if r is parent_router), None
-            )  # pragma: no cover
-            assert parent_prefix is not None
-            prefix = normalize_path("/".join((parent_prefix, prefix))).lstrip("/")
-
-        self._routers.extend(router.build_routers(prefix))
-        router.set_api_instance(self, parent_router)
 
     @property
     def urls(self) -> Tuple[List[Union[URLResolver, URLPattern]], str, str]:
@@ -435,24 +425,11 @@ class NinjaAPI:
         """
         self._validate()
         return (
-            self._get_urls(),
+            self.routing._get_urls(),
             "ninja",
             self.urls_namespace.split(":")[-1],
             # ^ if api included into nested urls, we only care about last bit here
         )
-
-    def _get_urls(self) -> List[Union[URLResolver, URLPattern]]:
-        result = get_openapi_urls(self)
-
-        for prefix, router in self._routers:
-            result.extend(router.urls_paths(prefix))
-
-        result.append(get_root_url(self))
-        return result
-
-    def get_root_path(self, path_params: DictStrAny) -> str:
-        name = f"{self.urls_namespace}:api-root"
-        return reverse(name, kwargs=path_params)
 
     def create_response(
         self,
@@ -466,23 +443,15 @@ class NinjaAPI:
             status = temporal_response.status_code
         assert status
 
-        content = self.renderer.render(request, data, response_status=status)
-
-        if temporal_response:
-            response = temporal_response
-            response.content = content
-        else:
-            response = HttpResponse(
-                content, status=status, content_type=self.get_content_type()
-            )
-
-        return response
+        return self.response_factory.create_response(
+            request, data, status=status, temporal_response=temporal_response
+        )
 
     def create_temporal_response(self, request: HttpRequest) -> HttpResponse:
-        return HttpResponse("", content_type=self.get_content_type())
+        return self.response_factory.create_temporal_response()
 
     def get_content_type(self) -> str:
-        return f"{self.renderer.media_type}; charset={self.renderer.charset}"
+        return self.response_factory.get_content_type()
 
     def get_openapi_schema(
         self,
@@ -491,7 +460,7 @@ class NinjaAPI:
         path_params: Optional[DictStrAny] = None,
     ) -> OpenAPISchema:
         if path_prefix is None:
-            path_prefix = self.get_root_path(path_params or {})
+            path_prefix = self.routing.get_root_path(path_params or {})
         return get_schema(api=self, path_prefix=path_prefix)
 
     def get_openapi_operation_id(self, operation: "Operation") -> str:
@@ -509,8 +478,7 @@ class NinjaAPI:
     def add_exception_handler(
         self, exc_class: Type[_E], handler: ExcHandler[_E]
     ) -> None:
-        assert issubclass(exc_class, Exception)
-        self._exception_handlers[exc_class] = handler
+        self.exceptions.add_handler(exc_class, handler)
 
     def exception_handler(
         self, exc_class: Type[Exception]
@@ -525,7 +493,7 @@ class NinjaAPI:
         set_default_exc_handlers(self)
 
     def on_exception(self, request: HttpRequest, exc: Exc[_E]) -> HttpResponse:
-        handler = self._lookup_exception_handler(exc)
+        handler = self.exceptions.lookup(exc)
         if handler is None:
             raise exc
         return handler(request, exc)
@@ -533,49 +501,11 @@ class NinjaAPI:
     def validation_error_from_error_contexts(
         self, error_contexts: List[ValidationErrorContext]
     ) -> ValidationError:
-        errors: List[Dict[str, Any]] = []
-        for context in error_contexts:
-            model = context.model
-            e = context.pydantic_validation_error
-            for i in e.errors(include_url=False):
-                i["loc"] = (
-                    model.__ninja_param_source__,
-                ) + model.__ninja_flatten_map_reverse__.get(i["loc"], i["loc"])
-                # removing pydantic hints
-                del i["input"]  # type: ignore
-                if (
-                    "ctx" in i
-                    and "error" in i["ctx"]
-                    and isinstance(i["ctx"]["error"], Exception)
-                ):
-                    i["ctx"]["error"] = str(i["ctx"]["error"])
-                errors.append(dict(i))
-        return ValidationError(errors)
-
-    def _lookup_exception_handler(self, exc: Exc[_E]) -> Optional[ExcHandler[_E]]:
-        for cls in type(exc).__mro__:
-            if cls in self._exception_handlers:
-                return self._exception_handlers[cls]
-
-        return None
+        return self.exceptions.validation_error_from_contexts(error_contexts)
 
     def _validate(self) -> None:
         # urls namespacing validation
-        skip_registry = os.environ.get("NINJA_SKIP_REGISTRY", False)
-        if (
-            not skip_registry
-            and self.urls_namespace in NinjaAPI._registry
-            and not debug_server_url_reimport()
-        ):
-            msg = f"""
-Looks like you created multiple NinjaAPIs or TestClients
-To let ninja distinguish them you need to set either unique version or urls_namespace
- - NinjaAPI(..., version='2.0.0')
- - NinjaAPI(..., urls_namespace='otherapi')
-Already registered: {NinjaAPI._registry}
-"""
-            raise ConfigError(msg.strip())
-        NinjaAPI._registry.append(self.urls_namespace)
+        ApiRegistry.validate_namespace(self.urls_namespace)
 
 
 _imported_while_running_in_debug_server = is_debug_server()
