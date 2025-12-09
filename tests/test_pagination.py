@@ -7,9 +7,9 @@ from django.test import override_settings
 from pydantic.errors import PydanticSchemaGenerationError
 
 from ninja import NinjaAPI, Schema
+from ninja.constants import NOT_SET
 from ninja.errors import ConfigError
 from ninja.operation import Operation
-from ninja.constants import NOT_SET
 from ninja.pagination import (
     LimitOffsetPagination,
     PageNumberPagination,
