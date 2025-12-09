@@ -109,7 +109,9 @@ class NinjaAPI:
 
         # Top-level router registrations (new architecture)
         # Stores (prefix, router, auth, throttle, tags, url_name_prefix) for each add_router call
-        self._router_registrations: List[Tuple[str, Router, Any, Any, Optional[List[str]], Optional[str]]] = []
+        self._router_registrations: List[
+            Tuple[str, Router, Any, Any, Optional[List[str]], Optional[str]]
+        ] = []
         self._bound_routers_cache: Optional[List[BoundRouter]] = None
 
         # Backward compat: keep _routers list populated
@@ -434,7 +436,14 @@ class NinjaAPI:
 
         # Store registration for later processing during URL generation
         # This allows child routers to be added after add_router() is called
-        self._router_registrations.append((prefix, router, auth, throttle, tags, url_name_prefix))
+        self._router_registrations.append((
+            prefix,
+            router,
+            auth,
+            throttle,
+            tags,
+            url_name_prefix,
+        ))
 
         # Backward compat: keep _routers list updated (just the top-level router)
         self._routers.append((prefix, router))
@@ -462,10 +471,19 @@ class NinjaAPI:
             # Build mounts from registrations (delayed to capture all child routers)
             all_mounts: List[RouterMount] = []
 
-            for prefix, router, auth, throttle, tags, url_name_prefix in self._router_registrations:
+            for (
+                prefix,
+                router,
+                auth,
+                throttle,
+                tags,
+                url_name_prefix,
+            ) in self._router_registrations:
                 # Get API-level decorators from default router
                 api_decorators = (
-                    self.default_router._decorators if router is not self.default_router else []
+                    self.default_router._decorators
+                    if router is not self.default_router
+                    else []
                 )
 
                 # Build mount configurations (non-mutating)

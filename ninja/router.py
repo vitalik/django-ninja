@@ -535,7 +535,9 @@ class Router:
 
         return None
 
-    def urls_paths(self, prefix: str, api: Optional["NinjaAPI"] = None) -> Iterator[URLPattern]:
+    def urls_paths(
+        self, prefix: str, api: Optional["NinjaAPI"] = None
+    ) -> Iterator[URLPattern]:
         """
         Generate URL patterns for this router.
 
@@ -651,20 +653,24 @@ class Router:
         # For auth/throttle/tags, effective value is used for children:
         # priority: this router's own setting > inherited
         child_auth = self.auth if self.auth is not NOT_SET else inherited_auth
-        child_throttle = self.throttle if self.throttle is not NOT_SET else inherited_throttle
+        child_throttle = (
+            self.throttle if self.throttle is not NOT_SET else inherited_throttle
+        )
         child_tags = self.tags if self.tags is not None else inherited_tags
 
         # Build mounts for child routers
         child_mounts: List[RouterMount] = []
         for child_prefix, child_router in self._routers:
             child_path = normalize_path("/".join((prefix, child_prefix))).lstrip("/")
-            child_mounts.extend(child_router.build_routers(
-                child_path,
-                child_decorators,
-                child_auth,
-                child_throttle,
-                child_tags,
-            ))
+            child_mounts.extend(
+                child_router.build_routers(
+                    child_path,
+                    child_decorators,
+                    child_auth,
+                    child_throttle,
+                    child_tags,
+                )
+            )
 
         return [mount, *child_mounts]
 
