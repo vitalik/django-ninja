@@ -179,10 +179,10 @@ class Operation:
         # Re-apply run decorators (from decorate_view) to the clone's run method
         # We can't just copy the decorated run because it's bound to the original instance
         if hasattr(self, "_run_decorators") and self._run_decorators:
-            cloned._run_decorators = []
+            cloned._run_decorators = []  # type: ignore[attr-defined]
             for deco in self._run_decorators:
                 cloned.run = deco(cloned.run)  # type: ignore
-                cloned._run_decorators.append(deco)
+                cloned._run_decorators.append(deco)  # type: ignore[attr-defined]
 
         return cloned
 

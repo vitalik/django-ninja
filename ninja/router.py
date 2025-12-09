@@ -93,6 +93,7 @@ class BoundRouter:
         else:
             self.throttle = NOT_SET
 
+        self.tags: Optional[List[str]]
         if mount.tags is not None:
             self.tags = mount.tags
         elif mount.template.tags is not None:
@@ -144,8 +145,8 @@ class BoundRouter:
                         )
 
                 # Apply tags inheritance
-                if operation.tags is None and self.tags is not None:
-                    operation.tags = self.tags
+                if operation.tags is None and self.tags is not None:  # type: ignore[has-type]
+                    operation.tags = self.tags  # type: ignore[has-type]
 
                 # Apply decorators (fresh application - no tracking needed)
                 for decorator, mode in effective_decorators:
