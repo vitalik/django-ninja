@@ -55,20 +55,23 @@ def test_schema():
 
 
 def test_duplicate_names():
+    # Create separate APIs for error testing to avoid frozen router issues
     class TestData(Schema):
         p1: str
 
+    api1 = NinjaAPI(urls_namespace="test_dup1")
     match = "Duplicated name: 'p1' in params: 'p1' & 'data'"
     with pytest.raises(ConfigError, match=match):
 
-        @api.post("/broken1")
+        @api1.post("/broken1")
         def broken1(request, p1: int = Form(...), data: TestData = Form(...)):
             pass
 
+    api2 = NinjaAPI(urls_namespace="test_dup2")
     match = "Duplicated name: 'p1' also in 'data'"
     with pytest.raises(ConfigError, match=match):
 
-        @api.post("/broken2")
+        @api2.post("/broken2")
         def broken2(request, data: TestData = Form(...), p1: int = Form(...)):
             pass
 

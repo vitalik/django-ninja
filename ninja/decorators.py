@@ -43,5 +43,9 @@ def decorate_view(*decorators: Callable[..., Any]) -> Callable[[TCallable], TCal
 def _apply_decorators(
     decorators: Tuple[Callable[..., Any]], operation: Operation
 ) -> None:
+    # Track decorators for cloning support
+    if not hasattr(operation, "_run_decorators"):
+        operation._run_decorators = []  # type: ignore
     for deco in decorators:
         operation.run = deco(operation.run)  # type: ignore
+        operation._run_decorators.append(deco)  # type: ignore

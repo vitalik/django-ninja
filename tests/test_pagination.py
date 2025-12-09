@@ -9,10 +9,12 @@ from pydantic.errors import PydanticSchemaGenerationError
 from ninja import NinjaAPI, Schema
 from ninja.errors import ConfigError
 from ninja.operation import Operation
+from ninja.constants import NOT_SET
 from ninja.pagination import (
     LimitOffsetPagination,
     PageNumberPagination,
     PaginationBase,
+    _find_collection_response,
     make_response_paginated,
     paginate,
 )
@@ -682,3 +684,40 @@ def test_no_pagination_without_query_params():
         assert (
             param.get("required", False) is False
         ), f"Parameter {param['name']} should not be required"
+
+
+def test_find_collection_response_skips_none_and_not_set():
+    """Test that _find_collection_response skips None and NOT_SET response models."""
+
+    class ItemSchema(Schema):
+        id: int
+
+    # Create operation with a collection response
+    operation = Operation("/test", ["GET"], lambda: None, response=List[ItemSchema])
+
+    # Manually add None and NOT_SET response models before the collection one
+    original_200 = operation.response_models[200]
+    operation.response_models = {
+        204: None,  # Should be skipped
+        404: NOT_SET,  # Should be skipped
+        200: original_200,  # Collection type - should be found
+    }
+
+    # Should find the collection response at 200, skipping 204 and 404
+    status_code, item_schema = _find_collection_response(operation)
+    assert status_code == 200
+    assert item_schema is ItemSchema
+
+
+def test_find_collection_response_raises_when_no_collection():
+    """Test that _find_collection_response raises ConfigError when no collection response."""
+
+    class ItemSchema(Schema):
+        id: int
+
+    # Create operation with a non-collection response
+    operation = Operation("/test", ["GET"], lambda: None, response=ItemSchema)
+
+    # Should raise ConfigError since ItemSchema is not a collection
+    with pytest.raises(ConfigError, match="no collection response"):
+        _find_collection_response(operation)

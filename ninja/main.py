@@ -1,4 +1,3 @@
-import os
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -31,10 +30,9 @@ from ninja.openapi.schema import OpenAPISchema
 from ninja.openapi.urls import get_openapi_urls, get_root_url
 from ninja.parser import Parser
 from ninja.renderers import BaseRenderer, JSONRenderer
-from ninja.router import Router
+from ninja.router import BoundRouter, Router, RouterMount
 from ninja.throttling import BaseThrottle
 from ninja.types import DictStrAny, TCallable
-from ninja.utils import is_debug_server, normalize_path
 
 if TYPE_CHECKING:
     from .operation import Operation  # pragma: no cover
@@ -50,8 +48,6 @@ class NinjaAPI:
     """
     Ninja API
     """
-
-    _registry: List[str] = []
 
     def __init__(
         self,
@@ -111,7 +107,14 @@ class NinjaAPI:
 
         self.throttle = throttle
 
+        # Top-level router registrations (new architecture)
+        # Stores (prefix, router, auth, throttle, tags, url_name_prefix) for each add_router call
+        self._router_registrations: List[Tuple[str, Router, Any, Any, Optional[List[str]], Optional[str]]] = []
+        self._bound_routers_cache: List[BoundRouter] | None = None
+
+        # Backward compat: keep _routers list populated
         self._routers: List[Tuple[str, Router]] = []
+
         self.default_router = default_router or Router()
         self.add_router("", self.default_router)
 
@@ -395,34 +398,46 @@ class NinjaAPI:
         auth: Any = NOT_SET,
         throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         tags: Optional[List[str]] = None,
+        url_name_prefix: Optional[str] = None,
         parent_router: Optional[Router] = None,
     ) -> None:
+        """
+        Add a router to this API.
+
+        Args:
+            prefix: URL prefix for all routes in the router
+            router: Router instance or import path string
+            auth: Authentication override for this router
+            throttle: Throttle override for this router
+            tags: Tags override for this router
+            url_name_prefix: Prefix for URL names (required when mounting same router multiple times)
+            parent_router: Internal use - parent router for nested routers
+        """
+        # Prevent adding routers after URLs have been generated
+        if self._bound_routers_cache is not None:
+            raise ConfigError(
+                "Cannot add routers after URLs have been generated. "
+                "Add all routers before accessing api.urls"
+            )
+
         if isinstance(router, str):
             router = import_string(router)
             assert isinstance(router, Router)
 
-        if auth is not NOT_SET:
-            router.auth = auth
+        # Check for duplicate router template - require url_name_prefix
+        existing_templates = {reg[1] for reg in self._router_registrations}
+        if router in existing_templates and url_name_prefix is None:
+            raise ConfigError(
+                "Router is already mounted to this API. When mounting the same router "
+                "multiple times, you must provide unique url_name_prefix for each mount."
+            )
 
-        if throttle is not NOT_SET:
-            router.throttle = throttle
+        # Store registration for later processing during URL generation
+        # This allows child routers to be added after add_router() is called
+        self._router_registrations.append((prefix, router, auth, throttle, tags, url_name_prefix))
 
-        if tags is not None:
-            router.tags = tags
-
-        # Inherit API-level decorators from default router
-        # Prepend API decorators so they execute first (outer decorators)
-        router._decorators = self.default_router._decorators + router._decorators
-
-        if parent_router:
-            parent_prefix = next(
-                (path for path, r in self._routers if r is parent_router), None
-            )  # pragma: no cover
-            assert parent_prefix is not None
-            prefix = normalize_path("/".join((parent_prefix, prefix))).lstrip("/")
-
-        self._routers.extend(router.build_routers(prefix))
-        router.set_api_instance(self, parent_router)
+        # Backward compat: keep _routers list updated (just the top-level router)
+        self._routers.append((prefix, router))
 
     @property
     def urls(self) -> Tuple[List[Union[URLResolver, URLPattern]], str, str]:
@@ -441,11 +456,64 @@ class NinjaAPI:
             # ^ if api included into nested urls, we only care about last bit here
         )
 
+    def _get_bound_routers(self) -> List[BoundRouter]:
+        """Get or create bound router instances."""
+        if self._bound_routers_cache is None:
+            # Build mounts from registrations (delayed to capture all child routers)
+            all_mounts: List[RouterMount] = []
+
+            for prefix, router, auth, throttle, tags, url_name_prefix in self._router_registrations:
+                # Get API-level decorators from default router
+                api_decorators = (
+                    self.default_router._decorators if router is not self.default_router else []
+                )
+
+                # Build mount configurations (non-mutating)
+                # Pass auth/throttle/tags so they can be inherited by children
+                mounts = router.build_routers(
+                    prefix,
+                    api_decorators,
+                    inherited_auth=auth,
+                    inherited_throttle=throttle,
+                    inherited_tags=tags,
+                )
+
+                # Apply mount-level overrides to the first (parent) mount
+                # build_routers() always returns at least one mount (the router itself)
+                first_mount = mounts[0]
+                if auth is not NOT_SET:
+                    first_mount.auth = auth
+                if throttle is not NOT_SET:
+                    first_mount.throttle = throttle
+                if tags is not None:
+                    first_mount.tags = tags
+
+                # Apply url_name_prefix to all mounts
+                if url_name_prefix is not None:
+                    for mount in mounts:
+                        mount.url_name_prefix = url_name_prefix
+
+                all_mounts.extend(mounts)
+
+            # Create bound routers from mounts
+            self._bound_routers_cache = [
+                BoundRouter(mount, self) for mount in all_mounts
+            ]
+
+            # Freeze all templates after binding
+            for mount in all_mounts:
+                mount.template._freeze()
+
+            # Update _routers for backward compat (include all nested routers)
+            self._routers = [(m.prefix, m.template) for m in all_mounts]
+
+        return self._bound_routers_cache
+
     def _get_urls(self) -> List[Union[URLResolver, URLPattern]]:
         result = get_openapi_urls(self)
 
-        for prefix, router in self._routers:
-            result.extend(router.urls_paths(prefix))
+        for bound_router in self._get_bound_routers():
+            result.extend(bound_router.urls_paths(bound_router.prefix))
 
         result.append(get_root_url(self))
         return result
@@ -560,68 +628,6 @@ class NinjaAPI:
         return None
 
     def _validate(self) -> None:
-        # urls namespacing validation
-        skip_registry = os.environ.get("NINJA_SKIP_REGISTRY", False)
-        if (
-            not skip_registry
-            and self.urls_namespace in NinjaAPI._registry
-            and not debug_server_url_reimport()
-        ):
-            msg = f"""
-Looks like you created multiple NinjaAPIs or TestClients
-To let ninja distinguish them you need to set either unique version or urls_namespace
- - NinjaAPI(..., version='2.0.0')
- - NinjaAPI(..., urls_namespace='otherapi')
-Already registered: {NinjaAPI._registry}
-"""
-            raise ConfigError(msg.strip())
-        NinjaAPI._registry.append(self.urls_namespace)
-
-
-_imported_while_running_in_debug_server = is_debug_server()
-
-
-def debug_server_url_reimport() -> bool:
-    """
-    Detect reimport of URL module to allow error to propagate to developer.
-
-    When Django loads urls it uses: ``django.urls.resolvers.urlconf_module()``
-
-    ```Python
-    @cached_property
-    def urlconf_module(self):
-        if isinstance(self.urlconf_name, str):
-            return import_module(self.urlconf_name)
-        else:
-            return self.urlconf_name
-    ```
-
-    This uses ``@cached_property`` to generally only import once.  But if the
-    import throws an error when using the development server, the following
-    code in ``django.utils.autoreload.BaseReloader.run()`` is used:
-
-    ```Python
-    # Prevent a race condition where URL modules aren't loaded when the
-    # reloader starts by accessing the urlconf_module property.
-    try:
-        get_resolver().urlconf_module
-    except Exception:
-        # Loading the urlconf can result in errors during development.
-        # If this occurs then swallow the error and continue.
+        # Registry check no longer needed - routers are independent templates
+        # and can be reused across multiple APIs without conflicts
         pass
-    ```
-
-    This means the (likely) developer error that caused the Exception is
-    initially ignored. This is not generally a problem since the error will
-    usually be exercised again, and reported at that time.  But Ninja has
-    various code which guards against errors where items that cannot be reused,
-    are attempted to be reused.  This results in Ninja throwing a false error,
-    and hiding the true error from the developer when running under the
-    development server.
-
-    Returns:
-
-        True if this module was originally imported during Django dev-server
-        init but the caller is not being running during Django dev-server init.
-    """
-    return _imported_while_running_in_debug_server and not is_debug_server()
