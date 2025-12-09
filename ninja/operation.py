@@ -35,7 +35,7 @@ from ninja.types import DictStrAny
 from ninja.utils import is_async_callable
 
 if TYPE_CHECKING:
-    from ninja import NinjaAPI, Router  # pragma: no cover
+    from ninja import NinjaAPI  # pragma: no cover
 
 __all__ = ["Operation", "PathView", "ResponseObject"]
 
@@ -124,6 +124,68 @@ class Operation:
             for callback in callbacks:
                 callback(self)
 
+    def clone(self) -> "Operation":
+        """
+        Create a fresh copy of this operation for binding to an API.
+
+        This method is used when mounting the same router multiple times
+        to ensure each mount has independent operation instances.
+        """
+        # Create instance without calling __init__ to avoid expensive processing
+        cloned = object.__new__(self.__class__)
+
+        # Copy all essential attributes
+        cloned.is_async = self.is_async
+        cloned.path = self.path
+        cloned.methods = list(self.methods)
+        cloned.view_func = self.view_func
+        cloned.api = cast("NinjaAPI", None)  # Will be set during binding
+        cloned.csrf_exempt = self.csrf_exempt
+
+        # Copy url_name if it exists
+        if hasattr(self, "url_name"):
+            cloned.url_name = self.url_name
+
+        # Copy auth settings
+        cloned.auth_param = self.auth_param
+        cloned.auth_callbacks = list(self.auth_callbacks)
+
+        # Copy throttle settings
+        cloned.throttle_param = self.throttle_param
+        cloned.throttle_objects = list(self.throttle_objects)
+
+        # Copy signature and models (immutable after creation, safe to share)
+        cloned.signature = self.signature
+        cloned.models = self.models
+
+        # Copy response models (dict copy for isolation)
+        cloned.response_models = dict(self.response_models)
+
+        # Copy metadata
+        cloned.operation_id = self.operation_id
+        cloned.summary = self.summary
+        cloned.description = self.description
+        cloned.tags = list(self.tags) if self.tags else None
+        cloned.deprecated = self.deprecated
+        cloned.include_in_schema = self.include_in_schema
+        cloned.openapi_extra = dict(self.openapi_extra) if self.openapi_extra else None
+
+        # Copy export model params
+        cloned.by_alias = self.by_alias
+        cloned.exclude_unset = self.exclude_unset
+        cloned.exclude_defaults = self.exclude_defaults
+        cloned.exclude_none = self.exclude_none
+
+        # Re-apply run decorators (from decorate_view) to the clone's run method
+        # We can't just copy the decorated run because it's bound to the original instance
+        if hasattr(self, "_run_decorators") and self._run_decorators:
+            cloned._run_decorators = []  # type: ignore[attr-defined]
+            for deco in self._run_decorators:
+                cloned.run = deco(cloned.run)  # type: ignore
+                cloned._run_decorators.append(deco)  # type: ignore[attr-defined]
+
+        return cloned
+
     def run(self, request: HttpRequest, **kw: Any) -> HttpResponseBase:
         error = self._run_checks(request)
         if error:
@@ -139,38 +201,6 @@ class Operation:
                 msg = f"{e.args[0]}: {msg}" if e.args else msg
                 e.args = (msg,) + e.args[1:]
             return self.api.on_exception(request, e)
-
-    def set_api_instance(self, api: "NinjaAPI", router: "Router") -> None:
-        self.api = api
-
-        if self.auth_param == NOT_SET:
-            if router.auth != NOT_SET:
-                # If the router auth was explicitly set, use it.
-                self._set_auth(router.auth)
-            elif api.auth != NOT_SET:
-                # Otherwise fall back to the api auth. Since this is in an else branch,
-                # it will only be used if the router auth was not explicitly set (i.e.
-                # setting the router's auth to None explicitly allows "resetting" the
-                # default auth that its operations will use).
-                self._set_auth(self.api.auth)
-
-        if self.throttle_param == NOT_SET:
-            if api.throttle != NOT_SET:
-                self.throttle_objects = (
-                    isinstance(api.throttle, BaseThrottle)
-                    and [api.throttle]
-                    or api.throttle  # type: ignore
-                )
-            if router.throttle != NOT_SET:
-                _t = router.throttle
-                self.throttle_objects = isinstance(_t, BaseThrottle) and [_t] or _t  # type: ignore
-            assert all(
-                isinstance(th, BaseThrottle) for th in self.throttle_objects
-            ), "Throttle should be an instance of BaseThrottle"
-
-        if self.tags is None:
-            if router.tags is not None:
-                self.tags = router.tags
 
     def _set_auth(
         self, auth: Optional[Union[Sequence[Callable], Callable, object]]
@@ -459,10 +489,18 @@ class PathView:
 
         return operation
 
-    def set_api_instance(self, api: "NinjaAPI", router: "Router") -> None:
-        self.api = api
-        for op in self.operations:
-            op.set_api_instance(api, router)
+    def clone(self) -> "PathView":
+        """
+        Create a fresh copy of this PathView with cloned operations.
+
+        This method is used when mounting the same router multiple times
+        to ensure each mount has independent PathView and Operation instances.
+        """
+        cloned = PathView()
+        cloned.is_async = self.is_async
+        cloned.url_name = self.url_name
+        cloned.operations = [op.clone() for op in self.operations]
+        return cloned
 
     def get_view(self) -> Callable:
         # Create a unique view function for this PathView

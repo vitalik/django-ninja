@@ -32,7 +32,7 @@ class TestClient(BaseTestClient):
 
 csrf_OFF = NinjaAPI(urls_namespace="csrf_OFF")
 csrf_ON = NinjaAPI(urls_namespace="csrf_ON", auth=AnyCookieAuth())  # , csrf=True
-csrf_ON_with_django_auth = NinjaAPI(urls_namespace="csrf_ON", auth=django_auth)
+csrf_ON_with_django_auth = NinjaAPI(urls_namespace="csrf_ON_django", auth=django_auth)
 
 
 @csrf_OFF.post("/post")
@@ -49,6 +49,34 @@ def post_on(request):
 @csrf_exempt
 def post_on_with_exempt(request):
     return {"success": True}
+
+
+# Operations for test_csrf_cookies_can_be_obtained - defined at module level
+# to avoid frozen router issues
+@csrf_ON.get("/obtain_csrf_token_get")
+@ensure_csrf_cookie
+def obtain_csrf_token_get(request):
+    return JsonResponse(data={"success": True})
+
+
+@csrf_ON.post("/obtain_csrf_token_post")
+@ensure_csrf_cookie
+@csrf_exempt
+def obtain_csrf_token_post(request):
+    return JsonResponse(data={"success": True})
+
+
+@csrf_ON_with_django_auth.get("/obtain_csrf_token_get", auth=None)
+@ensure_csrf_cookie
+def obtain_csrf_token_get_no_auth_route(request):
+    return JsonResponse(data={"success": True})
+
+
+@csrf_ON_with_django_auth.post("/obtain_csrf_token_post", auth=None)
+@ensure_csrf_cookie
+@csrf_exempt
+def obtain_csrf_token_post_no_auth_route(request):
+    return JsonResponse(data={"success": True})
 
 
 TOKEN = "1bcdefghij2bcdefghij3bcdefghij4bcdefghij5bcdefghij6bcdefghijABCD"
@@ -115,28 +143,7 @@ def test_csrf_cookie_auth():
 
 
 def test_csrf_cookies_can_be_obtained():
-    @csrf_ON.get("/obtain_csrf_token_get")
-    @ensure_csrf_cookie
-    def obtain_csrf_token_get(request):
-        return JsonResponse(data={"success": True})
-
-    @csrf_ON.post("/obtain_csrf_token_post")
-    @ensure_csrf_cookie
-    @csrf_exempt
-    def obtain_csrf_token_post(request):
-        return JsonResponse(data={"success": True})
-
-    @csrf_ON_with_django_auth.get("/obtain_csrf_token_get", auth=None)
-    @ensure_csrf_cookie
-    def obtain_csrf_token_get_no_auth_route(request):
-        return JsonResponse(data={"success": True})
-
-    @csrf_ON_with_django_auth.post("/obtain_csrf_token_post", auth=None)
-    @ensure_csrf_cookie
-    @csrf_exempt
-    def obtain_csrf_token_post_no_auth_route(request):
-        return JsonResponse(data={"success": True})
-
+    # Operations are defined at module level to avoid frozen router issues
     client = TestClient(csrf_ON)
     # can get csrf cookie through get
     response = client.get("/obtain_csrf_token_get")
