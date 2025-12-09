@@ -43,17 +43,17 @@ class RouterMount:
 
     template: "Router"
     prefix: str
-    url_name_prefix: str | None = None
+    url_name_prefix: Optional[str] = None
     auth: Any = NOT_SET
     throttle: Any = NOT_SET
-    tags: list[str] | None = None
-    inherited_decorators: list[tuple[Callable, DecoratorMode]] = field(
+    tags: Optional[List[str]] = None
+    inherited_decorators: List[Tuple[Callable, DecoratorMode]] = field(
         default_factory=list
     )
     # Inherited auth/throttle/tags from parent routers (for nested router inheritance)
     inherited_auth: Any = NOT_SET
     inherited_throttle: Any = NOT_SET
-    inherited_tags: list[str] | None = None
+    inherited_tags: Optional[List[str]] = None
 
 
 class BoundRouter:
@@ -103,7 +103,7 @@ class BoundRouter:
             self.tags = None
 
         # Clone operations and apply decorators
-        self.path_operations: dict[str, PathView] = {}
+        self.path_operations: Dict[str, PathView] = {}
         self._bind_operations()
 
     def _bind_operations(self) -> None:
@@ -535,7 +535,7 @@ class Router:
 
         return None
 
-    def urls_paths(self, prefix: str, api: "NinjaAPI | None" = None) -> Iterator[URLPattern]:
+    def urls_paths(self, prefix: str, api: Optional["NinjaAPI"] = None) -> Iterator[URLPattern]:
         """
         Generate URL patterns for this router.
 
@@ -611,10 +611,10 @@ class Router:
     def build_routers(
         self,
         prefix: str,
-        inherited_decorators: List[Tuple[Callable, DecoratorMode]] | None = None,
+        inherited_decorators: Optional[List[Tuple[Callable, DecoratorMode]]] = None,
         inherited_auth: Any = NOT_SET,
         inherited_throttle: Any = NOT_SET,
-        inherited_tags: List[str] | None = None,
+        inherited_tags: Optional[List[str]] = None,
     ) -> List[RouterMount]:
         """
         Build mount configurations for this router and all child routers.

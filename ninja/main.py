@@ -110,7 +110,7 @@ class NinjaAPI:
         # Top-level router registrations (new architecture)
         # Stores (prefix, router, auth, throttle, tags, url_name_prefix) for each add_router call
         self._router_registrations: List[Tuple[str, Router, Any, Any, Optional[List[str]], Optional[str]]] = []
-        self._bound_routers_cache: List[BoundRouter] | None = None
+        self._bound_routers_cache: Optional[List[BoundRouter]] = None
 
         # Backward compat: keep _routers list populated
         self._routers: List[Tuple[str, Router]] = []
