@@ -22,14 +22,7 @@ client = TestClient(router)
 
 
 def test_set_field_serialization():
-    """
-    Test that set fields serialize correctly.
-
-    Fix: In ninja/responses.py line 24, change:
-        return o.model_dump()
-    to:
-        return o.model_dump(mode="json")
-    """
+    """Test that set fields serialize correctly."""
     response = client.get("/with-set/")
 
     assert response.status_code == 200

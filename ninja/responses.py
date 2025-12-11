@@ -22,6 +22,8 @@ class NinjaJSONEncoder(DjangoJSONEncoder):
     def default(self, o: Any) -> Any:
         if isinstance(o, BaseModel):
             return o.model_dump()
+            # Fix for set serialization (see tests/test_pydantic_serialization.py):
+            # return o.model_dump(mode="json")
         if isinstance(o, Url):
             return str(o)
         if isinstance(o, (IPv4Address, IPv4Network, IPv6Address, IPv6Network)):
