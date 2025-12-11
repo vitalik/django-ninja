@@ -1,4 +1,4 @@
-"""Test Pydantic model serialization with non-JSON-serializable types."""
+"""Test Pydantic model serialization with set fields."""
 
 from pydantic import BaseModel
 
@@ -23,7 +23,7 @@ client = TestClient(router)
 
 def test_set_field_serialization():
     """
-    Test that set fields serialize to JSON properly.
+    Test that set fields serialize correctly.
 
     Fix: In ninja/responses.py line 24, change:
         return o.model_dump()
