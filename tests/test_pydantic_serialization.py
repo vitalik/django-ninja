@@ -1,5 +1,3 @@
-"""Test Pydantic model serialization with set fields."""
-
 from pydantic import BaseModel
 
 from ninja import Router
