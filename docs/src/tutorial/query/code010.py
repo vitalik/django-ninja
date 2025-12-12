@@ -2,7 +2,9 @@ from typing import List
 
 from pydantic import Field
 
-from ninja import Query, Schema
+from ninja import NinjaAPI, Query, Schema
+
+api = NinjaAPI()
 
 
 class Filters(Schema):

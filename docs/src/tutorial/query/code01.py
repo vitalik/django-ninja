@@ -1,3 +1,7 @@
+from ninja import NinjaAPI
+
+api = NinjaAPI()
+
 weapons = ["Ninjato", "Shuriken", "Katana", "Kama", "Kunai", "Naginata", "Yari"]
 
 
