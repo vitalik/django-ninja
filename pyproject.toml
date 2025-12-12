@@ -72,7 +72,11 @@ dev = ["pre-commit"]
 [tool.ruff]
 target-version = "py37"
 
+[tool.ruff.format]
+preview = true
+
 [tool.ruff.lint]
+preview = true
 select = [
     "B",    # flake8-bugbear
     "C",    # flake8-comprehensions
