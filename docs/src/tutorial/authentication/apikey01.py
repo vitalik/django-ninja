@@ -1,5 +1,6 @@
-from ninja.security import APIKeyQuery
 from someapp.models import Client
+
+from ninja.security import APIKeyQuery
 
 
 class ApiKey(APIKeyQuery):
