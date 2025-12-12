@@ -3,7 +3,9 @@ from typing import Annotated, TypeVar
 from pydantic import WrapValidator
 from pydantic_core import PydanticUseDefault
 
-from ninja import Form, Schema
+from ninja import Form, NinjaAPI, Schema
+
+api = NinjaAPI()
 
 
 def _empty_str_to_default(v, handler, info):
