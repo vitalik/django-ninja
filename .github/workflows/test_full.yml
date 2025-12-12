@@ -80,17 +80,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.12
-      - name: Install Flit
-        run: pip install flit
-      - name: Install Dependencies
-        run: flit install --symlink
-      - name: Ruff format
-        run: ruff format --check ninja tests
-      - name: Ruff lint
-        run: ruff check ninja tests
-      - name: mypy
-        run: mypy ninja tests/mypy_test.py
+      - uses: j178/prek-action@v1
