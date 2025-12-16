@@ -128,9 +128,12 @@ class OpenAPISchema(dict):
             result["securitySchemes"] = self.securitySchemes
         return result
 
-    # Keep add_schema_definitions for backward compatibility
     def add_schema_definitions(self, definitions: dict) -> None:
-        """Add schema definitions to the shared schemas dictionary."""
+        # TODO: check if schema["definitions"] are unique
+        # if not - workaround (maybe use pydantic.schema.schema(models)) to process list of models
+        # assert set(definitions.keys()) - set(self.schemas.keys()) == set()
+        # ::TODO:: this is broken in interesting ways for by_alias,
+        #     because same schema (name) can have different values
         self.schemas.update(definitions)
 
 

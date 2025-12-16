@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 from pydantic.json_schema import JsonSchemaMode
 
 from ninja.constants import NOT_SET
+from ninja.openapi.schema import flatten_properties
 from ninja.params.models import TModel, TModels
 from ninja.schema import NinjaGenerateJsonSchema
 from ninja.types import DictStrAny
@@ -155,7 +156,6 @@ class OperationSchemaBuilder:
 
     def _extract_parameters(self, model: TModel) -> List[DictStrAny]:
         """Extract parameters from a model's JSON schema."""
-        from ninja.openapi.schema import flatten_properties
 
         result: List[DictStrAny] = []
 
@@ -355,7 +355,9 @@ class OperationSchemaBuilder:
                 and isinstance(main_dict[key], dict)
                 and isinstance(update_dict[key], dict)
             ):
-                self._deep_dict_update(main_dict[key], update_dict[key])
+                self._deep_dict_update(
+                    main_dict[key], update_dict[key]
+                )  # pragma: no cover
             elif (
                 key in main_dict
                 and isinstance(main_dict[key], list)
