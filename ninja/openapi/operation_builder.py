@@ -136,9 +136,8 @@ class OperationSchemaBuilder:
 
     def _get_operation_id(self) -> str:
         """Get or generate the operation ID."""
-        return (
-            self.operation.operation_id
-            or self.api.get_openapi_operation_id(self.operation)
+        return self.operation.operation_id or self.api.get_openapi_operation_id(
+            self.operation
         )
 
     def build_parameters(self) -> List[DictStrAny]:
@@ -365,4 +364,3 @@ class OperationSchemaBuilder:
                 main_dict[key].extend(update_dict[key])
             else:
                 main_dict[key] = update_dict[key]
-
