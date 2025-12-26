@@ -36,6 +36,9 @@ from ninja.utils import is_async_callable
 
 if TYPE_CHECKING:
     from ninja import NinjaAPI, Router  # pragma: no cover
+    from ninja.openapi.operation_builder import (
+        OperationSchemaBuilder,  # pragma: no cover
+    )
 
 __all__ = ["Operation", "PathView", "ResponseObject"]
 
@@ -177,6 +180,16 @@ class Operation:
     ) -> None:
         if auth is not None and auth is not NOT_SET:
             self.auth_callbacks = isinstance(auth, Sequence) and auth or [auth]
+
+    def get_operation_builder_type(self) -> Type["OperationSchemaBuilder"]:
+        """
+        Return the builder class used for OpenAPI schema generation.
+
+        Override this method in subclasses to provide a custom builder.
+        """
+        from ninja.openapi.operation_builder import OperationSchemaBuilder
+
+        return OperationSchemaBuilder
 
     def _run_checks(self, request: HttpRequest) -> Optional[HttpResponse]:
         "Runs security/throttle checks for each operation"
