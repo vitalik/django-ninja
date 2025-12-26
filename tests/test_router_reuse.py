@@ -437,10 +437,13 @@ class TestCloneCompleteness:
 
         # Get all instance attributes from the original operation
         original_attrs = {
-            attr for attr in dir(op)
+            attr
+            for attr in dir(op)
             if not attr.startswith("_")  # Skip private/dunder
             and not callable(getattr(op, attr))  # Skip methods
-            and not isinstance(getattr(type(op), attr, None), property)  # Skip properties
+            and not isinstance(
+                getattr(type(op), attr, None), property
+            )  # Skip properties
         }
 
         # Also check for underscore attributes that we explicitly track
@@ -466,7 +469,9 @@ class TestCloneCompleteness:
 
         # Verify all known attributes exist on both original and clone
         for attr in KNOWN_ATTRIBUTES:
-            assert hasattr(op, attr), f"KNOWN_ATTRIBUTES lists '{attr}' but Operation doesn't have it"
+            assert hasattr(
+                op, attr
+            ), f"KNOWN_ATTRIBUTES lists '{attr}' but Operation doesn't have it"
             assert hasattr(cloned, attr), f"clone() doesn't set attribute: {attr}"
 
 
