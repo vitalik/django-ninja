@@ -1,5 +1,4 @@
 import contextlib
-import os
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
@@ -7,7 +6,6 @@ import pytest
 from django.http import FileResponse, HttpResponse
 
 from ninja import NinjaAPI
-from ninja.main import ConfigError
 from ninja.testing import TestClient
 
 api = NinjaAPI()
@@ -103,9 +101,8 @@ def test_method(method, path, expected_status, expected_data, expected_streaming
 
 
 def test_validates():
-    try:
-        os.environ["NINJA_SKIP_REGISTRY"] = ""
-        with pytest.raises(ConfigError):
-            _urls = NinjaAPI().urls
-    finally:
-        os.environ["NINJA_SKIP_REGISTRY"] = "yes"
+    # Registry check was removed - routers are now independent templates
+    # that can be reused across multiple APIs without conflicts
+    # This test now just verifies that creating an API and accessing urls works
+    api2 = NinjaAPI(urls_namespace="test-validates-api")
+    _ = api2.urls  # Should not raise
