@@ -357,6 +357,118 @@ class TestCloneCompleteness:
             if isinstance(orig_val, (list, dict)) and orig_val:
                 assert clone_val is not orig_val, f"clone() should copy {attr}"
 
+    def test_clone_catches_new_attributes(self):
+        """
+        IMPORTANT: This test will FAIL if you add a new attribute to Operation
+        but forget to handle it in clone().
+
+        When this test fails, update Operation.clone() to handle the new attribute,
+        then add it to the KNOWN_ATTRIBUTES set below.
+        """
+
+        def dummy_view(request):
+            return {}
+
+        op = Operation(
+            path="/test/{id}",
+            methods=["GET", "POST"],
+            view_func=dummy_view,
+            auth=lambda r: True,
+            response={200: dict},
+            tags=["test"],
+            summary="Test summary",
+            description="Test description",
+            operation_id="test_op",
+            deprecated=True,
+            by_alias=True,
+            exclude_unset=True,
+            exclude_defaults=True,
+            exclude_none=True,
+            url_name="test_url",
+            include_in_schema=True,
+            openapi_extra={"x-custom": "value"},
+        )
+
+        cloned = op.clone()
+
+        # Attributes that are known and handled by clone()
+        # If you add a new attribute to Operation, you MUST:
+        # 1. Add it to clone() method
+        # 2. Add it to this set
+        KNOWN_ATTRIBUTES = {
+            # Core operation attributes
+            "is_async",
+            "path",
+            "methods",
+            "view_func",
+            "api",
+            # Auth/security
+            "csrf_exempt",
+            "auth_param",
+            "auth_callbacks",
+            # Throttling
+            "throttle_param",
+            "throttle_objects",
+            # Signature and models
+            "signature",
+            "models",
+            "response_models",
+            # OpenAPI metadata
+            "operation_id",
+            "summary",
+            "description",
+            "tags",
+            "deprecated",
+            "include_in_schema",
+            "openapi_extra",
+            "url_name",
+            # Response serialization options
+            "by_alias",
+            "exclude_unset",
+            "exclude_defaults",
+            "exclude_none",
+        }
+
+        # Attributes that are intentionally not cloned (internal/runtime state)
+        EXCLUDED_ATTRIBUTES = {
+            "_run_decorators",  # Re-applied during clone, not copied
+            "_applied_decorators",  # Router-level decorator tracking
+        }
+
+        # Get all instance attributes from the original operation
+        original_attrs = {
+            attr for attr in dir(op)
+            if not attr.startswith("_")  # Skip private/dunder
+            and not callable(getattr(op, attr))  # Skip methods
+            and not isinstance(getattr(type(op), attr, None), property)  # Skip properties
+        }
+
+        # Also check for underscore attributes that we explicitly track
+        for attr in dir(op):
+            if attr.startswith("_") and not attr.startswith("__"):
+                if attr in EXCLUDED_ATTRIBUTES:
+                    continue
+                if hasattr(op, attr) and not callable(getattr(op, attr)):
+                    original_attrs.add(attr)
+
+        # Find any attributes that exist on original but aren't in our known set
+        unknown_attrs = original_attrs - KNOWN_ATTRIBUTES - EXCLUDED_ATTRIBUTES
+
+        if unknown_attrs:
+            raise AssertionError(
+                f"New attribute(s) found on Operation that may not be handled by clone(): "
+                f"{unknown_attrs}\n\n"
+                f"If you added a new attribute to Operation:\n"
+                f"1. Update Operation.clone() to handle it\n"
+                f"2. Add it to KNOWN_ATTRIBUTES in this test\n"
+                f"3. Add it to EXCLUDED_ATTRIBUTES if it should NOT be cloned"
+            )
+
+        # Verify all known attributes exist on both original and clone
+        for attr in KNOWN_ATTRIBUTES:
+            assert hasattr(op, attr), f"KNOWN_ATTRIBUTES lists '{attr}' but Operation doesn't have it"
+            assert hasattr(cloned, attr), f"clone() doesn't set attribute: {attr}"
+
 
 class TestThrottleAndTagsInheritance:
     """Test throttle and tags inheritance in BoundRouter."""
