@@ -93,15 +93,21 @@ class BoundRouter:
         else:
             self.throttle = NOT_SET
 
+        # Tags handling (issue #794):
+        # - mount.tags (from add_router call) = explicit override, use as-is
+        # - Otherwise, accumulate: inherited tags + template's own tags
         self.tags: Optional[List[str]]
         if mount.tags is not None:
+            # Explicit tags from add_router() call - use as override
             self.tags = mount.tags
-        elif mount.template.tags is not None:
-            self.tags = mount.template.tags
-        elif mount.inherited_tags is not None:
-            self.tags = mount.inherited_tags
         else:
-            self.tags = None
+            # Accumulate inherited tags with template's own tags
+            accumulated_tags: List[str] = []
+            if mount.inherited_tags is not None:
+                accumulated_tags.extend(mount.inherited_tags)
+            if mount.template.tags is not None:
+                accumulated_tags.extend(mount.template.tags)
+            self.tags = accumulated_tags if accumulated_tags else None
 
         # Clone operations and apply decorators
         self.path_operations: Dict[str, PathView] = {}
@@ -205,13 +211,13 @@ class Router:
         self.exclude_none = exclude_none
 
         self.path_operations: Dict[str, PathView] = {}
-        self._routers: List[Tuple[str, Router]] = []
+        self._routers: List[Tuple[str, Router, Optional[List[str]]]] = []
         self._decorators: List[Tuple[Callable, DecoratorMode]] = []
 
     def _freeze(self) -> None:
         """Mark router as frozen - no more modifications allowed."""
         self._frozen = True
-        for _, child_router in self._routers:
+        for _, child_router, _ in self._routers:
             child_router._freeze()
 
     def _check_not_frozen(self) -> None:
@@ -582,16 +588,15 @@ class Router:
             router = import_string(router)
             assert isinstance(router, Router)
 
-        # Store child router with its configuration
-        # Auth/throttle/tags are stored on the child router for now,
-        # but the actual binding happens via RouterMount during URL generation
+        # Store child router with its mount-time configuration
+        # Auth/throttle are stored on the child router template,
+        # but tags from add_router are stored separately to distinguish from Router(tags=...)
         if auth != NOT_SET:
             router.auth = auth
         if throttle != NOT_SET:
             router.throttle = throttle
-        if tags is not None:
-            router.tags = tags
-        self._routers.append((prefix, router))
+        # Store as (prefix, router, tags) - tags here are mount-level overrides
+        self._routers.append((prefix, router, tags))
 
     def add_decorator(
         self,
@@ -661,17 +666,19 @@ class Router:
 
         # Build mounts for child routers
         child_mounts: List[RouterMount] = []
-        for child_prefix, child_router in self._routers:
+        for child_prefix, child_router, child_mount_tags in self._routers:
             child_path = normalize_path("/".join((prefix, child_prefix))).lstrip("/")
-            child_mounts.extend(
-                child_router.build_routers(
-                    child_path,
-                    child_decorators,
-                    child_auth,
-                    child_throttle,
-                    child_tags,
-                )
+            mounts = child_router.build_routers(
+                child_path,
+                child_decorators,
+                child_auth,
+                child_throttle,
+                child_tags,
             )
+            # Apply mount-level tags override to the first mount (the child router itself)
+            if mounts and child_mount_tags is not None:
+                mounts[0].tags = child_mount_tags
+            child_mounts.extend(mounts)
 
         return [mount, *child_mounts]
 

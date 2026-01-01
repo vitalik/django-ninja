@@ -555,6 +555,34 @@ class TestThrottleAndTagsInheritance:
         child_bound = next(b for b in bound_routers if b.template is child)
         assert child_bound.tags == ["parent-tag"]
 
+    def test_tags_accumulation(self):
+        """
+        Test for issue #794: Tags from parent routers should accumulate with child tags.
+
+        When a child router has its own tags, they should be combined with parent tags,
+        not replace them.
+        """
+        parent = Router(tags=["Parent Tag"])
+        child = Router(tags=["Child Tag"])
+
+        @child.get("/test")
+        def test_op(request):
+            return {"ok": True}
+
+        parent.add_router("/child", child)
+
+        api = NinjaAPI()
+        api.add_router("/", parent)
+
+        # Check OpenAPI schema
+        schema = api.get_openapi_schema(path_prefix="")
+        path_info = schema["paths"]["/child/test"]["get"]
+
+        # Tags should include BOTH parent and child tags
+        tags = path_info.get("tags", [])
+        assert "Parent Tag" in tags, f"Parent tag missing. Got: {tags}"
+        assert "Child Tag" in tags, f"Child tag missing. Got: {tags}"
+
 
 class TestRouterUrlsPathsMethod:
     """Test Router.urls_paths() method for backward compatibility."""
@@ -595,9 +623,10 @@ class TestRouterAddRouterStringImport:
         parent.add_router("/test", child)
 
         assert len(parent._routers) == 1
-        _, added_child = parent._routers[0]
+        _, added_child, mount_tags = parent._routers[0]
         assert isinstance(added_child, Router)
         assert added_child is child
+        assert mount_tags is None  # No tags specified in add_router
 
 
 class TestBuildRoutersEdgeCases:
