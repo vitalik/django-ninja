@@ -107,7 +107,7 @@ class BoundRouter:
                 accumulated_tags.extend(mount.inherited_tags)
             if mount.template.tags is not None:
                 accumulated_tags.extend(mount.template.tags)
-            self.tags = accumulated_tags if accumulated_tags else None
+            self.tags = accumulated_tags or None
 
         # Clone operations and apply decorators
         self.path_operations: Dict[str, PathView] = {}
