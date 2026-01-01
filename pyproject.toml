@@ -30,6 +30,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: 3 :: Only",
     "Framework :: Django",
     "Framework :: Django :: 3.1",
@@ -39,6 +40,7 @@ classifiers = [
     "Framework :: Django :: 5.0",
     "Framework :: Django :: 5.1",
     "Framework :: Django :: 5.2",
+    "Framework :: Django :: 6.0",
     "Framework :: AsyncIO",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Internet :: WWW/HTTP",
@@ -72,7 +74,11 @@ dev = ["pre-commit"]
 [tool.ruff]
 target-version = "py37"
 
+[tool.ruff.format]
+preview = true
+
 [tool.ruff.lint]
+preview = true
 select = [
     "B",    # flake8-bugbear
     "C",    # flake8-comprehensions

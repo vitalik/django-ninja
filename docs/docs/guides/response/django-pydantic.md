@@ -173,4 +173,4 @@ def modify_data(request, pk: int, payload: PatchDict[GroupSchema]):
 
 ```
 
-in this example the `payload` argument will be a type of `dict` only fields that were passed in request and validated using `GroupSchema`
+in this example the `payload` argument will be of type `dict` and only contain fields that were passed in the request and validated using `GroupSchema`
