@@ -1,9 +1,13 @@
+from __future__ import annotations
+
 import typing
+from functools import wraps
 from sys import version_info
 
 import pytest
 
-from ninja.signature.details import is_collection_type
+from ninja import NinjaAPI, Schema
+from ninja.signature.details import ViewSignature, is_collection_type
 
 
 @pytest.mark.parametrize(
@@ -49,3 +53,52 @@ from ninja.signature.details import is_collection_type
 )
 def test_is_collection_type_returns(annotation: typing.Any, expected: bool):
     assert is_collection_type(annotation) is expected
+
+
+class PayloadSchema(Schema):
+    name: str
+    value: int
+
+
+def test_parameter_model_has_view_module():
+    """Parameter models must inherit __module__ from view function."""
+    api = NinjaAPI()
+
+    @api.post("/test")
+    def view(request, payload: PayloadSchema):
+        return {}
+
+    signature = ViewSignature("/test", view)
+    body_model = next(m for m in signature.models if m.__ninja_param_source__ == "body")
+
+    assert body_model.__module__ == view.__module__
+    assert body_model.__module__ == __name__
+
+
+def test_decorated_function_resolves_string_annotations():
+    """Decorated functions with string annotations must resolve correctly."""
+    api = NinjaAPI()
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    @api.post("/test")
+    @decorator
+    def view(request, payload: PayloadSchema):
+        return {}
+
+    signature = ViewSignature("/test", view)
+
+    body_model = next(
+        (m for m in signature.models if m.__ninja_param_source__ == "body"), None
+    )
+    query_model = next(
+        (m for m in signature.models if m.__ninja_param_source__ == "query"), None
+    )
+
+    assert body_model is not None
+    assert query_model is None

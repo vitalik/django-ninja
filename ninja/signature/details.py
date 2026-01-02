@@ -146,12 +146,12 @@ class ViewSignature:
             for arg in args:
                 field_definitions[arg.name] = (arg.annotation, arg.source)
 
-            # Use pydantic.create_model instead of type() for proper forward reference resolution
             base_cls = param_cls._model
-            model_cls = create_model(
+            model_cls = create_model(  # type: ignore[call-overload]
                 cls_name,
                 __base__=base_cls,
-                **field_definitions
+                __module__=self.view_func.__module__,
+                **field_definitions,
             )
 
             # Attach ninja-specific attributes to the dynamically created model
