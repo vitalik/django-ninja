@@ -60,7 +60,9 @@ class ParamModel(BaseModel, ABC):
             return cls()
 
         data = cls._map_data_paths(data)
-        return cls.model_validate(data, context={"request": request})
+        return cls.model_validate(
+            data, context={"request": request, "path_params": path_params}
+        )
 
     @classmethod
     def _map_data_paths(cls, data: DictStrAny) -> DictStrAny:
