@@ -51,7 +51,7 @@ def test_redoc():
         response = client.get("/docs")
         assert response.status_code == 200
         assert (
-            b"https://cdn.jsdelivr.net/npm/redoc@2.0.0/bundles/redoc.standalone.js"
+            b"https://cdn.jsdelivr.net/npm/redoc@2/bundles/redoc.standalone.js"
             in response.content
         )
 
