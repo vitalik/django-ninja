@@ -84,3 +84,39 @@ def test_form_json_invalid_json_debug_mode():
     response = client.post("/metadata-only", POST={"metadata": "not valid json"})
     assert response.status_code == 400
     assert "Expecting value" in response.json()["detail"]  # JSON parse error detail
+
+
+def test_form_json_openapi_schema():
+    schema = api.get_openapi_schema()
+
+    # Check /metadata-only endpoint schema (FormJson only -> x-www-form-urlencoded)
+    metadata_only_schema = schema["paths"]["/api/metadata-only"]["post"]["requestBody"]
+    assert "application/x-www-form-urlencoded" in metadata_only_schema["content"]
+    form_schema = metadata_only_schema["content"]["application/x-www-form-urlencoded"][
+        "schema"
+    ]
+    assert form_schema["required"] == ["metadata"]
+    assert "metadata" in form_schema["properties"]
+    # FormJson field should reference the Metadata schema
+    assert form_schema["properties"]["metadata"] == {
+        "$ref": "#/components/schemas/Metadata"
+    }
+
+    # Check /upload endpoint schema (FormJson + File -> multipart/form-data)
+    upload_schema = schema["paths"]["/api/upload"]["post"]["requestBody"]
+    assert "multipart/form-data" in upload_schema["content"]
+    form_schema = upload_schema["content"]["multipart/form-data"]["schema"]
+    assert set(form_schema["required"]) == {"file", "metadata"}
+    assert "file" in form_schema["properties"]
+    assert "metadata" in form_schema["properties"]
+    assert form_schema["properties"]["file"] == {
+        "type": "string",
+        "format": "binary",
+        "title": "File",
+    }
+
+    # Check that Metadata schema is defined in components
+    assert "Metadata" in schema["components"]["schemas"]
+    metadata_schema = schema["components"]["schemas"]["Metadata"]
+    assert "source" in metadata_schema["properties"]
+    assert "tags" in metadata_schema["properties"]
