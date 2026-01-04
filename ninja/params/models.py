@@ -32,6 +32,7 @@ __all__ = [
     "BodyModel",
     "FormModel",
     "FileModel",
+    "FormJsonModel",
 ]
 
 TModel = TypeVar("TModel", bound="ParamModel")
@@ -166,6 +167,26 @@ class FileModel(ParamModel):
         return api.parser.parse_querydict(request.FILES, list_fields, request)
 
 
+class FormJsonModel(ParamModel):
+    @classmethod
+    def get_request_data(
+        cls, request: HttpRequest, api: "NinjaAPI", path_params: DictStrAny
+    ) -> Optional[DictStrAny]:
+        import json
+
+        results: DictStrAny = {}
+        for name in cls.model_fields.keys():
+            if name in request.POST:
+                try:
+                    results[name] = json.loads(request.POST[name])
+                except json.JSONDecodeError as e:
+                    msg = f"Invalid JSON in field '{name}'"
+                    if settings.DEBUG:
+                        msg += f" ({e})"
+                    raise HttpError(400, msg) from e
+        return results or None
+
+
 class _HttpRequest(HttpRequest):
     body: bytes = b""
 
@@ -279,6 +300,14 @@ class Form(Param):  # type: ignore[misc]
 
 class File(Param):  # type: ignore[misc]
     _model = FileModel
+
+
+class FormJson(Param):  # type: ignore[misc]
+    _model = FormJsonModel
+
+    @classmethod
+    def _param_source(cls) -> str:
+        return "formjson"
 
 
 class _MultiPartBody(Param):  # type: ignore[misc]
