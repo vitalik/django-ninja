@@ -1,3 +1,4 @@
+import json
 from abc import ABC, abstractmethod
 from typing import (
     TYPE_CHECKING,
@@ -172,8 +173,6 @@ class FormJsonModel(ParamModel):
     def get_request_data(
         cls, request: HttpRequest, api: "NinjaAPI", path_params: DictStrAny
     ) -> Optional[DictStrAny]:
-        import json
-
         results: DictStrAny = {}
         for name in cls.model_fields.keys():
             if name in request.POST:
