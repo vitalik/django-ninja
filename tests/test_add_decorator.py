@@ -201,6 +201,108 @@ def test_decorator_cascading():
     }
 
 
+def test_decorator_cascading_in_reversed_attaching_ordering():
+    """Test decorators cascade when a child router is attached to a parent after the parent was added to the API."""
+    api = NinjaAPI()
+    parent_router = Router()
+    child_router = Router()
+
+    # Add decorator at API level
+    api.add_decorator(
+        lambda f: wraps(f)(lambda req, *a, **k: {**f(req, *a, **k), "api": True})
+    )
+
+    # Add decorator at parent router level
+    parent_router.add_decorator(
+        lambda f: wraps(f)(lambda req, *a, **k: {**f(req, *a, **k), "parent": True})
+    )
+
+    # Add decorator at child router level
+    child_router.add_decorator(
+        lambda f: wraps(f)(lambda req, *a, **k: {**f(req, *a, **k), "child": True})
+    )
+
+    @child_router.get("/test")
+    def endpoint(request):
+        return {"message": "test"}
+
+    api.add_router("/parent", parent_router)
+    parent_router.add_router("/child", child_router)
+
+    client = TestClient(api)
+    response = client.get("/parent/child/test")
+    assert response.status_code == 200
+    result = response.json()
+    assert result == {
+        "message": "test",
+        "api": True,
+        "parent": True,
+        "child": True,
+    }
+
+
+def test_decorator_cascading_in_mixed_attaching_ordering():
+    """
+    Test decorators cascade when a child router is attached to a parent
+    before and after the parent was added to the API.
+    """
+    api = NinjaAPI()
+    parent_router = Router()
+    child_router1 = Router()
+    child_router2 = Router()
+
+    # Add decorator at API level
+    api.add_decorator(
+        lambda f: wraps(f)(lambda req, *a, **k: {**f(req, *a, **k), "api": True})
+    )
+
+    # Add decorator at parent router level
+    parent_router.add_decorator(
+        lambda f: wraps(f)(lambda req, *a, **k: {**f(req, *a, **k), "parent": True})
+    )
+
+    # Add decorators at the child router level
+    child_router1.add_decorator(
+        lambda f: wraps(f)(lambda req, *a, **k: {**f(req, *a, **k), "child1": True})
+    )
+    child_router2.add_decorator(
+        lambda f: wraps(f)(lambda req, *a, **k: {**f(req, *a, **k), "child2": True})
+    )
+
+    @child_router1.get("/test")
+    def endpoint1(request):
+        return {"message": "test1"}
+
+    @child_router2.get("/test")
+    def endpoint2(request):
+        return {"message": "test2"}
+
+    parent_router.add_router("/child1", child_router1)
+    api.add_router("/parent", parent_router)
+    parent_router.add_router("/child2", child_router2)
+
+    client = TestClient(api)
+    response = client.get("/parent/child1/test")
+    assert response.status_code == 200
+    result = response.json()
+    assert result == {
+        "message": "test1",
+        "api": True,
+        "parent": True,
+        "child1": True,
+    }
+
+    response = client.get("/parent/child2/test")
+    assert response.status_code == 200
+    result = response.json()
+    assert result == {
+        "message": "test2",
+        "api": True,
+        "parent": True,
+        "child2": True,
+    }
+
+
 def test_api_decorator_applies_to_new_routers():
     """Test that API-level decorators apply to routers added after decorator"""
     api = NinjaAPI()
