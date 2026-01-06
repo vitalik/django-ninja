@@ -1,5 +1,6 @@
 from typing import Any, List, Optional, Union, no_type_check
 
+from django.apps import apps
 from django.db.models import Model as DjangoModel
 from pydantic.dataclasses import dataclass
 
@@ -26,6 +27,14 @@ class MetaConf:
         if "Meta" in namespace:
             meta = namespace["Meta"]
             model = meta.model
+            if isinstance(model, str):
+                try:
+                    app_label, model_name = model.split(".")
+                except ValueError as e:
+                    raise ValueError(
+                        f"Model string must be in format 'app_label.ModelName', got: {model}"
+                    ) from e
+                model = apps.get_model(app_label, model_name)
             fields = getattr(meta, "fields", None)
             exclude = getattr(meta, "exclude", None)
             optional_fields = getattr(meta, "fields_optional", None)
