@@ -30,6 +30,7 @@ from ninja.utils import is_optional_type
 __all__ = [
     "ViewSignature",
     "is_pydantic_model",
+    "extract_pydantic_model_from_union",
     "is_collection_type",
     "detect_collection_fields",
 ]
@@ -321,6 +322,23 @@ def is_pydantic_model(cls: Any) -> bool:
         return issubclass(cls, pydantic.BaseModel)
     except TypeError:  # pragma: no cover
         return False
+
+
+def extract_pydantic_model_from_union(annotation: Any) -> type | None:
+    """Extract Pydantic model from Union type annotation.
+
+    Args:
+        annotation: Type annotation (Union type or regular type)
+
+    Returns:
+        Pydantic model class or None if not found
+    """
+    origin = get_origin(annotation)
+    if origin in UNION_TYPES:
+        for arg in get_args(annotation):
+            if arg is not type(None) and is_pydantic_model(arg):
+                return arg  # type: ignore[no-any-return]
+    return None
 
 
 def is_collection_type(annotation: Any) -> bool:
