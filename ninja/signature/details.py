@@ -6,6 +6,7 @@ from typing import Any, Callable, Dict, Generator, List, Optional, Tuple
 
 import pydantic
 from django.http import HttpResponse
+from pydantic import create_model
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 from typing_extensions import Annotated, get_args, get_origin
@@ -138,14 +139,29 @@ class ViewSignature:
         result = []
         for param_cls, args in params_by_source_cls.items():
             cls_name: str = param_cls.__name__ + "Params"
-            attrs = {i.name: i.source for i in args}
-            attrs["__ninja_param_source__"] = param_cls._param_source()
-            attrs["__ninja_flatten_map_reverse__"] = {}
 
-            if attrs["__ninja_param_source__"] == "file":
+            # Build field definitions for pydantic.create_model
+            # Format: {field_name: (annotation, FieldInfo)}
+            field_definitions = {}
+            for arg in args:
+                field_definitions[arg.name] = (arg.annotation, arg.source)
+
+            base_cls = param_cls._model
+            model_cls = create_model(  # type: ignore[call-overload]
+                cls_name,
+                __base__=base_cls,
+                __module__=self.view_func.__module__,
+                **field_definitions,
+            )
+
+            # Attach ninja-specific attributes to the dynamically created model
+            model_cls.__ninja_param_source__ = param_cls._param_source()
+            model_cls.__ninja_flatten_map_reverse__ = {}
+
+            if model_cls.__ninja_param_source__ == "file":
                 pass
 
-            elif attrs["__ninja_param_source__"] in {
+            elif model_cls.__ninja_param_source__ in {
                 "form",
                 "query",
                 "header",
@@ -153,34 +169,28 @@ class ViewSignature:
                 "path",
             }:
                 flatten_map = self._args_flatten_map(args)
-                attrs["__ninja_flatten_map__"] = flatten_map
-                attrs["__ninja_flatten_map_reverse__"] = {
+                model_cls.__ninja_flatten_map__ = flatten_map
+                model_cls.__ninja_flatten_map_reverse__ = {
                     v: (k,) for k, v in flatten_map.items()
                 }
 
             else:
-                assert attrs["__ninja_param_source__"] == "body"
+                assert model_cls.__ninja_param_source__ == "body"
                 if is_multipart_response_with_body:
-                    attrs["__ninja_body_params__"] = {
+                    model_cls.__ninja_body_params__ = {
                         i.alias: i.annotation for i in args
                     }
                 else:
                     # ::TODO:: this is still sus.  build some test cases
-                    attrs["__read_from_single_attr__"] = (
+                    model_cls.__read_from_single_attr__ = (
                         args[0].name if len(args) == 1 else None
                     )
 
-            # adding annotations
-            attrs["__annotations__"] = {i.name: i.annotation for i in args}
-
             # collection fields:
-            attrs["__ninja_collection_fields__"] = detect_collection_fields(
-                args, attrs.get("__ninja_flatten_map__", {})
+            model_cls.__ninja_collection_fields__ = detect_collection_fields(
+                args, model_cls.__dict__.get("__ninja_flatten_map__", {})
             )
 
-            base_cls = param_cls._model
-            model_cls = type(cls_name, (base_cls,), attrs)
-            # TODO: https://pydantic-docs.helpmanual.io/usage/models/#dynamic-model-creation - check if anything special in create_model method that I did not use
             result.append(model_cls)
         return result
 
