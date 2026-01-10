@@ -196,10 +196,14 @@ def test_query_schema_with_union_type_model():
 
 
 def test_query_schema_with_optional_syntax():
-    """Optional[Model] syntax should work the same as Model | None.
+    """Regression test: Optional[Model] syntax should work the same as Model | None.
 
+    This is a regression test to ensure backward compatibility with typing.Optional syntax.
     typing.Optional[X] is internally Union[X, None], which should be handled
     the same way as the pipe syntax (X | None).
+
+    Note: The core logic is already tested in test_extract_pydantic_model_from_union_returns,
+    but this integration test ensures the full API endpoint works correctly.
     """
     from typing import Optional
 
