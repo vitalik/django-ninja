@@ -1,18 +1,31 @@
+import binascii
 import inspect
 from abc import ABC, abstractmethod
+from base64 import b64decode, b64encode
 from functools import partial, wraps
 from math import inf
-from typing import Any, AsyncGenerator, Callable, List, Optional, Tuple, Type, Union
+from typing import (
+    Any,
+    AsyncGenerator,
+    Callable,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    Union,
+)
+from urllib import parse
 
 from django.db.models import QuerySet
 from django.http import HttpRequest
 from django.utils.module_loading import import_string
+from pydantic import BaseModel, field_validator
 from typing_extensions import get_args as get_collection_args
 
 from ninja import Field, Query, Router, Schema
 from ninja.conf import settings
 from ninja.constants import NOT_SET
-from ninja.errors import ConfigError
+from ninja.errors import ConfigError, ValidationError
 from ninja.operation import Operation
 from ninja.signature.details import is_collection_type
 from ninja.utils import (
@@ -177,6 +190,376 @@ class PageNumberPagination(AsyncPaginationBase):
             self.items_attribute: items,
             "count": await self._aitems_count(queryset),
         }  # noqa: E203
+
+
+class CursorPagination(AsyncPaginationBase):
+    max_page_size: int
+    page_size: int
+
+    items_attribute: str = "results"
+
+    def __init__(
+        self,
+        *,
+        ordering: Tuple[str, ...] = settings.PAGINATION_DEFAULT_ORDERING,
+        page_size: int = settings.PAGINATION_PER_PAGE,
+        max_page_size: int = settings.PAGINATION_MAX_PER_PAGE_SIZE,
+        **kwargs: Any,
+    ) -> None:
+        self.ordering = ordering
+        # take the first ordering parameter as the attribute for establishing
+        # position
+        self._order_attribute = (
+            ordering[0][1:] if ordering[0].startswith("-") else ordering[0]
+        )
+        self._order_attribute_reversed = ordering[0].startswith("-")
+
+        self.page_size = page_size
+        self.max_page_size = max_page_size
+
+        super().__init__(**kwargs)
+
+    class Input(Schema):
+        page_size: Optional[int] = None
+        cursor: Optional[str] = None
+
+    class Output(Schema):
+        previous: Optional[str]
+        next: Optional[str]
+        results: List[Any]
+
+    class Cursor(BaseModel):
+        """
+        Represents pagination state.
+
+        This is encoded in a base64 query parameter.
+
+        """
+
+        p: Optional[str] = Field(
+            default=None,
+            title="position",
+            description="String identifier for the current position in the dataset",
+        )
+
+        r: bool = Field(
+            default=False,
+            title="reverse",
+            description="Whether to reverse the ordering direction",
+        )
+
+        # offset enables the use of a non-unique ordering field
+        # e.g. if created time of two items is exactly the same, we can use the offset
+        # to figure out the position exactly
+        o: int = Field(
+            default=0,
+            ge=0,
+            lt=settings.PAGINATION_MAX_OFFSET,
+            title="offset",
+            description="Number of items to skip from the current position",
+        )
+
+        @field_validator("*", mode="before")
+        @classmethod
+        def validate_individual_queryparam(cls, value: Any) -> Any:
+            """
+            Handle query string parsing quirks where single values become lists.
+
+            URL parsing libraries wrap single query parameters in lists, we only
+            care about a single value
+            """
+            if isinstance(value, list):
+                return value[0]
+            return value
+
+        @classmethod
+        def from_encoded_param(
+            cls, encoded_param: Optional[str], context: Any = None
+        ) -> "CursorPagination.Cursor":
+            """
+            Deserialize cursor from URL-safe base64 token.
+            """
+            if not encoded_param:
+                return cls()
+            try:
+                decoded = b64decode(
+                    encoded_param.encode("ascii"), validate=True
+                ).decode("ascii")
+            except (ValueError, binascii.Error) as e:
+                raise ValidationError([{"cursor": "Invalid Cursor"}]) from e
+
+            parsed_querystring = parse.parse_qs(decoded, keep_blank_values=True)
+            return cls.model_validate(parsed_querystring, context=context)
+
+        def encode_as_param(self) -> str:
+            """
+            Serialize cursor to URL-safe base64 token.
+            """
+            data = self.model_dump(
+                exclude_defaults=True, exclude_none=True, exclude_unset=True
+            )
+            query_string = parse.urlencode(data, doseq=True)
+            return b64encode(query_string.encode("ascii")).decode("ascii")
+
+    @staticmethod
+    def _reverse_order(order: Tuple[str, ...]) -> Tuple[str, ...]:
+        """
+        Flip ordering direction for backward pagination.
+
+        Example:
+            ("-created", "pk") becomes ("created", "-pk")
+            ("name", "-updated") becomes ("-name", "updated")
+        """
+        return tuple(
+            marker[1:] if marker.startswith("-") else f"-{marker}" for marker in order
+        )
+
+    def _get_position(self, item: Any) -> str:
+        """
+        Extract the string representation of the attribute value used for ordering,
+        which serves as the position identifier.
+
+        """
+        return str(getattr(item, self._order_attribute))
+
+    def _get_page_size(self, requested_page_size: Optional[int]) -> int:
+        """
+        Determine the actual page size to use, respecting configured limits.
+
+        Uses the default page size when no specific size is requested, otherwise
+        clamps the requested size within the allowed range to prevent resource
+        exhaustion attacks.
+        """
+        if requested_page_size is None:
+            return self.page_size
+        return min(self.max_page_size, max(1, requested_page_size))
+
+    def _build_next_cursor(
+        self,
+        current_cursor: Cursor,
+        results: List[Any],
+        additional_position: Optional[str] = None,
+    ) -> Optional[Cursor]:
+        """
+        Build cursor for next page
+        """
+        if (additional_position is None and not current_cursor.r) or not results:
+            return None
+
+        if not current_cursor.r:
+            # next position is provided by the additional position in a forward cursor
+            next_position = additional_position
+        else:
+            # default to the last item
+            # this will result in this item being included in the next set of results
+            # when flipping from a reversed cursor query to a forward cursor query
+            next_position = self._get_position(results[-1])
+
+        offset = 0
+
+        if current_cursor.p == next_position and not current_cursor.r:
+            offset += current_cursor.o + len(results)
+        else:
+            # Count duplicates at page end to find the offset
+            for item in reversed(results):
+                item_position_value = self._get_position(item)
+                if item_position_value != next_position:
+                    break
+                offset += 1
+
+        return self.Cursor(o=offset, r=False, p=next_position)
+
+    def _build_previous_cursor(
+        self,
+        current_cursor: Cursor,
+        results: List[Any],
+        additional_position: Optional[str] = None,
+    ) -> Optional[Cursor]:
+        """
+        Build cursor for previous page
+        """
+        if (
+            current_cursor.r and additional_position is None
+        ) or current_cursor.p is None:
+            return None
+
+        if not results:
+            # End of dataset - create reverse cursor to go backward
+            return self.Cursor(o=0, r=True, p=current_cursor.p)
+
+        if current_cursor.r:
+            # previous position is provided by the additional position in a
+            # reversed cursor
+            previous_position = additional_position
+
+        else:
+            # default to the first item
+            # this will result in this item being included in the previous set of
+            # results when flipping from a forward cursor query to a reversed
+            # cursor query
+            previous_position = self._get_position(results[0])
+
+        offset = 0
+
+        if current_cursor.p == previous_position and current_cursor.r:
+            offset += current_cursor.o + len(results)
+        else:
+            # Count duplicates at page end to find the offset
+            for item in results:
+                item_position_value = self._get_position(item)
+                if item_position_value != previous_position:
+                    break
+                offset += 1
+
+        return self.Cursor(o=offset, r=True, p=previous_position)
+
+    @staticmethod
+    def _add_cursor_to_URL(url: str, cursor: Optional[Cursor]) -> Optional[str]:
+        """
+        Build pagination URLs with an encoded cursor.
+
+        Ignore any previous cursors but preserve any other query parameters
+
+        Example:
+            Given URL "https://api.example.com/pages?tag=hiring" and a cursor
+            with position "2024-01-01T10:00:00Z", returns:
+            "https://api.example.com/pages?cursor=cD0yMDI0LTAxLTAxVDEwJTNBMDA%3D&tag=hiring"
+        """
+
+        if cursor is None:
+            return None
+        (scheme, netloc, path, query, fragment) = parse.urlsplit(url)
+        query_dict = parse.parse_qs(query, keep_blank_values=True)
+        query_dict["cursor"] = [cursor.encode_as_param()]
+        query = parse.urlencode(sorted(query_dict.items()), doseq=True)
+        return parse.urlunsplit((scheme, netloc, path, query, fragment))
+
+    def _order_queryset(self, queryset: QuerySet, cursor: Cursor) -> QuerySet:
+        """
+        Apply ordering to queryset based on cursor direction.
+
+        For backward pagination (cursor.r=True), flips the ordering direction
+        to traverse the dataset in reverse.
+        """
+        if cursor.r:
+            return queryset.order_by(*self._reverse_order(self.ordering))
+
+        return queryset.order_by(*self.ordering)
+
+    def _find_position(self, queryset: QuerySet, cursor: Cursor) -> QuerySet:
+        """
+        Filter queryset to start from the cursor position.
+        """
+        if cursor.p is None:
+            return queryset
+
+        cmp = "gte" if cursor.r == self._order_attribute_reversed else "lte"
+        filters = {f"{self._order_attribute}__{cmp}": cursor.p}
+        return queryset.filter(**filters)
+
+    def paginate_queryset(
+        self, queryset: QuerySet, pagination: Input, request: HttpRequest, **params: Any
+    ) -> Any:
+        """
+        Execute cursor-based pagination with stable positioning.
+
+        We fetch page_size + 1 items to detect whether more pages exist without
+        requiring a separate count query. The extra item is discarded from results
+        but used for next/previous cursor generation.
+        """
+        page_size = self._get_page_size(pagination.page_size)
+        cursor = self.Cursor.from_encoded_param(pagination.cursor)
+
+        queryset = self._order_queryset(queryset, cursor)
+        queryset = self._find_position(queryset, cursor)
+
+        # fetch results here and turn into a list
+        results_plus_one = list(queryset[cursor.o : cursor.o + page_size + 1])
+        additional_position = (
+            self._get_position(results_plus_one[-1])
+            if len(results_plus_one) > page_size
+            else None
+        )
+
+        if cursor.r:
+            results = list(reversed(results_plus_one[:page_size]))
+        else:
+            results = results_plus_one[:page_size]
+
+        next_cursor = self._build_next_cursor(
+            current_cursor=cursor,
+            results=results,
+            additional_position=additional_position,
+        )
+
+        previous_cursor = self._build_previous_cursor(
+            current_cursor=cursor,
+            results=results,
+            additional_position=additional_position,
+        )
+
+        base_url = request.build_absolute_uri()
+
+        return {
+            "next": self._add_cursor_to_URL(base_url, next_cursor),
+            "previous": self._add_cursor_to_URL(base_url, previous_cursor),
+            self.items_attribute: results,
+        }
+
+    async def apaginate_queryset(
+        self,
+        queryset: QuerySet,
+        pagination: Input,
+        request: HttpRequest,
+        **params: Any,
+    ) -> Any:
+        """
+        Execute async cursor-based pagination with stable positioning.
+
+        We fetch page_size + 1 items to detect whether more pages exist without
+        requiring a separate count query. The extra item is discarded from results
+        but used for next/previous cursor generation.
+        """
+        page_size = self._get_page_size(pagination.page_size)
+        cursor = self.Cursor.from_encoded_param(pagination.cursor)
+
+        queryset = self._order_queryset(queryset, cursor)
+        queryset = self._find_position(queryset, cursor)
+
+        # fetch results here and turn into a list
+        results_plus_one = [
+            obj async for obj in queryset[cursor.o : cursor.o + page_size + 1]
+        ]
+        additional_position = (
+            self._get_position(results_plus_one[-1])
+            if len(results_plus_one) > page_size
+            else None
+        )
+
+        if cursor.r:
+            results = list(reversed(results_plus_one[:page_size]))
+        else:
+            results = results_plus_one[:page_size]
+
+        next_cursor = self._build_next_cursor(
+            current_cursor=cursor,
+            results=results,
+            additional_position=additional_position,
+        )
+
+        previous_cursor = self._build_previous_cursor(
+            current_cursor=cursor,
+            results=results,
+            additional_position=additional_position,
+        )
+
+        base_url = request.build_absolute_uri()
+
+        return {
+            "next": self._add_cursor_to_URL(base_url, next_cursor),
+            "previous": self._add_cursor_to_URL(base_url, previous_cursor),
+            self.items_attribute: results,
+        }
 
 
 def paginate(
