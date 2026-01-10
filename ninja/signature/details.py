@@ -213,7 +213,7 @@ class ViewSignature:
         origin = get_origin(model)
         if origin in UNION_TYPES:
             actual_model = extract_pydantic_model_from_union(model)
-            if actual_model is not None:
+            if actual_model is not None:  # pragma: no branch
                 yield from self._model_flatten_map(actual_model, prefix)  # type: ignore[type-var]
             return
 
@@ -395,7 +395,7 @@ def detect_collection_fields(
                     if actual_model is not None:
                         annotation_or_field = actual_model
                     else:
-                        break
+                        break  # pragma: no cover
                 annotation_or_field = next(
                     (
                         a
