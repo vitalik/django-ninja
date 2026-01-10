@@ -210,10 +210,10 @@ class ViewSignature:
 
     def _model_flatten_map(self, model: TModel, prefix: str) -> Generator:
         # Handle Union types by extracting the Pydantic model
-        origin = get_origin(model)
-        if origin in UNION_TYPES:
-            actual_model = extract_pydantic_model_from_union(model)
-            if actual_model is not None:  # pragma: no branch
+        if get_origin(model) in UNION_TYPES:
+            if actual_model := extract_pydantic_model_from_union(
+                model
+            ):  # pragma: no branch
                 yield from self._model_flatten_map(actual_model, prefix)  # type: ignore[type-var]
             return
 
@@ -333,19 +333,13 @@ def is_pydantic_model(cls: Any) -> bool:
 
 
 def extract_pydantic_model_from_union(annotation: Any) -> type | None:
-    """Extract Pydantic model from Union type annotation.
+    """Extract Pydantic model from Union type annotation, or None if not found."""
+    if get_origin(annotation) not in UNION_TYPES:
+        return None
 
-    Args:
-        annotation: Type annotation (Union type or regular type)
-
-    Returns:
-        Pydantic model class or None if not found
-    """
-    origin = get_origin(annotation)
-    if origin in UNION_TYPES:
-        for arg in get_args(annotation):
-            if arg is not type(None) and is_pydantic_model(arg):
-                return arg  # type: ignore[no-any-return]
+    for arg in get_args(annotation):
+        if arg is not type(None) and is_pydantic_model(arg):
+            return arg  # type: ignore[no-any-return]
     return None
 
 
@@ -387,13 +381,9 @@ def detect_collection_fields(
                 if hasattr(annotation_or_field, "annotation"):
                     annotation_or_field = annotation_or_field.annotation
                 # Handle Union types by extracting the Pydantic model
-                origin = get_origin(annotation_or_field)
-                if origin in UNION_TYPES:
-                    actual_model = extract_pydantic_model_from_union(
-                        annotation_or_field
-                    )
-                    if actual_model is not None:
-                        annotation_or_field = actual_model
+                if get_origin(annotation_or_field) in UNION_TYPES:
+                    if model := extract_pydantic_model_from_union(annotation_or_field):
+                        annotation_or_field = model
                     else:
                         break  # pragma: no cover
                 annotation_or_field = next(
