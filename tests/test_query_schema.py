@@ -163,3 +163,33 @@ def test_schema_all_of_no_ref():
         "default": 1,
         "allOf": [{"title": "Best Type Ever!"}, {"no-ref-here": "xyzzy"}],
     }
+
+
+def test_query_schema_with_union_type_model():
+    """Union type with Pydantic model should not raise AttributeError.
+
+    This test verifies that endpoint creation succeeds when using Union types
+    with Pydantic models (e.g., InnerModel | None) in Query parameters.
+    Previously, this would raise: AttributeError: 'types.UnionType' object has no attribute 'model_fields'
+    """
+
+    class InnerModel(Schema):
+        value: int
+
+    class OuterModel(Schema):
+        inner: InnerModel | None = None
+
+    temp_api = NinjaAPI()
+
+    # This should not raise AttributeError during endpoint registration
+    @temp_api.get("/test-union")
+    def view(request, data: OuterModel = Query(...)):
+        return {"inner": data.inner.model_dump() if data.inner else None}
+
+    # Verify endpoint was created successfully
+    client = TestClient(temp_api)
+
+    # Test with inner model data provided
+    response = client.get("/test-union?value=42")
+    assert response.status_code == 200
+    assert response.json() == {"inner": {"value": 42}}

@@ -209,6 +209,14 @@ class ViewSignature:
         return flatten_map
 
     def _model_flatten_map(self, model: TModel, prefix: str) -> Generator:
+        # Handle Union types by extracting the Pydantic model
+        origin = get_origin(model)
+        if origin in UNION_TYPES:
+            actual_model = extract_pydantic_model_from_union(model)
+            if actual_model is not None:
+                yield from self._model_flatten_map(actual_model, prefix)  # type: ignore[type-var]
+            return
+
         field: FieldInfo
         for attr, field in model.model_fields.items():
             field_name = field.alias or attr
@@ -378,6 +386,16 @@ def detect_collection_fields(
             for attr in path[1:]:
                 if hasattr(annotation_or_field, "annotation"):
                     annotation_or_field = annotation_or_field.annotation
+                # Handle Union types by extracting the Pydantic model
+                origin = get_origin(annotation_or_field)
+                if origin in UNION_TYPES:
+                    actual_model = extract_pydantic_model_from_union(
+                        annotation_or_field
+                    )
+                    if actual_model is not None:
+                        annotation_or_field = actual_model
+                    else:
+                        break
                 annotation_or_field = next(
                     (
                         a
@@ -390,10 +408,10 @@ def detect_collection_fields(
                 annotation_or_field = getattr(
                     annotation_or_field, "outer_type_", annotation_or_field
                 )
+            else:
+                # if hasattr(annotation_or_field, "annotation"):
+                annotation_or_field = annotation_or_field.annotation
 
-            # if hasattr(annotation_or_field, "annotation"):
-            annotation_or_field = annotation_or_field.annotation
-
-            if is_collection_type(annotation_or_field):
-                result.append(path[-1])
+                if is_collection_type(annotation_or_field):
+                    result.append(path[-1])
     return result
