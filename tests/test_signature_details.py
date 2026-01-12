@@ -65,16 +65,6 @@ def test_is_collection_type_returns(annotation: typing.Any, expected: bool):
     ("annotation", "expected"),
     [
         pytest.param(
-            SampleModel | None,
-            SampleModel,
-            id="returns_model_from_union_with_none",
-        ),
-        pytest.param(
-            str | None,
-            None,
-            id="returns_none_when_no_model_in_union",
-        ),
-        pytest.param(
             SampleModel,
             None,
             id="returns_none_for_non_union_type",
@@ -84,14 +74,31 @@ def test_is_collection_type_returns(annotation: typing.Any, expected: bool):
             SampleModel,
             id="returns_model_from_optional_syntax",
         ),
-        pytest.param(
-            str | int,
-            None,
-            id="returns_none_for_union_without_model",
+        # PEP 604 Union syntax (X | Y) requires Python 3.10+
+        *(
+            (
+                pytest.param(
+                    SampleModel | None,
+                    SampleModel,
+                    id="returns_model_from_union_with_none",
+                ),
+                pytest.param(
+                    str | None,
+                    None,
+                    id="returns_none_when_no_model_in_union",
+                ),
+                pytest.param(
+                    str | int,
+                    None,
+                    id="returns_none_for_union_without_model",
+                ),
+            )
+            if version_info >= (3, 10)
+            else ()
         ),
     ],
 )
 def test_extract_pydantic_model_from_union_returns(
-    annotation: typing.Any, expected: type | None
+    annotation: typing.Any, expected: typing.Optional[type]
 ):
     assert extract_pydantic_model_from_union(annotation) is expected

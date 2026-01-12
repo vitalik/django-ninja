@@ -1,5 +1,6 @@
 from datetime import datetime
 from enum import IntEnum
+from sys import version_info
 
 from pydantic import BaseModel, Field
 
@@ -165,34 +166,37 @@ def test_schema_all_of_no_ref():
     }
 
 
-def test_query_schema_with_union_type_model():
-    """Union type with Pydantic model should not raise AttributeError.
+# PEP 604 Union syntax (X | Y) requires Python 3.10+
+if version_info >= (3, 10):
 
-    This test verifies that endpoint creation succeeds when using Union types
-    with Pydantic models (e.g., InnerModel | None) in Query parameters.
-    Previously, this would raise: AttributeError: 'types.UnionType' object has no attribute 'model_fields'
-    """
+    def test_query_schema_with_union_type_model():
+        """Union type with Pydantic model should not raise AttributeError.
 
-    class InnerModel(Schema):
-        value: int
+        This test verifies that endpoint creation succeeds when using Union types
+        with Pydantic models (e.g., InnerModel | None) in Query parameters.
+        Previously, this would raise: AttributeError: 'types.UnionType' object has no attribute 'model_fields'
+        """
 
-    class OuterModel(Schema):
-        inner: InnerModel | None = None
+        class InnerModel(Schema):
+            value: int
 
-    temp_api = NinjaAPI()
+        class OuterModel(Schema):
+            inner: InnerModel | None = None
 
-    # This should not raise AttributeError during endpoint registration
-    @temp_api.get("/test-union")
-    def view(request, data: OuterModel = Query(...)):
-        return {"inner": data.inner.model_dump() if data.inner else None}
+        temp_api = NinjaAPI()
 
-    # Verify endpoint was created successfully
-    client = TestClient(temp_api)
+        # This should not raise AttributeError during endpoint registration
+        @temp_api.get("/test-union")
+        def view(request, data: OuterModel = Query(...)):
+            return {"inner": data.inner.model_dump() if data.inner else None}
 
-    # Test with inner model data provided
-    response = client.get("/test-union?value=42")
-    assert response.status_code == 200
-    assert response.json() == {"inner": {"value": 42}}
+        # Verify endpoint was created successfully
+        client = TestClient(temp_api)
+
+        # Test with inner model data provided
+        response = client.get("/test-union?value=42")
+        assert response.status_code == 200
+        assert response.json() == {"inner": {"value": 42}}
 
 
 def test_query_schema_with_optional_syntax():
@@ -226,33 +230,36 @@ def test_query_schema_with_optional_syntax():
     assert response.json() == {"inner": {"value": 99}}
 
 
-def test_query_schema_with_nested_union_types():
-    """Nested Union types should be handled correctly.
+# PEP 604 Union syntax (X | Y) requires Python 3.10+
+if version_info >= (3, 10):
 
-    Tests a schema structure like:
-    TopModel -> MiddleModel | None -> InnerModel | None
-    """
+    def test_query_schema_with_nested_union_types():
+        """Nested Union types should be handled correctly.
 
-    class InnerModel(Schema):
-        value: int
+        Tests a schema structure like:
+        TopModel -> MiddleModel | None -> InnerModel | None
+        """
 
-    class MiddleModel(Schema):
-        inner: InnerModel | None = None
+        class InnerModel(Schema):
+            value: int
 
-    class TopModel(Schema):
-        middle: MiddleModel | None = None
+        class MiddleModel(Schema):
+            inner: InnerModel | None = None
 
-    temp_api = NinjaAPI()
+        class TopModel(Schema):
+            middle: MiddleModel | None = None
 
-    @temp_api.get("/test-nested")
-    def view(request, data: TopModel = Query(...)):
-        if data.middle and data.middle.inner:
-            return {"value": data.middle.inner.value}
-        return {"value": None}
+        temp_api = NinjaAPI()
 
-    client = TestClient(temp_api)
+        @temp_api.get("/test-nested")
+        def view(request, data: TopModel = Query(...)):
+            if data.middle and data.middle.inner:
+                return {"value": data.middle.inner.value}
+            return {"value": None}
 
-    # Test with fully nested data
-    response = client.get("/test-nested?value=123")
-    assert response.status_code == 200
-    assert response.json() == {"value": 123}
+        client = TestClient(temp_api)
+
+        # Test with fully nested data
+        response = client.get("/test-nested?value=123")
+        assert response.status_code == 200
+        assert response.json() == {"value": 123}

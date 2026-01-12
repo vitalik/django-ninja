@@ -211,9 +211,8 @@ class ViewSignature:
     def _model_flatten_map(self, model: TModel, prefix: str) -> Generator:
         # Handle Union types by extracting the Pydantic model
         if get_origin(model) in UNION_TYPES:
-            if actual_model := extract_pydantic_model_from_union(
-                model
-            ):  # pragma: no branch
+            actual_model = extract_pydantic_model_from_union(model)
+            if actual_model:  # pragma: no branch
                 yield from self._model_flatten_map(actual_model, prefix)  # type: ignore[type-var]
             return
 
@@ -332,7 +331,7 @@ def is_pydantic_model(cls: Any) -> bool:
         return False
 
 
-def extract_pydantic_model_from_union(annotation: Any) -> type | None:
+def extract_pydantic_model_from_union(annotation: Any) -> Optional[type]:
     """Extract Pydantic model from Union type annotation, or None if not found."""
     if get_origin(annotation) not in UNION_TYPES:
         return None
@@ -382,8 +381,11 @@ def detect_collection_fields(
                     annotation_or_field = annotation_or_field.annotation
                 # Handle Union types by extracting the Pydantic model
                 if get_origin(annotation_or_field) in UNION_TYPES:
-                    if model := extract_pydantic_model_from_union(annotation_or_field):
-                        annotation_or_field = model
+                    extracted_model = extract_pydantic_model_from_union(
+                        annotation_or_field
+                    )
+                    if extracted_model:
+                        annotation_or_field = extracted_model
                     else:
                         break  # pragma: no cover
                 annotation_or_field = next(
