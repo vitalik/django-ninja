@@ -185,9 +185,28 @@ class ViewSignature:
         return result
 
     def _args_flatten_map(self, args: List[FuncParam]) -> Dict[str, Tuple[str, ...]]:
-        flatten_map = {}
+        flatten_map: Dict[str, Tuple[str, ...]] = {}
         arg_names: Any = {}
         for arg in args:
+            # Check if this is an optional union type with None default
+            if get_origin(arg.annotation) in UNION_TYPES:
+                union_args = get_args(arg.annotation)
+                has_none = type(None) in union_args
+                # If it's a union with None and the source default is None (like Query(None)), don't flatten it
+                if (
+                    has_none
+                    and hasattr(arg.source, "default")
+                    and arg.source.default is None
+                ):
+                    name = arg.alias
+                    if name in flatten_map:
+                        raise ConfigError(
+                            f"Duplicated name: '{name}' also in '{arg_names[name]}'"
+                        )
+                    flatten_map[name] = (name,)
+                    arg_names[name] = name
+                    continue
+
             if is_pydantic_model(arg.annotation):
                 for name, path in self._model_flatten_map(arg.annotation, arg.alias):
                     if name in flatten_map:
@@ -209,12 +228,19 @@ class ViewSignature:
 
     def _model_flatten_map(self, model: TModel, prefix: str) -> Generator:
         field: FieldInfo
-        for attr, field in model.model_fields.items():
-            field_name = field.alias or attr
-            name = f"{prefix}{self.FLATTEN_PATH_SEP}{field_name}"
-            if is_pydantic_model(field.annotation):
-                yield from self._model_flatten_map(field.annotation, name)  # type: ignore
-            else:
+        if get_origin(model) in UNION_TYPES:
+            # If the model is a union type, process each type in the union
+            for arg in get_args(model):
+                yield from self._model_flatten_map(arg, prefix)
+        else:
+            for attr, field in model.model_fields.items():
+                field_name = field.alias or attr
+                name = f"{prefix}{self.FLATTEN_PATH_SEP}{field_name}"
+
+                if get_origin(
+                    field.annotation
+                ) not in UNION_TYPES and is_pydantic_model(field.annotation):
+                    yield from self._model_flatten_map(field.annotation, name)  # type: ignore
                 yield field_name, name
 
     def _get_param_type(self, name: str, arg: inspect.Parameter) -> FuncParam:
@@ -277,15 +303,21 @@ class ViewSignature:
 
         # 2) if param name is a part of the path parameter
         elif name in self.path_params_names:
-            assert (
-                default == self.signature.empty
-            ), f"'{name}' is a path param, default not allowed"
+            assert default == self.signature.empty, (
+                f"'{name}' is a path param, default not allowed"
+            )
             param_source = Path(...)
 
         # 3) if param is a collection, or annotation is part of pydantic model:
         elif is_collection or is_pydantic_model(annotation):
             if default == self.signature.empty:
-                param_source = Body(...)
+                # Check if this is a Union type that includes None - if so, None should be a valid value
+                if get_origin(annotation) in UNION_TYPES and type(None) in get_args(
+                    annotation
+                ):
+                    param_source = Body(None)  # Make it optional with None default
+                else:
+                    param_source = Body(...)
             else:
                 param_source = Body(default)
 
@@ -317,7 +349,11 @@ def is_pydantic_model(cls: Any) -> bool:
 
         # Handle Union types
         if origin in UNION_TYPES:
-            return any(issubclass(arg, pydantic.BaseModel) for arg in get_args(cls))
+            return any(
+                issubclass(arg, pydantic.BaseModel)
+                for arg in get_args(cls)
+                if arg is not type(None)
+            )
         return issubclass(cls, pydantic.BaseModel)
     except TypeError:  # pragma: no cover
         return False
@@ -360,20 +396,31 @@ def detect_collection_fields(
             for attr in path[1:]:
                 if hasattr(annotation_or_field, "annotation"):
                     annotation_or_field = annotation_or_field.annotation
-                annotation_or_field = next(
-                    (
-                        a
-                        for a in annotation_or_field.model_fields.values()
-                        if a.alias == attr
-                    ),
-                    annotation_or_field.model_fields.get(attr),
-                )  # pragma: no cover
+
+                # check union types
+                if get_origin(annotation_or_field) in UNION_TYPES:
+                    for arg in get_args(annotation_or_field):  # pragma: no branch
+                        found_field = next(
+                            (a for a in arg.model_fields.values() if a.alias == attr),
+                            arg.model_fields.get(attr),
+                        )
+                        if found_field is not None:
+                            annotation_or_field = found_field
+                            break
+                else:
+                    annotation_or_field = next(
+                        (
+                            a
+                            for a in annotation_or_field.model_fields.values()
+                            if a.alias == attr
+                        ),
+                        annotation_or_field.model_fields.get(attr),
+                    )
 
                 annotation_or_field = getattr(
                     annotation_or_field, "outer_type_", annotation_or_field
                 )
 
-            # if hasattr(annotation_or_field, "annotation"):
             annotation_or_field = annotation_or_field.annotation
 
             if is_collection_type(annotation_or_field):
