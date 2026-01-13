@@ -109,9 +109,11 @@ class NinjaClientBase:
             if isinstance(self.router_or_app, NinjaAPI):
                 self._urls_cache = self.router_or_app.urls[0]
             else:
-                api = NinjaAPI()
-                self.router_or_app.set_api_instance(api)
-                self._urls_cache = list(self.router_or_app.urls_paths(""))
+                # Create temporary API without mutating router
+                # Unique namespace prevents registry conflicts
+                api = NinjaAPI(urls_namespace=f"test-{id(self)}")
+                api.add_router("", self.router_or_app)
+                self._urls_cache = api.urls[0]
         return self._urls_cache
 
     def _resolve(

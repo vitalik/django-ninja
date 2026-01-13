@@ -144,11 +144,14 @@ def test_for_list_with_overridden_pagination_reponse():
 
 @pytest.mark.asyncio
 async def test_async_pagination():
-    @api.get("/items_async", response=List[ItemSchema])
+    # Create separate API for async test to avoid frozen router issues
+    async_api = NinjaAPI(default_router=RouterPaginated(), urls_namespace="async_test")
+
+    @async_api.get("/items_async", response=List[ItemSchema])
     async def items_async(request):
         return [{"id": i} for i in range(1, 51)]
 
-    client = TestAsyncClient(api)
+    client = TestAsyncClient(async_api)
 
     response = await client.get("/items_async?offset=5&limit=1")
     assert response.json() == {"items": [{"id": 6}], "count": 50}
