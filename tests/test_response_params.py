@@ -34,6 +34,11 @@ def op_exclude_none(request):
     return {"field1": None, "field2": "default value"}
 
 
+@api.get("/test-schema-return", response=SomeResponse)
+def op_return_schema(request):
+    return SomeResponse()
+
+
 client = TestClient(api)
 
 
@@ -46,3 +51,8 @@ def test_arguments():
     assert client.get("/test-unset").json() == {"field3": 10}
     assert client.get("/test-defaults").json() == {"field1": 3}
     assert client.get("/test-none").json() == {"field2": "default value"}
+    assert client.get("/test-schema-return").json() == {
+        "field1": 1,
+        "field2": "default value",
+        "field3": None,
+    }

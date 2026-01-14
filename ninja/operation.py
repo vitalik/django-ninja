@@ -305,26 +305,33 @@ class Operation:
             # Empty response.
             return temporal_response
 
-        resp_object = ResponseObject(result)
-        # ^ we need object because getter_dict seems work only with model_validate
-        validated_object = response_model.model_validate(
-            resp_object, context={"request": request, "response_status": status}
-        )
-
-        model_dump_kwargs: Dict[str, Any] = {}
+        model_dump_kwargs: Dict[str, Any] = {
+            "by_alias": self.by_alias,
+            "exclude_unset": self.exclude_unset,
+            "exclude_defaults": self.exclude_defaults,
+            "exclude_none": self.exclude_none,
+        }
         if pydantic_version >= [2, 7]:
             # pydantic added support for serialization context at 2.7
             model_dump_kwargs.update(
                 context={"request": request, "response_status": status}
             )
 
-        result = validated_object.model_dump(
-            by_alias=self.by_alias,
-            exclude_unset=self.exclude_unset,
-            exclude_defaults=self.exclude_defaults,
-            exclude_none=self.exclude_none,
-            **model_dump_kwargs,
-        )["response"]
+        if isinstance(result, pydantic.BaseModel):
+            # if the result is already a Schema, just return it
+            return self.api.create_response(
+                request,
+                result.model_dump(**model_dump_kwargs),
+                temporal_response=temporal_response,
+            )
+
+        resp_object = ResponseObject(result)
+        # ^ we need object because getter_dict seems work only with model_validate
+        validated_object = response_model.model_validate(
+            resp_object, context={"request": request, "response_status": status}
+        )
+
+        result = validated_object.model_dump(**model_dump_kwargs)["response"]
         return self.api.create_response(
             request, result, temporal_response=temporal_response
         )
