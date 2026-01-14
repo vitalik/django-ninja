@@ -9,6 +9,7 @@ __all__ = [
     "Cookie",
     "File",
     "Form",
+    "FormJson",
     "Header",
     "Path",
     "Query",
@@ -16,6 +17,7 @@ __all__ = [
     "CookieEx",
     "FileEx",
     "FormEx",
+    "FormJsonEx",
     "HeaderEx",
     "PathEx",
     "QueryEx",
@@ -43,6 +45,7 @@ if TYPE_CHECKING:  # pragma: nocover
     Cookie = Annotated[T, param_functions.Cookie()]
     File = Annotated[T, param_functions.File()]
     Form = Annotated[T, param_functions.Form()]
+    FormJson = Annotated[T, param_functions.FormJson()]
     Header = Annotated[T, param_functions.Header()]
     Path = Annotated[T, param_functions.Path()]
     Query = Annotated[T, param_functions.Query()]
@@ -52,6 +55,7 @@ if TYPE_CHECKING:  # pragma: nocover
     from typing_extensions import Annotated as CookieEx
     from typing_extensions import Annotated as FileEx
     from typing_extensions import Annotated as FormEx
+    from typing_extensions import Annotated as FormJsonEx
     from typing_extensions import Annotated as HeaderEx
     from typing_extensions import Annotated as PathEx
     from typing_extensions import Annotated as QueryEx
@@ -60,6 +64,7 @@ else:
     Cookie = ParamShortcut(param_functions.Cookie)
     File = ParamShortcut(param_functions.File)
     Form = ParamShortcut(param_functions.Form)
+    FormJson = ParamShortcut(param_functions.FormJson)
     Header = ParamShortcut(param_functions.Header)
     Path = ParamShortcut(param_functions.Path)
     Query = ParamShortcut(param_functions.Query)
@@ -69,6 +74,7 @@ else:
     CookieEx = Cookie
     FileEx = File
     FormEx = Form
+    FormJsonEx = FormJson
     HeaderEx = Header
     PathEx = Path
     QueryEx = Query
