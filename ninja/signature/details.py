@@ -30,6 +30,7 @@ from ninja.utils import is_optional_type
 __all__ = [
     "ViewSignature",
     "is_pydantic_model",
+    "extract_pydantic_model_from_union",
     "is_collection_type",
     "detect_collection_fields",
 ]
@@ -208,6 +209,13 @@ class ViewSignature:
         return flatten_map
 
     def _model_flatten_map(self, model: TModel, prefix: str) -> Generator:
+        # Handle Union types by extracting the Pydantic model
+        if get_origin(model) in UNION_TYPES:
+            actual_model = extract_pydantic_model_from_union(model)
+            if actual_model:  # pragma: no branch
+                yield from self._model_flatten_map(actual_model, prefix)  # type: ignore[type-var]
+            return
+
         field: FieldInfo
         for attr, field in model.model_fields.items():
             field_name = field.alias or attr
@@ -323,6 +331,17 @@ def is_pydantic_model(cls: Any) -> bool:
         return False
 
 
+def extract_pydantic_model_from_union(annotation: Any) -> Optional[type]:
+    """Extract Pydantic model from Union type annotation, or None if not found."""
+    if get_origin(annotation) not in UNION_TYPES:
+        return None
+
+    for arg in get_args(annotation):
+        if arg is not type(None) and is_pydantic_model(arg):
+            return arg  # type: ignore[no-any-return]
+    return None
+
+
 def is_collection_type(annotation: Any) -> bool:
     origin = get_origin(annotation)
 
@@ -360,6 +379,15 @@ def detect_collection_fields(
             for attr in path[1:]:
                 if hasattr(annotation_or_field, "annotation"):
                     annotation_or_field = annotation_or_field.annotation
+                # Handle Union types by extracting the Pydantic model
+                if get_origin(annotation_or_field) in UNION_TYPES:
+                    extracted_model = extract_pydantic_model_from_union(
+                        annotation_or_field
+                    )
+                    if extracted_model:
+                        annotation_or_field = extracted_model
+                    else:
+                        break  # pragma: no cover
                 annotation_or_field = next(
                     (
                         a
@@ -372,10 +400,10 @@ def detect_collection_fields(
                 annotation_or_field = getattr(
                     annotation_or_field, "outer_type_", annotation_or_field
                 )
+            else:
+                # if hasattr(annotation_or_field, "annotation"):
+                annotation_or_field = annotation_or_field.annotation
 
-            # if hasattr(annotation_or_field, "annotation"):
-            annotation_or_field = annotation_or_field.annotation
-
-            if is_collection_type(annotation_or_field):
-                result.append(path[-1])
+                if is_collection_type(annotation_or_field):
+                    result.append(path[-1])
     return result

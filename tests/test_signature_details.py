@@ -2,8 +2,18 @@ import typing
 from sys import version_info
 
 import pytest
+from pydantic import BaseModel
 
-from ninja.signature.details import is_collection_type
+from ninja.signature.details import (
+    extract_pydantic_model_from_union,
+    is_collection_type,
+)
+
+
+class SampleModel(BaseModel):
+    """Sample model for testing extract_pydantic_model_from_union."""
+
+    value: int
 
 
 @pytest.mark.parametrize(
@@ -49,3 +59,46 @@ from ninja.signature.details import is_collection_type
 )
 def test_is_collection_type_returns(annotation: typing.Any, expected: bool):
     assert is_collection_type(annotation) is expected
+
+
+@pytest.mark.parametrize(
+    ("annotation", "expected"),
+    [
+        pytest.param(
+            SampleModel,
+            None,
+            id="returns_none_for_non_union_type",
+        ),
+        pytest.param(
+            typing.Optional[SampleModel],
+            SampleModel,
+            id="returns_model_from_optional_syntax",
+        ),
+        # PEP 604 Union syntax (X | Y) requires Python 3.10+
+        *(
+            (
+                pytest.param(
+                    SampleModel | None,
+                    SampleModel,
+                    id="returns_model_from_union_with_none",
+                ),
+                pytest.param(
+                    str | None,
+                    None,
+                    id="returns_none_when_no_model_in_union",
+                ),
+                pytest.param(
+                    str | int,
+                    None,
+                    id="returns_none_for_union_without_model",
+                ),
+            )
+            if version_info >= (3, 10)
+            else ()
+        ),
+    ],
+)
+def test_extract_pydantic_model_from_union_returns(
+    annotation: typing.Any, expected: typing.Optional[type]
+):
+    assert extract_pydantic_model_from_union(annotation) is expected
