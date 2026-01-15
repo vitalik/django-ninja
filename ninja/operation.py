@@ -237,7 +237,11 @@ class Operation:
                 if is_async_callable(callback) or getattr(callback, "is_async", False):
                     result = callback(request)
                     if inspect.iscoroutine(result):
-                        result = async_to_sync(callback)(request)
+
+                        async def await_result(cor: Coroutine) -> Any:
+                            return await cor
+
+                        result = async_to_sync(await_result)(result)
                 else:
                     result = callback(request)
             except Exception as exc:
