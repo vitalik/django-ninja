@@ -211,7 +211,7 @@ def test_cursor_pagination_end_date_offset():
 
     # Verify results are sorted by start_dates, then by id (implicit in creation order)
     start_dates = [result["start_date"] for result in all_results]
-    assert start_dates == sorted(start_dates), "Results should be sorted by end_date"
+    assert start_dates == sorted(start_dates), "Results should be sorted by start_date"
 
 
 def test_cursor_pagination_end_date_offset_backwards():
