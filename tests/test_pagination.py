@@ -3,6 +3,7 @@ from sys import version_info
 from typing import Any, List
 
 import pytest
+from django.http import HttpRequest
 from django.test import override_settings
 from pydantic.errors import PydanticSchemaGenerationError
 
@@ -36,6 +37,7 @@ class CustomPagination(PaginationBase):
         count: str
         skip: int
 
+    # Explicitly exclude "request", as the previous signature didn't guarantee it
     def paginate_queryset(self, items, pagination: Input, **params):
         skip = pagination.skip
         return {
@@ -52,7 +54,7 @@ class NoOutputPagination(PaginationBase):
 
     Output = None
 
-    def paginate_queryset(self, items, pagination: Input, **params):
+    def paginate_queryset(self, items, *, pagination: Input, request: HttpRequest, **params):
         skip = pagination.skip
         return items[skip : skip + 5]
 
@@ -70,7 +72,7 @@ class ResultsPaginator(PaginationBase):
 
     items_attribute: str = "results"
 
-    def paginate_queryset(self, items, pagination: Input, **params):
+    def paginate_queryset(self, items, *, pagination: Input, request: HttpRequest, **params):
         skip = pagination.skip
         return {
             "results": items[skip : skip + 5],
@@ -89,7 +91,7 @@ class NextPrevPagination(PaginationBase):
         next: str = None
         prev: str = None
 
-    def paginate_queryset(self, items, pagination: Input, request, **params):
+    def paginate_queryset(self, items, *, pagination: Input, request: HttpRequest, **params):
         skip = pagination.skip
         prev_skip = skip - 5
         if prev_skip < 0:

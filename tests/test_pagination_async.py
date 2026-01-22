@@ -3,6 +3,7 @@ from typing import Any, List
 
 import django
 import pytest
+from django.http import HttpRequest
 from django.db.models import QuerySet
 from someapp.models import Category
 
@@ -31,7 +32,7 @@ class NoAsyncPagination(PaginationBase):
         count: str
         skip: int
 
-    def paginate_queryset(self, items, pagination: Input, **params):
+    def paginate_queryset(self, items, *, pagination: Input, request: HttpRequest, **params):
         skip = pagination.skip
         return {
             "items": items[skip : skip + 5],
@@ -47,7 +48,7 @@ class AsyncNoOutputPagination(AsyncPaginationBase):
 
     Output = None
 
-    def paginate_queryset(self, items, pagination: Input, **params):
+    def paginate_queryset(self, items, *, pagination: Input, request: HttpRequest, **params):
         skip = pagination.skip
         return items[skip : skip + 5]
 
