@@ -1,4 +1,3 @@
-from functools import partial
 from typing import TYPE_CHECKING, Any, List
 
 from django.urls import path
@@ -15,11 +14,11 @@ def get_openapi_urls(api: "NinjaAPI") -> List[Any]:
     result = []
 
     if api.openapi_url:
-        view = partial(openapi_json, api=api)
+        view = openapi_json
         if api.docs_decorator:
             view = api.docs_decorator(view)  # type: ignore
         result.append(
-            path(api.openapi_url.lstrip("/"), view, name="openapi-json"),
+            path(api.openapi_url.lstrip("/"), view, {"api": api}, name="openapi-json"),
         )
 
         assert (
@@ -27,15 +26,15 @@ def get_openapi_urls(api: "NinjaAPI") -> List[Any]:
         ), "Please use different urls for openapi_url and docs_url"
 
         if api.docs_url:
-            view = partial(openapi_view, api=api)
+            view = openapi_view
             if api.docs_decorator:
                 view = api.docs_decorator(view)  # type: ignore
             result.append(
-                path(api.docs_url.lstrip("/"), view, name="openapi-view"),
+                path(api.docs_url.lstrip("/"), view, {"api": api}, name="openapi-view"),
             )
 
     return result
 
 
 def get_root_url(api: "NinjaAPI") -> Any:
-    return path("", partial(default_home, api=api), name="api-root")
+    return path("", default_home, {"api": api}, name="api-root")
