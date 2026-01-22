@@ -104,6 +104,8 @@ for path, auth in [
     ("bearer", BearerAuth()),
     ("async_bearer", AsyncBearerAuth()),
     ("customexception", KeyHeaderCustomException()),
+    ("none", None),
+    ("empty_sequence", []),
 ]:
     api.get(f"/{path}", auth=auth, operation_id=path)(demo_operation)
 
@@ -257,6 +259,8 @@ BODY_FORBIDDEN_DEFAULT = dict(detail="Forbidden")
             200,
             dict(auth="keyheadersecret"),
         ),
+        ("/none", {}, 200, dict(auth=None)),
+        ("/empty_sequence", {}, 200, dict(auth=None)),
     ],
 )
 def test_auth(path, kwargs, expected_code, expected_body, settings):
