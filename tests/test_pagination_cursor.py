@@ -2,6 +2,7 @@ from datetime import date, timedelta
 from http import HTTPStatus
 from typing import List
 
+import django
 import pytest
 from django.test import override_settings
 from someapp.api import EventSchema  # pyright: ignore[reportMissingImports]
@@ -819,6 +820,7 @@ async def test_async_cursor_pagination_settings_override():
     assert len(response_data["results"]) == 13
 
 
+@pytest.mark.skipif(django.VERSION < (4, 2), reason="Model.adelete() requires Django 4.2+")
 @pytest.mark.asyncio
 async def test_async_cursor_pagination_deleted_position():
     """Test cursor pagination when the cursor position is deleted between requests with async."""
@@ -856,6 +858,7 @@ async def test_async_cursor_pagination_deleted_position():
     assert titles[0] == "Event 5"
 
 
+@pytest.mark.skipif(django.VERSION < (4, 2), reason="Model.adelete() requires Django 4.2+")
 @pytest.mark.asyncio
 async def test_async_cursor_pagination_deleted_position_previous():
     """Test cursor pagination when the cursor position is deleted between requests using previous cursor with async."""
@@ -898,6 +901,7 @@ async def test_async_cursor_pagination_deleted_position_previous():
     assert "Special Event 13" not in titles
 
 
+@pytest.mark.skipif(django.VERSION < (4, 2), reason="Model.adelete() requires Django 4.2+")
 @pytest.mark.asyncio
 async def test_async_cursor_pagination_last_item_deleted():
     """Test cursor pagination when the cursor is pointed at the last item, but it is deleted with async."""
