@@ -42,6 +42,14 @@ from typing_extensions import dataclass_transform
 from ninja.signature.utils import get_args_names, has_kwargs
 from ninja.types import DictStrAny
 
+# if we can't get the real sentinels, just make some. They will never match, but it won't err
+try:
+    from pydantic.experimental.missing_sentinel import MISSING
+    from pydantic.json_schema import NoDefault
+except ModuleNotFoundError:
+    MISSING = object()
+    NoDefault = object()
+
 pydantic_version = list(map(int, pydantic.VERSION.split(".")[:2]))
 assert pydantic_version >= [2, 0], "Pydantic 2.0+ required"
 
@@ -189,21 +197,18 @@ class NinjaGenerateJsonSchema(GenerateJsonSchema):
         # which really breaks swagger and django model callable defaults
         # so here we completely override behavior
         json_schema = self.generate_inner(schema["schema"])
-
-        default = None
-        if "default" in schema and schema["default"] is not None:
-            default = self.encode_default(schema["default"])
+        default = schema.get(
+            "default", NoDefault
+        )  # matches new `get_default_value` method in 2.11+
 
         if "$ref" in json_schema:
             # Since reference schemas do not support child keys, we wrap the reference schema in a single-case allOf:
-            result = {"allOf": [json_schema]}
-        else:
-            result = json_schema
+            json_schema = {"allOf": [json_schema]}
 
-        if default is not None:
-            result["default"] = default
+        if default is not None and default is not NoDefault and default is not MISSING:
+            json_schema["default"] = self.encode_default(default)
 
-        return result
+        return json_schema
 
 
 class Schema(BaseModel, metaclass=ResolverMetaclass):
