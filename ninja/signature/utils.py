@@ -22,7 +22,10 @@ __all__ = [
 def get_typed_signature(call: Callable[..., Any]) -> inspect.Signature:
     "Finds call signature and resolves all forwardrefs"
     signature = inspect.signature(call)
-    globalns = getattr(call, "__globals__", {})
+    unwrapped = call
+    while hasattr(unwrapped, "__wrapped__"):
+        unwrapped = unwrapped.__wrapped__
+    globalns = getattr(unwrapped, "__globals__", {})
     typed_params = [
         inspect.Parameter(
             name=param.name,
