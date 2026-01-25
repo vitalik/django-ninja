@@ -1,5 +1,6 @@
 from datetime import datetime
 from enum import IntEnum
+from sys import version_info
 
 from pydantic import BaseModel, Field
 
@@ -163,3 +164,102 @@ def test_schema_all_of_no_ref():
         "default": 1,
         "allOf": [{"title": "Best Type Ever!"}, {"no-ref-here": "xyzzy"}],
     }
+
+
+# PEP 604 Union syntax (X | Y) requires Python 3.10+
+if version_info >= (3, 10):
+
+    def test_query_schema_with_union_type_model():
+        """Union type with Pydantic model should not raise AttributeError.
+
+        This test verifies that endpoint creation succeeds when using Union types
+        with Pydantic models (e.g., InnerModel | None) in Query parameters.
+        Previously, this would raise: AttributeError: 'types.UnionType' object has no attribute 'model_fields'
+        """
+
+        class InnerModel(Schema):
+            value: int
+
+        class OuterModel(Schema):
+            inner: InnerModel | None = None
+
+        temp_api = NinjaAPI()
+
+        # This should not raise AttributeError during endpoint registration
+        @temp_api.get("/test-union")
+        def view(request, data: OuterModel = Query(...)):
+            return {"inner": data.inner.model_dump() if data.inner else None}
+
+        # Verify endpoint was created successfully
+        client = TestClient(temp_api)
+
+        # Test with inner model data provided
+        response = client.get("/test-union?value=42")
+        assert response.status_code == 200
+        assert response.json() == {"inner": {"value": 42}}
+
+
+def test_query_schema_with_optional_syntax():
+    """Regression test: Optional[Model] syntax should work the same as Model | None.
+
+    This is a regression test to ensure backward compatibility with typing.Optional syntax.
+    typing.Optional[X] is internally Union[X, None], which should be handled
+    the same way as the pipe syntax (X | None).
+
+    Note: The core logic is already tested in test_extract_pydantic_model_from_union_returns,
+    but this integration test ensures the full API endpoint works correctly.
+    """
+    from typing import Optional
+
+    class InnerModel(Schema):
+        value: int
+
+    class OuterModel(Schema):
+        inner: Optional[InnerModel] = None
+
+    temp_api = NinjaAPI()
+
+    @temp_api.get("/test-optional")
+    def view(request, data: OuterModel = Query(...)):
+        return {"inner": data.inner.model_dump() if data.inner else None}
+
+    client = TestClient(temp_api)
+
+    response = client.get("/test-optional?value=99")
+    assert response.status_code == 200
+    assert response.json() == {"inner": {"value": 99}}
+
+
+# PEP 604 Union syntax (X | Y) requires Python 3.10+
+if version_info >= (3, 10):
+
+    def test_query_schema_with_nested_union_types():
+        """Nested Union types should be handled correctly.
+
+        Tests a schema structure like:
+        TopModel -> MiddleModel | None -> InnerModel | None
+        """
+
+        class InnerModel(Schema):
+            value: int
+
+        class MiddleModel(Schema):
+            inner: InnerModel | None = None
+
+        class TopModel(Schema):
+            middle: MiddleModel | None = None
+
+        temp_api = NinjaAPI()
+
+        @temp_api.get("/test-nested")
+        def view(request, data: TopModel = Query(...)):
+            if data.middle and data.middle.inner:
+                return {"value": data.middle.inner.value}
+            return {"value": None}
+
+        client = TestClient(temp_api)
+
+        # Test with fully nested data
+        response = client.get("/test-nested?value=123")
+        assert response.status_code == 200
+        assert response.json() == {"value": 123}
