@@ -61,6 +61,7 @@ nav:
           - guides/input/file-params.md
           - guides/input/request-parsers.md
           - guides/input/filtering.md
+          - guides/input/ordering.md
       - Handling responses:
           - Defining a Schema: guides/response/index.md
           - guides/response/temporal_response.md
