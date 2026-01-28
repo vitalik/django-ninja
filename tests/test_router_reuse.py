@@ -469,9 +469,9 @@ class TestCloneCompleteness:
 
         # Verify all known attributes exist on both original and clone
         for attr in KNOWN_ATTRIBUTES:
-            assert hasattr(
-                op, attr
-            ), f"KNOWN_ATTRIBUTES lists '{attr}' but Operation doesn't have it"
+            assert hasattr(op, attr), (
+                f"KNOWN_ATTRIBUTES lists '{attr}' but Operation doesn't have it"
+            )
             assert hasattr(cloned, attr), f"clone() doesn't set attribute: {attr}"
 
 

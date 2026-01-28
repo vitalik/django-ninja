@@ -1,4 +1,7 @@
+from ninja import NinjaAPI
 from ninja.security import HttpBasicAuth
+
+api = NinjaAPI()
 
 
 class BasicAuth(HttpBasicAuth):

@@ -82,9 +82,9 @@ class Operation:
         self.throttle_objects: List[BaseThrottle] = []
         if throttle is not NOT_SET:
             for th in throttle:  # type: ignore
-                assert isinstance(
-                    th, BaseThrottle
-                ), "Throttle should be an instance of BaseThrottle"
+                assert isinstance(th, BaseThrottle), (
+                    "Throttle should be an instance of BaseThrottle"
+                )
                 self.throttle_objects.append(th)
 
         self.signature = ViewSignature(self.path, self.view_func)
