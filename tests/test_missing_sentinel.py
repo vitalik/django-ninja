@@ -13,7 +13,9 @@ class Project(models.Model):
         app_label = "tests"
 
 
-ProjectModelSchema = create_schema(Project, fields=["name", "missing"])
+ProjectModelSchema = create_schema(
+    Project, fields=["name", "missing"], nullable_value=MISSING, nullable_type=MISSING
+)
 
 
 class ProjectSchema(Schema):
@@ -45,6 +47,7 @@ def test_missing_in_schema():
     assert openapi_schema["components"]["schemas"]["ProjectSchema"]["properties"][
         "missing"
     ] == {"title": "Missing", "type": "string", "maxLength": 10}
+    assert ProjectSchema(name="Name").model_dump() == {"name": "Name"}
 
 
 def test_missing_in_modelschema():
@@ -54,3 +57,4 @@ def test_missing_in_modelschema():
     assert openapi_schema["components"]["schemas"]["Project"]["properties"][
         "missing"
     ] == {"title": "Missing", "type": "string", "maxLength": 10}
+    assert ProjectModelSchema(name="Name").model_dump() == {"name": "Name"}
