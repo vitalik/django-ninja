@@ -6,6 +6,7 @@ from uuid import UUID
 from django.db.models import ManyToManyField
 from django.db.models.fields import Field as DjangoField
 from pydantic import IPvAnyAddress
+from pydantic.experimental.missing_sentinel import MISSING
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined, core_schema
 
@@ -115,7 +116,12 @@ def create_m2m_link_type(type_: Type[TModel]) -> Type[TModel]:
 
 @no_type_check
 def get_schema_field(
-    field: DjangoField, *, depth: int = 0, optional: bool = False
+    field: DjangoField,
+    *,
+    depth: int = 0,
+    optional: bool = False,
+    nullable_type: None | MISSING = None,
+    nullable_value: Any = None,
 ) -> Tuple:
     "Returns pydantic field from django's model field"
     alias = None
@@ -129,12 +135,14 @@ def get_schema_field(
 
     if field.is_relation:
         if depth > 0:
-            return get_related_field_schema(field, depth=depth)
+            return get_related_field_schema(
+                field, depth=depth, nullable_value=nullable_value
+            )
 
         internal_type = field.related_model._meta.pk.get_internal_type()
 
         if not field.concrete and field.auto_created or field.null or optional:
-            default = None
+            default = nullable_value
             nullable = True
 
         alias = getattr(field, "get_attname", None) and field.get_attname()
@@ -164,7 +172,7 @@ def get_schema_field(
             raise ConfigError("\n".join(msg)) from e
 
         if field.primary_key or blank or null or optional:
-            default = None
+            default = nullable_value
             nullable = True
 
         if field.has_default():
@@ -177,7 +185,7 @@ def get_schema_field(
         default = PydanticUndefined
 
     if nullable:
-        python_type = Union[python_type, None]  # aka Optional in 3.7+
+        python_type = Union[python_type, nullable_type]  # aka Optional in 3.7+
 
     description = field.help_text or None
     title = title_if_lower(field.verbose_name)
@@ -198,14 +206,16 @@ def get_schema_field(
 
 
 @no_type_check
-def get_related_field_schema(field: DjangoField, *, depth: int) -> Tuple[OpenAPISchema]:
+def get_related_field_schema(
+    field: DjangoField, *, depth: int, nullable_value: Any
+) -> Tuple[OpenAPISchema]:
     from ninja.orm import create_schema
 
     model = field.related_model
     schema = create_schema(model, depth=depth - 1)
     default = ...
     if not field.concrete and field.auto_created or field.null:
-        default = None
+        default = nullable_value
     if isinstance(field, ManyToManyField):
         schema = List[schema]  # type: ignore
 
