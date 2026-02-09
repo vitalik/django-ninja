@@ -5,9 +5,10 @@ from uuid import UUID
 
 from django.db.models import ManyToManyField
 from django.db.models.fields import Field as DjangoField
-from pydantic import IPvAnyAddress
+from pydantic import BeforeValidator, IPvAnyAddress
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined, core_schema
+from typing_extensions import Annotated
 
 from ninja.conf import settings
 from ninja.errors import ConfigError
@@ -83,6 +84,19 @@ TYPES = {
 TModel = TypeVar("TModel")
 
 
+def use_nullable_wrapper(nullable_value: Any) -> Callable[..., Any]:
+    def use_nullable_value(value: Any) -> Any:
+        """
+        When getting values from model instances by attr, we need to convert 'null'
+        `None` values to the currently configured `nullable_value` for proper validation
+        """
+        if value is nullable_value or value is None or value == []:
+            return nullable_value
+        return value
+
+    return use_nullable_value
+
+
 def register_field(django_field: str, python_type: Any) -> None:
     TYPES[django_field] = python_type
 
@@ -136,7 +150,10 @@ def get_schema_field(
     if field.is_relation:
         if depth > 0:
             return get_related_field_schema(
-                field, depth=depth, nullable_value=nullable_value
+                field,
+                depth=depth,
+                nullable_type=nullable_type,
+                nullable_value=nullable_value,
             )
 
         internal_type = field.related_model._meta.pk.get_internal_type()
@@ -184,35 +201,50 @@ def get_schema_field(
     if default_factory:
         default = PydanticUndefined
 
-    if nullable:
-        python_type = Union[python_type, nullable_type]  # aka Optional in 3.7+
-
     description = field.help_text or None
     title = title_if_lower(field.verbose_name)
+    fieldinfo = FieldInfo(
+        default=default,
+        alias=alias,
+        validation_alias=alias,
+        serialization_alias=alias,
+        default_factory=default_factory,
+        title=title,
+        description=description,
+    )
+    if nullable:
+        typeinfo = Annotated[
+            Union[
+                # attach python type specific constraints without constraining nullable_type
+                Annotated[python_type, FieldInfo(max_length=max_length)], nullable_type  # type: ignore
+            ],
+            fieldinfo,  # general field annotations
+            BeforeValidator(
+                use_nullable_wrapper(nullable_value)
+            ),  # convert null values
+        ]
+    else:
+        typeinfo = Annotated[python_type, fieldinfo, FieldInfo(max_length=max_length)]  # type: ignore
 
     return (
-        python_type,
-        FieldInfo(
-            default=default,
-            alias=alias,
-            validation_alias=alias,
-            serialization_alias=alias,
-            default_factory=default_factory,
-            title=title,
-            description=description,
-            max_length=max_length,
-        ),
+        typeinfo,
+        default,
     )
 
 
 @no_type_check
 def get_related_field_schema(
-    field: DjangoField, *, depth: int, nullable_value: Any
+    field: DjangoField, *, depth: int, nullable_type: Any, nullable_value: Any
 ) -> Tuple[OpenAPISchema]:
     from ninja.orm import create_schema
 
     model = field.related_model
-    schema = create_schema(model, depth=depth - 1)
+    schema = create_schema(
+        model,
+        depth=depth - 1,
+        nullable_type=nullable_type,
+        nullable_value=nullable_value,
+    )
     default = ...
     if not field.concrete and field.auto_created or field.null:
         default = nullable_value
