@@ -1,9 +1,8 @@
 from math import inf
-from typing import Any, Dict, Optional, Set, Tuple, Union
+from typing import Any, Dict, Optional, Set, Tuple
 
 from django.conf import settings as django_settings
 from pydantic import BaseModel, ConfigDict, Field
-from pydantic.experimental.missing_sentinel import MISSING
 
 
 class Settings(BaseModel):
@@ -37,7 +36,7 @@ class Settings(BaseModel):
     NULLABLE_FIELD_DEFAULT_VALUE: Any = Field(
         None, alias="NINJA_NULLABLE_FIELD_DEFAULT_VALUE"
     )
-    NULLABLE_FIELD_UNION_TYPE: Union[None, MISSING] = Field(
+    NULLABLE_FIELD_UNION_TYPE: Any = Field(
         None, alias="NINJA_NULLABLE_FIELD_UNION_TYPE"
     )
 
