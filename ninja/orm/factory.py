@@ -25,7 +25,7 @@ from ninja.schema import Schema
 
 __all__ = ["SchemaFactory", "factory", "create_schema"]
 
-SchemaKey = Tuple[Type[Model], str, int, str, str, str, str]
+SchemaKey = Tuple[Type[Model], str, int, str, str, str, str, str, str]
 
 
 class SchemaFactory:
@@ -53,7 +53,15 @@ class SchemaFactory:
             raise ConfigError("Only one of 'fields' or 'exclude' should be set.")
 
         key = self.get_key(
-            model, name, depth, fields, exclude, optional_fields, custom_fields
+            model,
+            name,
+            depth,
+            fields,
+            exclude,
+            optional_fields,
+            custom_fields,
+            nullable_type,
+            nullable_value,
         )
         if key in self.schemas:
             return self.schemas[key]
@@ -112,6 +120,8 @@ class SchemaFactory:
         exclude: Optional[List[str]],
         optional_fields: Optional[Union[List[str], str]],
         custom_fields: Optional[List[Tuple[str, str, Any]]],
+        nullable_type: Any,
+        nullable_value: Any,
     ) -> SchemaKey:
         "returns a hashable value for all given parameters"
         # TODO: must be a test that compares all kwargs from init to get_key
@@ -123,6 +133,8 @@ class SchemaFactory:
             str(exclude),
             str(optional_fields),
             str(custom_fields),
+            str(nullable_type),
+            str(nullable_value),
         )
 
     def _get_unique_name(self, name: str) -> str:
