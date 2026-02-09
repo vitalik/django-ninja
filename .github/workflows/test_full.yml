@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
-        django-version: ['<3.2', '<3.3', '<4.2', '<4.3', '<5.1', '<5.2', '<5.3']
+        django-version: ['<3.2', '<3.3', '<4.2', '<4.3', '<5.1', '<5.2', '<5.3', '<6.1']
         exclude:
           - python-version: '3.7'
             django-version: '<5.1'
@@ -48,7 +48,7 @@ jobs:
             django-version: '<5.2'
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -64,7 +64,7 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -79,7 +79,7 @@ jobs:
   codestyle:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -89,8 +89,8 @@ jobs:
       - name: Install Dependencies
         run: flit install --symlink
       - name: Ruff format
-        run: ruff format --preview --check ninja tests
+        run: ruff format --check ninja tests
       - name: Ruff lint
-        run: ruff check --preview ninja tests
+        run: ruff check ninja tests
       - name: mypy
         run: mypy ninja tests/mypy_test.py

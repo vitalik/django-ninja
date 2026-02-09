@@ -47,11 +47,36 @@ Settings reference:
 
 ## Hiding docs
 
-In case you do not need to display interactive documentation - set `docs_url` argument to `None`
+### Hiding the interactive docs viewer
+
+To hide only the interactive documentation UI (Swagger or Redoc) while keeping the OpenAPI schema accessible, set `docs_url` to `None`:
 
 ```python
 api = NinjaAPI(docs_url=None)
 ```
+
+This disables the `/docs` endpoint but the OpenAPI schema remains available at `/openapi.json`. This is useful when you want to:
+
+- Disable the interactive UI but keep the schema for API clients or code generators
+- Use external documentation tools that consume the OpenAPI spec
+
+### Disabling the OpenAPI schema endpoint
+
+To disable the OpenAPI schema endpoint, set `openapi_url` to `None`:
+
+```python
+api = NinjaAPI(openapi_url=None)
+```
+
+This disables the `/openapi.json` endpoint. Since the docs viewer depends on the OpenAPI schema, this also disables the docs viewer - no documentation URLs will be registered.
+
+### Summary
+
+| Configuration | `/openapi.json` | `/docs` | Use Case |
+|---------------|-----------------|---------|----------|
+| Default | Available | Available | Development |
+| `docs_url=None` | Available | Hidden | Hide UI, keep schema for clients |
+| `openapi_url=None` | Hidden | Hidden | Completely hide all documentation |
 
 ## Protecting docs
 
