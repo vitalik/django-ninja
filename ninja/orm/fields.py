@@ -10,6 +10,7 @@ from pydantic.experimental.missing_sentinel import MISSING
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined, core_schema
 
+from ninja.conf import settings
 from ninja.errors import ConfigError
 from ninja.openapi.schema import OpenAPISchema
 from ninja.types import DictStrAny
@@ -120,8 +121,8 @@ def get_schema_field(
     *,
     depth: int = 0,
     optional: bool = False,
-    nullable_type: None | MISSING = None,
-    nullable_value: Any = None,
+    nullable_type: Union[None, MISSING] = settings.NULLABLE_FIELD_UNION_TYPE,
+    nullable_value: Any = settings.NULLABLE_FIELD_DEFAULT_VALUE,
 ) -> Tuple:
     "Returns pydantic field from django's model field"
     alias = None
