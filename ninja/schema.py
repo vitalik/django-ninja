@@ -35,6 +35,7 @@ from django.db.models.fields.files import FieldFile
 from django.template import Variable, VariableDoesNotExist
 from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, model_validator
 from pydantic._internal._model_construction import ModelMetaclass
+from pydantic.experimental.missing_sentinel import MISSING
 from pydantic.functional_validators import ModelWrapValidatorHandler
 from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
 from typing_extensions import dataclass_transform
@@ -191,7 +192,11 @@ class NinjaGenerateJsonSchema(GenerateJsonSchema):
         json_schema = self.generate_inner(schema["schema"])
 
         default = None
-        if "default" in schema and schema["default"] is not None:
+        if (
+            "default" in schema
+            and schema["default"] is not None
+            and schema["default"] is not MISSING
+        ):
             default = self.encode_default(schema["default"])
 
         if "$ref" in json_schema:
@@ -199,8 +204,7 @@ class NinjaGenerateJsonSchema(GenerateJsonSchema):
             result = {"allOf": [json_schema]}
         else:
             result = json_schema
-
-        if default is not None:
+        if default is not None and default is not MISSING:
             result["default"] = default
 
         return result
