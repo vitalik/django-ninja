@@ -4,7 +4,6 @@ from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Type, Union,
 from django.db.models import Field as DjangoField
 from django.db.models import ManyToManyRel, ManyToOneRel, Model
 from pydantic import create_model as create_pydantic_model
-from pydantic.experimental.missing_sentinel import MISSING
 
 from ninja.conf import settings
 from ninja.errors import ConfigError
@@ -45,7 +44,7 @@ class SchemaFactory:
         optional_fields: Optional[List[str]] = None,
         custom_fields: Optional[List[Tuple[str, Any, Any]]] = None,
         base_class: Type[Schema] = Schema,
-        nullable_type: Union[None, MISSING] = settings.NULLABLE_FIELD_UNION_TYPE,
+        nullable_type: Any = settings.NULLABLE_FIELD_UNION_TYPE,
         nullable_value: Any = settings.NULLABLE_FIELD_DEFAULT_VALUE,
     ) -> Type[Schema]:
         name = name or model.__name__

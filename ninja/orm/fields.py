@@ -6,7 +6,6 @@ from uuid import UUID
 from django.db.models import ManyToManyField
 from django.db.models.fields import Field as DjangoField
 from pydantic import IPvAnyAddress
-from pydantic.experimental.missing_sentinel import MISSING
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined, core_schema
 
@@ -121,7 +120,7 @@ def get_schema_field(
     *,
     depth: int = 0,
     optional: bool = False,
-    nullable_type: Union[None, MISSING] = settings.NULLABLE_FIELD_UNION_TYPE,
+    nullable_type: Any = settings.NULLABLE_FIELD_UNION_TYPE,
     nullable_value: Any = settings.NULLABLE_FIELD_DEFAULT_VALUE,
 ) -> Tuple:
     "Returns pydantic field from django's model field"
