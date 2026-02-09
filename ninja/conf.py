@@ -1,5 +1,5 @@
 from math import inf
-from typing import Any, Dict, Optional, Set
+from typing import Any, Dict, Optional, Set, Tuple
 
 from django.conf import settings as django_settings
 from pydantic import BaseModel, ConfigDict, Field
