@@ -1,8 +1,9 @@
 from math import inf
-from typing import Dict, Optional, Set
+from typing import Any, Dict, Optional, Set, Union
 
 from django.conf import settings as django_settings
 from pydantic import BaseModel, ConfigDict, Field
+from pydantic.experimental.missing_sentinel import MISSING
 
 
 class Settings(BaseModel):
@@ -28,6 +29,12 @@ class Settings(BaseModel):
 
     FIX_REQUEST_FILES_METHODS: Set[str] = Field(
         {"PUT", "PATCH", "DELETE"}, alias="NINJA_FIX_REQUEST_FILES_METHODS"
+    )
+    NULLABLE_FIELD_DEFAULT_VALUE: Any = Field(
+        None, alias="NINJA_NULLABLE_FIELD_DEFAULT_VALUE"
+    )
+    NULLABLE_FIELD_UNION_TYPE: Union[None, MISSING] = Field(
+        None, alias="NINJA_NULLABLE_FIELD_UNION_TYPE"
     )
 
 
