@@ -1,7 +1,7 @@
 from django.db import models
 from pydantic.experimental.missing_sentinel import MISSING
 
-from ninja import Field, NinjaAPI, Schema
+from ninja import Field, ModelSchema, NinjaAPI, Schema
 from ninja.orm import create_schema
 
 
@@ -18,6 +18,14 @@ ProjectModelSchema = create_schema(
 )
 
 
+class ProjectModelSchemaClass(ModelSchema):
+    class Meta:
+        model = Project
+        fields = ["name", "missing"]
+        nullable_type = MISSING
+        nullable_value = MISSING
+
+
 class ProjectSchema(Schema):
     name: str = Field(..., max_length=10)
     missing: str | MISSING = Field(MISSING, max_length=10)
@@ -28,6 +36,11 @@ api = NinjaAPI()
 
 @api.get("/modelschema", response=ProjectModelSchema)
 def get_modelschema(request, input: ProjectModelSchema):
+    return Project(name="Name")
+
+
+@api.get("/modelschemameta", response=ProjectModelSchemaClass)
+def get_modelschemameta(request, input: ProjectModelSchemaClass):
     return Project(name="Name")
 
 
@@ -58,3 +71,16 @@ def test_missing_in_modelschema():
         "missing"
     ] == {"title": "Missing", "type": "string", "maxLength": 10}
     assert ProjectModelSchema(name="Name").model_dump() == {"name": "Name"}
+
+
+def test_missing_in_meta():
+    assert (
+        "missing"
+        not in openapi_schema["components"]["schemas"]["ProjectModelSchemaClass"][
+            "required"
+        ]
+    )
+    assert openapi_schema["components"]["schemas"]["ProjectModelSchemaClass"][
+        "properties"
+    ]["missing"] == {"title": "Missing", "type": "string", "maxLength": 10}
+    assert ProjectSchema(name="Name").model_dump() == {"name": "Name"}
