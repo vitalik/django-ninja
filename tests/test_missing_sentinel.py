@@ -5,16 +5,29 @@ from ninja import Field, ModelSchema, NinjaAPI, Schema
 from ninja.orm import create_schema
 
 
-class Project(models.Model):
-    name = models.CharField(max_length=10)
+class Status(models.Model):
+    label = models.CharField(max_length=10)
     missing = models.CharField(max_length=10, blank=True, null=True)
 
     class Meta:
         app_label = "tests"
 
 
+class Project(models.Model):
+    name = models.CharField(max_length=10)
+    missing = models.CharField(max_length=10, blank=True, null=True)
+    status = models.ForeignKey(Status, on_delete=models.SET_NULL, blank=True, null=True)
+
+    class Meta:
+        app_label = "tests"
+
+
 ProjectModelSchema = create_schema(
-    Project, fields=["name", "missing"], nullable_value=MISSING, nullable_type=MISSING
+    Project,
+    fields=["name", "missing", "status"],
+    nullable_value=MISSING,
+    nullable_type=MISSING,
+    depth=2,
 )
 
 
@@ -72,6 +85,15 @@ def test_missing_in_modelschema():
     ] == {"title": "Missing", "type": "string", "maxLength": 10}
     assert ProjectModelSchema(name="Name").model_dump() == {"name": "Name"}
 
+    # the configured `nullable_value`, `None`s, and empty lists should be converted to `nullable_value`
+    assert ProjectModelSchema(name="Name", missing=None).model_dump() == {
+        "name": "Name"
+    }
+    assert ProjectModelSchema(name="Name", missing=MISSING).model_dump() == {
+        "name": "Name"
+    }
+    assert ProjectModelSchema(name="Name", missing=[]).model_dump() == {"name": "Name"}
+
 
 def test_missing_in_meta():
     assert (
@@ -83,4 +105,38 @@ def test_missing_in_meta():
     assert openapi_schema["components"]["schemas"]["ProjectModelSchemaClass"][
         "properties"
     ]["missing"] == {"title": "Missing", "type": "string", "maxLength": 10}
-    assert ProjectSchema(name="Name").model_dump() == {"name": "Name"}
+
+    assert ProjectModelSchemaClass(name="Name").model_dump() == {"name": "Name"}
+
+    # the configured `nullable_value`, `None`s, and empty lists should be converted to `nullable_value`
+    assert ProjectModelSchemaClass(name="Name", missing=None).model_dump() == {
+        "name": "Name"
+    }
+    assert ProjectModelSchemaClass(name="Name", missing=MISSING).model_dump() == {
+        "name": "Name"
+    }
+    assert ProjectModelSchemaClass(name="Name", missing=[]).model_dump() == {
+        "name": "Name"
+    }
+
+
+def test_missing_in_child():
+    assert (
+        "missing" not in openapi_schema["components"]["schemas"]["Status"]["required"]
+    )
+    assert openapi_schema["components"]["schemas"]["Status"]["properties"][
+        "missing"
+    ] == {"title": "Missing", "type": "string", "maxLength": 10}
+
+    inst = ProjectModelSchema(name="Name", status=Status(label="Label"))
+    assert inst.model_dump() == {"name": "Name", "status": {"label": "Label"}}
+
+    # the configured `nullable_value`, `None`s, and empty lists should be converted to `nullable_value`
+    inst = ProjectModelSchema(name="Name", status=Status(label="Label", missing=None))
+    assert inst.model_dump() == {"name": "Name", "status": {"label": "Label"}}
+    inst = ProjectModelSchema(
+        name="Name", status=Status(label="Label", missing=MISSING)
+    )
+    assert inst.model_dump() == {"name": "Name", "status": {"label": "Label"}}
+    inst = ProjectModelSchema(name="Name", status=Status(label="Label", missing=[]))
+    assert inst.model_dump() == {"name": "Name", "status": {"label": "Label"}}
