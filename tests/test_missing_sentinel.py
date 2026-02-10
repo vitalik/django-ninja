@@ -1,3 +1,5 @@
+from typing import Union
+
 import pytest
 from django.db import models
 
@@ -47,7 +49,7 @@ class ProjectModelSchemaClass(ModelSchema):
 
 class ProjectSchema(Schema):
     name: str = Field(..., max_length=10)
-    missing: str | MISSING = Field(MISSING, max_length=10)
+    missing: Union[str, MISSING] = Field(MISSING, max_length=10)
 
 
 api = NinjaAPI()
