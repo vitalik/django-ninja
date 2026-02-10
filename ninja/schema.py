@@ -44,7 +44,7 @@ from ninja.types import DictStrAny
 
 try:
     from pydantic.experimental.missing_sentinel import MISSING
-except ImportError:
+except ImportError:  # pragma: no cover
     MISSING = object()
 
 pydantic_version = list(map(int, pydantic.VERSION.split(".")[:2]))
