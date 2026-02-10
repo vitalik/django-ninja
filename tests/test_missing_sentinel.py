@@ -1,8 +1,14 @@
+import pytest
 from django.db import models
-from pydantic.experimental.missing_sentinel import MISSING
 
 from ninja import Field, ModelSchema, NinjaAPI, Schema
 from ninja.orm import create_schema
+
+# skip file if can't import MISSING
+try:
+    from pydantic.experimental.missing_sentinel import MISSING
+except ImportError:
+    pytest.skip(reason="MISSING sentinel cannot be imported", allow_module_level=True)
 
 
 class Status(models.Model):
