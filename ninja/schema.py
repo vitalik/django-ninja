@@ -97,7 +97,7 @@ class DjangoGetter:
         elif isinstance(result, getattr(QuerySet, "__origin__", QuerySet)):
             return list(result)
 
-        if callable(result):
+        if result is not MISSING and callable(result):  # MISSING is callable in <3.11
             return result()
 
         elif isinstance(result, FieldFile):
