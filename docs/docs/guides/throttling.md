@@ -105,3 +105,9 @@ class NoReadsThrottle(AnonRateThrottle):
             return True
         return super().allow_request(request)
 ```
+
+## Response format
+
+By default, Django Ninja returns a HTTP 429 response if a request is throttled due to rate limiting being applied, along with a JSON response payload with `"detail"` specifying `"Too many requests."`.
+
+If the `wait` method of a throttling class returns a floating point number, the number of seconds to retry the request will also be set in the `Retry-After` HTTP header.
