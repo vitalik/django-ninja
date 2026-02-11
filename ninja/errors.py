@@ -98,6 +98,10 @@ def set_default_exc_handlers(api: "NinjaAPI") -> None:
         partial(_default_http_error, api=api),
     )
     api.add_exception_handler(
+        Throttled,
+        partial(_default_throttled_error, api=api),
+    )
+    api.add_exception_handler(
         ValidationError,
         partial(_default_validation_error, api=api),
     )
@@ -114,6 +118,18 @@ def _default_http_error(
     request: HttpRequest, exc: HttpError, api: "NinjaAPI"
 ) -> HttpResponse:
     return api.create_response(request, {"detail": str(exc)}, status=exc.status_code)
+
+
+def _default_throttled_error(
+    request: HttpRequest, exc: Throttled, api: "NinjaAPI"
+) -> HttpResponse:
+    response = _default_http_error(request, exc, api)
+
+    if exc.wait is not None:
+        # Set the `Retry-After` header if `wait` is defined
+        response.headers["Retry-After"] = exc.wait
+
+    return response
 
 
 def _default_validation_error(
