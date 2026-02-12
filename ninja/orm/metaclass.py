@@ -3,6 +3,7 @@ from typing import Any, List, Optional, Union, no_type_check
 from django.db.models import Model as DjangoModel
 from pydantic.dataclasses import dataclass
 
+from ninja.conf import settings
 from ninja.errors import ConfigError
 from ninja.orm.factory import create_schema
 from ninja.schema import ResolverMetaclass, Schema
@@ -16,6 +17,8 @@ class MetaConf:
     fields: Optional[List[str]] = None
     exclude: Union[List[str], str, None] = None
     fields_optional: Union[List[str], str, None] = None
+    nullable_type: Any = settings.NULLABLE_FIELD_UNION_TYPE
+    nullable_value: Any = settings.NULLABLE_FIELD_DEFAULT_VALUE
 
     @staticmethod
     def from_schema_class(name: str, namespace: dict) -> "MetaConf":
@@ -29,6 +32,12 @@ class MetaConf:
             fields = getattr(meta, "fields", None)
             exclude = getattr(meta, "exclude", None)
             optional_fields = getattr(meta, "fields_optional", None)
+            nullable_type = getattr(
+                meta, "nullable_type", settings.NULLABLE_FIELD_UNION_TYPE
+            )
+            nullable_value = getattr(
+                meta, "nullable_value", settings.NULLABLE_FIELD_DEFAULT_VALUE
+            )
 
         else:
             raise ConfigError(f"ModelSchema class '{name}' requires a 'Meta' subclass")
@@ -50,6 +59,8 @@ class MetaConf:
             fields=fields,
             exclude=exclude,
             fields_optional=optional_fields,
+            nullable_type=nullable_type,
+            nullable_value=nullable_value,
         )
 
 
@@ -98,6 +109,8 @@ class ModelSchemaMetaclass(ResolverMetaclass):
                     exclude=meta_conf.exclude,
                     optional_fields=meta_conf.fields_optional,
                     custom_fields=custom_fields,
+                    nullable_type=meta_conf.nullable_type,
+                    nullable_value=meta_conf.nullable_value,
                     base_class=cls,
                 )
                 model_schema.__doc__ = cls.__doc__

@@ -42,6 +42,11 @@ from typing_extensions import dataclass_transform
 from ninja.signature.utils import get_args_names, has_kwargs
 from ninja.types import DictStrAny
 
+try:
+    from pydantic.experimental.missing_sentinel import MISSING
+except ImportError:  # pragma: no cover
+    MISSING = object()
+
 pydantic_version = list(map(int, pydantic.VERSION.split(".")[:2]))
 assert pydantic_version >= [2, 0], "Pydantic 2.0+ required"
 
@@ -96,7 +101,7 @@ class DjangoGetter:
         elif isinstance(result, getattr(QuerySet, "__origin__", QuerySet)):
             return list(result)
 
-        if callable(result):
+        if result is not MISSING and callable(result):  # MISSING is callable in <3.11
             return result()
 
         elif isinstance(result, FieldFile):
@@ -191,7 +196,11 @@ class NinjaGenerateJsonSchema(GenerateJsonSchema):
         json_schema = self.generate_inner(schema["schema"])
 
         default = None
-        if "default" in schema and schema["default"] is not None:
+        if (
+            "default" in schema
+            and schema["default"] is not None
+            and schema["default"] is not MISSING
+        ):
             default = self.encode_default(schema["default"])
 
         if "$ref" in json_schema:
@@ -199,8 +208,7 @@ class NinjaGenerateJsonSchema(GenerateJsonSchema):
             result = {"allOf": [json_schema]}
         else:
             result = json_schema
-
-        if default is not None:
+        if default is not None and default is not MISSING:
             result["default"] = default
 
         return result
