@@ -51,6 +51,7 @@ nav:
       - Other Tutorials:
           - tutorial/other/video.md
           - tutorial/other/crud.md
+          - tutorial/other/course.md
   - How-to Guides:
       - Parsing input:
           - guides/input/operations.md
