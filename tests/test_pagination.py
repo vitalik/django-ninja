@@ -507,8 +507,8 @@ def test_case9():
     response = client.get("/items_9?skip=5").json()
     assert response == {
         "items": [5, 6, 7, 8, 9],
-        "next": "http://testlocation/?skip=10",
-        "prev": "http://testlocation/?skip=0",
+        "next": "http://testserver/items_9?skip=10",
+        "prev": "http://testserver/items_9?skip=0",
     }
 
 
