@@ -1,3 +1,4 @@
+import inspect
 from json import dumps as json_dumps
 from json import loads as json_loads
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
@@ -198,7 +199,9 @@ class TestAsyncClient(NinjaClientBase):
         self, func: Callable, request: Mock, kwargs: Dict
     ) -> "NinjaResponse":
         http_response = await func(request, **kwargs)
-        if http_response.streaming and hasattr(http_response, "is_async"):
+        if http_response.streaming and inspect.isasyncgen(
+            http_response.streaming_content
+        ):
             # Async streaming: consume async iterator into bytes
             chunks = []
             async for chunk in http_response.streaming_content:

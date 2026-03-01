@@ -25,6 +25,7 @@ from django.http import (
 from django.http.response import HttpResponseBase
 
 from ninja.compatibility.files import FIX_MIDDLEWARE_PATH, need_to_fix_request_files
+from ninja.compatibility.streaming import create_streaming_response
 from ninja.constants import NOT_SET, NOT_SET_TYPE
 from ninja.errors import (
     AuthenticationError,
@@ -455,7 +456,7 @@ class AsyncOperation(Operation):
             values = self._get_values(request, kw, temporal_response)
             if self.stream_format:
                 result = self.view_func(request, **values)
-                return self._async_stream_response(
+                return await self._async_stream_response(
                     request, result, temporal_response
                 )
             result = await self.view_func(request, **values)
@@ -463,7 +464,7 @@ class AsyncOperation(Operation):
         except Exception as e:
             return self.api.on_exception(request, e)
 
-    def _async_stream_response(
+    async def _async_stream_response(
         self,
         request: HttpRequest,
         generator: Any,
@@ -473,25 +474,18 @@ class AsyncOperation(Operation):
         assert self.stream_format is not None
         fmt = self.stream_format
 
-        async def content_iter() -> Any:
+        async def content_gen() -> Any:
             async for item in generator:
                 data = self._validate_stream_item(item, request)
                 yield fmt.format_chunk(data)
-            # Copy headers/cookies after generator completes (user may set them inside)
-            for key, value in temporal_response.items():
-                if key.lower() != "content-type":
-                    response[key] = value
-            for cookie_name, cookie in temporal_response.cookies.items():
-                response.cookies[cookie_name] = cookie
 
-        response = StreamingHttpResponse(
-            content_iter(),
+        return await create_streaming_response(
+            content_gen(),
             content_type=fmt.media_type,
             status=temporal_response.status_code,
+            temporal_response=temporal_response,
+            extra_headers=fmt.response_headers(),
         )
-        for key, value in fmt.response_headers().items():
-            response[key] = value
-        return response
 
     async def _run_checks(self, request: HttpRequest) -> Optional[HttpResponse]:  # type: ignore
         "Runs security/throttle checks for each operation"
