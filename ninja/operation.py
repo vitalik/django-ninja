@@ -332,7 +332,7 @@ class Operation:
             and isinstance(result, BaseModel)
             and isinstance(result, resp_annotation)
         ):
-            result = result.model_dump(
+            result = cast(BaseModel, result).model_dump(
                 by_alias=self.by_alias,
                 exclude_unset=self.exclude_unset,
                 exclude_defaults=self.exclude_defaults,
