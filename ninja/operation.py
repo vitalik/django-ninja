@@ -298,7 +298,7 @@ class Operation:
                 "Returning tuple (status_code, response) is deprecated. "
                 "Use Status(status_code, response) instead.",
                 DeprecationWarning,
-                stacklevel=1,
+                stacklevel=2,
             )
             status, result = result
 
