@@ -217,9 +217,10 @@ class NinjaResponse:
         self.status_code = http_response.status_code
         self.streaming = http_response.streaming
         if self.streaming:
+            assert isinstance(http_response, StreamingHttpResponse)
             self.content = b"".join(
                 chunk.encode("utf-8") if isinstance(chunk, str) else chunk
-                for chunk in http_response.streaming_content
+                for chunk in http_response.streaming_content  # type: ignore[union-attr]
             )
         else:
             self.content = http_response.content

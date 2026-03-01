@@ -35,7 +35,7 @@ from ninja.errors import (
 from ninja.params.models import TModels
 from ninja.schema import Schema, pydantic_version
 from ninja.signature import ViewSignature, is_async
-from ninja.streaming import _serialize_item, _StreamAlias
+from ninja.streaming import StreamFormat, _serialize_item, _StreamAlias
 from ninja.throttling import BaseThrottle
 from ninja.types import DictStrAny
 from ninja.utils import is_async_callable
@@ -96,8 +96,8 @@ class Operation:
         self.signature = ViewSignature(self.path, self.view_func)
         self.models: TModels = self.signature.models
 
-        self.stream_format = None
-        self.stream_item_model = None
+        self.stream_format: Optional[type[StreamFormat]] = None
+        self.stream_item_model: Optional[Type[Schema]] = None
         self.response_models: Dict[Any, Any]
         if isinstance(response, _StreamAlias):
             self.stream_format = response.format_cls
@@ -222,6 +222,7 @@ class Operation:
 
     def _validate_stream_item(self, item: Any, request: HttpRequest) -> str:
         """Validate a single stream item and return serialized JSON string."""
+        assert self.stream_item_model is not None
         resp_object = ResponseObject(item)
         validated = self.stream_item_model.model_validate(
             resp_object, context={"request": request, "response_status": 200}
@@ -249,9 +250,10 @@ class Operation:
         temporal_response: HttpResponse,
     ) -> StreamingHttpResponse:
         """Create a StreamingHttpResponse from a sync generator."""
+        assert self.stream_format is not None
         fmt = self.stream_format
 
-        def content_iter():
+        def content_iter() -> Any:
             for item in generator:
                 data = self._validate_stream_item(item, request)
                 yield fmt.format_chunk(data)
@@ -471,9 +473,10 @@ class AsyncOperation(Operation):
         temporal_response: HttpResponse,
     ) -> StreamingHttpResponse:
         """Create a StreamingHttpResponse from an async generator."""
+        assert self.stream_format is not None
         fmt = self.stream_format
 
-        async def content_iter():
+        async def content_iter() -> Any:
             async for item in generator:
                 data = self._validate_stream_item(item, request)
                 yield fmt.format_chunk(data)
