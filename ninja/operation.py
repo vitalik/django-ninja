@@ -229,7 +229,8 @@ class Operation:
         )
 
         model_dump_kwargs: Dict[str, Any] = {}
-        if pydantic_version >= [2, 7]:
+        if pydantic_version >= [2, 7]:  # pragma: no branch
+            # pydantic added support for serialization context at 2.7
             model_dump_kwargs.update(
                 context={"request": request, "response_status": 200}
             )
@@ -453,14 +454,10 @@ class AsyncOperation(Operation):
             temporal_response = self.api.create_temporal_response(request)
             values = self._get_values(request, kw, temporal_response)
             if self.stream_format:
-                if inspect.isasyncgenfunction(self.view_func):
-                    result = self.view_func(request, **values)
-                    return self._async_stream_response(
-                        request, result, temporal_response
-                    )
-                else:
-                    result = self.view_func(request, **values)
-                    return self._stream_response(request, result, temporal_response)
+                result = self.view_func(request, **values)
+                return self._async_stream_response(
+                    request, result, temporal_response
+                )
             result = await self.view_func(request, **values)
             return self._result_to_response(request, result, temporal_response)
         except Exception as e:

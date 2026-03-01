@@ -202,10 +202,9 @@ class TestAsyncClient(NinjaClientBase):
             # Async streaming: consume async iterator into bytes
             chunks = []
             async for chunk in http_response.streaming_content:
-                if isinstance(chunk, str):
-                    chunks.append(chunk.encode("utf-8"))
-                else:
-                    chunks.append(chunk)
+                chunks.append(
+                    chunk.encode("utf-8") if isinstance(chunk, str) else chunk
+                )
             # Replace with sync content for NinjaResponse
             http_response.streaming_content = iter(chunks)
         return NinjaResponse(http_response)

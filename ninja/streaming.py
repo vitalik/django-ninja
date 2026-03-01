@@ -29,7 +29,7 @@ class StreamFormat:
     @classmethod
     def format_chunk(cls, data: str) -> str:
         """Format a serialized JSON string for this stream."""
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     @classmethod
     def openapi_content_schema(cls, item_schema: dict) -> dict:
