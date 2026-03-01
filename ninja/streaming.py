@@ -1,5 +1,5 @@
 import json
-from typing import Any
+from typing import Any, Dict
 
 from ninja.responses import NinjaJSONEncoder
 
@@ -23,7 +23,7 @@ class StreamFormat:
 
     media_type: str
 
-    def __class_getitem__(cls, item_type: type) -> _StreamAlias:
+    def __class_getitem__(cls, item_type: type) -> "_StreamAlias":
         return _StreamAlias(cls, item_type)
 
     @classmethod
@@ -37,7 +37,7 @@ class StreamFormat:
         return {cls.media_type: {"schema": item_schema}}
 
     @classmethod
-    def response_headers(cls) -> dict[str, str]:
+    def response_headers(cls) -> Dict[str, str]:
         """Extra headers for the streaming response."""
         return {}
 
@@ -58,7 +58,7 @@ class SSE(StreamFormat):
         return f"data: {data}\n\n"
 
     @classmethod
-    def response_headers(cls) -> dict[str, str]:
+    def response_headers(cls) -> Dict[str, str]:
         return {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
 
     @classmethod

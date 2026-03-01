@@ -96,7 +96,7 @@ class Operation:
         self.signature = ViewSignature(self.path, self.view_func)
         self.models: TModels = self.signature.models
 
-        self.stream_format: Optional[type[StreamFormat]] = None
+        self.stream_format: Optional[Type[StreamFormat]] = None
         self.stream_item_model: Optional[Type[Schema]] = None
         self.response_models: Dict[Any, Any]
         if isinstance(response, _StreamAlias):
