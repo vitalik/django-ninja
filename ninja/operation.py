@@ -477,17 +477,18 @@ class AsyncOperation(Operation):
             async for item in generator:
                 data = self._validate_stream_item(item, request)
                 yield fmt.format_chunk(data)
+            # Copy headers/cookies after generator completes (user may set them inside)
+            for key, value in temporal_response.items():
+                if key.lower() != "content-type":
+                    response[key] = value
+            for cookie_name, cookie in temporal_response.cookies.items():
+                response.cookies[cookie_name] = cookie
 
         response = StreamingHttpResponse(
             content_iter(),
             content_type=fmt.media_type,
             status=temporal_response.status_code,
         )
-        for key, value in temporal_response.items():
-            if key.lower() != "content-type":
-                response[key] = value
-        for cookie_name, cookie in temporal_response.cookies.items():
-            response.cookies[cookie_name] = cookie
         for key, value in fmt.response_headers().items():
             response[key] = value
         return response

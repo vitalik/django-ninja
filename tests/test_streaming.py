@@ -133,6 +133,13 @@ async def async_sse_items(request):
         yield {"name": f"item-{i}", "price": float(i)}
 
 
+@async_api.get("/jsonl/with-headers", response=JSONL[Item])
+async def async_jsonl_with_headers(request, response: HttpResponse):
+    response["X-Custom"] = "async-hello"
+    response.set_cookie("token", "xyz")
+    yield {"name": "async-headers", "price": 0.0}
+
+
 async_client = TestAsyncClient(async_api)
 
 
@@ -159,6 +166,15 @@ class TestAsyncSSE:
         content = response.content.decode()
         events = content.strip().split("\n\n")
         assert len(events) == 3
+
+
+@pytest.mark.asyncio
+class TestAsyncHeaders:
+    async def test_async_temporal_response_headers(self):
+        response = await async_client.get("/jsonl/with-headers")
+        assert response.status_code == 200
+        assert response["X-Custom"] == "async-hello"
+        assert "token" in response.cookies
 
 
 # --- OpenAPI Schema ---
