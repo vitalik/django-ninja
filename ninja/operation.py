@@ -1,4 +1,5 @@
 import inspect
+import warnings
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -18,6 +19,7 @@ import pydantic
 from asgiref.sync import async_to_sync, sync_to_async
 from django.http import HttpRequest, HttpResponse, HttpResponseNotAllowed
 from django.http.response import HttpResponseBase
+from pydantic import BaseModel
 
 from ninja.compatibility.files import FIX_MIDDLEWARE_PATH, need_to_fix_request_files
 from ninja.constants import NOT_SET, NOT_SET_TYPE
@@ -28,6 +30,7 @@ from ninja.errors import (
     ValidationErrorContext,
 )
 from ninja.params.models import TModels
+from ninja.responses import Status
 from ninja.schema import Schema, pydantic_version
 from ninja.signature import ViewSignature, is_async
 from ninja.throttling import BaseThrottle
@@ -264,13 +267,20 @@ class Operation:
             return self.api.on_exception(request, Throttled(wait=duration))  # type: ignore
         return None
 
+    def _model_dump_kwargs(self, request: HttpRequest, status: int) -> dict[str, Any]:
+        kwargs: dict[str, Any] = {}
+        if pydantic_version >= [2, 7]:
+            kwargs["context"] = {"request": request, "response_status": status}
+        return kwargs
+
     def _result_to_response(
         self, request: HttpRequest, result: Any, temporal_response: HttpResponse
     ) -> HttpResponseBase:
         """
         The protocol for results
          - if HttpResponse - returns as is
-         - if tuple with 2 elements - means http_code + body
+         - if Status object - uses status code + body
+         - if tuple with 2 elements - means http_code + body (deprecated)
          - otherwise it's a body
         """
         if isinstance(result, HttpResponseBase):
@@ -280,9 +290,17 @@ class Operation:
         if len(self.response_models) == 1:
             status = next(iter(self.response_models))
 
-        if isinstance(result, tuple) and len(result) == 2:
-            status = result[0]
-            result = result[1]
+        if isinstance(result, Status):
+            status = result.status_code
+            result = result.value
+        elif isinstance(result, tuple) and len(result) == 2:
+            warnings.warn(
+                "Returning tuple (status_code, response) is deprecated. "
+                "Use Status(status_code, response) instead.",
+                DeprecationWarning,
+                stacklevel=1,
+            )
+            status, result = result
 
         if status in self.response_models:
             response_model = self.response_models[status]
@@ -305,18 +323,31 @@ class Operation:
             # Empty response.
             return temporal_response
 
+        model_dump_kwargs = self._model_dump_kwargs(request, status)
+
+        # Skip re-validation for pydantic model instances matching the response type
+        resp_annotation = response_model.model_fields["response"].annotation
+        if (
+            isinstance(resp_annotation, type)
+            and isinstance(result, BaseModel)
+            and isinstance(result, resp_annotation)
+        ):
+            result = result.model_dump(
+                by_alias=self.by_alias,
+                exclude_unset=self.exclude_unset,
+                exclude_defaults=self.exclude_defaults,
+                exclude_none=self.exclude_none,
+                **model_dump_kwargs,
+            )
+            return self.api.create_response(
+                request, result, temporal_response=temporal_response
+            )
+
         resp_object = ResponseObject(result)
         # ^ we need object because getter_dict seems work only with model_validate
         validated_object = response_model.model_validate(
             resp_object, context={"request": request, "response_status": status}
         )
-
-        model_dump_kwargs: Dict[str, Any] = {}
-        if pydantic_version >= [2, 7]:
-            # pydantic added support for serialization context at 2.7
-            model_dump_kwargs.update(
-                context={"request": request, "response_status": status}
-            )
 
         result = validated_object.model_dump(
             by_alias=self.by_alias,

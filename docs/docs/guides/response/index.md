@@ -276,7 +276,9 @@ Also, when you return the result - you have to also pass a status code to tell *
 
 An example:
 
-```python hl_lines="9 12 14 16"
+```python hl_lines="1 9 12 14 16"
+from ninja import Status
+
 class Token(Schema):
     token: str
     expires: date
@@ -288,11 +290,15 @@ class Message(Schema):
 @api.post('/login', response={200: Token, 401: Message, 402: Message})
 def login(request, payload: Auth):
     if auth_not_valid:
-        return 401, {'message': 'Unauthorized'}
+        return Status(401, {'message': 'Unauthorized'})
     if negative_balance:
-        return 402, {'message': 'Insufficient balance amount. Please proceed to a payment page.'}
-    return 200, {'token': xxx, ...}
+        return Status(402, {'message': 'Insufficient balance amount. Please proceed to a payment page.'})
+    return Status(200, {'token': xxx, ...})
 ```
+
+!!! warning "Deprecated: tuple syntax"
+    Returning `(status_code, body)` tuples is deprecated and will be removed in a future version.
+    Use `Status(status_code, body)` instead.
 
 ## Multiple response codes
 
@@ -304,18 +310,19 @@ In the previous example you saw that we basically repeated the `Message` schema 
 
 To avoid this duplication you can use multiple response codes for a schema:
 
-```python hl_lines="2 5 8 10"
+```python hl_lines="2 3 6 9 11"
 ...
+from ninja import Status
 from ninja.responses import codes_4xx
 
 
 @api.post('/login', response={200: Token, codes_4xx: Message})
 def login(request, payload: Auth):
     if auth_not_valid:
-        return 401, {'message': 'Unauthorized'}
+        return Status(401, {'message': 'Unauthorized'})
     if negative_balance:
-        return 402, {'message': 'Insufficient balance amount. Please proceed to a payment page.'}
-    return 200, {'token': xxx, ...}
+        return Status(402, {'message': 'Insufficient balance amount. Please proceed to a payment page.'})
+    return Status(200, {'token': xxx, ...})
 ```
 
 **Django Ninja** comes with the following HTTP codes:
@@ -346,7 +353,7 @@ To indicate the response body is empty mark `response` argument with `None` inst
 ```python hl_lines="1 3"
 @api.post("/no_content", response={204: None})
 def no_content(request):
-    return 204, None
+    return Status(204, None)
 ```
 
 ## Error responses
