@@ -197,7 +197,18 @@ class TestAsyncClient(NinjaClientBase):
     async def _call(
         self, func: Callable, request: Mock, kwargs: Dict
     ) -> "NinjaResponse":
-        return NinjaResponse(await func(request, **kwargs))
+        http_response = await func(request, **kwargs)
+        if http_response.streaming and hasattr(http_response, "is_async"):
+            # Async streaming: consume async iterator into bytes
+            chunks = []
+            async for chunk in http_response.streaming_content:
+                if isinstance(chunk, str):
+                    chunks.append(chunk.encode("utf-8"))
+                else:
+                    chunks.append(chunk)
+            # Replace with sync content for NinjaResponse
+            http_response.streaming_content = iter(chunks)
+        return NinjaResponse(http_response)
 
 
 class NinjaResponse:
@@ -206,7 +217,10 @@ class NinjaResponse:
         self.status_code = http_response.status_code
         self.streaming = http_response.streaming
         if self.streaming:
-            self.content = b"".join(http_response.streaming_content)  # type: ignore
+            self.content = b"".join(
+                chunk.encode("utf-8") if isinstance(chunk, str) else chunk
+                for chunk in http_response.streaming_content
+            )
         else:
             self.content = http_response.content
         self._data = None

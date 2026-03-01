@@ -303,9 +303,14 @@ class OpenAPISchema(dict):
                 schema = self._create_schema_from_model(
                     model, by_alias=operation.by_alias, mode="serialization"
                 )[0]
-                details[status]["content"] = {
-                    self.api.renderer.media_type: {"schema": schema}
-                }
+                if getattr(operation, "stream_format", None):
+                    details[status]["content"] = (
+                        operation.stream_format.openapi_content_schema(schema)
+                    )
+                else:
+                    details[status]["content"] = {
+                        self.api.renderer.media_type: {"schema": schema}
+                    }
             result.update(details)
 
         return result
