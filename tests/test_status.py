@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import pytest
 
-from ninja import NinjaAPI, Schema, Status
+from ninja import Field, NinjaAPI, Schema, Status
 from ninja.operation import ResponseObject
 from ninja.pagination import LimitOffsetPagination, paginate
 from ninja.responses import codes_2xx, codes_3xx
@@ -26,9 +26,7 @@ class ErrorOut(Schema):
 
 
 class AliasOut(Schema):
-    user_name: str
-
-    model_config = {"populate_by_name": True}
+    user_name: str = Field(serialization_alias="userName")
 
 
 # -- API for basic Status tests --
@@ -269,7 +267,7 @@ class TestSkipRevalidation:
     def test_by_alias_serialization(self):
         response = client.get("/by_alias_response")
         assert response.status_code == 200
-        assert response.json() == {"user_name": "Alice"}
+        assert response.json() == {"userName": "Alice"}
 
     def test_status_wrapping_model_skips_validation(self):
         with patch(
