@@ -1,3 +1,4 @@
+from typing import List, Union
 from unittest.mock import patch
 
 import pytest
@@ -95,14 +96,14 @@ def dict_result(request):
     return {"id": 1, "name": "John"}
 
 
-@api.get("/union_response", response={200: int | UserOut, 400: ErrorOut})
+@api.get("/union_response", response={200: Union[int, UserOut], 400: ErrorOut})
 def union_response(request, q: int):
     if q == 0:
         return Status(200, 1)
     return Status(200, UserOut(id=1, name="John"))
 
 
-@api.get("/list_response", response={200: list[UserOut]})
+@api.get("/list_response", response={200: List[UserOut]})
 def list_response(request):
     return Status(200, [{"id": 1, "name": "John"}])
 
@@ -115,7 +116,7 @@ def by_alias_response(request):
 # -- Pagination + Status --
 
 
-@api.get("/paginated_status", response={201: list[UserOut]})
+@api.get("/paginated_status", response={201: List[UserOut]})
 @paginate(LimitOffsetPagination)
 def paginated_status(request):
     return Status(
@@ -124,7 +125,7 @@ def paginated_status(request):
     )
 
 
-@api.get("/paginated_normal", response=list[UserOut])
+@api.get("/paginated_normal", response=List[UserOut])
 @paginate(LimitOffsetPagination)
 def paginated_normal(request):
     return [{"id": 1, "name": "A"}, {"id": 2, "name": "B"}]
@@ -134,7 +135,7 @@ def paginated_normal(request):
 async_api = NinjaAPI()
 
 
-@async_api.get("/async_paginated_status", response={201: list[UserOut]})
+@async_api.get("/async_paginated_status", response={201: List[UserOut]})
 @paginate(LimitOffsetPagination)
 async def async_paginated_status(request):
     return Status(
@@ -143,7 +144,7 @@ async def async_paginated_status(request):
     )
 
 
-@async_api.get("/async_paginated_normal", response=list[UserOut])
+@async_api.get("/async_paginated_normal", response=List[UserOut])
 @paginate(LimitOffsetPagination)
 async def async_paginated_normal(request):
     return [{"id": 1, "name": "A"}, {"id": 2, "name": "B"}]

@@ -267,8 +267,8 @@ class Operation:
             return self.api.on_exception(request, Throttled(wait=duration))  # type: ignore
         return None
 
-    def _model_dump_kwargs(self, request: HttpRequest, status: int) -> dict[str, Any]:
-        kwargs: dict[str, Any] = {}
+    def _model_dump_kwargs(self, request: HttpRequest, status: int) -> Dict[str, Any]:
+        kwargs: Dict[str, Any] = {}
         if pydantic_version >= [2, 7]:
             kwargs["context"] = {"request": request, "response_status": status}
         return kwargs
