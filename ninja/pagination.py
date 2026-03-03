@@ -27,6 +27,7 @@ from ninja.conf import settings
 from ninja.constants import NOT_SET
 from ninja.errors import ConfigError, ValidationError
 from ninja.operation import Operation
+from ninja.responses import Status
 from ninja.signature.details import is_collection_type
 from ninja.utils import (
     contribute_operation_args,
@@ -625,6 +626,11 @@ def _inject_pagination(
 
             items = await func(request, **kwargs)
 
+            status_code = None
+            if isinstance(items, Status):
+                status_code = items.status_code
+                items = items.value
+
             result = await paginator.apaginate_queryset(
                 items, pagination=pagination_params, request=request, **kwargs
             )
@@ -638,6 +644,9 @@ def _inject_pagination(
                     result
                     async for result in evaluate(result[paginator.items_attribute])
                 ]
+
+            if status_code is not None:
+                return Status(status_code, result)
             return result
 
     else:
@@ -652,6 +661,11 @@ def _inject_pagination(
 
             items = func(request, **kwargs)
 
+            status_code = None
+            if isinstance(items, Status):
+                status_code = items.status_code
+                items = items.value
+
             result = paginator.paginate_queryset(
                 items, pagination=pagination_params, request=request, **kwargs
             )
@@ -660,6 +674,9 @@ def _inject_pagination(
                     result[paginator.items_attribute]
                 )
                 # ^ forcing queryset evaluation #TODO: check why pydantic did not do it here
+
+            if status_code is not None:
+                return Status(status_code, result)
             return result
 
     # Only contribute args if Input has fields

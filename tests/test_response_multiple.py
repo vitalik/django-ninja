@@ -8,6 +8,8 @@ from ninja.errors import ConfigError
 from ninja.responses import codes_2xx, codes_3xx
 from ninja.testing import TestClient
 
+pytestmark = pytest.mark.filterwarnings("ignore::DeprecationWarning")
+
 api = NinjaAPI()
 
 
