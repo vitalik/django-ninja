@@ -7,6 +7,7 @@ issues 1652, 1580
 """
 
 from django.db import models
+
 from ninja import ModelSchema, Schema
 
 
