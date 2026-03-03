@@ -28,6 +28,7 @@ from ninja.params import (
     QueryEx,
 )
 from ninja.patch_dict import PatchDict
+from ninja.responses import Status
 from ninja.router import Router
 from ninja.schema import Schema
 from ninja.streaming import JSONL, SSE
@@ -62,4 +63,5 @@ __all__ = [
     "PatchDict",
     "SSE",
     "JSONL",
+    "Status",
 ]

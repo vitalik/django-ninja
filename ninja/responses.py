@@ -10,12 +10,28 @@ from pydantic_core import Url
 __all__ = [
     "NinjaJSONEncoder",
     "Response",
+    "Status",
     "codes_1xx",
     "codes_2xx",
     "codes_3xx",
     "codes_4xx",
     "codes_5xx",
 ]
+
+
+class Status:
+    """Return a response with an explicit HTTP status code.
+
+    Usage:
+        return Status(200, {"key": "value"})
+        return Status(204, None)
+    """
+
+    __slots__ = ("status_code", "value")
+
+    def __init__(self, status_code: int, value: Any):
+        self.status_code = status_code
+        self.value = value
 
 
 class NinjaJSONEncoder(DjangoJSONEncoder):

@@ -3,6 +3,7 @@ from typing import Any, List, Optional, Union, no_type_check
 from django.db.models import Model as DjangoModel
 from pydantic.dataclasses import dataclass
 
+from ninja.compatibility.util import get_annotations_from_namespace
 from ninja.errors import ConfigError
 from ninja.orm.factory import create_schema
 from ninja.schema import ResolverMetaclass, Schema
@@ -78,7 +79,7 @@ class ModelSchemaMetaclass(ResolverMetaclass):
                 meta_conf = MetaConf.from_schema_class(name, namespace)
 
                 custom_fields = []
-                annotations = namespace.get("__annotations__", {})
+                annotations = get_annotations_from_namespace(namespace)
                 for attr_name, type in annotations.items():
                     if attr_name.startswith("_"):
                         continue
