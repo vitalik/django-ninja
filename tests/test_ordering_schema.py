@@ -76,6 +76,27 @@ def test_validate_order_by_field__should_raise_validation_error_when_value_desc_
         DummyOrderingSchema.validate_order_by_field(order_by_value)
 
 
+def test_parsed_order_by__should_return_mapped_fields_when_allowed_fields_is_dict():
+    class DummyOrderingSchema(OrderingSchema):
+        class Meta(OrderingSchema.Meta):
+            allowed_fields = {
+                "field1": "mapped_field1",
+                "field2": "mapped_field2",
+            }
+
+    ordering_schema = DummyOrderingSchema(order_by=["field1", "-field2"])
+    assert ordering_schema.parsed_order_by == ["mapped_field1", "-mapped_field2"]
+
+
+def test_parsed_order_by__should_return_original_fields_when_allowed_fields_is_not_dict():
+    class DummyOrderingSchema(OrderingSchema):
+        class Meta(OrderingSchema.Meta):
+            allowed_fields = ["field1", "field2"]
+
+    ordering_schema = DummyOrderingSchema(order_by=["field1", "-field2"])
+    assert ordering_schema.parsed_order_by == ["field1", "-field2"]
+
+
 def test_sort__should_return_queryset_when_no_order_by():
     ordering_schema = OrderingSchema(order_by=[])
     queryset = FakeQS()
@@ -99,3 +120,20 @@ def test_sort__should_raise_not_implemented_error():
 
     with pytest.raises(NotImplementedError):
         DummyOrderingSchema().sort(FakeQS())
+
+
+def test_sort__should_use_parsed_order_by():
+    class DummyOrderingSchema(OrderingSchema):
+        class Meta(OrderingSchema.Meta):
+            allowed_fields = {
+                "field1": "mapped_field1",
+                "field2": "mapped_field2",
+            }
+
+    order_by_value = ["field1", "-field2"]
+    ordering_schema = DummyOrderingSchema(order_by=order_by_value)
+
+    queryset = FakeQS()
+    queryset = ordering_schema.sort(queryset)
+    assert queryset.is_ordered
+    assert queryset.order_by_args == ("mapped_field1", "-mapped_field2")

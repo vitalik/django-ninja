@@ -1,4 +1,4 @@
-from typing import Any, List, TypeVar
+from typing import Generic, List, TypeVar
 
 from django.db.models import QuerySet
 from pydantic import ConfigDict, field_validator
@@ -8,7 +8,7 @@ from .schema import Schema
 QS = TypeVar("QS", bound=QuerySet)
 
 
-class OrderingBaseSchema(Schema):
+class OrderingBaseSchema(Schema, Generic[QS]):
     model_config = ConfigDict(from_attributes=True)
 
     order_by: List[str] = []
@@ -29,12 +29,27 @@ class OrderingBaseSchema(Schema):
 
         return value
 
-    def sort(self, elements: Any) -> Any:
+    @property
+    def parsed_order_by(self) -> List[str]:
+        parsed_order_by: List[str] = []
+        if isinstance(self.Meta.allowed_fields, dict):
+            for field in self.order_by:
+                is_decreasing = field.startswith("-")
+                field_name = field.lstrip("-")
+                new_field_name = self.Meta.allowed_fields.get(field_name)
+                parsed_order_by.append(
+                    f"-{new_field_name}" if is_decreasing else new_field_name
+                )
+            return parsed_order_by
+        return self.order_by
+
+    def sort(self, queryset: QS) -> QS:
         raise NotImplementedError
 
 
 class OrderingSchema(OrderingBaseSchema):
     def sort(self, queryset: QS) -> QS:
-        if not self.order_by:
+        ordering_fields = self.parsed_order_by
+        if not ordering_fields:
             return queryset
-        return queryset.order_by(*self.order_by)
+        return queryset.order_by(*ordering_fields)
