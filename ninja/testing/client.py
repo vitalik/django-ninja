@@ -1,3 +1,4 @@
+import inspect
 from json import dumps as json_dumps
 from json import loads as json_loads
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
@@ -109,9 +110,11 @@ class NinjaClientBase:
             if isinstance(self.router_or_app, NinjaAPI):
                 self._urls_cache = self.router_or_app.urls[0]
             else:
-                api = NinjaAPI()
-                self.router_or_app.set_api_instance(api)
-                self._urls_cache = list(self.router_or_app.urls_paths(""))
+                # Create temporary API without mutating router
+                # Unique namespace prevents registry conflicts
+                api = NinjaAPI(urls_namespace=f"test-{id(self)}")
+                api.add_router("", self.router_or_app)
+                self._urls_cache = api.urls[0]
         return self._urls_cache
 
     def _resolve(
@@ -195,7 +198,19 @@ class TestAsyncClient(NinjaClientBase):
     async def _call(
         self, func: Callable, request: Mock, kwargs: Dict
     ) -> "NinjaResponse":
-        return NinjaResponse(await func(request, **kwargs))
+        http_response = await func(request, **kwargs)
+        if http_response.streaming and inspect.isasyncgen(
+            http_response.streaming_content
+        ):
+            # Async streaming: consume async iterator into bytes
+            chunks = []
+            async for chunk in http_response.streaming_content:
+                chunks.append(
+                    chunk.encode("utf-8") if isinstance(chunk, str) else chunk
+                )
+            # Replace with sync content for NinjaResponse
+            http_response.streaming_content = iter(chunks)
+        return NinjaResponse(http_response)
 
 
 class NinjaResponse:
@@ -204,7 +219,11 @@ class NinjaResponse:
         self.status_code = http_response.status_code
         self.streaming = http_response.streaming
         if self.streaming:
-            self.content = b"".join(http_response.streaming_content)  # type: ignore
+            assert isinstance(http_response, StreamingHttpResponse)
+            self.content = b"".join(
+                chunk.encode("utf-8") if isinstance(chunk, str) else chunk
+                for chunk in http_response.streaming_content  # type: ignore[union-attr]
+            )
         else:
             self.content = http_response.content
         self._data = None

@@ -1,4 +1,5 @@
 import inspect
+import warnings
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -16,10 +17,17 @@ from typing import (
 
 import pydantic
 from asgiref.sync import async_to_sync, sync_to_async
-from django.http import HttpRequest, HttpResponse, HttpResponseNotAllowed
+from django.http import (
+    HttpRequest,
+    HttpResponse,
+    HttpResponseNotAllowed,
+    StreamingHttpResponse,
+)
 from django.http.response import HttpResponseBase
+from pydantic import BaseModel
 
 from ninja.compatibility.files import FIX_MIDDLEWARE_PATH, need_to_fix_request_files
+from ninja.compatibility.streaming import create_streaming_response
 from ninja.constants import NOT_SET, NOT_SET_TYPE
 from ninja.errors import (
     AuthenticationError,
@@ -28,14 +36,16 @@ from ninja.errors import (
     ValidationErrorContext,
 )
 from ninja.params.models import TModels
+from ninja.responses import Status
 from ninja.schema import Schema, pydantic_version
 from ninja.signature import ViewSignature, is_async
+from ninja.streaming import StreamFormat, _serialize_item, _StreamAlias
 from ninja.throttling import BaseThrottle
 from ninja.types import DictStrAny
 from ninja.utils import is_async_callable
 
 if TYPE_CHECKING:
-    from ninja import NinjaAPI, Router  # pragma: no cover
+    from ninja import NinjaAPI  # pragma: no cover
 
 __all__ = ["Operation", "PathView", "ResponseObject"]
 
@@ -90,8 +100,14 @@ class Operation:
         self.signature = ViewSignature(self.path, self.view_func)
         self.models: TModels = self.signature.models
 
+        self.stream_format: Optional[Type[StreamFormat]] = None
+        self.stream_item_model: Optional[Type[Schema]] = None
         self.response_models: Dict[Any, Any]
-        if response is NOT_SET:
+        if isinstance(response, _StreamAlias):
+            self.stream_format = response.format_cls
+            self.stream_item_model = self._create_response_model(response.item_type)
+            self.response_models = {200: self.stream_item_model}
+        elif response is NOT_SET:
             self.response_models = {200: NOT_SET}
         elif isinstance(response, dict):
             self.response_models = self._create_response_model_multiple(response)
@@ -124,6 +140,72 @@ class Operation:
             for callback in callbacks:
                 callback(self)
 
+    def clone(self) -> "Operation":
+        """
+        Create a fresh copy of this operation for binding to an API.
+
+        This method is used when mounting the same router multiple times
+        to ensure each mount has independent operation instances.
+        """
+        # Create instance without calling __init__ to avoid expensive processing
+        cloned = object.__new__(self.__class__)
+
+        # Copy all essential attributes
+        cloned.is_async = self.is_async
+        cloned.path = self.path
+        cloned.methods = list(self.methods)
+        cloned.view_func = self.view_func
+        cloned.api = cast("NinjaAPI", None)  # Will be set during binding
+        cloned.csrf_exempt = self.csrf_exempt
+
+        # Copy url_name if it exists
+        if hasattr(self, "url_name"):
+            cloned.url_name = self.url_name
+
+        # Copy auth settings
+        cloned.auth_param = self.auth_param
+        cloned.auth_callbacks = list(self.auth_callbacks)
+
+        # Copy throttle settings
+        cloned.throttle_param = self.throttle_param
+        cloned.throttle_objects = list(self.throttle_objects)
+
+        # Copy signature and models (immutable after creation, safe to share)
+        cloned.signature = self.signature
+        cloned.models = self.models
+
+        # Copy streaming attributes
+        cloned.stream_format = self.stream_format
+        cloned.stream_item_model = self.stream_item_model
+
+        # Copy response models (dict copy for isolation)
+        cloned.response_models = dict(self.response_models)
+
+        # Copy metadata
+        cloned.operation_id = self.operation_id
+        cloned.summary = self.summary
+        cloned.description = self.description
+        cloned.tags = list(self.tags) if self.tags else None
+        cloned.deprecated = self.deprecated
+        cloned.include_in_schema = self.include_in_schema
+        cloned.openapi_extra = dict(self.openapi_extra) if self.openapi_extra else None
+
+        # Copy export model params
+        cloned.by_alias = self.by_alias
+        cloned.exclude_unset = self.exclude_unset
+        cloned.exclude_defaults = self.exclude_defaults
+        cloned.exclude_none = self.exclude_none
+
+        # Re-apply run decorators (from decorate_view) to the clone's run method
+        # We can't just copy the decorated run because it's bound to the original instance
+        if hasattr(self, "_run_decorators") and self._run_decorators:
+            cloned._run_decorators = []  # type: ignore[attr-defined]
+            for deco in self._run_decorators:
+                cloned.run = deco(cloned.run)  # type: ignore
+                cloned._run_decorators.append(deco)  # type: ignore[attr-defined]
+
+        return cloned
+
     def run(self, request: HttpRequest, **kw: Any) -> HttpResponseBase:
         error = self._run_checks(request)
         if error:
@@ -132,6 +214,8 @@ class Operation:
             temporal_response = self.api.create_temporal_response(request)
             values = self._get_values(request, kw, temporal_response)
             result = self.view_func(request, **values)
+            if self.stream_format:
+                return self._stream_response(request, result, temporal_response)
             return self._result_to_response(request, result, temporal_response)
         except Exception as e:
             if isinstance(e, TypeError) and "required positional argument" in str(e):
@@ -140,37 +224,60 @@ class Operation:
                 e.args = (msg,) + e.args[1:]
             return self.api.on_exception(request, e)
 
-    def set_api_instance(self, api: "NinjaAPI", router: "Router") -> None:
-        self.api = api
+    def _validate_stream_item(self, item: Any, request: HttpRequest) -> str:
+        """Validate a single stream item and return serialized JSON string."""
+        assert self.stream_item_model is not None
+        resp_object = ResponseObject(item)
+        validated = self.stream_item_model.model_validate(
+            resp_object, context={"request": request, "response_status": 200}
+        )
 
-        if self.auth_param == NOT_SET:
-            if router.auth != NOT_SET:
-                # If the router auth was explicitly set, use it.
-                self._set_auth(router.auth)
-            elif api.auth != NOT_SET:
-                # Otherwise fall back to the api auth. Since this is in an else branch,
-                # it will only be used if the router auth was not explicitly set (i.e.
-                # setting the router's auth to None explicitly allows "resetting" the
-                # default auth that its operations will use).
-                self._set_auth(self.api.auth)
+        model_dump_kwargs: Dict[str, Any] = {}
+        if pydantic_version >= [2, 7]:  # pragma: no branch
+            # pydantic added support for serialization context at 2.7
+            model_dump_kwargs.update(
+                context={"request": request, "response_status": 200}
+            )
 
-        if self.throttle_param == NOT_SET:
-            if api.throttle != NOT_SET:
-                self.throttle_objects = (
-                    isinstance(api.throttle, BaseThrottle)
-                    and [api.throttle]
-                    or api.throttle  # type: ignore
-                )
-            if router.throttle != NOT_SET:
-                _t = router.throttle
-                self.throttle_objects = isinstance(_t, BaseThrottle) and [_t] or _t  # type: ignore
-            assert all(
-                isinstance(th, BaseThrottle) for th in self.throttle_objects
-            ), "Throttle should be an instance of BaseThrottle"
+        result = validated.model_dump(
+            by_alias=self.by_alias,
+            exclude_unset=self.exclude_unset,
+            exclude_defaults=self.exclude_defaults,
+            exclude_none=self.exclude_none,
+            **model_dump_kwargs,
+        )["response"]
+        return _serialize_item(result)
 
-        if self.tags is None:
-            if router.tags is not None:
-                self.tags = router.tags
+    def _stream_response(
+        self,
+        request: HttpRequest,
+        generator: Any,
+        temporal_response: HttpResponse,
+    ) -> StreamingHttpResponse:
+        """Create a StreamingHttpResponse from a sync generator."""
+        assert self.stream_format is not None
+        fmt = self.stream_format
+
+        def content_iter() -> Any:
+            for item in generator:
+                data = self._validate_stream_item(item, request)
+                yield fmt.format_chunk(data)
+            # Copy headers/cookies after generator completes (user may set them inside)
+            for key, value in temporal_response.items():
+                if key.lower() != "content-type":
+                    response[key] = value
+            for cookie_name, cookie in temporal_response.cookies.items():
+                response.cookies[cookie_name] = cookie
+
+        response = StreamingHttpResponse(
+            content_iter(),
+            content_type=fmt.media_type,
+            status=temporal_response.status_code,
+        )
+        # Add format-specific headers
+        for key, value in fmt.response_headers().items():
+            response[key] = value
+        return response
 
     def _set_auth(
         self, auth: Optional[Union[Sequence[Callable], Callable, object]]
@@ -234,13 +341,20 @@ class Operation:
             return self.api.on_exception(request, Throttled(wait=duration))  # type: ignore
         return None
 
+    def _model_dump_kwargs(self, request: HttpRequest, status: int) -> Dict[str, Any]:
+        kwargs: Dict[str, Any] = {}
+        if pydantic_version >= [2, 7]:
+            kwargs["context"] = {"request": request, "response_status": status}
+        return kwargs
+
     def _result_to_response(
         self, request: HttpRequest, result: Any, temporal_response: HttpResponse
     ) -> HttpResponseBase:
         """
         The protocol for results
          - if HttpResponse - returns as is
-         - if tuple with 2 elements - means http_code + body
+         - if Status object - uses status code + body
+         - if tuple with 2 elements - means http_code + body (deprecated)
          - otherwise it's a body
         """
         if isinstance(result, HttpResponseBase):
@@ -250,9 +364,17 @@ class Operation:
         if len(self.response_models) == 1:
             status = next(iter(self.response_models))
 
-        if isinstance(result, tuple) and len(result) == 2:
-            status = result[0]
-            result = result[1]
+        if isinstance(result, Status):
+            status = result.status_code
+            result = result.value
+        elif isinstance(result, tuple) and len(result) == 2:
+            warnings.warn(
+                "Returning tuple (status_code, response) is deprecated. "
+                "Use Status(status_code, response) instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            status, result = result
 
         if status in self.response_models:
             response_model = self.response_models[status]
@@ -275,18 +397,31 @@ class Operation:
             # Empty response.
             return temporal_response
 
+        model_dump_kwargs = self._model_dump_kwargs(request, status)
+
+        # Skip re-validation for pydantic model instances matching the response type
+        resp_annotation = response_model.model_fields["response"].annotation
+        if (
+            isinstance(resp_annotation, type)
+            and isinstance(result, BaseModel)
+            and isinstance(result, resp_annotation)
+        ):
+            result = cast(BaseModel, result).model_dump(
+                by_alias=self.by_alias,
+                exclude_unset=self.exclude_unset,
+                exclude_defaults=self.exclude_defaults,
+                exclude_none=self.exclude_none,
+                **model_dump_kwargs,
+            )
+            return self.api.create_response(
+                request, result, temporal_response=temporal_response
+            )
+
         resp_object = ResponseObject(result)
         # ^ we need object because getter_dict seems work only with model_validate
         validated_object = response_model.model_validate(
             resp_object, context={"request": request, "response_status": status}
         )
-
-        model_dump_kwargs: Dict[str, Any] = {}
-        if pydantic_version >= [2, 7]:
-            # pydantic added support for serialization context at 2.7
-            model_dump_kwargs.update(
-                context={"request": request, "response_status": status}
-            )
 
         result = validated_object.model_dump(
             by_alias=self.by_alias,
@@ -350,10 +485,38 @@ class AsyncOperation(Operation):
         try:
             temporal_response = self.api.create_temporal_response(request)
             values = self._get_values(request, kw, temporal_response)
+            if self.stream_format:
+                result = self.view_func(request, **values)
+                return await self._async_stream_response(
+                    request, result, temporal_response
+                )
             result = await self.view_func(request, **values)
             return self._result_to_response(request, result, temporal_response)
         except Exception as e:
             return self.api.on_exception(request, e)
+
+    async def _async_stream_response(
+        self,
+        request: HttpRequest,
+        generator: Any,
+        temporal_response: HttpResponse,
+    ) -> StreamingHttpResponse:
+        """Create a StreamingHttpResponse from an async generator."""
+        assert self.stream_format is not None
+        fmt = self.stream_format
+
+        async def content_gen() -> Any:
+            async for item in generator:
+                data = self._validate_stream_item(item, request)
+                yield fmt.format_chunk(data)
+
+        return await create_streaming_response(
+            content_gen(),
+            content_type=fmt.media_type,
+            status=temporal_response.status_code,
+            temporal_response=temporal_response,
+            extra_headers=fmt.response_headers(),
+        )
 
     async def _run_checks(self, request: HttpRequest) -> Optional[HttpResponse]:  # type: ignore
         "Runs security/throttle checks for each operation"
@@ -429,7 +592,10 @@ class PathView:
             self.url_name = url_name
 
         OperationClass = Operation
-        if is_async(view_func):
+        is_streaming = isinstance(response, _StreamAlias)
+        if is_async(view_func) or (
+            is_streaming and inspect.isasyncgenfunction(view_func)
+        ):
             self.is_async = True
             OperationClass = AsyncOperation
 
@@ -459,10 +625,18 @@ class PathView:
 
         return operation
 
-    def set_api_instance(self, api: "NinjaAPI", router: "Router") -> None:
-        self.api = api
-        for op in self.operations:
-            op.set_api_instance(api, router)
+    def clone(self) -> "PathView":
+        """
+        Create a fresh copy of this PathView with cloned operations.
+
+        This method is used when mounting the same router multiple times
+        to ensure each mount has independent PathView and Operation instances.
+        """
+        cloned = PathView()
+        cloned.is_async = self.is_async
+        cloned.url_name = self.url_name
+        cloned.operations = [op.clone() for op in self.operations]
+        return cloned
 
     def get_view(self) -> Callable:
         # Create a unique view function for this PathView

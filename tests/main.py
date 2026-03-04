@@ -260,6 +260,14 @@ def get_query_type_optional(request, query: int = None):
     return f"foo bar {query}"
 
 
+@router.get("/query/str/optional")
+def get_query_str_optional(request, query: str = None):
+    """Test for issue #1607 - str type with None default should be optional."""
+    if query is None:
+        return "foo bar"
+    return f"foo bar {query}"
+
+
 @router.get("/query/int/default")
 def get_query_type_optional_10(request, query: int = 10):
     return f"foo bar {query}"

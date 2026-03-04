@@ -3,7 +3,7 @@
 <html>
 <head>
     <link type="text/css" rel="stylesheet" href="{% static 'ninja/swagger-ui.css' %}">
-    <link rel="shortcut icon" href="{% static 'ninja/favicon.png' %}">
+    {% include "ninja/favicons.html" %}
     <title>{{ api.title }}</title>
 </head>
 <body

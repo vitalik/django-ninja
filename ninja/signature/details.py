@@ -25,6 +25,7 @@ from ninja.params.models import (
     _MultiPartBody,
 )
 from ninja.signature.utils import get_path_param_names, get_typed_signature
+from ninja.utils import is_optional_type
 
 __all__ = [
     "ViewSignature",
@@ -294,6 +295,11 @@ class ViewSignature:
                 param_source = Query(...)
             else:
                 param_source = Query(default)
+
+        # If default is None but annotation is not Optional,
+        # wrap it in Optional to allow None values in Pydantic v2
+        if default is None and not is_optional_type(annotation):
+            annotation = Optional[annotation]
 
         return FuncParam(
             name, param_source.alias or name, param_source, annotation, is_collection
