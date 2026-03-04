@@ -19,7 +19,7 @@ class OrderingBaseSchema(Schema, Generic[QS]):
         ordering_query_param = "order_by"
 
     @classmethod
-    def __pydantic_init_subclass__(cls, **kwargs: Any):
+    def __pydantic_init_subclass__(cls, **kwargs: Any) -> None:
         super().__pydantic_init_subclass__(**kwargs)
 
         ordering_query_param: str = getattr(
