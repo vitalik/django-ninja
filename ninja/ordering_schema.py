@@ -25,7 +25,7 @@ class OrderingBaseSchema(Schema, Generic[QS]):
         ordering_query_param: str = getattr(
             cls.Meta, "ordering_query_param", "order_by"
         )
-        order_by_field: FieldInfo = cls.model_fields.get("order_by")
+        order_by_field: FieldInfo = cls.model_fields["order_by"]
 
         if ordering_query_param == "order_by":
             order_by_field.alias = None
