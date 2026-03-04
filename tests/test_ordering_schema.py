@@ -1,8 +1,9 @@
 import pytest
 from django.db.models import QuerySet
 
-from ninja import OrderingSchema
+from ninja import NinjaAPI, OrderingSchema, Query
 from ninja.ordering_schema import OrderingBaseSchema
+from ninja.testing import TestClient
 
 
 class FakeQS(QuerySet):
@@ -137,3 +138,41 @@ def test_sort__should_use_parsed_order_by():
     queryset = ordering_schema.sort(queryset)
     assert queryset.is_ordered
     assert queryset.order_by_args == ("mapped_field1", "-mapped_field2")
+
+
+def test_ordering_query_param__should_parse_custom_query_param():
+    api = NinjaAPI(urls_namespace="test_ordering_query_param")
+
+    class CustomOrderingSchema(OrderingSchema):
+        class Meta(OrderingSchema.Meta):
+            ordering_query_param = "ordering"
+
+    @api.get("/items")
+    def list_items(request, ordering: CustomOrderingSchema = Query(...)):
+        return ordering.order_by
+
+    client = TestClient(api)
+    response = client.get("/items?ordering=name&ordering=-created_at")
+
+    assert response.status_code == 200
+    assert response.json() == ["name", "-created_at"]
+
+
+def test_ordering_query_param__should_use_custom_name_in_openapi():
+    api = NinjaAPI(urls_namespace="test_ordering_query_param_openapi")
+
+    class CustomOrderingSchema(OrderingSchema):
+        class Meta(OrderingSchema.Meta):
+            ordering_query_param = "ordering"
+
+    @api.get("/items")
+    def list_items(request, ordering: CustomOrderingSchema = Query(...)):
+        return ordering.order_by
+
+    parameters = api.get_openapi_schema(path_prefix="")["paths"]["/items"]["get"][
+        "parameters"
+    ]
+    parameter_names = {parameter["name"] for parameter in parameters}
+
+    assert "ordering" in parameter_names
+    assert "order_by" not in parameter_names

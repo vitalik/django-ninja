@@ -1,7 +1,8 @@
-from typing import Generic, List, TypeVar
+from typing import Any, Generic, List, TypeVar
 
 from django.db.models import QuerySet
-from pydantic import ConfigDict, field_validator
+from pydantic import ConfigDict, Field, field_validator
+from pydantic.fields import FieldInfo
 
 from .schema import Schema
 
@@ -11,10 +12,34 @@ QS = TypeVar("QS", bound=QuerySet)
 class OrderingBaseSchema(Schema, Generic[QS]):
     model_config = ConfigDict(from_attributes=True)
 
-    order_by: List[str] = []
+    order_by: List[str] = Field(default_factory=list)
 
     class Meta:
         allowed_fields = "__all__"
+        ordering_query_param = "order_by"
+
+    @classmethod
+    def __pydantic_init_subclass__(cls, **kwargs: Any):
+        super().__pydantic_init_subclass__(**kwargs)
+
+        ordering_query_param: str = getattr(
+            cls.Meta, "ordering_query_param", "order_by"
+        )
+        order_by_field: FieldInfo | None = cls.model_fields.get("order_by")
+
+        if order_by_field is None:
+            return
+
+        if ordering_query_param == "order_by":
+            order_by_field.alias = None
+            order_by_field.validation_alias = None
+            order_by_field.serialization_alias = None
+        else:
+            order_by_field.alias = ordering_query_param
+            order_by_field.validation_alias = ordering_query_param
+            order_by_field.serialization_alias = ordering_query_param
+
+        cls.model_rebuild(force=True)
 
     @field_validator("order_by")
     @classmethod
