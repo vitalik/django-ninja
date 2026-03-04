@@ -27,9 +27,6 @@ class OrderingBaseSchema(Schema, Generic[QS]):
         )
         order_by_field: FieldInfo | None = cls.model_fields.get("order_by")
 
-        if order_by_field is None:
-            return
-
         if ordering_query_param == "order_by":
             order_by_field.alias = None
             order_by_field.validation_alias = None
