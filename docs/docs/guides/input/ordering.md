@@ -29,7 +29,17 @@ def list_books(request, ordering: OrderingSchema = Query(...)):
 
 Under the hood, `OrderingSchema` expose a query parameter `order_by` that can be used to order the queryset. The `order_by` parameter expects a list of string, representing the list of field names that will be passed to the `queryset.order_by(*args)` call. This values can be optionally prefixed by a minus sign (`-`) to indicate descending order, following the same standard from Django ORM.
 
-## Restricting Fields
+If you want to use a different query parameter name, you can configure it in `Meta.ordering_query_param`:
+
+```python
+class BookOrderingSchema(OrderingSchema):
+    class Meta(OrderingSchema.Meta):
+        ordering_query_param = "ordering"
+```
+
+With this configuration, Django Ninja will read `?ordering=...` from the query string and show `ordering` in the generated OpenAPI documentation.
+
+## Restricting & Mapping Fields
 
 By default, `OrderingSchema` will allow to pass any field name to order the queryset. If you want to restrict the fields that can be used to order the queryset, you can use the `allowed_fields` field in the `OrderingSchema.Meta` class definition:
 
@@ -40,6 +50,17 @@ class BookOrderingSchema(OrderingSchema):
 ```
 
 This class definition will restrict the fields that can be used to order the queryset to only `name` and `created_at` fields. If the user tries to pass any other field, a `ValidationError` will be raised.
+
+You can also use a dictionary to map the allowed field names to different field names in the queryset:
+
+```python hl_lines="3"
+class BookOrderingSchema(OrderingSchema):
+    class Meta:
+        allowed_fields = {
+            'name': 'real_name_model_field',
+            'created': 'another__real__created_at',
+        }
+```
 
 ## Default Ordering
 
