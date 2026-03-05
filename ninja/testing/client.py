@@ -124,9 +124,10 @@ class NinjaClientBase:
         request.method = method
         body = request_params.pop("body", b"")
         request._body = body.encode() if isinstance(body, str) else body
-        request._dont_enforce_csrf_checks = True
+        # Django CsrfViewMiddleware respects "_dont_enforce_csrf_checks" on a Request
+        request._dont_enforce_csrf_checks = True  # type: ignore[attr-defined]
 
-        request.auth = None
+        request.auth = None  # type: ignore[attr-defined]
         if "user" not in request_params:
             request.user = Mock()
             request.user.is_authenticated = False
