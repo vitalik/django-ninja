@@ -208,6 +208,7 @@ class ViewSignature:
         return flatten_map
 
     def _model_flatten_map(self, model: TModel, prefix: str) -> Generator:
+        model = _unwrap_union_model(model)
         field: FieldInfo
         for attr, field in model.model_fields.items():
             field_name = field.alias or attr
@@ -306,6 +307,15 @@ class ViewSignature:
         )
 
 
+def _unwrap_union_model(annotation: Any) -> Any:
+    """If annotation is a Union containing a pydantic model, return that model class."""
+    if get_origin(annotation) in UNION_TYPES:
+        for arg in get_args(annotation):
+            if arg is not type(None) and is_pydantic_model(arg):
+                return arg
+    return annotation
+
+
 def is_pydantic_model(cls: Any) -> bool:
     try:
         origin = get_origin(cls)
@@ -360,6 +370,7 @@ def detect_collection_fields(
             for attr in path[1:]:
                 if hasattr(annotation_or_field, "annotation"):
                     annotation_or_field = annotation_or_field.annotation
+                annotation_or_field = _unwrap_union_model(annotation_or_field)
                 annotation_or_field = next(
                     (
                         a
