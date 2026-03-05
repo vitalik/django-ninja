@@ -177,7 +177,7 @@ class NinjaClientBase:
             },
         )
         request.META.update({
-            f"HTTP_{k.replace('-', '_')}": v
+            f"HTTP_{k.replace('-', '_').upper()}": v
             for k, v in request_params.pop("headers", {}).items()
         })
 
