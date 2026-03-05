@@ -146,8 +146,11 @@ class NinjaClientBase:
             for k, v in data.items():
                 request.POST[k] = v
 
+        query_string = ""
         query_params = request_params.pop("query_params", None)
         if "?" in path:
+            # Store "query_string" verbatim here, for assignment to "request.META.QUERY_STRING",
+            # to ensure empty parameter syntax is preserved
             path, query_string = path.split("?", maxsplit=1)
             request.GET = QueryDict(query_string)
         elif query_params is not None:
@@ -157,6 +160,7 @@ class NinjaClientBase:
                         request.GET.appendlist(k, item)
                 else:
                     request.GET[k] = v
+            query_string = request.GET.urlencode()
         request.path = path
         # If "settings.FORCE_SCRIPT_NAME" is set, "request.path_info" ought
         # to respect it, but this class skips the Django URL resolver,
@@ -169,7 +173,7 @@ class NinjaClientBase:
                 "REQUEST_METHOD": request.method,
                 "SCRIPT_NAME": "",
                 "PATH_INFO": request.path_info,
-                "QUERY_STRING": request.GET.urlencode(),
+                "QUERY_STRING": query_string,
                 "SERVER_NAME": "testserver",
                 "SERVER_PORT": "80",
                 "SERVER_PROTOCOL": "HTTP/1.1",
