@@ -134,7 +134,7 @@ class NinjaClientBase:
         request = Mock(spec=HttpRequest)
         request.method = method
         request.path = path
-        request.body = ""
+        request.body = b""
         request.COOKIES = {}
         request._dont_enforce_csrf_checks = True
         request.is_secure.return_value = False
