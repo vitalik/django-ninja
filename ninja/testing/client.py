@@ -3,23 +3,13 @@ from json import dumps as json_dumps
 from json import loads as json_loads
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from unittest.mock import Mock
-from urllib.parse import urljoin
 
 from django.http import QueryDict, StreamingHttpResponse
-from django.http.request import HttpHeaders, HttpRequest
+from django.http.request import HttpRequest
 
 from ninja import NinjaAPI, Router
 from ninja.responses import NinjaJSONEncoder
 from ninja.responses import Response as HttpResponse
-
-
-def build_absolute_uri(location: Optional[str] = None) -> str:
-    base = "http://testlocation/"
-
-    if location:
-        base = urljoin(base, location)
-
-    return base
 
 
 # TODO: this should be changed
@@ -118,8 +108,8 @@ class NinjaClientBase:
         return self._urls_cache
 
     def _resolve(
-        self, method: str, path: str, data: Dict, request_params: Any
-    ) -> Tuple[Callable, Mock, Dict]:
+        self, method: str, path: str, data: Dict, request_params: Dict[str, Any]
+    ) -> Tuple[Callable, HttpRequest, Dict]:
         url_path = path.split("?")[0].lstrip("/")
         for url in self.urls:
             match = url.resolve(url_path)
@@ -129,60 +119,72 @@ class NinjaClientBase:
         raise Exception(f'Cannot resolve "{path}"')
 
     def _build_request(
-        self, method: str, path: str, data: Dict, request_params: Any
-    ) -> Mock:
-        request = Mock(spec=HttpRequest)
+        self, method: str, path: str, data: Dict, request_params: Dict[str, Any]
+    ) -> HttpRequest:
+        request = HttpRequest()
         request.method = method
-        request.path = path
-        request.body = ""
-        request.COOKIES = {}
-        request._dont_enforce_csrf_checks = True
-        request.is_secure.return_value = False
-        request.build_absolute_uri = build_absolute_uri
+        body = request_params.pop("body", b"")
+        request._body = body.encode() if isinstance(body, str) else body
+        # Django CsrfViewMiddleware respects "_dont_enforce_csrf_checks" on a Request
+        request._dont_enforce_csrf_checks = True  # type: ignore[attr-defined]
 
-        request.auth = None
-        request.user = Mock()
+        request.auth = None  # type: ignore[attr-defined]
         if "user" not in request_params:
+            request.user = Mock()
             request.user.is_authenticated = False
             request.user.is_staff = False
             request.user.is_superuser = False
 
-        request.META = request_params.pop("META", {"REMOTE_ADDR": "127.0.0.1"})
-        request.FILES = request_params.pop("FILES", {})
-
-        request.META.update({
-            f"HTTP_{k.replace('-', '_')}": v
-            for k, v in request_params.pop("headers", {}).items()
-        })
-
-        request.headers = HttpHeaders(request.META)
+        files = request_params.pop("FILES", None)
+        if files is not None:
+            request.FILES = files
 
         if isinstance(data, QueryDict):
             request.POST = data
-        else:
-            request.POST = QueryDict(mutable=True)
+        elif isinstance(data, (str, bytes)):
+            request._body = data.encode() if isinstance(data, str) else data
+        elif data:
+            for k, v in data.items():
+                request.POST[k] = v
 
-            if isinstance(data, (str, bytes)):
-                request_params["body"] = data
-            elif data:
-                for k, v in data.items():
-                    request.POST[k] = v
-
+        query_string = ""
+        query_params = request_params.pop("query_params", None)
         if "?" in path:
-            request.GET = QueryDict(path.split("?")[1])
-        else:
-            query_params = request_params.pop("query_params", None)
-            if query_params:
-                query_dict = QueryDict(mutable=True)
-                for k, v in query_params.items():
-                    if isinstance(v, list):
-                        for item in v:
-                            query_dict.appendlist(k, item)
-                    else:
-                        query_dict[k] = v
-                request.GET = query_dict
-            else:
-                request.GET = QueryDict()
+            # Store "query_string" verbatim here, for assignment to "request.META.QUERY_STRING",
+            # to ensure empty parameter syntax is preserved
+            path, query_string = path.split("?", maxsplit=1)
+            request.GET = QueryDict(query_string)
+        elif query_params is not None:
+            for k, v in query_params.items():
+                if isinstance(v, list):
+                    for item in v:
+                        request.GET.appendlist(k, item)
+                else:
+                    request.GET[k] = v
+            query_string = request.GET.urlencode()
+        request.path = path
+        # If "settings.FORCE_SCRIPT_NAME" is set, "request.path_info" ought
+        # to respect it, but this class skips the Django URL resolver,
+        # so don't bother
+        request.path_info = path
+
+        request.META = request_params.pop(
+            "META",
+            {
+                "REQUEST_METHOD": request.method,
+                "SCRIPT_NAME": "",
+                "PATH_INFO": request.path_info,
+                "QUERY_STRING": query_string,
+                "SERVER_NAME": "testserver",
+                "SERVER_PORT": "80",
+                "SERVER_PROTOCOL": "HTTP/1.1",
+                "REMOTE_ADDR": "127.0.0.1",
+            },
+        )
+        request.META.update({
+            f"HTTP_{k.replace('-', '_').upper()}": v
+            for k, v in request_params.pop("headers", {}).items()
+        })
 
         for k, v in request_params.items():
             setattr(request, k, v)
@@ -190,13 +192,15 @@ class NinjaClientBase:
 
 
 class TestClient(NinjaClientBase):
-    def _call(self, func: Callable, request: Mock, kwargs: Dict) -> "NinjaResponse":
+    def _call(
+        self, func: Callable, request: HttpRequest, kwargs: Dict
+    ) -> "NinjaResponse":
         return NinjaResponse(func(request, **kwargs))
 
 
 class TestAsyncClient(NinjaClientBase):
     async def _call(
-        self, func: Callable, request: Mock, kwargs: Dict
+        self, func: Callable, request: HttpRequest, kwargs: Dict
     ) -> "NinjaResponse":
         http_response = await func(request, **kwargs)
         if http_response.streaming and inspect.isasyncgen(

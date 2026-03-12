@@ -12,7 +12,7 @@ class MyParser(Parser):
 
     def parse_body(self, request: HttpRequest):
         "just splitting body to lines"
-        return request.body.encode().splitlines()
+        return request.body.splitlines()
 
     def parse_querydict(
         self, data: QueryDict, list_fields: List[str], request: HttpRequest
