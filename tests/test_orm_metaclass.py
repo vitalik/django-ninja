@@ -3,6 +3,7 @@ from django.db import models
 
 from ninja import ModelSchema
 from ninja.errors import ConfigError
+from ninja.schema import Field
 
 
 def test_simple():
@@ -197,3 +198,40 @@ def test_model_schema_with_old_config():
             class Config:
                 model = "User"
                 model_fields = ["x"]
+
+
+def test_field_alias_with_display_method():
+    class StatusModel(models.Model):
+        STATUS_CHOICES = [
+            ("NA", "Not assessed"),
+            ("IP", "In progress"),
+            ("CO", "Complete"),
+        ]
+        status = models.CharField(max_length=2, choices=STATUS_CHOICES, default="NA")
+
+        class Meta:
+            app_label = "tests"
+
+    class StatusSchemaFields(ModelSchema):
+        status: str = Field(alias="get_status_display")
+
+        class Meta:
+            model = StatusModel
+            fields = ["id", "status"]
+
+    class StatusSchemaExclude(ModelSchema):
+        status: str = Field(alias="get_status_display")
+
+        class Meta:
+            model = StatusModel
+            exclude = ["id"]
+
+    instance = StatusModel(id=4, status="NA")
+
+    schema_fields = StatusSchemaFields.from_orm(instance)
+    assert schema_fields.status == "Not assessed"
+    assert schema_fields.id == 4
+
+    schema_exclude = StatusSchemaExclude.from_orm(instance)
+    assert schema_exclude.status == "Not assessed"
+    assert not hasattr(schema_exclude, "id")
