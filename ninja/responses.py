@@ -1,6 +1,6 @@
 from enum import Enum
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
-from typing import Any, FrozenSet
+from typing import Any, FrozenSet, Generic, TypeVar
 
 from django.core.serializers.json import DjangoJSONEncoder
 from django.http import JsonResponse
@@ -19,7 +19,10 @@ __all__ = [
 ]
 
 
-class Status:
+T = TypeVar("T")
+
+
+class Status(Generic[T]):
     """Return a response with an explicit HTTP status code.
 
     Usage:
@@ -29,7 +32,7 @@ class Status:
 
     __slots__ = ("status_code", "value")
 
-    def __init__(self, status_code: int, value: Any):
+    def __init__(self, status_code: int, value: T):
         self.status_code = status_code
         self.value = value
 
