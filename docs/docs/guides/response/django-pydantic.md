@@ -114,7 +114,7 @@ When you process input data, you need to tell Pydantic to avoid setting undefine
 def patch(request, pk: int, payload: PatchGroupSchema):
 
     # Notice that we set exclude_unset=True
-    updated_fields = payload.dict(exclude_unset=True)
+    updated_fields = payload.model_dump(exclude_unset=True)
 
     obj = MyModel.objects.get(pk=pk)
 
