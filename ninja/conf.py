@@ -1,3 +1,4 @@
+import re
 from math import inf
 from typing import Dict, Optional, Set, Tuple
 
@@ -32,6 +33,9 @@ class Settings(BaseModel):
 
     FIX_REQUEST_FILES_METHODS: Set[str] = Field(
         {"PUT", "PATCH", "DELETE"}, alias="NINJA_FIX_REQUEST_FILES_METHODS"
+    )
+    FIX_REQUEST_FILES_URLS: Optional[re.Pattern] = Field(
+        None, alias="NINJA_FIX_REQUEST_FILES_URLS"
     )
 
 
