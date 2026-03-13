@@ -1,4 +1,6 @@
-from ninja import Form, Schema
+from ninja import Form, NinjaAPI, Schema
+
+api = NinjaAPI()
 
 
 class Item(Schema):
