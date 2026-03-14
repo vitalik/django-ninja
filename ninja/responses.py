@@ -4,7 +4,7 @@ from typing import Any, FrozenSet
 
 from django.core.serializers.json import DjangoJSONEncoder
 from django.http import JsonResponse
-from pydantic import BaseModel
+from pydantic import AnyUrl, BaseModel
 from pydantic_core import Url
 
 __all__ = [
@@ -39,6 +39,8 @@ class NinjaJSONEncoder(DjangoJSONEncoder):
         if isinstance(o, BaseModel):
             return o.model_dump()
         if isinstance(o, Url):
+            return str(o)
+        if isinstance(o, AnyUrl):
             return str(o)
         if isinstance(o, (IPv4Address, IPv4Network, IPv6Address, IPv6Network)):
             return str(o)
