@@ -6,7 +6,7 @@ correctly protects all endpoints under that router, including child routers.
 """
 
 import base64
-from typing import Any
+from typing import Dict
 
 import pytest
 
@@ -31,7 +31,7 @@ class BasicAuth(HttpBasicAuth):
             return username
 
 
-def _basic_auth_header() -> dict[str, str]:
+def _basic_auth_header() -> Dict[str, str]:
     creds = base64.b64encode(b"admin:secret").decode()
     return {"Authorization": f"Basic {creds}"}
 
@@ -51,7 +51,9 @@ def test_add_router_auth_override_basic_auth():
     client = TestClient(api)
 
     assert client.get("/events/endpoint").status_code == 401
-    assert client.get("/events/endpoint", headers=_basic_auth_header()).status_code == 200
+    assert (
+        client.get("/events/endpoint", headers=_basic_auth_header()).status_code == 200
+    )
 
 
 # --- Test 2: Auth override with APIKeyQuery ---
