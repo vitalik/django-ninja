@@ -8,8 +8,6 @@ correctly protects all endpoints under that router, including child routers.
 import base64
 from typing import Dict
 
-import pytest
-
 from ninja import NinjaAPI, Router
 from ninja.security import APIKeyQuery, HttpBasicAuth
 from ninja.testing import TestClient
