@@ -1,5 +1,7 @@
+import inspect
 import itertools
 import re
+import warnings
 from http.client import responses
 from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Set, Tuple
 
@@ -113,10 +115,14 @@ class OpenAPISchema(dict):
     def operation_details(self, operation: Operation) -> DictStrAny:
         op_id = operation.operation_id or self.api.get_openapi_operation_id(operation)
         if op_id in self.all_operation_ids:
-            print(
-                bold_red_style(
-                    f'Warning: operation_id "{op_id}" is already used (Try giving a different name to: {operation.view_func.__module__}.{operation.view_func.__name__})'
-                )
+            warnings.warn_explicit(
+                UserWarning(
+                    f'operation_id "{op_id}" is already used (Try giving a different name to: {operation.view_func.__module__}.{operation.view_func.__name__})'
+                ),
+                category=None,
+                filename=inspect.getfile(operation.view_func),
+                lineno=inspect.getsourcelines(operation.view_func)[1],
+                source=None,
             )
         self.all_operation_ids.add(op_id)
         result = {
