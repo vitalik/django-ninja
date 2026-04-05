@@ -213,9 +213,9 @@ def test_no_auth_csrf_exempt():
 
     # If csrf_response is None, the request passed CSRF checks
     # If it's not None, it's a 403 Forbidden response
-    assert (
-        csrf_response is None
-    ), f"CSRF middleware blocked the request! Regular APIs should be CSRF exempt. Response: {csrf_response}"
+    assert csrf_response is None, (
+        f"CSRF middleware blocked the request! Regular APIs should be CSRF exempt. Response: {csrf_response}"
+    )
 
 
 def test_docs_cookie_auth():
