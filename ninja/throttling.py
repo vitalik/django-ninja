@@ -1,16 +1,45 @@
 import hashlib
 import time
+import warnings
 from typing import Dict, List, Optional, Tuple
 
 from django.core.cache import cache as default_cache
 from django.core.exceptions import ImproperlyConfigured
 from django.http import HttpRequest
+from django.utils.module_loading import import_string
+
+
+def get_client_ip(request: HttpRequest) -> Optional[str]:
+    """
+    Identify the machine making the request by parsing HTTP_X_FORWARDED_FOR
+    if present and number of proxies is > 0. If not use all of
+    HTTP_X_FORWARDED_FOR if it is available, if not use REMOTE_ADDR.
+    """
+    from ninja.conf import settings
+
+    xff = request.META.get("HTTP_X_FORWARDED_FOR")
+    remote_addr = request.META.get("REMOTE_ADDR")
+    num_proxies = settings.NUM_PROXIES
+
+    if num_proxies is not None:
+        if num_proxies == 0 or xff is None:
+            return remote_addr
+        addrs: List[str] = xff.split(",")
+        client_addr = addrs[-min(num_proxies, len(addrs))]
+        return client_addr.strip()
+
+    return "".join(xff.split()) if xff else remote_addr
 
 
 class BaseThrottle:
     """
     Rate throttling of requests.
     """
+
+    def __init__(self) -> None:
+        from ninja.conf import settings
+
+        self.client_ip = import_string(settings.CLIENT_IP_CALLABLE)
 
     def allow_request(self, request: HttpRequest) -> bool:
         """
@@ -19,25 +48,12 @@ class BaseThrottle:
         raise NotImplementedError(".allow_request() must be overridden")
 
     def get_ident(self, request: HttpRequest) -> Optional[str]:
-        """
-        Identify the machine making the request by parsing HTTP_X_FORWARDED_FOR
-        if present and number of proxies is > 0. If not use all of
-        HTTP_X_FORWARDED_FOR if it is available, if not use REMOTE_ADDR.
-        """
-        from ninja.conf import settings
-
-        xff = request.META.get("HTTP_X_FORWARDED_FOR")
-        remote_addr = request.META.get("REMOTE_ADDR")
-        num_proxies = settings.NUM_PROXIES
-
-        if num_proxies is not None:
-            if num_proxies == 0 or xff is None:
-                return remote_addr
-            addrs: List[str] = xff.split(",")
-            client_addr = addrs[-min(num_proxies, len(addrs))]
-            return client_addr.strip()
-
-        return "".join(xff.split()) if xff else remote_addr
+        warnings.warn(
+            ".get_ident() is deprecated, use .client_ip() instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return get_client_ip(request)
 
     def wait(self) -> Optional[float]:
         """
@@ -79,6 +95,7 @@ class SimpleRateThrottle(BaseThrottle):
     }
 
     def __init__(self, rate: Optional[str] = None):
+        super().__init__()
         self.rate: Optional[str]
         if rate:
             self.rate = rate
@@ -204,7 +221,7 @@ class AnonRateThrottle(SimpleRateThrottle):
 
         return self.cache_format % {
             "scope": self.scope,
-            "ident": self.get_ident(request),
+            "ident": self.client_ip(request),
         }
 
 
@@ -224,7 +241,7 @@ class AuthRateThrottle(SimpleRateThrottle):
             ident = hashlib.sha256(str(request.auth).encode()).hexdigest()  # type: ignore
             # TODO: ^maybe auth should have an attribute that developer can overwrite
         else:
-            ident = self.get_ident(request)  # type: ignore
+            ident = self.client_ip(request)
 
         return self.cache_format % {"scope": self.scope, "ident": ident}
 
@@ -244,6 +261,6 @@ class UserRateThrottle(SimpleRateThrottle):
         if request.user and request.user.is_authenticated:
             ident = request.user.pk
         else:
-            ident = self.get_ident(request)
+            ident = self.client_ip(request)
 
         return self.cache_format % {"scope": self.scope, "ident": ident}

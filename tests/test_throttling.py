@@ -278,16 +278,38 @@ def test_proxy_throttle():
 
     th = SimpleRateThrottle("1/s")
     request = build_request(x_forwarded_for=None)
-    assert th.get_ident(request) == "8.8.8.8"
+    assert th.client_ip(request) == "8.8.8.8"
+    assert th.get_ident(request) == "8.8.8.8"  # Deprecated
 
     settings.NUM_PROXIES = 0
     request = build_request(x_forwarded_for="8.8.8.8,127.0.0.1")
-    assert th.get_ident(request) == "8.8.8.8"
+    assert th.client_ip(request) == "8.8.8.8"
+    assert th.get_ident(request) == "8.8.8.8"  # Deprecated
 
     settings.NUM_PROXIES = 1
-    assert th.get_ident(request) == "127.0.0.1"
+    assert th.client_ip(request) == "127.0.0.1"
+    assert th.get_ident(request) == "127.0.0.1"  # Deprecated
 
     settings.NUM_PROXIES = None
+
+
+def custom_client_ip_callable(request) -> str:
+    return "custom-ip"
+
+
+def test_proxy_throttle_custom_client_ip_callable():
+    from ninja.conf import settings
+
+    settings.CLIENT_IP_CALLABLE = "tests.test_throttling.custom_client_ip_callable"
+
+    th = SimpleRateThrottle("1/s")
+    request = build_request()
+    assert th.client_ip(request) == "custom-ip"
+    assert (
+        th.get_ident(request) == "8.8.8.8"
+    )  # Note: Deprecated function preserves old behavior and ignores new CLIENT_IP_CALLABLE setting.
+
+    settings.CLIENT_IP_CALLABLE = "ninja.throttling.get_client_ip"
 
 
 def test_base_classes():

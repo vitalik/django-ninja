@@ -105,3 +105,21 @@ class NoReadsThrottle(AnonRateThrottle):
             return True
         return super().allow_request(request)
 ```
+
+## Customizing Client IP Address Lookups
+
+To use custom client IP address lookup logic, change the `NINJA_CLIENT_IP_CALLABLE` setting to a suitable callable path.
+
+Example
+
+```Python
+from django.http import HttpRequest
+
+def get_client_ip(request: HttpRequest) -> str:
+    return request.META.get("REMOTE_ADDR")
+```
+
+`settings.py`:
+```python
+NINJA_CLIENT_IP_CALLABLE = "example.utils.get_client_ip"
+```

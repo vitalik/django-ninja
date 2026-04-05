@@ -21,6 +21,9 @@ class Settings(BaseModel):
 
     # Throttling
     NUM_PROXIES: Optional[int] = Field(None, alias="NINJA_NUM_PROXIES")
+    CLIENT_IP_CALLABLE: str = Field(
+        "ninja.throttling.get_client_ip", alias="NINJA_CLIENT_IP_CALLABLE"
+    )
     DEFAULT_THROTTLE_RATES: Dict[str, Optional[str]] = Field(
         {
             "auth": "10000/day",
