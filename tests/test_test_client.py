@@ -12,6 +12,14 @@ from ninja.testing import TestClient
 router = Router()
 
 
+class ClientTestSchemaWithResolver(Schema):
+    id: int
+
+    @staticmethod
+    def resolve_id(obj, context):
+        return context["request"].resolver_match.kwargs.get("id")
+
+
 @router.get("/request/build_absolute_uri")
 def request_build_absolute_uri(request):
     return request.build_absolute_uri()
@@ -27,6 +35,12 @@ def simple_get(request):
     return "test"
 
 
+
+@router.post("/test/{id}")
+def simple_post_with_path_arg(request, id: int, data: ClientTestSchemaWithResolver):
+    assert id == data.id
+    return data
+
 @router.get("/test-headers")
 def get_headers(request):
     return dict(request.headers)
@@ -35,6 +49,7 @@ def get_headers(request):
 @router.get("/test-cookies")
 def get_cookies(request):
     return dict(request.COOKIES)
+
 
 
 client = TestClient(router)
@@ -89,6 +104,15 @@ def test_json_as_body():
             == schema_instance.model_dump_json()
         )
 
+
+
+def test_request_resolver_match():
+    with mock.patch.object(client, "_call") as call:
+        test_id = "123"
+        client.post(f"/test/{test_id}")
+        request = call.call_args[0][1]
+
+        assert request.resolver_match.kwargs.get("id") == test_id
 
 headered_client = TestClient(router, headers={"A": "a", "B": "b"})
 
