@@ -45,6 +45,8 @@ from ninja.types import DictStrAny
 try:
     from pydantic.experimental.missing_sentinel import MISSING
 except ImportError:  # pragma: no cover
+    # pydantic <2.11 does not have the MISSING sentinel, and thus it cannot be used for many reasons.
+    # fake it here with object so it doesn't error
     MISSING = object()
 
 pydantic_version = list(map(int, pydantic.VERSION.split(".")[:2]))
@@ -101,7 +103,7 @@ class DjangoGetter:
         elif isinstance(result, getattr(QuerySet, "__origin__", QuerySet)):
             return list(result)
 
-        if result is not MISSING and callable(result):  # MISSING is callable in <3.11
+        if result is not MISSING and callable(result):
             return result()
 
         elif isinstance(result, FieldFile):

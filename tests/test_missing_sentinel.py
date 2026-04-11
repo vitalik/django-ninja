@@ -10,6 +10,7 @@ from ninja.orm import create_schema
 try:
     from pydantic.experimental.missing_sentinel import MISSING
 except ImportError:
+    # if MISSING cannot be imported, it can't be used as a type/value for pydantic
     pytest.skip(reason="MISSING sentinel cannot be imported", allow_module_level=True)
 
 
