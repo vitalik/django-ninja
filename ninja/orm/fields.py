@@ -136,6 +136,7 @@ def get_schema_field(
     optional: bool = False,
     nullable_type: Any = settings.NULLABLE_FIELD_UNION_TYPE,
     nullable_value: Any = settings.NULLABLE_FIELD_DEFAULT_VALUE,
+    pk_optional: bool = settings.PK_OPTIONAL,
 ) -> Tuple:
     "Returns pydantic field from django's model field"
     alias = None
@@ -154,6 +155,7 @@ def get_schema_field(
                 depth=depth,
                 nullable_type=nullable_type,
                 nullable_value=nullable_value,
+                pk_optional=pk_optional,
             )
 
         internal_type = field.related_model._meta.pk.get_internal_type()
@@ -188,7 +190,7 @@ def get_schema_field(
             ]
             raise ConfigError("\n".join(msg)) from e
 
-        if field.primary_key or blank or null or optional:
+        if (field.primary_key and pk_optional) or blank or null or optional:
             default = nullable_value
             nullable = True
 
@@ -234,7 +236,12 @@ def get_schema_field(
 
 @no_type_check
 def get_related_field_schema(
-    field: DjangoField, *, depth: int, nullable_type: Any, nullable_value: Any
+    field: DjangoField,
+    *,
+    depth: int,
+    nullable_type: Any,
+    nullable_value: Any,
+    pk_optional: bool,
 ) -> Tuple[OpenAPISchema]:
     from ninja.orm import create_schema
 
@@ -244,6 +251,7 @@ def get_related_field_schema(
         depth=depth - 1,
         nullable_type=nullable_type,
         nullable_value=nullable_value,
+        pk_optional=pk_optional,
     )
     default = ...
     if not field.concrete and field.auto_created or field.null:

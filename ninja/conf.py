@@ -39,6 +39,7 @@ class Settings(BaseModel):
     NULLABLE_FIELD_UNION_TYPE: Any = Field(
         None, alias="NINJA_NULLABLE_FIELD_UNION_TYPE"
     )
+    PK_OPTIONAL: bool = Field(True, alias="NINJA_PK_OPTIONAL")
 
 
 settings = Settings.model_validate(django_settings)

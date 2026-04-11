@@ -46,6 +46,7 @@ class SchemaFactory:
         base_class: Type[Schema] = Schema,
         nullable_type: Any = settings.NULLABLE_FIELD_UNION_TYPE,
         nullable_value: Any = settings.NULLABLE_FIELD_DEFAULT_VALUE,
+        pk_optional: bool = settings.PK_OPTIONAL,
     ) -> Type[Schema]:
         name = name or model.__name__
 
@@ -79,6 +80,7 @@ class SchemaFactory:
                 optional=optional_fields and (fld.name in optional_fields),
                 nullable_type=nullable_type,
                 nullable_value=nullable_value,
+                pk_optional=pk_optional,
             )
             definitions[fld.name] = (python_type, field_info)
 

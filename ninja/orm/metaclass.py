@@ -21,6 +21,7 @@ class MetaConf:
     fields_optional: Union[List[str], str, None] = None
     nullable_type: Any = settings.NULLABLE_FIELD_UNION_TYPE
     nullable_value: Any = settings.NULLABLE_FIELD_DEFAULT_VALUE
+    pk_optional: bool = settings.PK_OPTIONAL
 
     @staticmethod
     def from_schema_class(name: str, namespace: dict) -> "MetaConf":
@@ -48,6 +49,7 @@ class MetaConf:
             nullable_value = getattr(
                 meta, "nullable_value", settings.NULLABLE_FIELD_DEFAULT_VALUE
             )
+            pk_optional = getattr(meta, "pk_optional", settings.PK_OPTIONAL)
 
         else:
             raise ConfigError(f"ModelSchema class '{name}' requires a 'Meta' subclass")
@@ -71,6 +73,7 @@ class MetaConf:
             fields_optional=optional_fields,
             nullable_type=nullable_type,
             nullable_value=nullable_value,
+            pk_optional=pk_optional,
         )
 
 
@@ -121,6 +124,7 @@ class ModelSchemaMetaclass(ResolverMetaclass):
                     custom_fields=custom_fields,
                     nullable_type=meta_conf.nullable_type,
                     nullable_value=meta_conf.nullable_value,
+                    pk_optional=meta_conf.pk_optional,
                     base_class=cls,
                 )
                 model_schema.__doc__ = cls.__doc__
