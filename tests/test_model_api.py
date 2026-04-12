@@ -259,7 +259,9 @@ def test_schema_response_schema_has_id(category_schema):
 
 def test_schema_create_schema_excludes_id(category_schema):
     """CategoryCreateSchema must NOT include the auto PK 'id'."""
-    props = category_schema["components"]["schemas"]["CategoryCreateSchema"]["properties"]
+    props = category_schema["components"]["schemas"]["CategoryCreateSchema"][
+        "properties"
+    ]
     assert "id" not in props
     assert "title" in props
     required = category_schema["components"]["schemas"]["CategoryCreateSchema"].get(
@@ -302,9 +304,9 @@ def test_schema_exclude_field_removed_from_all_component_schemas():
     for schema_name in ("EventSchema", "EventCreateSchema", "EventPatchSchema"):
         assert schema_name in components, f"Missing schema: {schema_name}"
         props = components[schema_name]["properties"]
-        assert "category" not in props, (
-            f"'category' should be excluded from {schema_name}"
-        )
+        assert (
+            "category" not in props
+        ), f"'category' should be excluded from {schema_name}"
 
 
 # ===========================================================================

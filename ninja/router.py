@@ -713,7 +713,9 @@ class Router:
             "partial_update",
             "destroy",
         ]
-        ops: List[str] = list(_all_operations) if operations is None else list(operations)
+        ops: List[str] = (
+            list(_all_operations) if operations is None else list(operations)
+        )
 
         model_name: str = model.__name__
 
@@ -726,14 +728,11 @@ class Router:
         auto_field_names = [
             f.name
             for f in model._meta.get_fields()
-            if hasattr(f, "get_internal_type")
-            and f.get_internal_type() in _auto_types
+            if hasattr(f, "get_internal_type") and f.get_internal_type() in _auto_types
         ]
 
         m2m_field_names = {
-            f.name
-            for f in model._meta.get_fields()
-            if isinstance(f, ManyToManyField)
+            f.name for f in model._meta.get_fields() if isinstance(f, ManyToManyField)
         }
 
         response_schema = _create_schema(
@@ -754,7 +753,7 @@ class Router:
                 model,
                 name=f"{model_name}PatchSchema",
                 fields=write_fields,
-                optional_fields="__all__",
+                optional_fields="__all__",  # type: ignore[arg-type]
             )
         else:
             write_exclude: List[str] = list(auto_field_names)
@@ -771,7 +770,7 @@ class Router:
                 model,
                 name=f"{model_name}PatchSchema",
                 exclude=write_exclude,
-                optional_fields="__all__",
+                optional_fields="__all__",  # type: ignore[arg-type]
             )
 
         return {
@@ -856,7 +855,7 @@ class Router:
         # --- LIST ---
         if "list" in ops:
 
-            def list_view(request):  # type: ignore[return]
+            def list_view(request: Any) -> Any:
                 return model.objects.all()
 
             list_view.__name__ = f"list_{model_name.lower()}"
@@ -864,7 +863,7 @@ class Router:
                 collection_path,
                 ["GET"],
                 list_view,
-                response=TypingList[response_schema],  # type: ignore[valid-type]
+                response=TypingList[response_schema],
                 summary=f"List {model_name}",
                 tags=_tags,
                 **_auth_kwarg,
@@ -873,7 +872,7 @@ class Router:
         # --- RETRIEVE ---
         if "retrieve" in ops:
 
-            def retrieve_view(request, id):  # type: ignore[return]
+            def retrieve_view(request: Any, id: Any) -> Any:
                 return get_object_or_404(model, pk=id)
 
             retrieve_view.__name__ = f"retrieve_{model_name.lower()}"
@@ -891,10 +890,10 @@ class Router:
         # --- CREATE ---
         if "create" in ops:
 
-            def create_view(request, payload):  # type: ignore[return]
+            def create_view(request: Any, payload: Any) -> Any:
                 data = payload.model_dump()
                 m2m_data = {k: data.pop(k) for k in m2m_field_names if k in data}
-                instance = model(**data)
+                instance: Any = model(**data)
                 instance.save()
                 for field_name, values in m2m_data.items():
                     getattr(instance, field_name).set(values)
@@ -915,8 +914,8 @@ class Router:
         # --- UPDATE (PUT) ---
         if "update" in ops:
 
-            def update_view(request, id, payload):  # type: ignore[return]
-                instance = get_object_or_404(model, pk=id)
+            def update_view(request: Any, id: Any, payload: Any) -> Any:
+                instance: Any = get_object_or_404(model, pk=id)
                 data = payload.model_dump()
                 m2m_data = {k: data.pop(k) for k in m2m_field_names if k in data}
                 for attr, value in data.items():
@@ -944,8 +943,8 @@ class Router:
         # --- PARTIAL UPDATE (PATCH) ---
         if "partial_update" in ops:
 
-            def partial_update_view(request, id, payload):  # type: ignore[return]
-                instance = get_object_or_404(model, pk=id)
+            def partial_update_view(request: Any, id: Any, payload: Any) -> Any:
+                instance: Any = get_object_or_404(model, pk=id)
                 data = payload.model_dump(exclude_unset=True)
                 m2m_data = {k: data.pop(k) for k in m2m_field_names if k in data}
                 for attr, value in data.items():
@@ -973,8 +972,8 @@ class Router:
         # --- DESTROY (DELETE) ---
         if "destroy" in ops:
 
-            def destroy_view(request, id):
-                instance = get_object_or_404(model, pk=id)
+            def destroy_view(request: Any, id: Any) -> HttpResponse:
+                instance: Any = get_object_or_404(model, pk=id)
                 instance.delete()
                 return HttpResponse(status=204)
 
@@ -1055,7 +1054,7 @@ class Router:
         # --- LIST ---
         if "list" in ops:
 
-            async def list_view(request):  # type: ignore[return]
+            async def list_view(request: Any) -> Any:
                 return [obj async for obj in model.objects.all()]
 
             list_view.__name__ = f"list_{model_name.lower()}"
@@ -1063,7 +1062,7 @@ class Router:
                 collection_path,
                 ["GET"],
                 list_view,
-                response=TypingList[response_schema],  # type: ignore[valid-type]
+                response=TypingList[response_schema],
                 summary=f"List {model_name}",
                 tags=_tags,
                 **_auth_kwarg,
@@ -1072,7 +1071,7 @@ class Router:
         # --- RETRIEVE ---
         if "retrieve" in ops:
 
-            async def retrieve_view(request, id):  # type: ignore[return]
+            async def retrieve_view(request: Any, id: Any) -> Any:
                 return await aget_object_or_404(model, pk=id)
 
             retrieve_view.__name__ = f"retrieve_{model_name.lower()}"
@@ -1090,10 +1089,10 @@ class Router:
         # --- CREATE ---
         if "create" in ops:
 
-            async def create_view(request, payload):  # type: ignore[return]
+            async def create_view(request: Any, payload: Any) -> Any:
                 data = payload.model_dump()
                 m2m_data = {k: data.pop(k) for k in m2m_field_names if k in data}
-                instance = model(**data)
+                instance: Any = model(**data)
                 await instance.asave()
                 for field_name, values in m2m_data.items():
                     await getattr(instance, field_name).aset(values)
@@ -1114,8 +1113,8 @@ class Router:
         # --- UPDATE (PUT) ---
         if "update" in ops:
 
-            async def update_view(request, id, payload):  # type: ignore[return]
-                instance = await aget_object_or_404(model, pk=id)
+            async def update_view(request: Any, id: Any, payload: Any) -> Any:
+                instance: Any = await aget_object_or_404(model, pk=id)
                 data = payload.model_dump()
                 m2m_data = {k: data.pop(k) for k in m2m_field_names if k in data}
                 for attr, value in data.items():
@@ -1143,8 +1142,8 @@ class Router:
         # --- PARTIAL UPDATE (PATCH) ---
         if "partial_update" in ops:
 
-            async def partial_update_view(request, id, payload):  # type: ignore[return]
-                instance = await aget_object_or_404(model, pk=id)
+            async def partial_update_view(request: Any, id: Any, payload: Any) -> Any:
+                instance: Any = await aget_object_or_404(model, pk=id)
                 data = payload.model_dump(exclude_unset=True)
                 m2m_data = {k: data.pop(k) for k in m2m_field_names if k in data}
                 for attr, value in data.items():
@@ -1172,8 +1171,8 @@ class Router:
         # --- DESTROY (DELETE) ---
         if "destroy" in ops:
 
-            async def destroy_view(request, id):
-                instance = await aget_object_or_404(model, pk=id)
+            async def destroy_view(request: Any, id: Any) -> HttpResponse:
+                instance: Any = await aget_object_or_404(model, pk=id)
                 await instance.adelete()
                 return HttpResponse(status=204)
 
