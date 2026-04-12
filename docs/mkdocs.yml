@@ -70,6 +70,7 @@ nav:
           - guides/response/pagination.md
           - guides/response/response-renderers.md
       - Splitting your API with Routers: guides/routers.md
+      - Auto-generated Model API: guides/model-api.md
       - guides/decorators.md
       - guides/authentication.md
       - guides/throttling.md
