@@ -206,7 +206,6 @@ class Router:
         exclude_defaults: Optional[bool] = None,
         exclude_none: Optional[bool] = None,
     ) -> None:
-        self._frozen = False
         self.auth = auth
         self.throttle = throttle
         self.tags = tags
@@ -220,17 +219,6 @@ class Router:
         self._decorators: List[Tuple[Callable, DecoratorMode]] = []
         self._parent_routers: WeakSet[Router] = WeakSet()
         self._mounted_apis: WeakSet[NinjaAPI] = WeakSet()
-
-    def _freeze(self) -> None:
-        """Mark router as frozen - no more modifications allowed."""
-        self._frozen = True
-        for _, child_router, _ in self._routers:
-            child_router._freeze()
-
-    def _check_not_frozen(self) -> None:
-        """Thaw router templates so mounted APIs can be rebuilt after mutation."""
-        if self._frozen:
-            self._frozen = False
 
     def _collect_affected_apis(
         self, visited_router_ids: Optional[Set[int]] = None
@@ -520,7 +508,6 @@ class Router:
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> None:
-        self._check_not_frozen()
         path = re.sub(r"\{uuid:(\w+)\}", r"{uuidstr:\1}", path, flags=re.IGNORECASE)
         # django by default convert strings to UUIDs
         # but we want to keep them as strings to let pydantic handle conversion/validation
@@ -607,8 +594,6 @@ class Router:
         throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         tags: Optional[List[str]] = None,
     ) -> None:
-        self._check_not_frozen()
-
         if isinstance(router, str):
             router = import_string(router)
             assert isinstance(router, Router)
@@ -650,7 +635,6 @@ class Router:
             mode: "operation" (default) applies after validation,
                   "view" applies before validation
         """
-        self._check_not_frozen()
         if mode not in ("view", "operation"):
             raise ValueError(f"Invalid decorator mode: {mode}")
         self._decorators.append((decorator, mode))

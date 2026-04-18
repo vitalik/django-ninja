@@ -148,14 +148,12 @@ class TestLateRegistration:
         api.add_router("", router)
 
         patterns = api.urls[0]
-        assert router._frozen is True
 
         @router.get("/new")
         def new_endpoint(request):
             return ["new"]
 
         assert api.urls[0] is patterns
-        assert router._frozen is True
 
         client = TestClient(api)
         response = client.get("/new")

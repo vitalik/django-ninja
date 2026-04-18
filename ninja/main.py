@@ -553,10 +553,6 @@ class NinjaAPI:
                 BoundRouter(mount, self) for mount in all_mounts
             ]
 
-            # Freeze all templates after binding
-            for mount in all_mounts:
-                mount.template._freeze()
-
             # Update _routers for backward compat (include all nested routers)
             self._routers = [(m.prefix, m.template) for m in all_mounts]
 
