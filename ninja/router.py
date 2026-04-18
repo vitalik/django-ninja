@@ -8,9 +8,11 @@ from typing import (
     Iterator,
     List,
     Optional,
+    Set,
     Tuple,
     Union,
 )
+from weakref import WeakSet
 
 from django.urls import URLPattern
 from django.urls import path as django_path
@@ -18,7 +20,6 @@ from django.utils.module_loading import import_string
 
 from ninja.constants import NOT_SET, NOT_SET_TYPE
 from ninja.decorators import DecoratorMode
-from ninja.errors import ConfigError
 from ninja.operation import PathView
 from ninja.throttling import BaseThrottle
 from ninja.types import TCallable
@@ -29,6 +30,10 @@ if TYPE_CHECKING:
 
 
 __all__ = ["Router", "RouterMount", "BoundRouter"]
+
+
+def _same_value(left: Any, right: Any) -> bool:
+    return left is right or left == right
 
 
 @dataclass
@@ -213,6 +218,8 @@ class Router:
         self.path_operations: Dict[str, PathView] = {}
         self._routers: List[Tuple[str, Router, Optional[List[str]]]] = []
         self._decorators: List[Tuple[Callable, DecoratorMode]] = []
+        self._parent_routers: WeakSet[Router] = WeakSet()
+        self._mounted_apis: WeakSet[NinjaAPI] = WeakSet()
 
     def _freeze(self) -> None:
         """Mark router as frozen - no more modifications allowed."""
@@ -221,12 +228,29 @@ class Router:
             child_router._freeze()
 
     def _check_not_frozen(self) -> None:
-        """Raise error if attempting to modify a frozen router."""
+        """Thaw router templates so mounted APIs can be rebuilt after mutation."""
         if self._frozen:
-            raise ConfigError(
-                "Cannot modify router after URLs have been generated. "
-                "Routers become frozen when api.urls is accessed."
-            )
+            self._frozen = False
+
+    def _collect_affected_apis(
+        self, visited_router_ids: Optional[Set[int]] = None
+    ) -> Set["NinjaAPI"]:
+        if visited_router_ids is None:
+            visited_router_ids = set()
+
+        router_id = id(self)
+        if router_id in visited_router_ids:
+            return set()
+        visited_router_ids.add(router_id)
+
+        affected_apis = set(self._mounted_apis)
+        for parent in tuple(self._parent_routers):
+            affected_apis.update(parent._collect_affected_apis(visited_router_ids))
+        return affected_apis
+
+    def _invalidate_affected_apis(self) -> None:
+        for api in self._collect_affected_apis():
+            api._on_router_tree_changed()
 
     def get(
         self,
@@ -539,6 +563,7 @@ class Router:
             openapi_extra=openapi_extra,
         )
         # Note: API binding is now done via BoundRouter when urls are generated
+        self._invalidate_affected_apis()
 
         return None
 
@@ -588,6 +613,18 @@ class Router:
             router = import_string(router)
             assert isinstance(router, Router)
 
+        requested_auth = router.auth if auth is NOT_SET else auth
+        requested_throttle = router.throttle if throttle is NOT_SET else throttle
+        for existing_prefix, existing_router, existing_tags in self._routers:
+            if (
+                existing_prefix == prefix
+                and existing_router is router
+                and existing_tags == tags
+                and _same_value(existing_router.auth, requested_auth)
+                and _same_value(existing_router.throttle, requested_throttle)
+            ):
+                return
+
         # Store child router with its mount-time configuration
         # Auth/throttle are stored on the child router template,
         # but tags from add_router are stored separately to distinguish from Router(tags=...)
@@ -597,6 +634,8 @@ class Router:
             router.throttle = throttle
         # Store as (prefix, router, tags) - tags here are mount-level overrides
         self._routers.append((prefix, router, tags))
+        router._parent_routers.add(self)
+        self._invalidate_affected_apis()
 
     def add_decorator(
         self,
@@ -615,6 +654,7 @@ class Router:
         if mode not in ("view", "operation"):
             raise ValueError(f"Invalid decorator mode: {mode}")
         self._decorators.append((decorator, mode))
+        self._invalidate_affected_apis()
 
     def build_routers(
         self,

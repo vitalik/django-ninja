@@ -13,7 +13,7 @@ from typing import (
 )
 
 from django.http import HttpRequest, HttpResponse
-from django.urls import URLPattern, URLResolver, reverse
+from django.urls import URLPattern, URLResolver, clear_url_caches, reverse
 from django.utils.module_loading import import_string
 
 from ninja.constants import NOT_SET, NOT_SET_TYPE
@@ -42,6 +42,10 @@ __all__ = ["NinjaAPI"]
 _E = TypeVar("_E", bound=Exception)
 Exc = Union[_E, Type[_E]]
 ExcHandler = Callable[[HttpRequest, Exc[_E]], HttpResponse]
+
+
+def _same_value(left: Any, right: Any) -> bool:
+    return left is right or left == right
 
 
 class NinjaAPI:
@@ -113,6 +117,8 @@ class NinjaAPI:
             Tuple[str, Router, Any, Any, Optional[List[str]], Optional[str]]
         ] = []
         self._bound_routers_cache: Optional[List[BoundRouter]] = None
+        self._url_patterns: List[Union[URLResolver, URLPattern]] = []
+        self._urls_materialized = False
 
         # Backward compat: keep _routers list populated
         self._routers: List[Tuple[str, Router]] = []
@@ -415,16 +421,27 @@ class NinjaAPI:
             url_name_prefix: Prefix for URL names (required when mounting same router multiple times)
             parent_router: Internal use - parent router for nested routers
         """
-        # Prevent adding routers after URLs have been generated
-        if self._bound_routers_cache is not None:
-            raise ConfigError(
-                "Cannot add routers after URLs have been generated. "
-                "Add all routers before accessing api.urls"
-            )
-
         if isinstance(router, str):
             router = import_string(router)
             assert isinstance(router, Router)
+
+        for (
+            existing_prefix,
+            existing_router,
+            existing_auth,
+            existing_throttle,
+            existing_tags,
+            existing_url_name_prefix,
+        ) in self._router_registrations:
+            if (
+                existing_prefix == prefix
+                and existing_router is router
+                and _same_value(existing_auth, auth)
+                and _same_value(existing_throttle, throttle)
+                and existing_tags == tags
+                and existing_url_name_prefix == url_name_prefix
+            ):
+                return
 
         # Check for duplicate router template - require url_name_prefix
         existing_templates = {reg[1] for reg in self._router_registrations}
@@ -445,8 +462,8 @@ class NinjaAPI:
             url_name_prefix,
         ))
 
-        # Backward compat: keep _routers list updated (just the top-level router)
-        self._routers.append((prefix, router))
+        router._mounted_apis.add(self)
+        self._on_router_tree_changed()
 
     @property
     def urls(self) -> Tuple[List[Union[URLResolver, URLPattern]], str, str]:
@@ -464,6 +481,24 @@ class NinjaAPI:
             self.urls_namespace.split(":")[-1],
             # ^ if api included into nested urls, we only care about last bit here
         )
+
+    def _invalidate_router_cache(self) -> None:
+        self._bound_routers_cache = None
+        self._routers = [
+            (prefix, router)
+            for prefix, router, _, _, _, _ in self._router_registrations
+        ]
+
+    def _on_router_tree_changed(self) -> None:
+        self._invalidate_router_cache()
+        if self._urls_materialized:
+            self._rebuild_urls_in_place()
+
+    def _rebuild_urls_in_place(self) -> None:
+        self._invalidate_router_cache()
+        self._url_patterns[:] = self._build_url_patterns()
+        self._urls_materialized = True
+        clear_url_caches()
 
     def _get_bound_routers(self) -> List[BoundRouter]:
         """Get or create bound router instances."""
@@ -527,7 +562,7 @@ class NinjaAPI:
 
         return self._bound_routers_cache
 
-    def _get_urls(self) -> List[Union[URLResolver, URLPattern]]:
+    def _build_url_patterns(self) -> List[Union[URLResolver, URLPattern]]:
         result = get_openapi_urls(self)
 
         for bound_router in self._get_bound_routers():
@@ -535,6 +570,11 @@ class NinjaAPI:
 
         result.append(get_root_url(self))
         return result
+
+    def _get_urls(self) -> List[Union[URLResolver, URLPattern]]:
+        if not self._urls_materialized or self._bound_routers_cache is None:
+            self._rebuild_urls_in_place()
+        return self._url_patterns
 
     def get_root_path(self, path_params: DictStrAny) -> str:
         name = f"{self.urls_namespace}:api-root"
