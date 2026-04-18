@@ -175,6 +175,27 @@ async def test_auser():
     assert response.json() == {"has_user": True}
 
 
+@pytest.mark.asyncio
+async def test_async_client_patch_and_delete():
+    api = NinjaAPI()
+
+    @api.patch("/item")
+    async def patch_item(request):
+        return {"method": "PATCH"}
+
+    @api.delete("/item")
+    async def delete_item(request):
+        return {"method": "DELETE"}
+
+    async_client = TestAsyncClient(api)
+
+    response = await async_client.patch("/item")
+    assert response.json() == {"method": "PATCH"}
+
+    response = await async_client.delete("/item")
+    assert response.json() == {"method": "DELETE"}
+
+
 def test_resolver_match():
     response = client.get("/check-resolver-match/42")
     assert response.json() == {"has_resolver_match": True, "item_id": 42}
