@@ -32,10 +32,6 @@ if TYPE_CHECKING:
 __all__ = ["Router", "RouterMount", "BoundRouter"]
 
 
-def _same_value(left: Any, right: Any) -> bool:
-    return left is right or left == right
-
-
 @dataclass
 class RouterMount:
     """
@@ -605,8 +601,14 @@ class Router:
                 existing_prefix == prefix
                 and existing_router is router
                 and existing_tags == tags
-                and _same_value(existing_router.auth, requested_auth)
-                and _same_value(existing_router.throttle, requested_throttle)
+                and (
+                    existing_router.auth is requested_auth
+                    or existing_router.auth == requested_auth
+                )
+                and (
+                    existing_router.throttle is requested_throttle
+                    or existing_router.throttle == requested_throttle
+                )
             ):
                 return
 

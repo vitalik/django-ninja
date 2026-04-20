@@ -44,10 +44,6 @@ Exc = Union[_E, Type[_E]]
 ExcHandler = Callable[[HttpRequest, Exc[_E]], HttpResponse]
 
 
-def _same_value(left: Any, right: Any) -> bool:
-    return left is right or left == right
-
-
 class NinjaAPI:
     """
     Ninja API
@@ -436,8 +432,8 @@ class NinjaAPI:
             if (
                 existing_prefix == prefix
                 and existing_router is router
-                and _same_value(existing_auth, auth)
-                and _same_value(existing_throttle, throttle)
+                and (existing_auth is auth or existing_auth == auth)
+                and (existing_throttle is throttle or existing_throttle == throttle)
                 and existing_tags == tags
                 and existing_url_name_prefix == url_name_prefix
             ):
