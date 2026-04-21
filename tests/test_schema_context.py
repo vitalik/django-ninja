@@ -57,6 +57,9 @@ def test_request_context():
     resp = client.post("/resolve_ctx", json={})
     assert resp.status_code == 200, resp.content
     assert resp.json() == {
-        "other": {"value": {"request": "<request>"}, "other": None},
+        "other": {
+            "value": {"path_params": "{}", "request": "<request>"},
+            "other": None,
+        },
         "value": {"request": "<request>", "response_status": "200"},
     }
