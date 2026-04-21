@@ -682,6 +682,514 @@ class Router:
 
         return [mount, *child_mounts]
 
+    def _prepare_model_api(
+        self,
+        model: Any,
+        fields: Optional[List[str]],
+        exclude: Optional[List[str]],
+        tags: Optional[List[str]],
+        auth: Any,
+        operations: Optional[List[str]],
+    ) -> Dict[str, Any]:
+        """
+        Build schemas and shared config for add_model_api / add_async_model_api.
+
+        Returns a dict with keys: model_name, pk_python_type, m2m_field_names,
+        response_schema, create_schema_cls, patch_schema_cls, operations,
+        tags, auth_kwarg.
+        """
+        from typing import List as TypingList
+
+        from django.db.models import ManyToManyField
+
+        from ninja.orm import create_schema as _create_schema
+        from ninja.orm.fields import TYPES
+
+        _all_operations = [
+            "list",
+            "retrieve",
+            "create",
+            "update",
+            "partial_update",
+            "destroy",
+        ]
+        ops: List[str] = (
+            list(_all_operations) if operations is None else list(operations)
+        )
+
+        model_name: str = model.__name__
+
+        pk_field = model._meta.pk
+        pk_python_type = (
+            TYPES.get(pk_field.get_internal_type(), int) if pk_field else int
+        )
+
+        _auto_types = {"AutoField", "BigAutoField", "SmallAutoField"}
+        auto_field_names = [
+            f.name
+            for f in model._meta.get_fields()
+            if hasattr(f, "get_internal_type") and f.get_internal_type() in _auto_types
+        ]
+
+        m2m_field_names = {
+            f.name for f in model._meta.get_fields() if isinstance(f, ManyToManyField)
+        }
+
+        response_schema = _create_schema(
+            model,
+            name=f"{model_name}Schema",
+            fields=fields,
+            exclude=exclude,
+        )
+
+        if fields:
+            write_fields = [f for f in fields if f not in auto_field_names]
+            create_schema_cls = _create_schema(
+                model,
+                name=f"{model_name}CreateSchema",
+                fields=write_fields,
+            )
+            patch_schema_cls = _create_schema(
+                model,
+                name=f"{model_name}PatchSchema",
+                fields=write_fields,
+                optional_fields="__all__",  # type: ignore[arg-type]
+            )
+        else:
+            write_exclude: List[str] = list(auto_field_names)
+            if exclude:
+                for _f in exclude:
+                    if _f not in write_exclude:
+                        write_exclude.append(_f)
+            create_schema_cls = _create_schema(
+                model,
+                name=f"{model_name}CreateSchema",
+                exclude=write_exclude,
+            )
+            patch_schema_cls = _create_schema(
+                model,
+                name=f"{model_name}PatchSchema",
+                exclude=write_exclude,
+                optional_fields="__all__",  # type: ignore[arg-type]
+            )
+
+        return {
+            "model_name": model_name,
+            "path_prefix": model_name.lower(),
+            "pk_python_type": pk_python_type,
+            "m2m_field_names": m2m_field_names,
+            "response_schema": response_schema,
+            "create_schema_cls": create_schema_cls,
+            "patch_schema_cls": patch_schema_cls,
+            "operations": ops,
+            "tags": tags or [model_name],
+            "auth_kwarg": {} if auth is NOT_SET else {"auth": auth},
+            # expose for convenience inside the view-registration methods
+            "_TypingList": TypingList,
+        }
+
+    def add_model_api(
+        self,
+        model: Any,
+        *,
+        fields: Optional[List[str]] = None,
+        exclude: Optional[List[str]] = None,
+        tags: Optional[List[str]] = None,
+        auth: Any = NOT_SET,
+        operations: Optional[List[str]] = None,
+    ) -> None:
+        """
+        Automatically generate synchronous CRUD endpoints for a Django model.
+
+        Generated endpoints (all relative to the router prefix):
+        - GET /       - List all instances
+        - GET /{id}   - Retrieve a single instance by primary key
+        - POST /      - Create a new instance (responds 201)
+        - PUT /{id}   - Full update of an instance
+        - PATCH /{id} - Partial update of an instance
+        - DELETE /{id} - Delete an instance (responds 204)
+
+        Args:
+            model: Django model class to generate endpoints for.
+            fields: Fields to include in the response schema. Default: all.
+            exclude: Fields to exclude from the response schema.
+            tags: OpenAPI tags applied to all generated endpoints.
+                  Defaults to the model class name.
+            auth: Authentication override for all generated endpoints.
+            operations: Subset of operations to generate. Possible values:
+                        "list", "retrieve", "create", "update",
+                        "partial_update", "destroy". Default: all.
+
+        Example::
+
+            router = Router()
+            router.add_model_api(MyModel)
+
+            # Only GET endpoints:
+            router.add_model_api(MyModel, operations=["list", "retrieve"])
+
+            # Custom field selection:
+            router.add_model_api(MyModel, exclude=["internal_field"])
+        """
+        from django.http import HttpResponse
+        from django.shortcuts import get_object_or_404
+
+        from ninja.responses import Status
+
+        cfg = self._prepare_model_api(model, fields, exclude, tags, auth, operations)
+        model_name = cfg["model_name"]
+        prefix = cfg["path_prefix"]
+        pk_python_type = cfg["pk_python_type"]
+        m2m_field_names = cfg["m2m_field_names"]
+        response_schema = cfg["response_schema"]
+        create_schema_cls = cfg["create_schema_cls"]
+        patch_schema_cls = cfg["patch_schema_cls"]
+        ops = cfg["operations"]
+        _tags = cfg["tags"]
+        _auth_kwarg: Dict[str, Any] = cfg["auth_kwarg"]
+        TypingList = cfg["_TypingList"]
+
+        collection_path = f"/{prefix}/"
+        detail_path = f"/{prefix}/{{id}}"
+
+        # --- LIST ---
+        if "list" in ops:
+
+            def list_view(request: Any) -> Any:
+                return model.objects.all()
+
+            list_view.__name__ = f"list_{model_name.lower()}"
+            self.add_api_operation(
+                collection_path,
+                ["GET"],
+                list_view,
+                response=TypingList[response_schema],
+                summary=f"List {model_name}",
+                tags=_tags,
+                **_auth_kwarg,
+            )
+
+        # --- RETRIEVE ---
+        if "retrieve" in ops:
+
+            def retrieve_view(request: Any, id: Any) -> Any:
+                return get_object_or_404(model, pk=id)
+
+            retrieve_view.__name__ = f"retrieve_{model_name.lower()}"
+            retrieve_view.__annotations__ = {"id": pk_python_type}
+            self.add_api_operation(
+                detail_path,
+                ["GET"],
+                retrieve_view,
+                response=response_schema,
+                summary=f"Retrieve {model_name}",
+                tags=_tags,
+                **_auth_kwarg,
+            )
+
+        # --- CREATE ---
+        if "create" in ops:
+
+            def create_view(request: Any, payload: Any) -> Any:
+                data = payload.model_dump()
+                m2m_data = {k: data.pop(k) for k in m2m_field_names if k in data}
+                instance: Any = model(**data)
+                instance.save()
+                for field_name, values in m2m_data.items():
+                    getattr(instance, field_name).set(values)
+                return Status(201, instance)
+
+            create_view.__name__ = f"create_{model_name.lower()}"
+            create_view.__annotations__ = {"payload": create_schema_cls}
+            self.add_api_operation(
+                collection_path,
+                ["POST"],
+                create_view,
+                response={201: response_schema},
+                summary=f"Create {model_name}",
+                tags=_tags,
+                **_auth_kwarg,
+            )
+
+        # --- UPDATE (PUT) ---
+        if "update" in ops:
+
+            def update_view(request: Any, id: Any, payload: Any) -> Any:
+                instance: Any = get_object_or_404(model, pk=id)
+                data = payload.model_dump()
+                m2m_data = {k: data.pop(k) for k in m2m_field_names if k in data}
+                for attr, value in data.items():
+                    setattr(instance, attr, value)
+                instance.save()
+                for field_name, values in m2m_data.items():
+                    getattr(instance, field_name).set(values)
+                return instance
+
+            update_view.__name__ = f"update_{model_name.lower()}"
+            update_view.__annotations__ = {
+                "id": pk_python_type,
+                "payload": create_schema_cls,
+            }
+            self.add_api_operation(
+                detail_path,
+                ["PUT"],
+                update_view,
+                response=response_schema,
+                summary=f"Update {model_name}",
+                tags=_tags,
+                **_auth_kwarg,
+            )
+
+        # --- PARTIAL UPDATE (PATCH) ---
+        if "partial_update" in ops:
+
+            def partial_update_view(request: Any, id: Any, payload: Any) -> Any:
+                instance: Any = get_object_or_404(model, pk=id)
+                data = payload.model_dump(exclude_unset=True)
+                m2m_data = {k: data.pop(k) for k in m2m_field_names if k in data}
+                for attr, value in data.items():
+                    setattr(instance, attr, value)
+                instance.save()
+                for field_name, values in m2m_data.items():
+                    getattr(instance, field_name).set(values)
+                return instance
+
+            partial_update_view.__name__ = f"partial_update_{model_name.lower()}"
+            partial_update_view.__annotations__ = {
+                "id": pk_python_type,
+                "payload": patch_schema_cls,
+            }
+            self.add_api_operation(
+                detail_path,
+                ["PATCH"],
+                partial_update_view,
+                response=response_schema,
+                summary=f"Partial Update {model_name}",
+                tags=_tags,
+                **_auth_kwarg,
+            )
+
+        # --- DESTROY (DELETE) ---
+        if "destroy" in ops:
+
+            def destroy_view(request: Any, id: Any) -> HttpResponse:
+                instance: Any = get_object_or_404(model, pk=id)
+                instance.delete()
+                return HttpResponse(status=204)
+
+            destroy_view.__name__ = f"destroy_{model_name.lower()}"
+            destroy_view.__annotations__ = {
+                "id": pk_python_type,
+                "return": HttpResponse,
+            }
+            self.add_api_operation(
+                detail_path,
+                ["DELETE"],
+                destroy_view,
+                summary=f"Delete {model_name}",
+                tags=_tags,
+                **_auth_kwarg,
+            )
+
+    def add_async_model_api(
+        self,
+        model: Any,
+        *,
+        fields: Optional[List[str]] = None,
+        exclude: Optional[List[str]] = None,
+        tags: Optional[List[str]] = None,
+        auth: Any = NOT_SET,
+        operations: Optional[List[str]] = None,
+    ) -> None:
+        """
+        Automatically generate asynchronous CRUD endpoints for a Django model.
+
+        Identical to :meth:`add_model_api` in every respect (paths, schemas,
+        status codes, tags) but every view function is ``async def``, making
+        full use of Django's async ORM (``asave``, ``adelete``, ``aset``,
+        ``aget_object_or_404``, ``async for``).
+
+        Requires Django ≥ 4.1 (async ORM) and an ASGI server (e.g. uvicorn).
+
+        Args:
+            model: Django model class to generate endpoints for.
+            fields: Fields to include in the response schema. Default: all.
+            exclude: Fields to exclude from the response schema.
+            tags: OpenAPI tags applied to all generated endpoints.
+                  Defaults to the model class name.
+            auth: Authentication override for all generated endpoints.
+            operations: Subset of operations to generate. Possible values:
+                        "list", "retrieve", "create", "update",
+                        "partial_update", "destroy". Default: all.
+
+        Example::
+
+            router = Router()
+            router.add_async_model_api(MyModel)
+
+            # Only read endpoints:
+            router.add_async_model_api(MyModel, operations=["list", "retrieve"])
+        """
+        from django.http import HttpResponse
+        from django.shortcuts import aget_object_or_404
+
+        from ninja.responses import Status
+
+        cfg = self._prepare_model_api(model, fields, exclude, tags, auth, operations)
+        model_name = cfg["model_name"]
+        prefix = cfg["path_prefix"]
+        pk_python_type = cfg["pk_python_type"]
+        m2m_field_names = cfg["m2m_field_names"]
+        response_schema = cfg["response_schema"]
+        create_schema_cls = cfg["create_schema_cls"]
+        patch_schema_cls = cfg["patch_schema_cls"]
+        ops = cfg["operations"]
+        _tags = cfg["tags"]
+        _auth_kwarg: Dict[str, Any] = cfg["auth_kwarg"]
+        TypingList = cfg["_TypingList"]
+
+        collection_path = f"/{prefix}/"
+        detail_path = f"/{prefix}/{{id}}"
+
+        # --- LIST ---
+        if "list" in ops:
+
+            async def list_view(request: Any) -> Any:
+                return [obj async for obj in model.objects.all()]
+
+            list_view.__name__ = f"list_{model_name.lower()}"
+            self.add_api_operation(
+                collection_path,
+                ["GET"],
+                list_view,
+                response=TypingList[response_schema],
+                summary=f"List {model_name}",
+                tags=_tags,
+                **_auth_kwarg,
+            )
+
+        # --- RETRIEVE ---
+        if "retrieve" in ops:
+
+            async def retrieve_view(request: Any, id: Any) -> Any:
+                return await aget_object_or_404(model, pk=id)
+
+            retrieve_view.__name__ = f"retrieve_{model_name.lower()}"
+            retrieve_view.__annotations__ = {"id": pk_python_type}
+            self.add_api_operation(
+                detail_path,
+                ["GET"],
+                retrieve_view,
+                response=response_schema,
+                summary=f"Retrieve {model_name}",
+                tags=_tags,
+                **_auth_kwarg,
+            )
+
+        # --- CREATE ---
+        if "create" in ops:
+
+            async def create_view(request: Any, payload: Any) -> Any:
+                data = payload.model_dump()
+                m2m_data = {k: data.pop(k) for k in m2m_field_names if k in data}
+                instance: Any = model(**data)
+                await instance.asave()
+                for field_name, values in m2m_data.items():
+                    await getattr(instance, field_name).aset(values)
+                return Status(201, instance)
+
+            create_view.__name__ = f"create_{model_name.lower()}"
+            create_view.__annotations__ = {"payload": create_schema_cls}
+            self.add_api_operation(
+                collection_path,
+                ["POST"],
+                create_view,
+                response={201: response_schema},
+                summary=f"Create {model_name}",
+                tags=_tags,
+                **_auth_kwarg,
+            )
+
+        # --- UPDATE (PUT) ---
+        if "update" in ops:
+
+            async def update_view(request: Any, id: Any, payload: Any) -> Any:
+                instance: Any = await aget_object_or_404(model, pk=id)
+                data = payload.model_dump()
+                m2m_data = {k: data.pop(k) for k in m2m_field_names if k in data}
+                for attr, value in data.items():
+                    setattr(instance, attr, value)
+                await instance.asave()
+                for field_name, values in m2m_data.items():
+                    await getattr(instance, field_name).aset(values)
+                return instance
+
+            update_view.__name__ = f"update_{model_name.lower()}"
+            update_view.__annotations__ = {
+                "id": pk_python_type,
+                "payload": create_schema_cls,
+            }
+            self.add_api_operation(
+                detail_path,
+                ["PUT"],
+                update_view,
+                response=response_schema,
+                summary=f"Update {model_name}",
+                tags=_tags,
+                **_auth_kwarg,
+            )
+
+        # --- PARTIAL UPDATE (PATCH) ---
+        if "partial_update" in ops:
+
+            async def partial_update_view(request: Any, id: Any, payload: Any) -> Any:
+                instance: Any = await aget_object_or_404(model, pk=id)
+                data = payload.model_dump(exclude_unset=True)
+                m2m_data = {k: data.pop(k) for k in m2m_field_names if k in data}
+                for attr, value in data.items():
+                    setattr(instance, attr, value)
+                await instance.asave()
+                for field_name, values in m2m_data.items():
+                    await getattr(instance, field_name).aset(values)
+                return instance
+
+            partial_update_view.__name__ = f"partial_update_{model_name.lower()}"
+            partial_update_view.__annotations__ = {
+                "id": pk_python_type,
+                "payload": patch_schema_cls,
+            }
+            self.add_api_operation(
+                detail_path,
+                ["PATCH"],
+                partial_update_view,
+                response=response_schema,
+                summary=f"Partial Update {model_name}",
+                tags=_tags,
+                **_auth_kwarg,
+            )
+
+        # --- DESTROY (DELETE) ---
+        if "destroy" in ops:
+
+            async def destroy_view(request: Any, id: Any) -> HttpResponse:
+                instance: Any = await aget_object_or_404(model, pk=id)
+                await instance.adelete()
+                return HttpResponse(status=204)
+
+            destroy_view.__name__ = f"destroy_{model_name.lower()}"
+            destroy_view.__annotations__ = {
+                "id": pk_python_type,
+                "return": HttpResponse,
+            }
+            self.add_api_operation(
+                detail_path,
+                ["DELETE"],
+                destroy_view,
+                summary=f"Delete {model_name}",
+                tags=_tags,
+                **_auth_kwarg,
+            )
+
     def _apply_decorators_to_operations(self) -> None:
         """Apply all stored decorators to operations in this router"""
         for path_view in self.path_operations.values():
