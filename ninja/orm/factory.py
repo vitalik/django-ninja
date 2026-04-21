@@ -60,6 +60,14 @@ class SchemaFactory:
             if optional_fields == "__all__":
                 optional_fields = [f.name for f in model_fields_list]
 
+        declared_fields = self._get_declared_fields(base_class)
+
+        model_fields_list = [
+            f
+            for f in self._selected_model_fields(model, fields, exclude)
+            if f.name not in declared_fields
+        ]
+
         definitions = {}
         for fld in model_fields_list:
             python_type, field_info = get_schema_field(
@@ -162,6 +170,17 @@ class SchemaFactory:
                 # skipping relations
                 continue
             yield cast(DjangoField, fld)
+
+    def _get_declared_fields(self, base_class: Type[Schema]) -> Set[str]:
+        # Extracts field names already declared in the base Schema class to prevent duplicates when generating model fields.
+        if not hasattr(self, "_annotation_cache"):
+            self._annotation_cache: Dict[Type[Schema], Set[str]] = {}
+
+        if base_class not in self._annotation_cache:
+            self._annotation_cache[base_class] = set(
+                getattr(base_class, "__annotations__", {}).keys()
+            )
+        return self._annotation_cache[base_class]
 
 
 factory = SchemaFactory()
