@@ -4,7 +4,7 @@ from typing import Any
 from django.http import HttpRequest
 from typing_extensions import Annotated
 
-from ninja import Body, BodyEx, NinjaAPI, P, Schema
+from ninja import Body, BodyEx, NinjaAPI, P, Schema, Status
 
 
 class Payload(Schema):
@@ -34,3 +34,16 @@ def new_way(request: HttpRequest, data: Body[Payload]) -> Any:
 @api.post("/new_way_ex")
 def new_way_ex(request: HttpRequest, data: BodyEx[Payload, P(title="A title")]) -> Any:
     data.s.find("")
+
+
+# -- Status generic --
+
+
+@api.post("/status_generic")
+def status_generic(request: HttpRequest) -> Status[dict]:
+    return Status(200, {"key": "value"})
+
+
+@api.post("/status_generic_schema")
+def status_generic_schema(request: HttpRequest) -> Status[Payload]:
+    return Status(200, Payload(x=1, y=2.0, s="test"))

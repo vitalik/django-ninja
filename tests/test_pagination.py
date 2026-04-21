@@ -617,6 +617,24 @@ def test_11_max_limit_set_and_exceeded():
     }
 
 
+def test_limit_offset_per_endpoint_max_limit():
+    new_api = NinjaAPI()
+    new_client = TestClient(new_api)
+
+    @new_api.get("/items_capped", response=List[int])
+    @paginate(LimitOffsetPagination, max_limit=50)
+    def items_capped(request, **kwargs):
+        return ITEMS
+
+    # client requests more than allowed -> silently clamped to 50
+    response = new_client.get("/items_capped?limit=500").json()
+    assert response == {"items": ITEMS[:50], "count": 100}
+
+    # client requests under the cap -> pass-through
+    response = new_client.get("/items_capped?limit=30").json()
+    assert response == {"items": ITEMS[:30], "count": 100}
+
+
 def test_case11():
     response = client.get("/items_11").json()
     assert response == {"results": list(range(100)), "count": 100}

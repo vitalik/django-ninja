@@ -78,14 +78,14 @@ class NinjaClientBase:
     ) -> "NinjaResponse":
         return self.request("DELETE", path, data, json, **request_params)
 
-    def request(
+    def _prepare_request(
         self,
         method: str,
         path: str,
         data: Optional[Dict] = None,
         json: Any = None,
         **request_params: Any,
-    ) -> "NinjaResponse":
+    ) -> Tuple[Callable, Mock, Dict]:
         if json is not None:
             request_params["body"] = json_dumps(json, cls=NinjaJSONEncoder)
         if data is None:
@@ -100,7 +100,19 @@ class NinjaClientBase:
                 **self.cookies,
                 **request_params.get("COOKIES", {}),
             }
-        func, request, kwargs = self._resolve(method, path, data, request_params)
+        return self._resolve(method, path, data, request_params)
+
+    def request(
+        self,
+        method: str,
+        path: str,
+        data: Optional[Dict] = None,
+        json: Any = None,
+        **request_params: Any,
+    ) -> "NinjaResponse":
+        func, request, kwargs = self._prepare_request(
+            method, path, data, json, **request_params
+        )
         return self._call(func, request, kwargs)  # type: ignore
 
     @property
@@ -125,6 +137,7 @@ class NinjaClientBase:
             match = url.resolve(url_path)
             if match:
                 request = self._build_request(method, path, data, request_params)
+                request.resolver_match = match
                 return match.func, request, match.kwargs
         raise Exception(f'Cannot resolve "{path}"')
 
@@ -134,18 +147,24 @@ class NinjaClientBase:
         request = Mock(spec=HttpRequest)
         request.method = method
         request.path = path
-        request.body = ""
+        request.body = b""
         request.COOKIES = {}
         request._dont_enforce_csrf_checks = True
         request.is_secure.return_value = False
         request.build_absolute_uri = build_absolute_uri
 
         request.auth = None
+        request.session = {}
         request.user = Mock()
         if "user" not in request_params:
             request.user.is_authenticated = False
             request.user.is_staff = False
             request.user.is_superuser = False
+
+        async def _auser() -> Any:
+            return request.user
+
+        request.auser = _auser
 
         request.META = request_params.pop("META", {"REMOTE_ADDR": "127.0.0.1"})
         request.FILES = request_params.pop("FILES", {})
@@ -186,6 +205,10 @@ class NinjaClientBase:
 
         for k, v in request_params.items():
             setattr(request, k, v)
+
+        if isinstance(request.body, str):
+            request.body = request.body.encode("utf-8")
+
         return request
 
 
@@ -195,6 +218,60 @@ class TestClient(NinjaClientBase):
 
 
 class TestAsyncClient(NinjaClientBase):
+    async def request(  # type: ignore[override]
+        self,
+        method: str,
+        path: str,
+        data: Optional[Dict] = None,
+        json: Any = None,
+        **request_params: Any,
+    ) -> "NinjaResponse":
+        func, request, kwargs = self._prepare_request(
+            method, path, data, json, **request_params
+        )
+        return await self._call(func, request, kwargs)
+
+    async def get(  # type: ignore[override]
+        self, path: str, data: Optional[Dict] = None, **request_params: Any
+    ) -> "NinjaResponse":
+        return await self.request("GET", path, data, **request_params)
+
+    async def post(  # type: ignore[override]
+        self,
+        path: str,
+        data: Optional[Dict] = None,
+        json: Any = None,
+        **request_params: Any,
+    ) -> "NinjaResponse":
+        return await self.request("POST", path, data, json, **request_params)
+
+    async def patch(  # type: ignore[override]
+        self,
+        path: str,
+        data: Optional[Dict] = None,
+        json: Any = None,
+        **request_params: Any,
+    ) -> "NinjaResponse":
+        return await self.request("PATCH", path, data, json, **request_params)
+
+    async def put(  # type: ignore[override]
+        self,
+        path: str,
+        data: Optional[Dict] = None,
+        json: Any = None,
+        **request_params: Any,
+    ) -> "NinjaResponse":
+        return await self.request("PUT", path, data, json, **request_params)
+
+    async def delete(  # type: ignore[override]
+        self,
+        path: str,
+        data: Optional[Dict] = None,
+        json: Any = None,
+        **request_params: Any,
+    ) -> "NinjaResponse":
+        return await self.request("DELETE", path, data, json, **request_params)
+
     async def _call(
         self, func: Callable, request: Mock, kwargs: Dict
     ) -> "NinjaResponse":

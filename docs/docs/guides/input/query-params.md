@@ -93,10 +93,10 @@ the parameter `b` with a `bool` value of `True`, otherwise as `False`.
 
 Date can be both date string and integer (unix timestamp):
 
-<pre style="font-size: .85em; background-color:rgb(245, 245, 245);">
+```
 http://localhost:8000/api/example?d=<strong>1577836800</strong>  # same as 2020-01-01
 http://localhost:8000/api/example?d=<strong>2020-01-01</strong>
-</pre>
+```
 
 
 ### Using Schema

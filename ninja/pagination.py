@@ -104,6 +104,14 @@ class LimitOffsetPagination(AsyncPaginationBase):
         )
         offset: int = Field(0, ge=0)
 
+    def __init__(
+        self,
+        max_limit: int = settings.PAGINATION_MAX_LIMIT,
+        **kwargs: Any,
+    ) -> None:
+        self.max_limit = max_limit
+        super().__init__(**kwargs)
+
     def paginate_queryset(
         self,
         queryset: QuerySet,
@@ -112,7 +120,7 @@ class LimitOffsetPagination(AsyncPaginationBase):
         **params: Any,
     ) -> Any:
         offset = pagination.offset
-        limit: int = min(pagination.limit, settings.PAGINATION_MAX_LIMIT)
+        limit: int = min(pagination.limit, self.max_limit)
         return {
             self.items_attribute: queryset[offset : offset + limit],
             "count": self._items_count(queryset),
@@ -126,7 +134,7 @@ class LimitOffsetPagination(AsyncPaginationBase):
         **params: Any,
     ) -> Any:
         offset = pagination.offset
-        limit: int = min(pagination.limit, settings.PAGINATION_MAX_LIMIT)
+        limit: int = min(pagination.limit, self.max_limit)
         if isinstance(queryset, QuerySet):
             items = [obj async for obj in queryset[offset : offset + limit]]
         else:

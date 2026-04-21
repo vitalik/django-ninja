@@ -157,6 +157,13 @@ async_client = TestAsyncClient(async_api)
 # -- Tests: Status basic --
 
 
+class TestStatusGeneric:
+    def test_subscriptable_at_runtime(self):
+        """Status[dict] should not raise TypeError (GitHub #1693)."""
+        alias = Status[dict]
+        assert alias is not None
+
+
 class TestStatusBasic:
     def test_status_with_dict(self):
         response = client.get("/status_dict")

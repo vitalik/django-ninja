@@ -1,3 +1,4 @@
+import inspect
 from datetime import datetime
 from http import HTTPStatus
 from unittest import mock
@@ -5,9 +6,9 @@ from unittest import mock
 import pytest
 from django.utils import timezone
 
-from ninja import Router
+from ninja import NinjaAPI, Router
 from ninja.schema import Schema
-from ninja.testing import TestClient
+from ninja.testing import TestAsyncClient, TestClient
 
 router = Router()
 
@@ -35,6 +36,24 @@ def get_headers(request):
 @router.get("/test-cookies")
 def get_cookies(request):
     return dict(request.COOKIES)
+
+
+@router.post("/check-body-type")
+def check_body_type(request):
+    return {"is_bytes": isinstance(request.body, bytes)}
+
+
+@router.get("/check-session")
+def check_session(request):
+    return {"has_session": isinstance(request.session, dict)}
+
+
+@router.get("/check-resolver-match/{item_id}")
+def check_resolver_match(request, item_id: int):
+    return {
+        "has_resolver_match": request.resolver_match is not None,
+        "item_id": item_id,
+    }
 
 
 client = TestClient(router)
@@ -124,3 +143,75 @@ def test_headered_client_request_with_default_cookies():
 def test_headered_client_request_with_overwritten_and_additional_cookies():
     r = cookied_client.get("/test-cookies", COOKIES={"A": "na", "C": "nc"})
     assert r.json() == {"A": "na", "B": "b", "C": "nc"}
+
+
+def test_body_is_bytes_with_json():
+    response = client.post("/check-body-type", json={"key": "value"})
+    assert response.json() == {"is_bytes": True}
+
+
+def test_body_is_bytes_empty():
+    response = client.post("/check-body-type")
+    assert response.json() == {"is_bytes": True}
+
+
+def test_session_exists():
+    response = client.get("/check-session")
+    assert response.json() == {"has_session": True}
+
+
+@pytest.mark.asyncio
+async def test_auser():
+    api = NinjaAPI()
+
+    @api.get("/check-auser")
+    async def check_auser(request):
+        user = await request.auser()
+        return {"has_user": user is not None}
+
+    async_client = TestAsyncClient(api)
+    response = await async_client.get("/check-auser")
+    assert response.status_code == 200
+    assert response.json() == {"has_user": True}
+
+
+@pytest.mark.asyncio
+async def test_async_client_patch_and_delete():
+    api = NinjaAPI()
+
+    @api.patch("/item")
+    async def patch_item(request):
+        return {"method": "PATCH"}
+
+    @api.delete("/item")
+    async def delete_item(request):
+        return {"method": "DELETE"}
+
+    async_client = TestAsyncClient(api)
+
+    response = await async_client.patch("/item")
+    assert response.json() == {"method": "PATCH"}
+
+    response = await async_client.delete("/item")
+    assert response.json() == {"method": "DELETE"}
+
+
+def test_resolver_match():
+    response = client.get("/check-resolver-match/42")
+    assert response.json() == {"has_resolver_match": True, "item_id": 42}
+
+
+def test_async_client_methods_are_coroutines():
+    api = NinjaAPI()
+
+    @api.get("/dummy")
+    async def dummy(request):
+        return "ok"
+
+    async_client = TestAsyncClient(api)
+    assert inspect.iscoroutinefunction(async_client.get)
+    assert inspect.iscoroutinefunction(async_client.post)
+    assert inspect.iscoroutinefunction(async_client.put)
+    assert inspect.iscoroutinefunction(async_client.patch)
+    assert inspect.iscoroutinefunction(async_client.delete)
+    assert inspect.iscoroutinefunction(async_client.request)

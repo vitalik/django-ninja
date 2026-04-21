@@ -2,7 +2,7 @@ import asyncio
 import inspect
 import re
 from sys import version_info
-from typing import Any, Callable, ForwardRef, List, Set
+from typing import Any, Callable, Dict, ForwardRef, List, Set
 
 from django.urls import register_converter
 from django.urls.converters import UUIDConverter
@@ -18,10 +18,26 @@ __all__ = [
     "is_async",
 ]
 
+_FORWARDREF_KWARGS: Dict[str, Any]
+_STRING_KWARGS: Dict[str, Any]
+
+if version_info >= (3, 14):  # pragma: no cover
+    import annotationlib
+
+    _FORWARDREF_KWARGS = {
+        "annotation_format": annotationlib.Format.FORWARDREF,
+    }
+    _STRING_KWARGS = {
+        "annotation_format": annotationlib.Format.STRING,
+    }
+else:  # pragma: no cover
+    _FORWARDREF_KWARGS = {}
+    _STRING_KWARGS = {}
+
 
 def get_typed_signature(call: Callable[..., Any]) -> inspect.Signature:
     "Finds call signature and resolves all forwardrefs"
-    signature = inspect.signature(call)
+    signature = inspect.signature(call, **_FORWARDREF_KWARGS)
     globalns = getattr(call, "__globals__", {})
     typed_params = [
         inspect.Parameter(
@@ -66,7 +82,7 @@ def is_async(callable: Callable[..., Any]) -> bool:
 
 
 def has_kwargs(func: Callable[..., Any]) -> bool:
-    for param in inspect.signature(func).parameters.values():
+    for param in inspect.signature(func, **_STRING_KWARGS).parameters.values():
         if param.kind == param.VAR_KEYWORD:
             return True
     return False
@@ -74,7 +90,7 @@ def has_kwargs(func: Callable[..., Any]) -> bool:
 
 def get_args_names(func: Callable[..., Any]) -> List[str]:
     "returns list of function argument names"
-    return list(inspect.signature(func).parameters.keys())
+    return list(inspect.signature(func, **_STRING_KWARGS).parameters.keys())
 
 
 class UUIDStrConverter(UUIDConverter):
