@@ -1,4 +1,7 @@
+from ninja import NinjaAPI
 from ninja.security import HttpBearer
+
+api = NinjaAPI()
 
 
 class AuthBearer(HttpBearer):
