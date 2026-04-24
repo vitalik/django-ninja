@@ -371,6 +371,24 @@ def test_default():
     }
 
 
+def test_textfield_max_length_is_not_enforced():
+    class MyModel(models.Model):
+        text = models.TextField(max_length=5)
+
+        class Meta:
+            app_label = "tests"
+
+    Schema = create_schema(MyModel)
+
+    assert Schema.json_schema()["properties"]["text"] == {
+        "title": "Text",
+        "type": "string",
+    }
+
+    obj = type("Obj", (), {"text": "123456"})()
+    assert Schema.from_orm(obj).dict() == {"id": None, "text": "123456"}
+
+
 def test_fields_exclude():
     class SampleModel(models.Model):
         f1 = models.CharField()

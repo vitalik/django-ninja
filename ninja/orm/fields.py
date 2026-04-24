@@ -153,6 +153,9 @@ def get_schema_field(
         max_length = field_options.get("max_length")
 
         internal_type = field.get_internal_type()
+        if internal_type == "TextField":
+            # Django uses TextField.max_length for forms only, not validation.
+            max_length = None
         try:
             python_type = TYPES[internal_type]
         except KeyError as e:
