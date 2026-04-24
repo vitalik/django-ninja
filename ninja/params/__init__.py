@@ -43,7 +43,6 @@ if TYPE_CHECKING:  # pragma: nocover
     Cookie = Annotated[T, param_functions.Cookie()]
     File = Annotated[T, param_functions.File()]
     Form = Annotated[T, param_functions.Form()]
-    Header = Annotated[T, param_functions.Header()]
     Path = Annotated[T, param_functions.Path()]
     Query = Annotated[T, param_functions.Query()]
     # mypy does not like to extend already annotated params
@@ -52,7 +51,6 @@ if TYPE_CHECKING:  # pragma: nocover
     from typing_extensions import Annotated as CookieEx
     from typing_extensions import Annotated as FileEx
     from typing_extensions import Annotated as FormEx
-    from typing_extensions import Annotated as HeaderEx
     from typing_extensions import Annotated as PathEx
     from typing_extensions import Annotated as QueryEx
 else:
@@ -60,7 +58,6 @@ else:
     Cookie = ParamShortcut(param_functions.Cookie)
     File = ParamShortcut(param_functions.File)
     Form = ParamShortcut(param_functions.Form)
-    Header = ParamShortcut(param_functions.Header)
     Path = ParamShortcut(param_functions.Path)
     Query = ParamShortcut(param_functions.Query)
     # mypy does not like to extend already annotated params
@@ -69,9 +66,12 @@ else:
     CookieEx = Cookie
     FileEx = File
     FormEx = Form
-    HeaderEx = Header
     PathEx = Path
     QueryEx = Query
+
+
+Header = ParamShortcut(param_functions.Header)
+HeaderEx = Header
 
 
 def P(
