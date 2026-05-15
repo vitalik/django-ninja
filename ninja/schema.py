@@ -42,6 +42,13 @@ from typing_extensions import dataclass_transform
 from ninja.signature.utils import get_args_names, has_kwargs
 from ninja.types import DictStrAny
 
+try:
+    from pydantic.experimental.missing_sentinel import MISSING
+except ImportError:  # pragma: no cover
+    # pydantic <2.11 does not have the MISSING sentinel, and thus it cannot be used for many reasons.
+    # fake it here with None so it doesn't error
+    MISSING = None
+
 pydantic_version = list(map(int, pydantic.VERSION.split(".")[:2]))
 assert pydantic_version >= [2, 0], "Pydantic 2.0+ required"
 
@@ -191,7 +198,11 @@ class NinjaGenerateJsonSchema(GenerateJsonSchema):
         json_schema = self.generate_inner(schema["schema"])
 
         default = None
-        if "default" in schema and schema["default"] is not None:
+        if (
+            "default" in schema
+            and schema["default"] is not None
+            and schema["default"] is not MISSING
+        ):
             default = self.encode_default(schema["default"])
 
         if "$ref" in json_schema:
@@ -200,7 +211,7 @@ class NinjaGenerateJsonSchema(GenerateJsonSchema):
         else:
             result = json_schema
 
-        if default is not None:
+        if default is not None and default is not MISSING:
             result["default"] = default
 
         return result
