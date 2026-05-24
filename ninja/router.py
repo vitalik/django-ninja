@@ -111,7 +111,9 @@ class BoundRouter:
 
         # Clone operations and apply decorators
         self.path_operations: Dict[str, PathView] = {}
+        self.webhooks: Dict[str, PathView] = {}
         self._bind_operations()
+        self._bind_webhooks()
 
     def _bind_operations(self) -> None:
         """Clone operations from template and apply effective settings."""
@@ -167,6 +169,30 @@ class BoundRouter:
 
             self.path_operations[path] = cloned_view
 
+    def _bind_webhooks(self) -> None:
+        """Clone webhook payload definitions from template.
+
+        Webhooks are schema-only - they never run - so throttles and view/operation
+        decorators are not applied. Auth is still propagated so it shows up in
+        the generated OpenAPI ``security`` field for the webhook operation.
+        """
+        for name, path_view in self.template.webhooks.items():
+            cloned_view = path_view.clone()
+
+            for operation in cloned_view.operations:
+                operation.api = self.api
+
+                if operation.auth_param == NOT_SET:
+                    if self.auth != NOT_SET:
+                        operation._set_auth(self.auth)
+                    elif self.api.auth != NOT_SET:
+                        operation._set_auth(self.api.auth)
+
+                if operation.tags is None and self.tags is not None:  # type: ignore[has-type]
+                    operation.tags = self.tags  # type: ignore[has-type]
+
+            self.webhooks[name] = cloned_view
+
     def urls_paths(self, prefix: str) -> Iterator[URLPattern]:
         """Generate URL patterns for this bound router."""
         prefix = replace_path_param_notation(prefix)
@@ -211,6 +237,7 @@ class Router:
         self.exclude_none = exclude_none
 
         self.path_operations: Dict[str, PathView] = {}
+        self.webhooks: Dict[str, PathView] = {}
         self._routers: List[Tuple[str, Router, Optional[List[str]]]] = []
         self._decorators: List[Tuple[Callable, DecoratorMode]] = []
 
@@ -541,6 +568,112 @@ class Router:
         # Note: API binding is now done via BoundRouter when urls are generated
 
         return None
+
+    def webhook(
+        self,
+        name: str,
+        *,
+        methods: Optional[List[str]] = None,
+        auth: Any = NOT_SET,
+        response: Any = NOT_SET,
+        operation_id: Optional[str] = None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        deprecated: Optional[bool] = None,
+        by_alias: Optional[bool] = None,
+        exclude_unset: Optional[bool] = None,
+        exclude_defaults: Optional[bool] = None,
+        exclude_none: Optional[bool] = None,
+        include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
+    ) -> Callable[[TCallable], TCallable]:
+        """
+        Register a webhook payload definition for the OpenAPI 3.1 ``webhooks``
+        top-level field.
+
+        The decorated function is never called by django-ninja - its signature
+        is inspected only to derive the requestBody schema, exactly the way
+        regular endpoints do. No Django URL pattern is generated.
+        """
+        webhook_methods = ["POST"] if methods is None else methods
+
+        def decorator(view_func: TCallable) -> TCallable:
+            self.add_api_webhook(
+                name,
+                webhook_methods,
+                view_func,
+                auth=auth,
+                response=response,
+                operation_id=operation_id,
+                summary=summary,
+                description=description,
+                tags=tags,
+                deprecated=deprecated,
+                by_alias=by_alias,
+                exclude_unset=exclude_unset,
+                exclude_defaults=exclude_defaults,
+                exclude_none=exclude_none,
+                include_in_schema=include_in_schema,
+                openapi_extra=openapi_extra,
+            )
+            return view_func
+
+        return decorator
+
+    def add_api_webhook(
+        self,
+        name: str,
+        methods: List[str],
+        view_func: Callable,
+        *,
+        auth: Any = NOT_SET,
+        response: Any = NOT_SET,
+        operation_id: Optional[str] = None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        deprecated: Optional[bool] = None,
+        by_alias: Optional[bool] = None,
+        exclude_unset: Optional[bool] = None,
+        exclude_defaults: Optional[bool] = None,
+        exclude_none: Optional[bool] = None,
+        include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        self._check_not_frozen()
+
+        if name not in self.webhooks:
+            path_view = PathView()
+            self.webhooks[name] = path_view
+        else:
+            path_view = self.webhooks[name]
+
+        by_alias = by_alias is None and self.by_alias or by_alias
+        exclude_unset = exclude_unset is None and self.exclude_unset or exclude_unset
+        exclude_defaults = (
+            exclude_defaults is None and self.exclude_defaults or exclude_defaults
+        )
+        exclude_none = exclude_none is None and self.exclude_none or exclude_none
+
+        path_view.add_operation(
+            path=name,
+            methods=methods,
+            view_func=view_func,
+            auth=auth,
+            response=response,
+            operation_id=operation_id,
+            summary=summary,
+            description=description,
+            tags=tags,
+            deprecated=deprecated,
+            by_alias=by_alias,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
+            include_in_schema=include_in_schema,
+            openapi_extra=openapi_extra,
+        )
 
     def urls_paths(
         self, prefix: str, api: Optional["NinjaAPI"] = None
