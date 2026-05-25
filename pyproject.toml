@@ -63,9 +63,9 @@ test = [
     "pytest-django",
     "pytest-asyncio",
     "psycopg2-binary",
-    "mypy==1.7.1",
+    "mypy==1.13.0",
     "ruff==0.5.7",
-    "django-stubs",
+    "django-stubs[compatible-mypy]",
 ]
 doc = ["mkdocs", "mkdocs-material", "markdown-include", "mkdocstrings"]
 dev = ["pre-commit"]
