@@ -1,16 +1,16 @@
 import datetime
 from decimal import Decimal
-from typing import Any, Callable, Dict, List, Tuple, Type, TypeVar, Union, no_type_check
+from typing import Any, Callable, Dict, List, Tuple, Type, TypeVar, Union, cast
 from uuid import UUID
 
 from django.db.models import ManyToManyField
 from django.db.models.fields import Field as DjangoField
-from pydantic import IPvAnyAddress
+from pydantic import GetCoreSchemaHandler, GetJsonSchemaHandler, IPvAnyAddress
 from pydantic.fields import FieldInfo
+from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import PydanticUndefined, core_schema
 
 from ninja.errors import ConfigError
-from ninja.openapi.schema import OpenAPISchema
 from ninja.types import DictStrAny
 
 __all__ = ["create_m2m_link_type", "get_schema_field", "get_related_field_schema"]
@@ -43,7 +43,7 @@ class AnyObject:
         return value
 
 
-TYPES = {
+TYPES: dict[str, Any] = {
     "AutoField": int,
     "BigAutoField": int,
     "BigIntegerField": int,
@@ -86,15 +86,18 @@ def register_field(django_field: str, python_type: Any) -> None:
     TYPES[django_field] = python_type
 
 
-@no_type_check
 def create_m2m_link_type(type_: Type[TModel]) -> Type[TModel]:
     class M2MLink(type_):  # type: ignore
         @classmethod
-        def __get_pydantic_core_schema__(cls, source, handler):
+        def __get_pydantic_core_schema__(
+            cls, source_type: Any, handler: GetCoreSchemaHandler
+        ) -> core_schema.CoreSchema:
             return core_schema.with_info_plain_validator_function(cls._validate)
 
         @classmethod
-        def __get_pydantic_json_schema__(cls, schema, handler):
+        def __get_pydantic_json_schema__(
+            cls, core_schema: core_schema.CoreSchema, handler: GetJsonSchemaHandler
+        ) -> JsonSchemaValue:
             json_type = {
                 int: "integer",
                 str: "string",
@@ -104,33 +107,31 @@ def create_m2m_link_type(type_: Type[TModel]) -> Type[TModel]:
             return {"type": json_type}
 
         @classmethod
-        def _validate(cls, v: Any, _):
+        def _validate(cls, v: Any, _: core_schema.ValidationInfo[Any]) -> Any:
             try:
                 return v.pk  # when we output queryset - we have db instances
             except AttributeError:
-                return type_(v)  # when we read payloads we have primakey keys
+                return type_(v)  # type: ignore[call-arg] # when we read payloads we have primary keys
 
     return M2MLink
 
 
-@no_type_check
 def get_schema_field(
     field: DjangoField, *, depth: int = 0, optional: bool = False
-) -> Tuple:
+) -> Tuple[Any, FieldInfo]:
     "Returns pydantic field from django's model field"
     alias = None
-    default = ...
+    default: Any = ...
     default_factory = None
-    description = None
-    title = None
     max_length = None
     nullable = False
-    python_type = None
+    python_type: Type[Any]
 
     if field.is_relation:
         if depth > 0:
             return get_related_field_schema(field, depth=depth)
 
+        assert isinstance(field.related_model, type)
         internal_type = field.related_model._meta.pk.get_internal_type()
 
         if not field.concrete and field.auto_created or field.null or optional:
@@ -141,8 +142,8 @@ def get_schema_field(
 
         pk_type = TYPES.get(internal_type, int)
         if field.one_to_many or field.many_to_many:
-            m2m_type = create_m2m_link_type(pk_type)
-            python_type = List[m2m_type]  # type: ignore
+            m2m_type: Type[Any] = create_m2m_link_type(pk_type)
+            python_type = List[m2m_type]  # type: ignore[valid-type]
         else:
             python_type = pk_type
 
@@ -177,10 +178,10 @@ def get_schema_field(
         default = PydanticUndefined
 
     if nullable:
-        python_type = Union[python_type, None]  # aka Optional in 3.7+
+        python_type = Union[python_type, None]  # type: ignore[assignment]  # aka Optional in 3.7+
 
-    description = field.help_text or None
-    title = title_if_lower(field.verbose_name)
+    description = cast(str, field.help_text) or None
+    title = title_if_lower(cast(str, field.verbose_name))
 
     return (
         python_type,
@@ -197,13 +198,15 @@ def get_schema_field(
     )
 
 
-@no_type_check
-def get_related_field_schema(field: DjangoField, *, depth: int) -> Tuple[OpenAPISchema]:
+def get_related_field_schema(
+    field: DjangoField, *, depth: int
+) -> Tuple[Any, FieldInfo]:
     from ninja.orm import create_schema
 
     model = field.related_model
+    assert isinstance(model, type)
     schema = create_schema(model, depth=depth - 1)
-    default = ...
+    default: Any = ...
     if not field.concrete and field.auto_created or field.null:
         default = None
     if isinstance(field, ManyToManyField):
@@ -213,7 +216,7 @@ def get_related_field_schema(field: DjangoField, *, depth: int) -> Tuple[OpenAPI
         schema,
         FieldInfo(
             default=default,
-            description=field.help_text,
-            title=title_if_lower(field.verbose_name),
+            description=cast(str, field.help_text),
+            title=title_if_lower(cast(str, field.verbose_name)),
         ),
     )
