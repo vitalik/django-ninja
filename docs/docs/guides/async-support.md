@@ -42,7 +42,7 @@ async def say_after(request, delay: int, word: str):
 
 ### Run
 
-To run this code you need an ASGI server like <a href="https://www.uvicorn.org/" target="_blank">Uvicorn</a> or <a href="https://github.com/django/daphne" target="_blank">Daphne</a>. Let's use Uvicorn for, example:
+To run this code you need an ASGI server like <a href="https://www.uvicorn.dev/" target="_blank">Uvicorn</a> or <a href="https://github.com/django/daphne" target="_blank">Daphne</a>. Let's use Uvicorn for, example:
 
 To install Uvicorn, use:
 
