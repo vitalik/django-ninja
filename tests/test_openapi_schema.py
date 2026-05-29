@@ -209,6 +209,7 @@ def method_test_deprecated_example_examples(
             },
         },
     ),
+    param5: str = Query(..., examples=["Foo", "Bar"]),
     param4: int = Query(None, deprecated=True, include_in_schema=False),
 ):
     return dict(i=param2, f=param3)
@@ -803,6 +804,20 @@ def test_schema_deprecated_example_examples(schema):
                     "summary": "A normal example",
                     "value": "Foo",
                 },
+            },
+        },
+        {
+            "in": "query",
+            "name": "param5",
+            "required": True,
+            "schema": {
+                "title": "Param5",
+                "type": "string",
+                "examples": ["Foo", "Bar"],
+            },
+            "examples": {
+                "example1": {"value": "Foo"},
+                "example2": {"value": "Bar"},
             },
         },
     ]
