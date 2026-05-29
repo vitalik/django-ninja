@@ -1,3 +1,5 @@
+from typing import Union
+
 from ninja import Schema
 
 try:
@@ -8,8 +10,8 @@ except ImportError:
 
 class Contact(Schema):
     name: str
-    number: int | MISSING = MISSING
-    address: str | None = None
+    number: Union[int, MISSING] = MISSING
+    address: Union[str, None] = None
 
 
 def test_missing_serialization():
