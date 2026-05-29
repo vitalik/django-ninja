@@ -1,5 +1,5 @@
 from math import inf
-from typing import Dict, Optional, Set, Tuple
+from typing import Any, Dict, Optional, Set, Tuple
 
 from django.conf import settings as django_settings
 from pydantic import BaseModel, ConfigDict, Field
@@ -33,6 +33,13 @@ class Settings(BaseModel):
     FIX_REQUEST_FILES_METHODS: Set[str] = Field(
         {"PUT", "PATCH", "DELETE"}, alias="NINJA_FIX_REQUEST_FILES_METHODS"
     )
+    NULLABLE_FIELD_DEFAULT_VALUE: Any = Field(
+        None, alias="NINJA_NULLABLE_FIELD_DEFAULT_VALUE"
+    )
+    NULLABLE_FIELD_UNION_TYPE: Any = Field(
+        None, alias="NINJA_NULLABLE_FIELD_UNION_TYPE"
+    )
+    PK_OPTIONAL: bool = Field(True, alias="NINJA_PK_OPTIONAL")
 
 
 settings = Settings.model_validate(django_settings)
