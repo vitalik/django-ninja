@@ -1,7 +1,7 @@
 import sys
-from typing import Union
+from typing import Any, Tuple, Union
 
-__all__ = ["UNION_TYPES", "get_annotations_from_namespace"]
+__all__ = ["UNION_TYPES", "TYPE_ALIAS_TYPES", "get_annotations_from_namespace"]
 
 
 # python3.10+ syntax of creating a union or optional type (with str | int)
@@ -12,6 +12,20 @@ try:
     UNION_TYPES = (Union, UnionType)
 except ImportError:
     UNION_TYPES = (Union,)
+
+
+# python3.12+ `type X = ...` syntax (PEP 695) produces a TypeAliasType.
+# typing_extensions also backports it, and the two classes are not identical,
+# so collect every variant available to check against with isinstance().
+_alias_types = []
+for _module in ("typing", "typing_extensions"):
+    try:
+        _alias = getattr(__import__(_module), "TypeAliasType", None)
+    except ImportError:  # pragma: no cover
+        _alias = None
+    if _alias is not None and _alias not in _alias_types:
+        _alias_types.append(_alias)
+TYPE_ALIAS_TYPES: Tuple[Any, ...] = tuple(_alias_types)
 
 
 # python3.14+ no longer puts __annotations__ in the class namespace dict

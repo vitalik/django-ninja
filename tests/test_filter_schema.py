@@ -1,12 +1,13 @@
-from typing import Optional
+from typing import List, Optional
 
 import pytest
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Q, QuerySet
 from pydantic import Field
-from typing_extensions import Annotated
+from typing_extensions import Annotated, TypeAliasType
 
-from ninja import FilterConfigDict, FilterLookup, FilterSchema
+from ninja import FilterConfigDict, FilterLookup, FilterSchema, NinjaAPI, Query
+from ninja.testing import TestClient
 
 
 class FakeQS(QuerySet):
@@ -421,3 +422,62 @@ def test_pydantic_field_with_extra_warns():
         assert issubclass(w[0].category, DeprecationWarning)
         assert "deprecated" in str(w[0].message).lower()
         assert "FilterLookup" in str(w[0].message)
+
+
+# Regression tests for issue #1720:
+# A PEP 695 `type X = ...` alias (a TypeAliasType) used in a FilterSchema was
+# not unwrapped, so a list alias failed query parsing with "Input should be a
+# valid list" and a FilterLookup inside the alias was silently dropped.
+# TypeAliasType(...) is the runtime object that `type X = ...` produces; using
+# the constructor keeps these tests importable on Python < 3.12.
+
+NameListAlias = TypeAliasType(
+    "NameListAlias", Annotated[Optional[List[str]], FilterLookup("name__in")]
+)
+PlainNameAlias = TypeAliasType("PlainNameAlias", Annotated[Optional[str], "meta"])
+
+
+def test_filter_lookup_from_list_type_alias():
+    """FilterLookup inside a `type` list alias is still applied (issue #1720)."""
+
+    class DummyFilterSchema(FilterSchema):
+        name: NameListAlias = Field(default=None)
+
+    filter_instance = DummyFilterSchema(name=["a", "b"])
+    q = filter_instance.get_filter_expression()
+    assert q == Q(name__in=["a", "b"])
+
+
+def test_list_type_alias_query_parsing():
+    """A list `type` alias in a FilterSchema parses repeated query params as a
+    list instead of failing with a list_type error (issue #1720)."""
+    api = NinjaAPI()
+
+    class DummyFilterSchema(FilterSchema):
+        name: NameListAlias = Field(default=None)
+
+    @api.get("/books")
+    def list_books(request, filters: Query[DummyFilterSchema]):
+        return {"q": str(filters.get_filter_expression())}
+
+    client = TestClient(api)
+    response = client.get("/books?name=Test&name=Test%201")
+    assert response.status_code == 200, response.json()
+    assert response.json() == {"q": "(AND: ('name__in', ['Test', 'Test 1']))"}
+
+
+def test_non_list_type_alias_still_works():
+    """A non-list `type` alias keeps working unchanged (regression guard)."""
+    api = NinjaAPI()
+
+    class DummyFilterSchema(FilterSchema):
+        name: PlainNameAlias = Field(default=None)
+
+    @api.get("/books")
+    def list_books(request, filters: Query[DummyFilterSchema]):
+        return {"q": str(filters.get_filter_expression())}
+
+    client = TestClient(api)
+    response = client.get("/books?name=Test")
+    assert response.status_code == 200, response.json()
+    assert response.json() == {"q": "(AND: ('name', 'Test'))"}
