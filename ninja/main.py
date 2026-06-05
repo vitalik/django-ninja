@@ -339,7 +339,6 @@ class NinjaAPI:
         self,
         name: str,
         *,
-        methods: Optional[List[str]] = None,
         auth: Any = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
@@ -355,13 +354,11 @@ class NinjaAPI:
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         """
-        Register a payload definition for the OpenAPI 3.1 ``webhooks`` top-level
-        field. The decorated function is never invoked; its signature is used
-        only to derive the requestBody schema. No URL is registered.
+        OpenAPI 3.1 ``webhooks`` payload definition. The function is never
+        invoked; its signature is read only to derive the requestBody schema.
         """
         return self.default_router.webhook(
             name,
-            methods=methods,
             auth=auth is NOT_SET and self.auth or auth,
             response=response,
             operation_id=operation_id,

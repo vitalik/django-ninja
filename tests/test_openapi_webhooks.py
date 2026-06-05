@@ -78,7 +78,6 @@ def test_webhook_shares_components_with_paths():
     assert webhook_op["requestBody"]["content"]["application/json"]["schema"] == {
         "$ref": "#/components/schemas/Pet"
     }
-    # Pet is defined exactly once, both sides $ref it
     assert list(schema["components"]["schemas"].keys()) == ["Pet"]
 
 
@@ -106,17 +105,11 @@ def test_webhook_does_not_register_url_pattern():
     def pet_created(request, payload: Pet):
         pass
 
-    # Touch api.urls to materialise URL patterns
     url_patterns, _, _ = api.urls
-
-    # The route names exposed by the API should only be the openapi/docs/root
-    # entries plus any real operations - never a webhook name.
     names = {getattr(p, "name", None) for p in url_patterns}
     assert "pet_created" not in names
     assert "petCreated" not in names
 
-    # And the webhook callable itself is not reachable - TestClient raises
-    # when no URL pattern resolves the path.
     client = TestClient(api)
     with pytest.raises(Exception, match='Cannot resolve "/petCreated"'):
         client.post("/petCreated", json={"id": 1, "name": "Rex"})
@@ -131,8 +124,6 @@ def test_empty_webhooks_preserves_schema_shape():
 
     schema = api.get_openapi_schema()
 
-    # The webhooks key must NOT appear when no webhooks are registered, so
-    # existing tooling and snapshot assertions stay byte-for-byte stable.
     assert "webhooks" not in schema
 
 
@@ -157,9 +148,10 @@ def test_webhook_response_models_documented():
 def test_webhook_with_custom_methods():
     api = NinjaAPI()
 
-    @api.webhook("petUpdated", methods=["PUT"])
     def pet_updated(request, payload: Pet):
         pass
+
+    api.add_api_webhook("petUpdated", ["PUT"], pet_updated)
 
     schema = api.get_openapi_schema()
 

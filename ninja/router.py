@@ -170,24 +170,23 @@ class BoundRouter:
             self.path_operations[path] = cloned_view
 
     def _bind_webhooks(self) -> None:
-        """Clone webhook payload definitions from template.
-
-        Webhooks are schema-only - they never run - so throttles and view/operation
-        decorators are not applied. Auth is still propagated so it shows up in
-        the generated OpenAPI ``security`` field for the webhook operation.
-        """
+        """Clone webhooks from template and apply effective settings."""
+        # Webhooks never run, so throttles and decorators are not applied.
         for name, path_view in self.template.webhooks.items():
             cloned_view = path_view.clone()
 
             for operation in cloned_view.operations:
+                # Bind to API
                 operation.api = self.api
 
+                # Apply auth inheritance
                 if operation.auth_param == NOT_SET:
                     if self.auth != NOT_SET:
                         operation._set_auth(self.auth)
                     elif self.api.auth != NOT_SET:
                         operation._set_auth(self.api.auth)
 
+                # Apply tags inheritance
                 if operation.tags is None and self.tags is not None:  # type: ignore[has-type]
                     operation.tags = self.tags  # type: ignore[has-type]
 
@@ -573,7 +572,6 @@ class Router:
         self,
         name: str,
         *,
-        methods: Optional[List[str]] = None,
         auth: Any = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
@@ -588,20 +586,10 @@ class Router:
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
-        """
-        Register a webhook payload definition for the OpenAPI 3.1 ``webhooks``
-        top-level field.
-
-        The decorated function is never called by django-ninja - its signature
-        is inspected only to derive the requestBody schema, exactly the way
-        regular endpoints do. No Django URL pattern is generated.
-        """
-        webhook_methods = ["POST"] if methods is None else methods
-
         def decorator(view_func: TCallable) -> TCallable:
             self.add_api_webhook(
                 name,
-                webhook_methods,
+                ["POST"],
                 view_func,
                 auth=auth,
                 response=response,
@@ -642,7 +630,6 @@ class Router:
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> None:
         self._check_not_frozen()
-
         if name not in self.webhooks:
             path_view = PathView()
             self.webhooks[name] = path_view

@@ -41,9 +41,7 @@ class OpenAPISchema(dict):
         self.securitySchemes: DictStrAny = {}
         self.all_operation_ids: Set = set()
         extra_info = api.openapi_extra.get("info", {})
-        # Schemas referenced by webhook payloads share the same components.schemas
-        # bucket as path operations. get_paths() / get_webhooks() must run before
-        # get_components() so any payload models they pull in are registered.
+        # paths and webhooks must be collected before get_components() so their schemas are registered
         paths = self.get_paths()
         webhooks = self.get_webhooks()
         items: List[Tuple[str, Any]] = [
@@ -95,12 +93,11 @@ class OpenAPISchema(dict):
         for bound_router in self.api._get_bound_routers():
             for name, path_view in bound_router.webhooks.items():
                 path_methods = self.methods(path_view.operations)
-                if not path_methods:
-                    continue
-                if name in result:
-                    result[name].update(path_methods)
-                else:
-                    result[name] = path_methods
+                if path_methods:
+                    try:
+                        result[name].update(path_methods)
+                    except KeyError:
+                        result[name] = path_methods
         return result
 
     def methods(self, operations: list) -> DictStrAny:
