@@ -72,8 +72,35 @@ Raised when request data does not validate
 Used to throw http error with status code from any place of the code
 
 #### `django.http.Http404`
- 
- Django's default 404 exception (can be returned f.e. with `get_object_or_404`)
+
+Django's default 404 exception (can be returned f.e. with `get_object_or_404`)
+
+> **Note:** The `@api.exception_handler(Http404)` only catches `Http404` exceptions raised **within Ninja route handlers**. It does **not** intercept requests to URLs that are simply not registered in Django's URL configuration — those never reach Ninja and are handled directly by Django.
+
+```python
+from django.shortcuts import get_object_or_404
+from django.http import Http404
+
+@api.exception_handler(Http404)
+def handle_404(request, exc):
+    return api.create_response(request, {"message": "Not found"}, status=404)
+
+# This WILL trigger the handler above
+@api.get("/items/{item_id}")
+def get_item(request, item_id: int):
+    return get_object_or_404(Item, id=item_id)
+
+# Requests to undefined URLs (e.g. /api/undefined-route)
+# will NOT trigger this handler — Django handles them before reaching Ninja
+```
+
+To customize 404 responses for undefined URLs globally, use Django's standard
+`handler404` in your `urls.py`:
+
+```python
+# urls.py
+handler404 = "myapp.views.custom_404"
+```
 
 #### `Exception`
  
