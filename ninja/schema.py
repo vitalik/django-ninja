@@ -96,7 +96,7 @@ class DjangoGetter:
         elif isinstance(result, getattr(QuerySet, "__origin__", QuerySet)):
             return list(result)
 
-        if callable(result):
+        if callable(result) and not getattr(result, "alters_data", False):
             return result()
 
         elif isinstance(result, FieldFile):

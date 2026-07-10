@@ -227,3 +227,37 @@ def test_schema_skips_validation_when_validate_assignment_False(
         assert schema_inst.str_var == 5
     except ValidationError as ve:
         raise AssertionError() from ve
+
+
+def test_callable_with_alters_data_not_called():
+    """Callables with alters_data=True must not be invoked (issue #1686)."""
+
+    class FakeModel:
+        name = "Widget"
+
+        def delete(self):
+            raise AssertionError("delete() should not be called during serialization")
+
+        delete.alters_data = True
+
+    class SafeSchema(Schema):
+        name: str
+
+    result = SafeSchema.from_orm(FakeModel())
+    assert result.dict() == {"name": "Widget"}
+
+
+def test_safe_callable_still_called():
+    """Callables without alters_data are still called as before."""
+
+    class FakeModel:
+        name = "Widget"
+
+        def get_label(self):
+            return "my-label"
+
+    class LabelSchema(Schema):
+        label: str = Field(..., alias="get_label")
+
+    result = LabelSchema.from_orm(FakeModel())
+    assert result.dict() == {"label": "my-label"}
