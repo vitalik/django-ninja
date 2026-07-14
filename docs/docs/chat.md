@@ -13,6 +13,24 @@ Please feel free to share any questions or describe any problems you're encounte
     --serenity-answer-code-bg: #fafafa;
     --serenity-widget-bg: #ffffff;
 }
+
+[data-md-color-scheme="slate"] .serenity_app {
+    --serenity-widget-bg: var(--md-default-bg-color);
+    --serenity-answer-code-bg: var(--md-code-bg-color);
+
+    --serenity-widget-text: var(--md-default-fg-color);
+    --serenity-widget-placeholder: color-mix(
+        in srgb,
+        var(--md-default-fg-color) 60%,
+        transparent
+    );
+    --serenity-chat-powered: color-mix(
+        in srgb,
+        var(--md-default-fg-color) 50%,
+        transparent
+    );
+}
+
 </style>
 
 <div id="serenity"></div>
