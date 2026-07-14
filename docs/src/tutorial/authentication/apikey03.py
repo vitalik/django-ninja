@@ -1,4 +1,7 @@
+from ninja import NinjaAPI
 from ninja.security import APIKeyCookie
+
+api = NinjaAPI()
 
 
 class CookieKey(APIKeyCookie):

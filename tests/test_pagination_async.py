@@ -233,6 +233,6 @@ async def test_async_no_pagination_without_query_params():
 
     # If there are any parameters, they should all be optional
     for param in params:
-        assert (
-            param.get("required", False) is False
-        ), f"Parameter {param['name']} should not be required"
+        assert param.get("required", False) is False, (
+            f"Parameter {param['name']} should not be required"
+        )
