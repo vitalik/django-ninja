@@ -166,7 +166,9 @@ class FilterSchema(Schema):
         )
 
         if not q_expression:
-            return Q(**{field_name: field_value})
+            if isinstance(field_value, list):
+                return Q(**{f"{field_name}__in": field_value})
+            return Q(**{f"{field_name}": field_value})
         elif isinstance(q_expression, str):
             if q_expression.startswith("__"):
                 q_expression = f"{field_name}{q_expression}"
