@@ -5,7 +5,7 @@ from uuid import UUID
 
 from django.db.models import ManyToManyField
 from django.db.models.fields import Field as DjangoField
-from pydantic import IPvAnyAddress
+from pydantic import AliasGenerator, IPvAnyAddress
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined, core_schema
 
@@ -113,9 +113,25 @@ def create_m2m_link_type(type_: Type[TModel]) -> Type[TModel]:
     return M2MLink
 
 
+def _apply_alias_generator(alias_generator: Any, attname: str) -> str:
+    """Apply the schema's ``alias_generator`` to a relation's ``_id`` attname.
+
+    Relation fields set their alias explicitly (to the ``_id`` attname), which
+    otherwise bypasses the schema's ``alias_generator`` so the generated field
+    keeps its snake_case name while every other field is transformed (see #1691).
+    """
+    if isinstance(alias_generator, AliasGenerator):
+        return alias_generator.alias(attname) if alias_generator.alias else attname
+    return str(alias_generator(attname))
+
+
 @no_type_check
 def get_schema_field(
-    field: DjangoField, *, depth: int = 0, optional: bool = False
+    field: DjangoField,
+    *,
+    depth: int = 0,
+    optional: bool = False,
+    alias_generator: Any = None,
 ) -> Tuple:
     "Returns pydantic field from django's model field"
     alias = None
@@ -138,6 +154,8 @@ def get_schema_field(
             nullable = True
 
         alias = getattr(field, "get_attname", None) and field.get_attname()
+        if alias and alias_generator is not None:
+            alias = _apply_alias_generator(alias_generator, alias)
 
         pk_type = TYPES.get(internal_type, int)
         if field.one_to_many or field.many_to_many:
