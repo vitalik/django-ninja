@@ -28,13 +28,21 @@ def fix_request_files_middleware(get_response: Any) -> Any:
     populated for POST requests.
     https://code.djangoproject.com/ticket/12635
     """
+
+    def should_fix_request_files(request: HttpRequest) -> bool:
+        return (
+            request.method in FIX_METHODS
+            and request.content_type != "application/json"
+            and (
+                ninja_settings.FIX_REQUEST_FILES_URLS is None
+                or ninja_settings.FIX_REQUEST_FILES_URLS.search(request.path)
+            )
+        )
+
     if iscoroutinefunction(get_response):
 
         async def async_middleware(request: HttpRequest) -> Any:
-            if (
-                request.method in FIX_METHODS
-                and request.content_type != "application/json"
-            ):
+            if should_fix_request_files(request):
                 initial_method = request.method
                 request.method = "POST"
                 request.META["REQUEST_METHOD"] = "POST"
@@ -48,10 +56,7 @@ def fix_request_files_middleware(get_response: Any) -> Any:
     else:
 
         def sync_middleware(request: HttpRequest) -> Any:
-            if (
-                request.method in FIX_METHODS
-                and request.content_type != "application/json"
-            ):
+            if should_fix_request_files(request):
                 initial_method = request.method
                 request.method = "POST"
                 request.META["REQUEST_METHOD"] = "POST"
