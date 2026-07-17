@@ -1,3 +1,4 @@
+import sys
 from typing import Optional
 
 import pytest
@@ -24,6 +25,16 @@ router = Router()
 @router.get("/headers1")
 def headers1(request, user_agent: str = Header(...)):
     return user_agent
+
+
+annotated_available = sys.version_info >= (3, 9)
+
+if annotated_available:
+    from typing import Annotated
+
+    @router.get("/headers1_annotated")
+    def headers1_annotated(request, user_agent: Annotated[str, Header(...)]):
+        return user_agent
 
 
 @router.get("/headers2")
@@ -68,6 +79,7 @@ client = TestClient(router)
     "path,expected_status,expected_response",
     [
         ("/headers1", 200, "Ninja"),
+        *([("/headers1_annotated", 200, "Ninja")] if annotated_available else []),
         ("/headers2", 200, "Ninja"),
         ("/headers3", 200, 10),
         ("/headers4", 200, 10),
