@@ -424,6 +424,7 @@ class Operation:
         )
 
         result = validated_object.model_dump(
+            # mode="json",  # Fix: Ensure proper JSON serialization (sets→lists, UUID→str, etc)
             by_alias=self.by_alias,
             exclude_unset=self.exclude_unset,
             exclude_defaults=self.exclude_defaults,
