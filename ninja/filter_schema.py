@@ -5,9 +5,9 @@ from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Q, QuerySet
 from pydantic import ConfigDict
 from pydantic.fields import FieldInfo
-from typing_extensions import Annotated, Literal, get_args, get_origin
+from typing_extensions import Literal
 
-from .compatibility.util import TYPE_ALIAS_TYPES
+from .compatibility.util import collect_alias_metadata
 from .constants import NOT_SET
 from .schema import Schema
 
@@ -85,16 +85,14 @@ class FilterSchema(Schema):
     def _get_filter_lookup(
         self, field_name: str, field_info: FieldInfo
     ) -> Optional[FilterLookup]:
-        metadata = list(getattr(field_info, "metadata", None) or [])
-
         # PEP 695 `type` aliases hide their Annotated metadata from pydantic,
         # so a FilterLookup defined inside the alias never lands in
-        # field_info.metadata. Pull it out of the alias annotation directly.
-        annotation = field_info.annotation
-        if isinstance(annotation, TYPE_ALIAS_TYPES):
-            value = annotation.__value__
-            if get_origin(value) is Annotated:
-                metadata.extend(get_args(value)[1:])
+        # field_info.metadata. collect_alias_metadata walks the alias chain
+        # (and any outer Annotated wrapper) to recover it. Metadata from
+        # field_info.metadata and from the alias is merged; inner-first
+        # ordering matches PEP 593 flattening.
+        metadata = list(getattr(field_info, "metadata", None) or [])
+        metadata.extend(collect_alias_metadata(field_info.annotation))
 
         if not metadata:
             return None

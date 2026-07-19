@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, TypeVar
 
 import pytest
 from django.core.exceptions import ImproperlyConfigured
@@ -481,3 +481,85 @@ def test_non_list_type_alias_still_works():
     response = client.get("/books?name=Test")
     assert response.status_code == 200, response.json()
     assert response.json() == {"q": "(AND: ('name', 'Test'))"}
+
+
+# Regression tests for the reviewer warnings on PR #1734:
+# - Chained aliases (`type Outer = Inner`) lost FilterLookup because the
+#   original fix only unwrapped one alias layer.
+# - Parameterized generic aliases (`type Names[T] = ...; Names[str]`) were
+#   treated as scalars because a parameterized generic alias is a
+#   `types.GenericAlias`, not a `TypeAliasType`, and its origin is the
+#   `TypeAliasType` itself.
+# Both are now handled by the shared helpers in ninja.compatibility.util.
+
+InnerListAlias = TypeAliasType(
+    "InnerListAlias",
+    Annotated[Optional[List[str]], FilterLookup("name__in")],
+)
+OuterListAlias = TypeAliasType("OuterListAlias", InnerListAlias)
+
+_FilterT = TypeVar("_FilterT")
+NamesGenericAlias = TypeAliasType(
+    "NamesGenericAlias",
+    Annotated[List[_FilterT], FilterLookup("name__in")],
+    type_params=(_FilterT,),
+)
+
+
+def test_filter_lookup_from_chained_type_alias():
+    """FilterLookup inside a chained `type` alias is recovered through the
+    outer alias (reviewer warning 2)."""
+    api = NinjaAPI()
+
+    class DummyFilterSchema(FilterSchema):
+        name: OuterListAlias = Field(default=None)
+
+    filter_instance = DummyFilterSchema(name=["a", "b"])
+    q = filter_instance.get_filter_expression()
+    assert q == Q(name__in=["a", "b"])
+
+    @api.get("/books")
+    def list_books(request, filters: Query[DummyFilterSchema]):
+        return {"q": str(filters.get_filter_expression())}
+
+    client = TestClient(api)
+    response = client.get("/books?name=Test&name=Test%201")
+    assert response.status_code == 200, response.json()
+    assert response.json() == {"q": "(AND: ('name__in', ['Test', 'Test 1']))"}
+
+
+def test_filter_lookup_from_parameterized_generic_alias():
+    """FilterLookup inside a parameterized generic `type` alias is recovered
+    and the field is treated as a collection (reviewer warning 1)."""
+    api = NinjaAPI()
+
+    class DummyFilterSchema(FilterSchema):
+        name: NamesGenericAlias[str] = Field(default=None)
+
+    filter_instance = DummyFilterSchema(name=["a", "b"])
+    q = filter_instance.get_filter_expression()
+    assert q == Q(name__in=["a", "b"])
+
+    @api.get("/books")
+    def list_books(request, filters: Query[DummyFilterSchema]):
+        return {"q": str(filters.get_filter_expression())}
+
+    client = TestClient(api)
+    response = client.get("/books?name=Test&name=Test%201")
+    assert response.status_code == 200, response.json()
+    assert response.json() == {"q": "(AND: ('name__in', ['Test', 'Test 1']))"}
+
+
+def test_multiple_filter_lookup_across_chain_raises():
+    """When a chained alias surfaces more than one FilterLookup (one from an
+    inner alias, one from an outer Annotated wrapper), the existing
+    ImproperlyConfigured invariant still fires."""
+
+    class DummyFilterSchema(FilterSchema):
+        name: Annotated[InnerListAlias, FilterLookup("name__icontains")] = Field(
+            default=None
+        )
+
+    filter_instance = DummyFilterSchema(name=["a", "b"])
+    with pytest.raises(ImproperlyConfigured):
+        filter_instance.get_filter_expression()
