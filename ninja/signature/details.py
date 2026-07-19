@@ -11,7 +11,7 @@ from pydantic_core import PydanticUndefined
 from typing_extensions import Annotated, get_args, get_origin
 
 from ninja import UploadedFile
-from ninja.compatibility.util import UNION_TYPES
+from ninja.compatibility.util import UNION_TYPES, unwrap_type_alias
 from ninja.errors import ConfigError
 from ninja.params.models import (
     Body,
@@ -334,7 +334,17 @@ def is_pydantic_model(cls: Any) -> bool:
 
 
 def is_collection_type(annotation: Any) -> bool:
+    # `type X = ...` aliases (PEP 695) hide the real type in __value__, and a
+    # parameterized generic alias (Names[str]) hides it in the origin's
+    # __value__. unwrap_type_alias follows both chains, so the remaining
+    # logic only has to deal with Annotated / Union / concrete collections.
+    annotation = unwrap_type_alias(annotation)
+
     origin = get_origin(annotation)
+
+    # Annotated[list[...], ...] keeps the collection in its first argument.
+    if origin is Annotated:
+        return is_collection_type(get_args(annotation)[0])
 
     if origin in UNION_TYPES:
         for arg in get_args(annotation):
