@@ -113,16 +113,32 @@ def create_m2m_link_type(type_: Type[TModel]) -> Type[TModel]:
     return M2MLink
 
 
-def _apply_alias_generator(alias_generator: Any, attname: str) -> str:
-    """Apply the schema's ``alias_generator`` to a relation's ``_id`` attname.
+def _relation_field_aliases(attname: str, alias_generator: Any) -> Tuple[str, Any, Any]:
+    """Aliases for a relation's ``_id`` field, per validation/serialization direction.
 
-    Relation fields set their alias explicitly (to the ``_id`` attname), which
-    otherwise bypasses the schema's ``alias_generator`` so the generated field
-    keeps its snake_case name while every other field is transformed (see #1691).
+    A relation field is exposed under its ``_id`` attname (e.g. ``author_id``) by
+    setting the alias explicitly. That explicit alias otherwise bypasses the
+    schema's ``alias_generator``, so the ``_id`` field keeps its snake_case name
+    while every other field is transformed (see #1691). We reproduce pydantic's
+    own alias generation here, honoring an ``AliasGenerator``'s independent
+    ``alias`` / ``validation_alias`` / ``serialization_alias`` callbacks and
+    falling back to the ``_id`` attname for any direction the generator leaves
+    unset, so a single-callback generator still aliases both directions.
     """
+    if alias_generator is None:
+        return attname, attname, attname
     if isinstance(alias_generator, AliasGenerator):
-        return alias_generator.alias(attname) if alias_generator.alias else attname
-    return str(alias_generator(attname))
+        alias, validation_alias, serialization_alias = alias_generator.generate_aliases(
+            attname
+        )
+        alias = alias if alias is not None else attname
+        return (
+            alias,
+            validation_alias if validation_alias is not None else alias,
+            serialization_alias if serialization_alias is not None else alias,
+        )
+    generated = str(alias_generator(attname))
+    return generated, generated, generated
 
 
 @no_type_check
@@ -135,6 +151,8 @@ def get_schema_field(
 ) -> Tuple:
     "Returns pydantic field from django's model field"
     alias = None
+    validation_alias = None
+    serialization_alias = None
     default = ...
     default_factory = None
     description = None
@@ -153,9 +171,11 @@ def get_schema_field(
             default = None
             nullable = True
 
-        alias = getattr(field, "get_attname", None) and field.get_attname()
-        if alias and alias_generator is not None:
-            alias = _apply_alias_generator(alias_generator, alias)
+        attname = getattr(field, "get_attname", None) and field.get_attname()
+        if attname:
+            alias, validation_alias, serialization_alias = _relation_field_aliases(
+                attname, alias_generator
+            )
 
         pk_type = TYPES.get(internal_type, int)
         if field.one_to_many or field.many_to_many:
@@ -205,8 +225,8 @@ def get_schema_field(
         FieldInfo(
             default=default,
             alias=alias,
-            validation_alias=alias,
-            serialization_alias=alias,
+            validation_alias=validation_alias,
+            serialization_alias=serialization_alias,
             default_factory=default_factory,
             title=title,
             description=description,
