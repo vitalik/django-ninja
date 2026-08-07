@@ -76,7 +76,7 @@ def get_path_param_names(path: str) -> Set[str]:
 def is_async(callable: Callable[..., Any]) -> bool:
     # TODO: Drop this condition once support for <= 3.11 is dropped
     if version_info >= (3, 12):
-        return inspect.iscoroutinefunction(callable)
+        return inspect.iscoroutinefunction(callable)  # pragma: no cover
     else:
         return asyncio.iscoroutinefunction(callable)  # pragma: no cover
 

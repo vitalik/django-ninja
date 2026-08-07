@@ -51,6 +51,8 @@ __all__ = ["Operation", "PathView", "ResponseObject"]
 
 
 class Operation:
+    tags: Optional[List[str]] = None
+
     def __init__(
         self,
         path: str,
