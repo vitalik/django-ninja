@@ -78,6 +78,15 @@ class NinjaClientBase:
     ) -> "NinjaResponse":
         return self.request("DELETE", path, data, json, **request_params)
 
+    def query(
+        self,
+        path: str,
+        data: Optional[Dict] = None,
+        json: Any = None,
+        **request_params: Any,
+    ) -> "NinjaResponse":
+        return self.request("QUERY", path, data, json, **request_params)
+
     def _prepare_request(
         self,
         method: str,
@@ -271,6 +280,15 @@ class TestAsyncClient(NinjaClientBase):
         **request_params: Any,
     ) -> "NinjaResponse":
         return await self.request("DELETE", path, data, json, **request_params)
+
+    async def query(  # type: ignore[override]
+        self,
+        path: str,
+        data: Optional[Dict] = None,
+        json: Any = None,
+        **request_params: Any,
+    ) -> "NinjaResponse":
+        return await self.request("QUERY", path, data, json, **request_params)
 
     async def _call(
         self, func: Callable, request: Mock, kwargs: Dict
