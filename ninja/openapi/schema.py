@@ -40,6 +40,7 @@ class OpenAPISchema(dict):
         self.schemas: DictStrAny = {}
         self.securitySchemes: DictStrAny = {}
         self.all_operation_ids: Set = set()
+        self.uses_query_method = False
         extra_info = api.openapi_extra.get("info", {})
         super().__init__([
             ("openapi", "3.1.0"),
@@ -56,6 +57,8 @@ class OpenAPISchema(dict):
             ("components", self.get_components()),
             ("servers", api.servers),
         ])
+        if self.uses_query_method:
+            self["openapi"] = "3.2.0"
         for k, v in api.openapi_extra.items():
             if k not in self:
                 self[k] = v
@@ -86,6 +89,8 @@ class OpenAPISchema(dict):
             if op.include_in_schema:
                 operation_details = self.operation_details(op)
                 for method in op.methods:
+                    if method == "QUERY":
+                        self.uses_query_method = True
                     result[method.lower()] = operation_details
         return result
 
