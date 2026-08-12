@@ -196,6 +196,20 @@ async def test_async_client_patch_and_delete():
     assert response.json() == {"method": "DELETE"}
 
 
+@pytest.mark.asyncio
+async def test_async_client_query():
+    api = NinjaAPI()
+
+    @api.query("/item")
+    async def query_item(request):
+        return {"method": "QUERY"}
+
+    async_client = TestAsyncClient(api)
+
+    response = await async_client.query("/item")
+    assert response.json() == {"method": "QUERY"}
+
+
 def test_resolver_match():
     response = client.get("/check-resolver-match/42")
     assert response.json() == {"has_resolver_match": True, "item_id": 42}
@@ -214,4 +228,5 @@ def test_async_client_methods_are_coroutines():
     assert inspect.iscoroutinefunction(async_client.put)
     assert inspect.iscoroutinefunction(async_client.patch)
     assert inspect.iscoroutinefunction(async_client.delete)
+    assert inspect.iscoroutinefunction(async_client.query)
     assert inspect.iscoroutinefunction(async_client.request)
