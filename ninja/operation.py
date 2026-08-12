@@ -78,7 +78,9 @@ class Operation:
         self.methods: List[str] = methods
         self.view_func: Callable = view_func
         self.api: NinjaAPI = cast("NinjaAPI", None)
-        self.csrf_exempt: bool = getattr(view_func, "csrf_exempt", False)
+        self.csrf_exempt: bool = (
+            getattr(view_func, "csrf_exempt", False) or "QUERY" in methods
+        )
         if url_name is not None:
             self.url_name = url_name
 
