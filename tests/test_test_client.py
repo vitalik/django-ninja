@@ -23,6 +23,11 @@ def request_build_absolute_uri_location(request):
     return request.build_absolute_uri("location")
 
 
+@router.get("/request/get-preferred-type")
+def request_get_preferred_type(request):
+    return request.get_preferred_type(["application/json", "text/plain"])
+
+
 @router.get("/test")
 def simple_get(request):
     return "test"
@@ -75,6 +80,16 @@ def test_sync_build_absolute_uri(path, expected_status, expected_response):
 
     assert response.status_code == expected_status
     assert response.json() == expected_response
+
+
+def test_get_preferred_type():
+    response = client.get(
+        "/request/get-preferred-type",
+        headers={"Accept": "text/html,application/json;q=0.8"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == "application/json"
 
 
 class ClientTestSchema(Schema):
