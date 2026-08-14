@@ -35,3 +35,16 @@ def test_manytomany():
     response = client.post("/bar", json={"m2m": []})
     assert response.status_code == 200, str(response.json())
     assert response.json() == {"m2m": []}
+
+
+def test_foreignobject_reverse_relation():
+    # A plain ForeignObject (unlike ForeignKey) uses the bare
+    # ForeignObjectRel as its rel_class, not ManyToOneRel. Building a
+    # schema for the related-to model must still skip that reverse
+    # relation instead of trying to read .help_text off it.
+    # https://github.com/vitalik/django-ninja/issues/1530
+    from someapp.models import ForeignObjectTarget
+
+    schema = create_schema(ForeignObjectTarget)
+
+    assert "sources" not in schema.model_fields
