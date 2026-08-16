@@ -150,7 +150,11 @@ def test_all_fields():
             "timefield": {"type": "string", "format": "time", "title": "Timefield"},
             "urlfield": {"type": "string", "title": "Urlfield"},
             "uuidfield": {"type": "string", "format": "uuid", "title": "Uuidfield"},
-            "arrayfield": {"type": "array", "items": {}, "title": "Arrayfield"},
+            "arrayfield": {
+                "type": "array",
+                "items": {"type": "string"},
+                "title": "Arrayfield",
+            },
             "cicharfield": {"type": "string", "title": "Cicharfield"},
             "ciemailfield": {
                 "type": "string",
@@ -234,6 +238,38 @@ def test_altautofield():
                 "title": "Autofield",
             }
         }
+
+
+def test_array_field():
+    class ModelWithArrayField(models.Model):
+        tags = ps_fields.ArrayField(models.CharField())
+
+        class Meta:
+            app_label = "tests"
+
+    SchemaCls = create_schema(ModelWithArrayField)
+
+    assert SchemaCls.json_schema()["properties"]["tags"] == {
+        "items": {"type": "string"},
+        "title": "Tags",
+        "type": "array",
+    }
+
+
+def test_nested_array_field():
+    class ModelWithNestedArrayField(models.Model):
+        tags = ps_fields.ArrayField(ps_fields.ArrayField(models.CharField()))
+
+        class Meta:
+            app_label = "tests"
+
+    SchemaCls = create_schema(ModelWithNestedArrayField)
+
+    assert SchemaCls.json_schema()["properties"]["tags"] == {
+        "items": {"items": {"type": "string"}, "type": "array"},
+        "title": "Tags",
+        "type": "array",
+    }
 
 
 def test_django_31_fields():
