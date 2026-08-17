@@ -80,6 +80,29 @@ class TestRouterReuse:
         assert response_admin.status_code == 200
         assert response_public.status_code == 200
 
+    def test_api_and_router_operations_with_same_path_dispatch_by_method(self):
+        router = Router()
+
+        @router.put("/users")
+        def update_user(request):
+            return {"method": "put"}
+
+        api = NinjaAPI(urls_namespace="same-path-methods")
+
+        @api.post("/users")
+        def create_user(request):
+            return {"method": "post"}
+
+        api.add_router("", router)
+        client = TestClient(api)
+
+        assert client.post("/users").json() == {"method": "post"}
+        assert client.put("/users").json() == {"method": "put"}
+
+        response = client.delete("/users")
+        assert response.status_code == 405
+        assert {"POST", "PUT"} <= set(response["Allow"].split(", "))
+
 
 class TestDecoratorIsolation:
     """Test that decorators are isolated between mounts."""
