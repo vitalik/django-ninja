@@ -1,13 +1,15 @@
 [build-system]
-requires = ["flit_core >=2,<4"]
+requires = ["flit_core >=3.8,<5"]
 build-backend = "flit_core.buildapi"
 
-[tool.flit.metadata]
-module = "ninja"
-dist-name = "django-ninja"
-author = "Vitaliy Kucheryaviy"
-author-email = "ppr.vitaly@gmail.com"
-home-page = "https://django-ninja.dev"
+[project]
+name = "django-ninja"
+authors = [
+    {name = "Vitaliy Kucheryaviy", email = "ppr.vitaly@gmail.com"},
+]
+readme = "README.md"
+requires-python = ">=3.7"
+dynamic = ["version", "description"]
 classifiers = [
     "Intended Audience :: Information Technology",
     "Intended Audience :: System Administrators",
@@ -47,17 +49,18 @@ classifiers = [
     "Topic :: Internet :: WWW/HTTP",
 ]
 
-requires = ["Django >=3.1", "pydantic >=2.0,<3.0.0"]
-description-file = "README.md"
-requires-python = ">=3.7"
+dependencies = [
+    "Django >=3.1",
+    "pydantic >=2.0,<3.0.0",
+]
 
-
-[tool.flit.metadata.urls]
+[project.urls]
+Homepage = "https://django-ninja.dev"
 Documentation = "https://django-ninja.dev"
 Repository = "https://github.com/vitalik/django-ninja"
 
 
-[tool.flit.metadata.requires-extra]
+[project.optional-dependencies]
 test = [
     "pytest",
     "pytest-cov",
@@ -70,6 +73,9 @@ test = [
 ]
 doc = ["mkdocs", "mkdocs-material", "markdown-include", "mkdocstrings"]
 dev = ["pre-commit"]
+
+[tool.flit.module]
+name = "ninja"
 
 
 [tool.ruff]
