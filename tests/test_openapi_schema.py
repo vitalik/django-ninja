@@ -928,6 +928,23 @@ def test_openapi_version_bumped_for_query_method():
     assert schema["openapi"] == "3.2.0"
 
 
+def test_openapi_version_explicit_override_wins():
+    "openapi_extra can pin the version explicitly, overriding auto-detection"
+    api = NinjaAPI(
+        urls_namespace="test_openapi_version_override",
+        openapi_extra={"openapi": "3.1.0"},
+    )
+
+    @api.query("/query")
+    def query_op(request):
+        pass
+
+    # would normally auto-bump to 3.2.0 because a QUERY route is present,
+    # but the explicit override takes precedence
+    schema = api.get_openapi_schema(path_prefix="")
+    assert schema["openapi"] == "3.1.0"
+
+
 def test_docs_decorator():
     api = NinjaAPI(docs_decorator=staff_member_required)
 
