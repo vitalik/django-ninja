@@ -1,7 +1,9 @@
 from math import inf
-from typing import Dict, Optional, Set, Tuple
+from typing import Any, Dict, Optional, Set, Tuple
 
 from django.conf import settings as django_settings
+from django.dispatch import receiver
+from django.test.signals import setting_changed
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -36,6 +38,17 @@ class Settings(BaseModel):
 
 
 settings = Settings.model_validate(django_settings)
+
+
+@receiver(setting_changed)
+def reload_ninja_settings(*args: Any, setting: str, **kwargs: Any) -> None:
+    if not setting.startswith("NINJA_"):
+        return
+
+    updated_settings = Settings.model_validate(django_settings)
+    for field_name in Settings.model_fields:
+        setattr(settings, field_name, getattr(updated_settings, field_name))
+
 
 if hasattr(django_settings, "NINJA_DOCS_VIEW"):
     raise Exception(
