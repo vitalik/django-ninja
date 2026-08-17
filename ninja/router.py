@@ -167,26 +167,14 @@ class BoundRouter:
 
             self.path_operations[path] = cloned_view
 
-    def urls_paths(self, prefix: str) -> Iterator[URLPattern]:
-        """Generate URL patterns for this bound router."""
+    def iter_path_views(self, prefix: str) -> Iterator[Tuple[str, PathView]]:
+        """Yield normalized routes and their bound path views."""
         prefix = replace_path_param_notation(prefix)
         for path, path_view in self.path_operations.items():
             path = replace_path_param_notation(path)
             route = "/".join([i for i in (prefix, path) if i])
             route = normalize_path(route)
-            route = route.lstrip("/")
-
-            for operation in path_view.operations:
-                url_name = getattr(operation, "url_name", "")
-                if not url_name:
-                    url_name = self.api.get_operation_url_name(
-                        operation, router=self.template
-                    )
-                    # Apply url_name_prefix if specified
-                    if self.url_name_prefix and url_name:
-                        url_name = f"{self.url_name_prefix}_{url_name}"
-
-                yield django_path(route, path_view.get_view(), name=url_name)
+            yield route.lstrip("/"), path_view
 
 
 class Router:
