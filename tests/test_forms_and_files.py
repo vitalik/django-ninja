@@ -1,6 +1,6 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
 
-from ninja import File, Form, NinjaAPI, UploadedFile
+from ninja import Body, File, Form, NinjaAPI, UploadedFile
 from ninja.testing import TestClient
 
 api = NinjaAPI()
@@ -11,6 +11,15 @@ def str_and_file(
     request,
     title: str = Form(...),
     description: str = Form(""),
+    file: UploadedFile = File(...),
+):
+    return {"title": title, "data": file.read().decode()}
+
+
+@api.post("/str_body_and_file")
+def str_body_and_file(
+    request,
+    title: str = Body(...),
     file: UploadedFile = File(...),
 ):
     return {"title": title, "data": file.read().decode()}
@@ -57,3 +66,14 @@ def test_files():
         },
         "required": True,
     }
+
+
+def test_empty_multipart_body_field():
+    file = SimpleUploadedFile("test.txt", b"data123")
+    response = client.post(
+        "/str_body_and_file",
+        FILES={"file": file},
+        POST={"title": ""},
+    )
+    assert response.status_code == 200
+    assert response.json() == {"title": "", "data": "data123"}
