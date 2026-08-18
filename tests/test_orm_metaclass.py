@@ -1,7 +1,7 @@
 import pytest
 from django.db import models
 
-from ninja import ModelSchema
+from ninja import Field, ModelSchema
 from ninja.errors import ConfigError
 
 
@@ -80,6 +80,47 @@ def test_custom():
             "f4": {"title": "F4", "default": 1, "type": "integer"},
         },
         "required": ["f3", "f1"],
+    }
+
+
+def test_custom_model_field_preserves_django_metadata():
+    class Book(models.Model):
+        title = models.CharField(
+            "Book title", max_length=200, help_text="The published title"
+        )
+
+        class Meta:
+            app_label = "tests"
+
+    class BookSchema(ModelSchema):
+        title: str = Field(min_length=1)
+
+        class Meta:
+            model = Book
+            fields = ["title"]
+
+    class CustomizedBookSchema(ModelSchema):
+        title: str = Field(
+            min_length=1,
+            title="Custom title",
+            description="Custom description",
+        )
+
+        class Meta:
+            model = Book
+            fields = ["title"]
+
+    assert BookSchema.json_schema()["properties"]["title"] == {
+        "description": "The published title",
+        "minLength": 1,
+        "title": "Book title",
+        "type": "string",
+    }
+    assert CustomizedBookSchema.json_schema()["properties"]["title"] == {
+        "description": "Custom description",
+        "minLength": 1,
+        "title": "Custom title",
+        "type": "string",
     }
 
 
