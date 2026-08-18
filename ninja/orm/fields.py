@@ -163,6 +163,10 @@ def get_schema_field(
             ]
             raise ConfigError("\n".join(msg)) from e
 
+        if internal_type == "ArrayField":
+            item_type: Any = get_schema_field(field.base_field)[0]
+            python_type = List[item_type]
+
         if field.primary_key or blank or null or optional:
             default = None
             nullable = True
