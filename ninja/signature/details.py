@@ -142,7 +142,9 @@ class ViewSignature:
             attrs["__ninja_param_source__"] = param_cls._param_source()
             attrs["__ninja_flatten_map_reverse__"] = {}
 
-            if attrs["__ninja_param_source__"] == "file":
+            # "file" and "formjson" don't need flatten_map - they read fields directly
+            # without flattening nested Pydantic models into separate form fields
+            if attrs["__ninja_param_source__"] in {"file", "formjson"}:
                 pass
 
             elif attrs["__ninja_param_source__"] in {
