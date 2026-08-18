@@ -14,6 +14,7 @@ from typing import (
 
 from django.http import HttpRequest, HttpResponse
 from django.urls import URLPattern, URLResolver, reverse
+from django.urls import path as django_path
 from django.utils.module_loading import import_string
 
 from ninja.constants import NOT_SET, NOT_SET_TYPE
@@ -28,11 +29,13 @@ from ninja.openapi import get_schema
 from ninja.openapi.docs import DocsBase, Swagger
 from ninja.openapi.schema import OpenAPISchema
 from ninja.openapi.urls import get_openapi_urls, get_root_url
+from ninja.operation import PathView
 from ninja.parser import Parser
 from ninja.renderers import BaseRenderer, JSONRenderer
 from ninja.router import BoundRouter, Router, RouterMount
 from ninja.throttling import BaseThrottle
 from ninja.types import DictStrAny, TCallable
+from ninja.utils import normalize_path, replace_path_param_notation
 
 if TYPE_CHECKING:
     from .operation import Operation  # pragma: no cover
@@ -530,8 +533,39 @@ class NinjaAPI:
     def _get_urls(self) -> List[Union[URLResolver, URLPattern]]:
         result = get_openapi_urls(self)
 
+        path_views: Dict[str, PathView] = {}
+        url_names: List[Tuple[str, str]] = []
+
         for bound_router in self._get_bound_routers():
-            result.extend(bound_router.urls_paths(bound_router.prefix))
+            prefix = replace_path_param_notation(bound_router.prefix)
+            for path, path_view in bound_router.path_operations.items():
+                path = replace_path_param_notation(path)
+                route = "/".join([i for i in (prefix, path) if i])
+                route = normalize_path(route)
+                route = route.lstrip("/")
+
+                combined_view = path_views.get(route)
+                if combined_view is None:
+                    combined_view = PathView()
+                    path_views[route] = combined_view
+
+                combined_view.operations.extend(path_view.operations)
+                combined_view.is_async = combined_view.is_async or path_view.is_async
+
+                for operation in path_view.operations:
+                    url_name = getattr(operation, "url_name", "")
+                    if not url_name:
+                        url_name = self.get_operation_url_name(
+                            operation, router=bound_router.template
+                        )
+                        if bound_router.url_name_prefix and url_name:
+                            url_name = f"{bound_router.url_name_prefix}_{url_name}"
+                    url_names.append((route, url_name))
+
+        for route, url_name in url_names:
+            result.append(
+                django_path(route, path_views[route].get_view(), name=url_name)
+            )
 
         result.append(get_root_url(self))
         return result

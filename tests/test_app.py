@@ -5,7 +5,7 @@ from tempfile import NamedTemporaryFile
 import pytest
 from django.http import FileResponse, HttpResponse
 
-from ninja import NinjaAPI
+from ninja import NinjaAPI, Router, Schema
 from ninja.testing import TestClient
 
 api = NinjaAPI()
@@ -98,6 +98,40 @@ def test_method(method, path, expected_status, expected_data, expected_streaming
     except Exception:
         data = response.content
     assert data == expected_data
+
+
+def test_same_path_different_methods_across_api_and_router():
+    local_api = NinjaAPI(urls_namespace="same-path-methods")
+    router = Router()
+
+    class UserPostSchema(Schema):
+        username: str
+        password: str
+
+    class UserPutSchema(Schema):
+        id: int
+        username: str
+
+    @local_api.post("/users")
+    def user_create(request, rdata: UserPostSchema):
+        return {"method": request.method}
+
+    @router.put("/users")
+    def user_update(request, rdata: UserPutSchema):
+        return {"method": request.method}
+
+    local_api.add_router("", router)
+    local_client = TestClient(local_api)
+
+    response = local_client.post(
+        "/users", json={"username": "test", "password": "secret"}
+    )
+    assert response.status_code == 200
+    assert response.json() == {"method": "POST"}
+
+    response = local_client.put("/users", json={"id": 1, "username": "test"})
+    assert response.status_code == 200
+    assert response.json() == {"method": "PUT"}
 
 
 def test_validates():
