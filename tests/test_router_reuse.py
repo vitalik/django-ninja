@@ -10,6 +10,8 @@ These tests verify that:
 """
 
 import pytest
+from django.test import override_settings
+from django.urls import reverse
 
 from ninja import NinjaAPI, Router
 from ninja.errors import ConfigError
@@ -131,61 +133,187 @@ class TestDecoratorIsolation:
         assert calls["api2"] == 1
 
 
-class TestFreezeBehavior:
-    """Test that routers are frozen after URLs are generated."""
+class TestLateRegistration:
+    """Test late router mutation and registration after URLs are built."""
 
-    def test_router_frozen_after_urls_accessed(self):
-        """Router becomes frozen after api.urls is accessed."""
+    def test_router_operation_added_after_urls_accessed(self):
+        """Adding operations late rebuilds API URLs in place."""
         router = Router()
 
         @router.get("/items")
         def list_items(request):
             return []
 
-        api = NinjaAPI(urls_namespace="freeze-test")
+        api = NinjaAPI(urls_namespace="late-op-test")
         api.add_router("", router)
 
-        # Access urls (triggers freezing)
-        _ = api.urls
+        patterns = api.urls[0]
 
-        # Trying to add more operations should fail
-        with pytest.raises(ConfigError, match="frozen"):
+        @router.get("/new")
+        def new_endpoint(request):
+            return ["new"]
 
-            @router.get("/new")
-            def new_endpoint(request):
-                return []
+        assert api.urls[0] is patterns
 
-    def test_cannot_add_router_after_urls_accessed(self):
-        """Cannot add routers after URLs have been generated."""
-        api = NinjaAPI(urls_namespace="freeze-add-router")
+        client = TestClient(api)
+        response = client.get("/new")
+        assert response.status_code == 200
+        assert response.json() == ["new"]
 
-        # Access urls
-        _ = api.urls
+    def test_router_added_after_urls_accessed(self):
+        """Adding routers late rebuilds API URLs in place."""
+        api = NinjaAPI(urls_namespace="late-router-test")
+        patterns = api.urls[0]
 
         router = Router()
 
-        with pytest.raises(ConfigError, match="Cannot add routers"):
-            api.add_router("/new", router)
+        @router.get("/items")
+        def list_items(request):
+            return [1]
 
-    def test_cannot_add_decorator_to_frozen_router(self):
-        """Cannot add decorator to frozen router."""
+        api.add_router("/new", router)
+
+        assert api.urls[0] is patterns
+
+        client = TestClient(api)
+        response = client.get("/new/items")
+        assert response.status_code == 200
+        assert response.json() == [1]
+
+    def test_decorator_added_after_urls_accessed_updates_existing_client(self):
+        """Late decorator registration invalidates cached bound routers."""
         router = Router()
+        calls = []
 
         @router.get("/items")
         def list_items(request):
             return []
 
-        api = NinjaAPI(urls_namespace="freeze-decorator")
+        api = NinjaAPI(urls_namespace="late-decorator-test")
         api.add_router("", router)
 
-        # Access urls (triggers freezing)
-        _ = api.urls
+        client = TestClient(api)
+        response = client.get("/items")
+        assert response.status_code == 200
+        assert calls == []
 
         def some_decorator(func):
-            return func
+            def wrapper(*args, **kwargs):
+                calls.append("decorated")
+                return func(*args, **kwargs)
 
-        with pytest.raises(ConfigError, match="frozen"):
-            router.add_decorator(some_decorator)
+            return wrapper
+
+        router.add_decorator(some_decorator)
+
+        response = client.get("/items")
+        assert response.status_code == 200
+        assert calls == ["decorated"]
+
+    def test_exact_duplicate_api_registration_is_idempotent(self):
+        """Adding the exact same router mount twice is a no-op."""
+        router = Router()
+
+        @router.get("/items")
+        def list_items(request):
+            return []
+
+        api = NinjaAPI(urls_namespace="late-idempotent-api-test")
+        api.add_router("/items", router)
+        api.add_router("/items", router)
+
+        mounted = [b for b in api._get_bound_routers() if b.template is router]
+        assert len(mounted) == 1
+
+    def test_exact_duplicate_nested_registration_is_idempotent(self):
+        """Adding the exact same child router twice is a no-op."""
+        parent = Router()
+        child = Router()
+
+        @child.get("/items")
+        def list_items(request):
+            return []
+
+        parent.add_router("/child", child)
+        parent.add_router("/child", child)
+
+        api = NinjaAPI(urls_namespace="late-idempotent-child-test")
+        api.add_router("/parent", parent)
+
+        mounted = [b for b in api._get_bound_routers() if b.template is child]
+        assert len(mounted) == 1
+
+    def test_shared_child_router_invalidation_rebuilds_all_apis(self):
+        """Late changes to a shared child router invalidate every affected API."""
+        child = Router()
+
+        @child.get("/items")
+        def list_items(request):
+            return ["shared"]
+
+        parent_a = Router()
+        parent_b = Router()
+        parent_a.add_router("/child", child)
+        parent_b.add_router("/child", child)
+
+        api_a = NinjaAPI(urls_namespace="late-shared-a")
+        api_a.add_router("/a", parent_a)
+        api_b = NinjaAPI(urls_namespace="late-shared-b")
+        api_b.add_router("/b", parent_b)
+
+        client_a = TestClient(api_a)
+        client_b = TestClient(api_b)
+
+        assert client_a.get("/a/child/items").status_code == 200
+        assert client_b.get("/b/child/items").status_code == 200
+
+        @child.get("/late")
+        def late_endpoint(request):
+            return {"ok": True}
+
+        assert client_a.get("/a/child/late").status_code == 200
+        assert client_b.get("/b/child/late").status_code == 200
+
+    def test_collect_affected_apis_handles_diamond_router_graph(self):
+        """Shared parents should not cause duplicate traversal when walking upward."""
+        # Covers the visited-router guard in _collect_affected_apis(): traversing
+        # upward from `shared` reaches `grandparent` through both parents, so the
+        # second visit must short-circuit instead of recursing again.
+        shared = Router()
+        parent_a = Router()
+        parent_b = Router()
+        grandparent = Router()
+
+        parent_a.add_router("/shared", shared)
+        parent_b.add_router("/shared", shared)
+        grandparent.add_router("/a", parent_a)
+        grandparent.add_router("/b", parent_b)
+
+        api = NinjaAPI(urls_namespace="late-diamond-test")
+        api.add_router("/root", grandparent)
+
+        affected_apis = shared._collect_affected_apis()
+
+        assert affected_apis == {api}
+
+    @override_settings(ROOT_URLCONF="tests.late_router_registration_urls")
+    def test_reverse_sees_late_registered_routes(self):
+        """Django reverse sees routes added after the URLConf was imported."""
+        from tests import late_router_registration_urls
+
+        api = late_router_registration_urls.api
+
+        assert reverse("late-urls:initial") == "/late/initial"
+
+        router = Router()
+
+        @router.get("/route", url_name="late_route")
+        def late_route(request):
+            return {"ok": True}
+
+        api.add_router("/dynamic", router)
+
+        assert reverse("late-urls:late_route") == "/late/dynamic/route"
 
 
 class TestOperationClone:
