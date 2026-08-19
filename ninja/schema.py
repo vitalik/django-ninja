@@ -26,7 +26,6 @@ from typing import (
     Type,
     TypeVar,
     Union,
-    no_type_check,
 )
 
 import pydantic
@@ -93,7 +92,7 @@ class DjangoGetter:
         if isinstance(result, Manager):
             return list(result.all())
 
-        elif isinstance(result, getattr(QuerySet, "__origin__", QuerySet)):
+        elif isinstance(result, QuerySet):
             return list(result)
 
         if callable(result):
@@ -159,8 +158,13 @@ class Resolver:
 class ResolverMetaclass(ModelMetaclass):
     _ninja_resolvers: Dict[str, Resolver]
 
-    @no_type_check
-    def __new__(cls, name, bases, namespace, **kwargs):
+    def __new__(
+        cls,
+        name: str,
+        bases: tuple,
+        namespace: dict,
+        **kwargs: Any,
+    ) -> type:
         resolvers = {}
 
         for base in reversed(bases):
@@ -179,7 +183,7 @@ class ResolverMetaclass(ModelMetaclass):
             resolvers[attr[8:]] = Resolver(resolve_func)
 
         result = super().__new__(cls, name, bases, namespace, **kwargs)
-        result._ninja_resolvers = resolvers
+        result._ninja_resolvers = resolvers  # type: ignore[attr-defined]
         return result
 
 

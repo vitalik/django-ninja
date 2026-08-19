@@ -123,7 +123,7 @@ class Operation:
         self.operation_id = operation_id
         self.summary = summary or self.view_func.__name__.title().replace("_", " ")
         self.description = description or self.signature.docstring
-        self.tags = tags
+        self.tags: Optional[List[str]] = tags
         self.deprecated = deprecated
         self.include_in_schema = include_in_schema
         self.openapi_extra = openapi_extra
