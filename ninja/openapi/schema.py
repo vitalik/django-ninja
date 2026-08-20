@@ -155,6 +155,30 @@ class OpenAPISchema(dict):
                 result.extend(self._extract_parameters(model))
         return result
 
+    def _normalize_parameter_examples(self, examples: Any) -> DictStrAny:
+        if isinstance(examples, dict):
+            return examples
+
+        if not isinstance(examples, list):
+            return {}
+
+        normalized_examples: DictStrAny = {}
+        for index, example in enumerate(examples, start=1):
+            # OpenAPI Parameter Object expects examples to be a map where each value
+            # is an Example Object (or a Reference Object).
+            if isinstance(example, dict) and (
+                "$ref" in example
+                or any(
+                    key in example
+                    for key in ("summary", "description", "value", "externalValue")
+                )
+            ):
+                normalized_examples[f"example{index}"] = example
+            else:
+                normalized_examples[f"example{index}"] = {"value": example}
+
+        return normalized_examples
+
     def _extract_parameters(self, model: TModel) -> List[DictStrAny]:
         result = []
 
@@ -191,7 +215,9 @@ class OpenAPISchema(dict):
                 if "description" in p_schema:
                     param["description"] = p_schema["description"]
                 if "examples" in p_schema:
-                    param["examples"] = p_schema["examples"]
+                    examples = self._normalize_parameter_examples(p_schema["examples"])
+                    if examples:
+                        param["examples"] = examples
                 elif "example" in p_schema:
                     param["example"] = p_schema["example"]
                 if "deprecated" in p_schema:
