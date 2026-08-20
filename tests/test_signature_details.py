@@ -1,9 +1,13 @@
 import typing
 from sys import version_info
+from typing import List, Optional, TypeVar
 
 import pytest
+from typing_extensions import Annotated, TypeAliasType
 
 from ninja.signature.details import is_collection_type
+
+_T = TypeVar("_T")
 
 
 @pytest.mark.parametrize(
@@ -44,6 +48,56 @@ from ninja.signature.details import is_collection_type
             # TODO: Remove conditional once support for <=3.8 is dropped
             if version_info >= (3, 9)
             else ()
+        ),
+        # PEP 695 `type` aliases (TypeAliasType is available via typing_extensions
+        # on every supported Python; the `type` statement itself is 3.12+ syntax).
+        pytest.param(
+            TypeAliasType("BareListAlias", List[str]),
+            True,
+            id="true_for_bare_list_type_alias",
+        ),
+        pytest.param(
+            TypeAliasType("AnnotatedListAlias", Annotated[List[str], "meta"]),
+            True,
+            id="true_for_annotated_list_type_alias",
+        ),
+        pytest.param(
+            TypeAliasType(
+                "Inner",
+                Annotated[Optional[List[str]], "inner"],
+            ),
+            True,
+            id="true_for_inner_list_type_alias",
+        ),
+        pytest.param(
+            TypeAliasType(
+                "Outer",
+                TypeAliasType(
+                    "InnerForOuter",
+                    Annotated[Optional[List[str]], "inner"],
+                ),
+            ),
+            True,
+            id="true_for_chained_list_type_alias",
+        ),
+        pytest.param(
+            TypeAliasType(
+                "NamesGeneric",
+                Annotated[List[_T], "meta"],
+                type_params=(_T,),
+            )[str],
+            True,
+            id="true_for_parameterized_generic_list_type_alias",
+        ),
+        pytest.param(
+            TypeAliasType("ScalarAlias", Optional[str]),
+            False,
+            id="false_for_scalar_type_alias",
+        ),
+        pytest.param(
+            TypeAliasType("BareScalarAlias", str),
+            False,
+            id="false_for_bare_scalar_type_alias",
         ),
     ],
 )
