@@ -612,6 +612,7 @@ class NinjaAPI:
 
     def on_exception(self, request: HttpRequest, exc: Exc[_E]) -> HttpResponse:
         handler = self._lookup_exception_handler(exc)
+        transaction.set_rollback(True) # ensure DB rollback on exception
         if handler is None:
             raise exc
         return handler(request, exc)
