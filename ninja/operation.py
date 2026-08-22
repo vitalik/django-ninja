@@ -1,4 +1,5 @@
 import inspect
+import math
 import warnings
 from typing import (
     TYPE_CHECKING,
@@ -333,12 +334,15 @@ class Operation:
 
         if throttle_durations:
             # Filter out `None` values which may happen in case of config / rate
+            # Also, convert durations to integers with `math.ceil`
             durations = [
-                duration for duration in throttle_durations if duration is not None
+                math.ceil(duration)
+                for duration in throttle_durations
+                if duration is not None
             ]
 
             duration = max(durations, default=None)
-            return self.api.on_exception(request, Throttled(wait=duration))  # type: ignore
+            return self.api.on_exception(request, Throttled(wait=duration))
         return None
 
     def _model_dump_kwargs(self, request: HttpRequest, status: int) -> Dict[str, Any]:
