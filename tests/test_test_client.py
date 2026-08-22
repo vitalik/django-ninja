@@ -3,6 +3,7 @@ from datetime import datetime
 from http import HTTPStatus
 from unittest import mock
 
+import django
 import pytest
 from django.utils import timezone
 
@@ -82,6 +83,10 @@ def test_sync_build_absolute_uri(path, expected_status, expected_response):
     assert response.json() == expected_response
 
 
+@pytest.mark.skipif(
+    django.VERSION < (5, 2),
+    reason="HttpRequest.get_preferred_type() requires Django 5.2+",
+)
 def test_get_preferred_type():
     response = client.get(
         "/request/get-preferred-type",
