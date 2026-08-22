@@ -2,6 +2,14 @@
 
 **Django Ninja** allows you to install custom exception handlers to deal with how you return responses when errors or handled exceptions occur.
 
+## Debug behaviour
+
+It is important to note that when you've set `DEBUG=True` in your Django project, **Django Ninja** will swallow exceptions and return a 500 status error along with a stack trace).
+
+!!! warning "Transactions - `ATOMIC_REQUESTS` and `transaction.atomic`"
+
+    Due to the behaviour described above (when `DEBUG=True`), you may encounter issues with `transaction.atomic` or the `ATOMIC_REQUESTS` setting not working as expected - that's because a successful response is returned (status 500 with a stack trace).
+
 ## Custom exception handlers
 
 Let's say you are making API that depends on some external service that is designed to be unavailable at some moments. Instead of throwing default 500 error upon exception - you can handle the error and give some friendly response back to the client (to come back later)
