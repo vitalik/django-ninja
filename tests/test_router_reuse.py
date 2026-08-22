@@ -413,6 +413,9 @@ class TestCloneCompleteness:
             "signature",
             "models",
             "response_models",
+            # Streaming
+            "stream_format",
+            "stream_item_model",
             # OpenAPI metadata
             "operation_id",
             "summary",

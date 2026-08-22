@@ -23,7 +23,8 @@ Django Ninja supports two modes for applying decorators:
 
 ## Using `@decorate_view`
 
-The `@decorate_view` decorator allows you to apply Django view decorators to individual endpoints:
+The `@decorate_view` decorator allows you to apply Django view decorators to individual endpoints.
+These decorators are always executed in VIEW mode:
 
 ```python
 from django.views.decorators.cache import cache_page
@@ -53,6 +54,7 @@ def multi_decorated(request):
 ## Using `add_decorator`
 
 The `add_decorator` method allows you to apply decorators to multiple endpoints at once.
+By default, they are executed in OPERATION mode; however, you can switch them to VIEW mode.
 
 ### Router-Level Decorators
 
@@ -203,6 +205,8 @@ When multiple decorators are applied, they execute in this order:
 3. Child router decorators
 4. Individual endpoint decorators (innermost)
 
+Be aware that VIEW mode decorators are executed before OPERATION mode decorators.
+
 ```python
 api = NinjaAPI()
 parent_router = Router()
@@ -221,10 +225,10 @@ parent_router.add_router("/child", child_router)
 api.add_router("/parent", parent_router)
 
 # Execution order:
-# 1. api_decorator
-# 2. parent_decorator
-# 3. child_decorator
-# 4. endpoint_decorator
+# 1. endpoint_decorator (view)
+# 1. api_decorator (operational)
+# 2. parent_decorator (operational)
+# 3. child_decorator (operational)
 # 5. endpoint function
 ```
 

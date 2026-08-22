@@ -175,6 +175,74 @@ def test_fields_all():
     }
 
 
+def test_model_as_string_valid():
+    class SomeModel(models.Model):
+        field1 = models.CharField()
+
+        class Meta:
+            app_label = "someapp"
+
+    class SomeStringModelSchema(ModelSchema):
+        class Meta:
+            model = "someapp.SomeModel"
+            fields = ["field1"]
+
+    assert SomeStringModelSchema.json_schema() == {
+        "title": "SomeStringModelSchema",
+        "type": "object",
+        "properties": {"field1": {"title": "Field1", "type": "string"}},
+        "required": ["field1"],
+    }
+
+
+def test_model_as_string_invalid_format():
+    with pytest.raises(
+        ValueError,
+        match="Model string must be in format 'app_label.ModelName', got: SomeModel",
+    ):
+
+        class SomeSchema(ModelSchema):
+            class Meta:
+                model = "SomeModel"
+                fields = ["field1"]
+
+
+def test_model_as_string_invalid_format2():
+    with pytest.raises(
+        ValueError,
+        match="Model string must be in format 'app_label.ModelName', got: someapp.models.SomeModel",
+    ):
+
+        class SomeSchema(ModelSchema):
+            class Meta:
+                model = "someapp.models.SomeModel"
+                fields = ["field1"]
+
+
+def test_model_as_string_nonexistent_app():
+    with pytest.raises(
+        LookupError,
+        match="No installed app with label 'nonexistentapp'.",
+    ):
+
+        class SomeSchema(ModelSchema):
+            class Meta:
+                model = "nonexistentapp.NonExistentModel"
+                fields = ["field1"]
+
+
+def test_model_as_string_nonexistent_model_in_app():
+    with pytest.raises(
+        LookupError,
+        match="App 'someapp' doesn't have a 'NonExistentModel' model.",
+    ):
+
+        class SomeSchema(ModelSchema):
+            class Meta:
+                model = "someapp.NonExistentModel"
+                fields = ["field1"]
+
+
 def test_model_schema_without_meta():
     with pytest.raises(
         ConfigError,

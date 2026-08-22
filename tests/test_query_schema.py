@@ -1,10 +1,15 @@
+import sys
 from datetime import datetime
 from enum import IntEnum
+from typing import Optional
 
+import pytest
 from pydantic import BaseModel, Field
 
 from ninja import NinjaAPI, Query, Schema
 from ninja.testing.client import TestClient
+
+PY_310 = sys.version_info >= (3, 10)
 
 
 class Range(IntEnum):
@@ -163,3 +168,87 @@ def test_schema_all_of_no_ref():
         "default": 1,
         "allOf": [{"title": "Best Type Ever!"}, {"no-ref-here": "xyzzy"}],
     }
+
+
+@pytest.mark.skipif(not PY_310, reason="requires Python 3.10+ pipe syntax")
+def test_unwrap_union_model_no_model():
+    """_unwrap_union_model returns input as-is when union has no pydantic model."""
+    from ninja.signature.details import _unwrap_union_model
+
+    annotation = int | None
+    assert _unwrap_union_model(annotation) is annotation
+    assert _unwrap_union_model(str) is str
+
+
+def test_optional_query_schema():
+    """Optional[Model] in Query should not crash (issue #1634)."""
+
+    class MyFilter(Schema):
+        name: str = "default"
+
+    temp_api = NinjaAPI()
+
+    @temp_api.get("/opt")
+    def view(request, f: Optional[MyFilter] = Query(None)):
+        if f:
+            return f.model_dump()
+        return {}
+
+    client = TestClient(temp_api)
+
+    resp = client.get("/opt?name=hello")
+    assert resp.status_code == 200
+    assert resp.json() == {"name": "hello"}
+
+    resp = client.get("/opt")
+    assert resp.status_code == 200
+
+
+@pytest.mark.skipif(not PY_310, reason="requires Python 3.10+ pipe syntax")
+def test_union_pipe_syntax_query_schema():
+    """Model | None in Query should not crash (issue #1634, Python 3.10+ pipe syntax)."""
+
+    class MyFilter(Schema):
+        name: str = "default"
+
+    temp_api = NinjaAPI()
+
+    @temp_api.get("/pipe")
+    def view(request, f: MyFilter | None = Query(None)):
+        if f:
+            return f.model_dump()
+        return {}
+
+    client = TestClient(temp_api)
+
+    resp = client.get("/pipe?name=world")
+    assert resp.status_code == 200
+    assert resp.json() == {"name": "world"}
+
+    resp = client.get("/pipe")
+    assert resp.status_code == 200
+
+
+@pytest.mark.skipif(not PY_310, reason="requires Python 3.10+ pipe syntax")
+def test_nested_optional_query_schema():
+    """Nested optional model fields should also work."""
+
+    class Inner(Schema):
+        value: Optional[int] = 0
+        items: list[str] = []
+
+    class Outer(Schema):
+        inner: Inner | None = None
+        label: str = "x"
+
+    temp_api = NinjaAPI()
+
+    @temp_api.get("/nested")
+    def view(request, f: Outer = Query(...)):
+        return f.model_dump()
+
+    client = TestClient(temp_api)
+
+    resp = client.get("/nested?label=test")
+    assert resp.status_code == 200
+    assert resp.json()["label"] == "test"

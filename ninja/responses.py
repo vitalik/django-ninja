@@ -1,15 +1,16 @@
 from enum import Enum
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
-from typing import Any, FrozenSet
+from typing import Any, FrozenSet, Generic, TypeVar
 
 from django.core.serializers.json import DjangoJSONEncoder
 from django.http import JsonResponse
-from pydantic import BaseModel
+from pydantic import AnyUrl, BaseModel
 from pydantic_core import Url
 
 __all__ = [
     "NinjaJSONEncoder",
     "Response",
+    "Status",
     "codes_1xx",
     "codes_2xx",
     "codes_3xx",
@@ -18,11 +19,29 @@ __all__ = [
 ]
 
 
+T = TypeVar("T")
+
+
+class Status(Generic[T]):
+    """Return a response with an explicit HTTP status code.
+
+    Usage:
+        return Status(200, {"key": "value"})
+        return Status(204, None)
+    """
+
+    __slots__ = ("status_code", "value")
+
+    def __init__(self, status_code: int, value: T):
+        self.status_code = status_code
+        self.value = value
+
+
 class NinjaJSONEncoder(DjangoJSONEncoder):
     def default(self, o: Any) -> Any:
         if isinstance(o, BaseModel):
             return o.model_dump()
-        if isinstance(o, Url):
+        if isinstance(o, (Url, AnyUrl)):
             return str(o)
         if isinstance(o, (IPv4Address, IPv4Network, IPv6Address, IPv6Network)):
             return str(o)

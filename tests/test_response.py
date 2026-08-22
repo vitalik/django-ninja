@@ -5,7 +5,7 @@ from typing import List, Union
 
 import pytest
 from django.http import HttpResponse
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, HttpUrl, ValidationError
 from pydantic_core import Url
 
 from ninja import Router
@@ -181,3 +181,25 @@ def test_pydantic_url():
     response = Response(data)
     response_data = json.loads(response.content)
     assert response_data == {"url": "https://django-ninja.dev/"}
+
+
+def test_pydantic_httpurl():
+    data = {"url": HttpUrl("https://django-ninja.dev/")}
+    response = Response(data)
+    response_data = json.loads(response.content)
+    assert response_data == {"url": "https://django-ninja.dev/"}
+
+
+class HttpUrlSchema(BaseModel):
+    url: HttpUrl
+
+
+@router.get("/check_httpurl", response=HttpUrlSchema)
+def check_httpurl(request):
+    return HttpUrlSchema(url="https://django-ninja.dev/")
+
+
+def test_pydantic_httpurl_schema():
+    response = client.get("/check_httpurl")
+    assert response.status_code == 200
+    assert response.json() == {"url": "https://django-ninja.dev/"}

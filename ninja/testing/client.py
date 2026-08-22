@@ -1,6 +1,7 @@
+import inspect
 from json import dumps as json_dumps
 from json import loads as json_loads
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 from unittest.mock import Mock
 from urllib.parse import urljoin
 
@@ -77,14 +78,14 @@ class NinjaClientBase:
     ) -> "NinjaResponse":
         return self.request("DELETE", path, data, json, **request_params)
 
-    def request(
+    def _prepare_request(
         self,
         method: str,
         path: str,
         data: Optional[Dict] = None,
         json: Any = None,
         **request_params: Any,
-    ) -> "NinjaResponse":
+    ) -> Tuple[Callable, HttpRequest, Dict]:
         if json is not None:
             request_params["body"] = json_dumps(json, cls=NinjaJSONEncoder)
         if data is None:
@@ -99,7 +100,19 @@ class NinjaClientBase:
                 **self.cookies,
                 **request_params.get("COOKIES", {}),
             }
-        func, request, kwargs = self._resolve(method, path, data, request_params)
+        return self._resolve(method, path, data, request_params)
+
+    def request(
+        self,
+        method: str,
+        path: str,
+        data: Optional[Dict] = None,
+        json: Any = None,
+        **request_params: Any,
+    ) -> "NinjaResponse":
+        func, request, kwargs = self._prepare_request(
+            method, path, data, json, **request_params
+        )
         return self._call(func, request, kwargs)  # type: ignore
 
     @property
@@ -118,33 +131,39 @@ class NinjaClientBase:
 
     def _resolve(
         self, method: str, path: str, data: Dict, request_params: Any
-    ) -> Tuple[Callable, Mock, Dict]:
+    ) -> Tuple[Callable, HttpRequest, Dict]:
         url_path = path.split("?")[0].lstrip("/")
         for url in self.urls:
             match = url.resolve(url_path)
             if match:
                 request = self._build_request(method, path, data, request_params)
+                request.resolver_match = match
                 return match.func, request, match.kwargs
         raise Exception(f'Cannot resolve "{path}"')
 
     def _build_request(
         self, method: str, path: str, data: Dict, request_params: Any
-    ) -> Mock:
-        request = Mock(spec=HttpRequest)
+    ) -> HttpRequest:
+        request: Any = HttpRequest()
         request.method = method
         request.path = path
-        request.body = ""
+        request._body = b""
         request.COOKIES = {}
         request._dont_enforce_csrf_checks = True
-        request.is_secure.return_value = False
         request.build_absolute_uri = build_absolute_uri
 
         request.auth = None
+        request.session = {}
         request.user = Mock()
         if "user" not in request_params:
             request.user.is_authenticated = False
             request.user.is_staff = False
             request.user.is_superuser = False
+
+        async def _auser() -> Any:
+            return request.user
+
+        request.auser = _auser
 
         request.META = request_params.pop("META", {"REMOTE_ADDR": "127.0.0.1"})
         request.FILES = request_params.pop("FILES", {})
@@ -183,21 +202,93 @@ class NinjaClientBase:
             else:
                 request.GET = QueryDict()
 
+        body = request_params.pop("body", b"")
+        request._body = body.encode("utf-8") if isinstance(body, str) else body
+
         for k, v in request_params.items():
             setattr(request, k, v)
-        return request
+
+        return cast(HttpRequest, request)
 
 
 class TestClient(NinjaClientBase):
-    def _call(self, func: Callable, request: Mock, kwargs: Dict) -> "NinjaResponse":
+    def _call(
+        self, func: Callable, request: HttpRequest, kwargs: Dict
+    ) -> "NinjaResponse":
         return NinjaResponse(func(request, **kwargs))
 
 
 class TestAsyncClient(NinjaClientBase):
-    async def _call(
-        self, func: Callable, request: Mock, kwargs: Dict
+    async def request(  # type: ignore[override]
+        self,
+        method: str,
+        path: str,
+        data: Optional[Dict] = None,
+        json: Any = None,
+        **request_params: Any,
     ) -> "NinjaResponse":
-        return NinjaResponse(await func(request, **kwargs))
+        func, request, kwargs = self._prepare_request(
+            method, path, data, json, **request_params
+        )
+        return await self._call(func, request, kwargs)
+
+    async def get(  # type: ignore[override]
+        self, path: str, data: Optional[Dict] = None, **request_params: Any
+    ) -> "NinjaResponse":
+        return await self.request("GET", path, data, **request_params)
+
+    async def post(  # type: ignore[override]
+        self,
+        path: str,
+        data: Optional[Dict] = None,
+        json: Any = None,
+        **request_params: Any,
+    ) -> "NinjaResponse":
+        return await self.request("POST", path, data, json, **request_params)
+
+    async def patch(  # type: ignore[override]
+        self,
+        path: str,
+        data: Optional[Dict] = None,
+        json: Any = None,
+        **request_params: Any,
+    ) -> "NinjaResponse":
+        return await self.request("PATCH", path, data, json, **request_params)
+
+    async def put(  # type: ignore[override]
+        self,
+        path: str,
+        data: Optional[Dict] = None,
+        json: Any = None,
+        **request_params: Any,
+    ) -> "NinjaResponse":
+        return await self.request("PUT", path, data, json, **request_params)
+
+    async def delete(  # type: ignore[override]
+        self,
+        path: str,
+        data: Optional[Dict] = None,
+        json: Any = None,
+        **request_params: Any,
+    ) -> "NinjaResponse":
+        return await self.request("DELETE", path, data, json, **request_params)
+
+    async def _call(
+        self, func: Callable, request: HttpRequest, kwargs: Dict
+    ) -> "NinjaResponse":
+        http_response = await func(request, **kwargs)
+        if http_response.streaming and inspect.isasyncgen(
+            http_response.streaming_content
+        ):
+            # Async streaming: consume async iterator into bytes
+            chunks = []
+            async for chunk in http_response.streaming_content:
+                chunks.append(
+                    chunk.encode("utf-8") if isinstance(chunk, str) else chunk
+                )
+            # Replace with sync content for NinjaResponse
+            http_response.streaming_content = iter(chunks)
+        return NinjaResponse(http_response)
 
 
 class NinjaResponse:
@@ -206,7 +297,11 @@ class NinjaResponse:
         self.status_code = http_response.status_code
         self.streaming = http_response.streaming
         if self.streaming:
-            self.content = b"".join(http_response.streaming_content)  # type: ignore
+            assert isinstance(http_response, StreamingHttpResponse)
+            self.content = b"".join(
+                chunk.encode("utf-8") if isinstance(chunk, str) else chunk
+                for chunk in http_response.streaming_content  # type: ignore[union-attr]
+            )
         else:
             self.content = http_response.content
         self._data = None

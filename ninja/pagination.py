@@ -27,6 +27,7 @@ from ninja.conf import settings
 from ninja.constants import NOT_SET
 from ninja.errors import ConfigError, ValidationError
 from ninja.operation import Operation
+from ninja.responses import Status
 from ninja.signature.details import is_collection_type
 from ninja.utils import (
     contribute_operation_args,
@@ -103,6 +104,14 @@ class LimitOffsetPagination(AsyncPaginationBase):
         )
         offset: int = Field(0, ge=0)
 
+    def __init__(
+        self,
+        max_limit: int = settings.PAGINATION_MAX_LIMIT,
+        **kwargs: Any,
+    ) -> None:
+        self.max_limit = max_limit
+        super().__init__(**kwargs)
+
     def paginate_queryset(
         self,
         queryset: QuerySet,
@@ -111,7 +120,7 @@ class LimitOffsetPagination(AsyncPaginationBase):
         **params: Any,
     ) -> Any:
         offset = pagination.offset
-        limit: int = min(pagination.limit, settings.PAGINATION_MAX_LIMIT)
+        limit: int = min(pagination.limit, self.max_limit)
         return {
             self.items_attribute: queryset[offset : offset + limit],
             "count": self._items_count(queryset),
@@ -125,7 +134,7 @@ class LimitOffsetPagination(AsyncPaginationBase):
         **params: Any,
     ) -> Any:
         offset = pagination.offset
-        limit: int = min(pagination.limit, settings.PAGINATION_MAX_LIMIT)
+        limit: int = min(pagination.limit, self.max_limit)
         if isinstance(queryset, QuerySet):
             items = [obj async for obj in queryset[offset : offset + limit]]
         else:
@@ -625,6 +634,11 @@ def _inject_pagination(
 
             items = await func(request, **kwargs)
 
+            status_code = None
+            if isinstance(items, Status):
+                status_code = items.status_code
+                items = items.value
+
             result = await paginator.apaginate_queryset(
                 items, pagination=pagination_params, request=request, **kwargs
             )
@@ -638,6 +652,9 @@ def _inject_pagination(
                     result
                     async for result in evaluate(result[paginator.items_attribute])
                 ]
+
+            if status_code is not None:
+                return Status(status_code, result)
             return result
 
     else:
@@ -652,6 +669,11 @@ def _inject_pagination(
 
             items = func(request, **kwargs)
 
+            status_code = None
+            if isinstance(items, Status):
+                status_code = items.status_code
+                items = items.value
+
             result = paginator.paginate_queryset(
                 items, pagination=pagination_params, request=request, **kwargs
             )
@@ -660,6 +682,9 @@ def _inject_pagination(
                     result[paginator.items_attribute]
                 )
                 # ^ forcing queryset evaluation #TODO: check why pydantic did not do it here
+
+            if status_code is not None:
+                return Status(status_code, result)
             return result
 
     # Only contribute args if Input has fields

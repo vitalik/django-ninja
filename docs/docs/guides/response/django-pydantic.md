@@ -28,6 +28,12 @@ class UserSchema(ModelSchema):
 #     last_name: str
 ```
 
+!!! note
+
+    You can also specify the model using a [Django Absolute Lazy relationship](https://docs.djangoproject.com/en/stable/ref/models/fields/#absolute).
+    In the above example, it would be `model = 'auth.User'`.
+
+
 ### Using ALL model fields
 
 To use all fields from a model - you can pass `__all__` to `fields`:
