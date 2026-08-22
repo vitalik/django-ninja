@@ -192,7 +192,7 @@ def test_throttled_without_wait_has_no_retry_after_header():
 
     resp = client.get("/check")
     assert resp.status_code == 429
-    assert "Retry-After" not in resp.headers
+    assert not resp.has_header("Retry-After")
 
 
 @pytest.mark.asyncio

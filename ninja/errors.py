@@ -127,7 +127,8 @@ def _default_throttled_error(
 
     if exc.wait is not None:
         # Set the `Retry-After` header if `wait` is defined
-        response.headers["Retry-After"] = exc.wait
+        # (item assignment instead of `response.headers`, which requires Django 3.2+)
+        response["Retry-After"] = exc.wait
 
     return response
 
