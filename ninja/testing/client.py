@@ -1,7 +1,7 @@
 import inspect
 from json import dumps as json_dumps
 from json import loads as json_loads
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 from unittest.mock import Mock
 from urllib.parse import urljoin
 
@@ -85,7 +85,7 @@ class NinjaClientBase:
         data: Optional[Dict] = None,
         json: Any = None,
         **request_params: Any,
-    ) -> Tuple[Callable, Mock, Dict]:
+    ) -> Tuple[Callable, HttpRequest, Dict]:
         if json is not None:
             request_params["body"] = json_dumps(json, cls=NinjaJSONEncoder)
         if data is None:
@@ -131,7 +131,7 @@ class NinjaClientBase:
 
     def _resolve(
         self, method: str, path: str, data: Dict, request_params: Any
-    ) -> Tuple[Callable, Mock, Dict]:
+    ) -> Tuple[Callable, HttpRequest, Dict]:
         url_path = path.split("?")[0].lstrip("/")
         for url in self.urls:
             match = url.resolve(url_path)
@@ -143,14 +143,13 @@ class NinjaClientBase:
 
     def _build_request(
         self, method: str, path: str, data: Dict, request_params: Any
-    ) -> Mock:
-        request = Mock(spec=HttpRequest)
+    ) -> HttpRequest:
+        request: Any = HttpRequest()
         request.method = method
         request.path = path
-        request.body = b""
+        request._body = b""
         request.COOKIES = {}
         request._dont_enforce_csrf_checks = True
-        request.is_secure.return_value = False
         request.build_absolute_uri = build_absolute_uri
 
         request.auth = None
@@ -203,17 +202,19 @@ class NinjaClientBase:
             else:
                 request.GET = QueryDict()
 
+        body = request_params.pop("body", b"")
+        request._body = body.encode("utf-8") if isinstance(body, str) else body
+
         for k, v in request_params.items():
             setattr(request, k, v)
 
-        if isinstance(request.body, str):
-            request.body = request.body.encode("utf-8")
-
-        return request
+        return cast(HttpRequest, request)
 
 
 class TestClient(NinjaClientBase):
-    def _call(self, func: Callable, request: Mock, kwargs: Dict) -> "NinjaResponse":
+    def _call(
+        self, func: Callable, request: HttpRequest, kwargs: Dict
+    ) -> "NinjaResponse":
         return NinjaResponse(func(request, **kwargs))
 
 
@@ -273,7 +274,7 @@ class TestAsyncClient(NinjaClientBase):
         return await self.request("DELETE", path, data, json, **request_params)
 
     async def _call(
-        self, func: Callable, request: Mock, kwargs: Dict
+        self, func: Callable, request: HttpRequest, kwargs: Dict
     ) -> "NinjaResponse":
         http_response = await func(request, **kwargs)
         if http_response.streaming and inspect.isasyncgen(
