@@ -908,6 +908,43 @@ def test_unique_operation_ids(capsys):
     assert '"test_openapi_schema_same_name" is already used ' in captured.out
 
 
+def test_openapi_version_bumped_for_query_method():
+    api = NinjaAPI()
+
+    @api.get("/get")
+    def get_op(request):
+        pass
+
+    schema = api.get_openapi_schema()
+    assert schema["openapi"] == "3.1.0"
+
+    api_with_query = NinjaAPI(urls_namespace="test_openapi_version_query")
+
+    @api_with_query.query("/query")
+    def query_op(request):
+        pass
+
+    schema = api_with_query.get_openapi_schema(path_prefix="")
+    assert schema["openapi"] == "3.2.0"
+
+
+def test_openapi_version_explicit_override_wins():
+    "openapi_extra can pin the version explicitly, overriding auto-detection"
+    api = NinjaAPI(
+        urls_namespace="test_openapi_version_override",
+        openapi_extra={"openapi": "3.1.0"},
+    )
+
+    @api.query("/query")
+    def query_op(request):
+        pass
+
+    # would normally auto-bump to 3.2.0 because a QUERY route is present,
+    # but the explicit override takes precedence
+    schema = api.get_openapi_schema(path_prefix="")
+    assert schema["openapi"] == "3.1.0"
+
+
 def test_docs_decorator():
     api = NinjaAPI(docs_decorator=staff_member_required)
 

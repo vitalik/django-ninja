@@ -33,7 +33,7 @@ class Settings(BaseModel):
     )
 
     FIX_REQUEST_FILES_METHODS: Set[str] = Field(
-        {"PUT", "PATCH", "DELETE"}, alias="NINJA_FIX_REQUEST_FILES_METHODS"
+        {"PUT", "PATCH", "DELETE", "QUERY"}, alias="NINJA_FIX_REQUEST_FILES_METHODS"
     )
 
 

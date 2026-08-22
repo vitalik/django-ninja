@@ -79,6 +79,11 @@ def obtain_csrf_token_post_no_auth_route(request):
     return JsonResponse(data={"success": True})
 
 
+@csrf_ON.query("/query")
+def query_on(request):
+    return {"success": True}
+
+
 TOKEN = "1bcdefghij2bcdefghij3bcdefghij4bcdefghij5bcdefghij6bcdefghijABCD"
 COOKIES = {settings.CSRF_COOKIE_NAME: TOKEN}
 
@@ -103,6 +108,14 @@ def test_csrf_on():
 
     # exempt check
     assert client.post("/post/csrf_exempt", COOKIES=COOKIES).status_code == 200
+
+
+def test_csrf_query_is_safe():
+    "QUERY is a safe/idempotent method like GET, so it should never be CSRF checked"
+    client = TestClient(csrf_ON)
+
+    # no csrf token needed, just like GET
+    assert client.query("/query", COOKIES=COOKIES).status_code == 200
 
 
 def test_csrf_cookie_auth():
