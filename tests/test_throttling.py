@@ -134,6 +134,88 @@ async def test_async_throttling():
     assert resp.status_code == 429
 
 
+def test_throttled_retry_after_header():
+    th = AnonRateThrottle("1/s")
+    set_throttle_timer(th, 0)
+
+    api = NinjaAPI(throttle=th)
+
+    @api.get("/check")
+    def check(request):
+        return "OK"
+
+    client = TestClient(api)
+
+    resp = client.get("/check")
+    assert resp.status_code == 200
+
+    resp = client.get("/check")
+    assert resp.status_code == 429
+    assert resp["Retry-After"] == "1"
+
+
+def test_throttled_retry_after_header_rounds_up():
+    th = AnonRateThrottle("1/s")
+    set_throttle_timer(th, 0)
+
+    api = NinjaAPI(throttle=th)
+
+    @api.get("/check")
+    def check(request):
+        return "OK"
+
+    client = TestClient(api)
+
+    resp = client.get("/check")
+    assert resp.status_code == 200
+
+    # 0.6 seconds of the throttling window remain - the header
+    # must round up to a whole number of seconds
+    set_throttle_timer(th, 0.4)
+    resp = client.get("/check")
+    assert resp.status_code == 429
+    assert resp["Retry-After"] == "1"
+
+
+def test_throttled_without_wait_has_no_retry_after_header():
+    class NoWaitThrottle(BaseThrottle):
+        def allow_request(self, request):
+            return False
+
+    api = NinjaAPI(throttle=NoWaitThrottle())
+
+    @api.get("/check")
+    def check(request):
+        return "OK"
+
+    client = TestClient(api)
+
+    resp = client.get("/check")
+    assert resp.status_code == 429
+    assert "Retry-After" not in resp.headers
+
+
+@pytest.mark.asyncio
+async def test_async_throttled_retry_after_header():
+    th = AnonRateThrottle("1/s")
+    set_throttle_timer(th, 0)
+
+    api = NinjaAPI(throttle=th)
+
+    @api.get("/check-async")
+    async def check(request):
+        return "OK"
+
+    client = TestAsyncClient(api)
+
+    resp = await client.get("/check-async")
+    assert resp.status_code == 200
+
+    resp = await client.get("/check-async")
+    assert resp.status_code == 429
+    assert resp["Retry-After"] == "1"
+
+
 # "Unit tests" for the throttling module
 
 _client = TestClient(NinjaAPI())

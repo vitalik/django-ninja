@@ -342,7 +342,7 @@ class Operation:
             ]
 
             duration = max(durations, default=None)
-            return self.api.on_exception(request, Throttled(wait=duration))  # type: ignore
+            return self.api.on_exception(request, Throttled(wait=duration))
         return None
 
     def _model_dump_kwargs(self, request: HttpRequest, status: int) -> Dict[str, Any]:
