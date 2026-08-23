@@ -147,12 +147,12 @@ class BoundRouter:
                         operation.throttle_objects = (
                             isinstance(throttle, BaseThrottle)
                             and [throttle]
-                            or throttle  # type: ignore
+                            or throttle  # type: ignore[assignment]
                         )
 
                 # Apply tags inheritance
-                if operation.tags is None and self.tags is not None:  # type: ignore[has-type]
-                    operation.tags = self.tags  # type: ignore[has-type]
+                if operation.tags is None and self.tags is not None:
+                    operation.tags = self.tags
 
                 # Apply decorators (fresh application - no tracking needed)
                 for decorator, mode in effective_decorators:
