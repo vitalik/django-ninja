@@ -1,11 +1,13 @@
 import logging
 import traceback
 from functools import partial
-from typing import TYPE_CHECKING, Generic, List, Optional, TypeVar
+from typing import TYPE_CHECKING, Generic, List, Optional
 
 import pydantic
 from django.conf import settings
 from django.http import Http404, HttpRequest, HttpResponse
+from pydantic import BaseModel, GetCoreSchemaHandler
+from typing_extensions import TypeVar
 
 from ninja.types import DictStrAny
 
@@ -58,7 +60,27 @@ class ValidationError(Exception):
         super().__init__(errors)
 
 
-class HttpError(Exception):
+class HttpErrorResponse(BaseModel):
+    detail: str
+
+
+T = TypeVar("T", bound=HttpErrorResponse)
+
+
+class HttpError(Exception, Generic[T]):
+    __response_schema__ = HttpErrorResponse
+
+    def __init_subclass__(cls, **kwargs):
+        """
+        Sets the __response_schema__ for generic subclasses of HttpError, enabling
+        custom Pydantic response models via generic type parameters (e.g., HttpError[MySchema]).
+        """
+        super().__init_subclass__(**kwargs)
+        if hasattr(cls, "__orig_bases__"):
+            for base in cls.__orig_bases__:
+                if hasattr(base, "__args__") and base.__origin__ is HttpError:
+                    cls.__response_schema__ = base.__args__[0]
+
     def __init__(self, status_code: int, message: str) -> None:
         self.status_code = status_code
         self.message = message
@@ -66,6 +88,16 @@ class HttpError(Exception):
 
     def __str__(self) -> str:
         return self.message
+
+    @classmethod
+    def __get_pydantic_core_schema__(cls, source_type, handler: GetCoreSchemaHandler):
+        """
+        Returns the Pydantic core schema for the error response, allowing HttpError
+        subclasses to be used as valid response types in OpenAPI schema generation.
+        """
+        return cls.__response_schema__.__get_pydantic_core_schema__(
+            source_type, handler
+        )
 
 
 class AuthenticationError(HttpError):
