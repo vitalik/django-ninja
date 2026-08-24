@@ -1,4 +1,5 @@
 import inspect
+import math
 import warnings
 from typing import (
     TYPE_CHECKING,
@@ -338,7 +339,11 @@ class Operation:
             ]
 
             duration = max(durations, default=None)
-            return self.api.on_exception(request, Throttled(wait=duration))  # type: ignore
+            response = self.api.on_exception(request, Throttled(wait=duration))  # type: ignore
+            if duration is not None:
+                # Retry-After must be integer delta-seconds (RFC 9110)
+                response["Retry-After"] = str(math.ceil(duration))
+            return response
         return None
 
     def _model_dump_kwargs(self, request: HttpRequest, status: int) -> Dict[str, Any]:
