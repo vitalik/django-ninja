@@ -5,9 +5,10 @@ from uuid import UUID
 
 from django.db.models import ManyToManyField
 from django.db.models.fields import Field as DjangoField
-from pydantic import IPvAnyAddress
+from pydantic import AfterValidator, IPvAnyAddress
 from pydantic.fields import FieldInfo
-from pydantic_core import PydanticUndefined, core_schema
+from pydantic_core import PydanticKnownError, PydanticUndefined, core_schema
+from typing_extensions import Annotated
 
 from ninja.errors import ConfigError
 from ninja.openapi.schema import OpenAPISchema
@@ -113,6 +114,29 @@ def create_m2m_link_type(type_: Type[TModel]) -> Type[TModel]:
     return M2MLink
 
 
+def _request_max_length(limit: int) -> AfterValidator:
+    """
+    Length check applied to request data only.
+
+    Django does not enforce TextField.max_length at the model or database
+    level (it is only reflected in form widgets), so stored values may
+    legally exceed it.  A hard pydantic constraint would make response
+    serialization fail with a 500 for such rows (see #1692).  Instead we
+    validate incoming payloads (on par with Django forms and DRF) and skip
+    the check when serializing responses.
+    """
+
+    def check(value: Any, info: core_schema.ValidationInfo) -> Any:
+        context = info.context
+        if context and "response_status" in context:
+            return value  # serializing a response - skip
+        if value is not None and len(value) > limit:
+            raise PydanticKnownError("string_too_long", {"max_length": limit})
+        return value
+
+    return AfterValidator(check)
+
+
 @no_type_check
 def get_schema_field(
     field: DjangoField, *, depth: int = 0, optional: bool = False
@@ -176,6 +200,14 @@ def get_schema_field(
     if default_factory:
         default = PydanticUndefined
 
+    json_schema_extra = None
+    if max_length is not None and internal_type == "TextField":
+        # TextField.max_length is a form-level hint in Django, not a model
+        # or database constraint - enforce it for input only (#1692)
+        python_type = Annotated[python_type, _request_max_length(max_length)]
+        json_schema_extra = {"maxLength": max_length}
+        max_length = None
+
     if nullable:
         python_type = Union[python_type, None]  # aka Optional in 3.7+
 
@@ -193,6 +225,7 @@ def get_schema_field(
             title=title,
             description=description,
             max_length=max_length,
+            json_schema_extra=json_schema_extra,
         ),
     )
 

@@ -8,9 +8,11 @@ from django.db import models
 from django.db.models import Manager
 from util import pydantic_ref_fix
 
+from ninja import Router
 from ninja.errors import ConfigError
 from ninja.orm import create_schema, register_field
 from ninja.orm.shortcuts import L, S
+from ninja.testing import TestClient
 
 
 def test_inheritance():
@@ -369,6 +371,68 @@ def test_default():
             "default_dynamic": {"title": "Default Dynamic", "type": "string"},
         },
     }
+
+
+def test_textfield_max_length_validates_input_only():
+    # Django does not enforce TextField.max_length at the model or database
+    # level, so stored values may exceed it - serializing them in a response
+    # must not fail (#1692), while incoming payloads are still validated
+    class ModelWithLimitedText(models.Model):
+        text = models.TextField(max_length=5)
+
+        class Meta:
+            app_label = "tests"
+
+    Schema = create_schema(ModelWithLimitedText)
+
+    assert Schema.json_schema()["properties"]["text"] == {
+        "maxLength": 5,
+        "title": "Text",
+        "type": "string",
+    }
+
+    with pytest.raises(pydantic.ValidationError) as exc_info:
+        Schema(id=1, text="123456")
+    assert exc_info.value.errors()[0]["type"] == "string_too_long"
+
+    obj = Mock(id=1, text="123456")
+    assert Schema.from_orm(obj, context={"response_status": 200}).dict() == {
+        "id": 1,
+        "text": "123456",
+    }
+
+
+def test_textfield_max_length_api_flow():
+    class ModelWithLimitedDescription(models.Model):
+        description = models.TextField(max_length=5)
+
+        class Meta:
+            app_label = "tests"
+
+    Schema = create_schema(ModelWithLimitedDescription)
+
+    router = Router()
+
+    @router.post("/things")
+    def create_thing(request, payload: Schema):
+        return {"ok": True}
+
+    @router.get("/things", response=Schema)
+    def get_thing(request):
+        return type("Obj", (), {"id": 1, "description": "123456"})()
+
+    client = TestClient(router)
+
+    response = client.post("/things", json={"description": "123456"})
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["type"] == "string_too_long"
+
+    response = client.post("/things", json={"description": "12345"})
+    assert response.status_code == 200
+
+    response = client.get("/things")
+    assert response.status_code == 200
+    assert response.json() == {"id": 1, "description": "123456"}
 
 
 def test_fields_exclude():
