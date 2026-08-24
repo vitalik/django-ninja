@@ -1,10 +1,15 @@
+import importlib
+import re
 from typing import List
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
+from django.test.client import MULTIPART_CONTENT
 from django.utils.datastructures import MultiValueDict
 
 from ninja import File, NinjaAPI, UploadedFile
+from ninja.compatibility.files import fix_request_files_middleware
 from ninja.errors import ConfigError
 from ninja.testing import TestClient
 
@@ -144,3 +149,23 @@ def test_files_fix_middleware():
         @api.patch("/file1")
         def patch_with_file(request, file: UploadedFile):
             return {"name": file.name}
+
+
+@override_settings(NINJA_FIX_REQUEST_FILES_URLS=re.compile(r"^/file\d+"))
+def test_files_fix_middleware_urls(rf):
+    def get_response(request):
+        assert request.FILES == {}
+
+    from ninja import conf
+    from ninja.compatibility import files
+
+    importlib.reload(conf)
+    importlib.reload(files)
+
+    file = SimpleUploadedFile("test.txt", b"data123")
+    post_data = rf._encode_data({"file": file}, MULTIPART_CONTENT)
+    request = rf.generic(
+        "PATCH", "/not-patched", post_data, content_type=MULTIPART_CONTENT
+    )
+
+    fix_request_files_middleware(get_response)(request)
