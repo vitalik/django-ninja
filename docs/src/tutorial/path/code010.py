@@ -1,5 +1,8 @@
 import datetime
-from ninja import Schema, Path
+
+from ninja import NinjaAPI, Path, Schema
+
+api = NinjaAPI()
 
 
 class PathDate(Schema):

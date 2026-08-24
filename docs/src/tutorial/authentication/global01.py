@@ -1,4 +1,4 @@
-from ninja import NinjaAPI, Form
+from ninja import Form, NinjaAPI
 from ninja.security import HttpBearer
 
 

@@ -1,5 +1,9 @@
-from ninja.security import APIKeyQuery
 from someapp.models import Client
+
+from ninja import NinjaAPI
+from ninja.security import APIKeyQuery
+
+api = NinjaAPI()
 
 
 class ApiKey(APIKeyQuery):

@@ -22,9 +22,9 @@ def get_openapi_urls(api: "NinjaAPI") -> List[Any]:
             path(api.openapi_url.lstrip("/"), view, name="openapi-json"),
         )
 
-        assert (
-            api.openapi_url != api.docs_url
-        ), "Please use different urls for openapi_url and docs_url"
+        assert api.openapi_url != api.docs_url, (
+            "Please use different urls for openapi_url and docs_url"
+        )
 
         if api.docs_url:
             view = partial(openapi_view, api=api)
