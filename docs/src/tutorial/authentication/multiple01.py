@@ -1,4 +1,4 @@
-from ninja.security import APIKeyQuery, APIKeyHeader
+from ninja.security import APIKeyHeader, APIKeyQuery
 
 
 class AuthCheck:
