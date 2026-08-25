@@ -1,5 +1,5 @@
 import itertools
-from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Type, Union, cast
+from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Type, Union
 
 from django.db.models import Field as DjangoField
 from django.db.models import Model
@@ -164,7 +164,7 @@ class SchemaFactory:
                 # ManyToManyRel, and the bare ForeignObjectRel used as the
                 # rel_class for plain ForeignObject fields)
                 continue
-            yield cast(DjangoField, fld)
+            yield fld
 
 
 factory = SchemaFactory()
