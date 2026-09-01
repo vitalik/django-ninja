@@ -892,7 +892,7 @@ def test_get_openapi_urls():
         get_openapi_urls(api)
 
 
-def test_unique_operation_ids(capsys):
+def test_unique_operation_ids():
     api = NinjaAPI()
 
     @api.get("/1")
@@ -903,9 +903,10 @@ def test_unique_operation_ids(capsys):
     def same_name(request):  # noqa: F811
         pass
 
-    api.get_openapi_schema()
-    captured = capsys.readouterr()
-    assert '"test_openapi_schema_same_name" is already used ' in captured.out
+    with pytest.warns(
+        UserWarning, match='"test_openapi_schema_same_name" is already used'
+    ):
+        api.get_openapi_schema()
 
 
 def test_docs_decorator():
