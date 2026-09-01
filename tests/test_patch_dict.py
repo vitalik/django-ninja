@@ -22,6 +22,21 @@ class OtherSchema(SomeSchema):
     category: Optional[List[str]] = None
 
 
+class TagSchema(Schema):
+    name: str
+
+
+class MultiRefSchema(Schema):
+    label: str
+    primary: Optional[List[TagSchema]] = None
+    secondary: Optional[List[TagSchema]] = None
+
+
+@api.patch("/patch-multi-ref")
+def patch_multi_ref(request, payload: PatchDict[MultiRefSchema]):
+    return {"payload": payload, "type": str(type(payload))}
+
+
 @api.patch("/patch")
 def patch(request, payload: PatchDict[SomeSchema]):
     return {"payload": payload, "type": str(type(payload))}
@@ -75,6 +90,16 @@ def test_patch_inherited():
     expected_output = {"payload": input, "type": "<class 'dict'>"}
 
     response = client.patch("/patch-inherited", json=input)
+    assert response.json() == expected_output
+
+
+def test_patch_repeated_sub_model():
+    # a sub-model referenced by more than one field must not break schema
+    # generation (the wrapped model's schema uses $ref definitions).
+    input = {"label": "x", "primary": [{"name": "a"}]}
+    expected_output = {"payload": input, "type": "<class 'dict'>"}
+
+    response = client.patch("/patch-multi-ref", json=input)
     assert response.json() == expected_output
 
 
