@@ -32,9 +32,9 @@ Some features that are made possible with pydantic2
 
 ### pydantic context
 
-Pydantic now supports context during validation and serialization and Django ninja passes "request" object during request and response work
+Pydantic now supports context during validation and serialization and Django ninja passes "request" object and "path\_params" dict during request and response work
 
-```Python hl_lines="6 7"
+```Python hl_lines="6 7 11 12"
 class Payload(Schema):
     id: int
     name: str
@@ -44,6 +44,11 @@ class Payload(Schema):
     def resolve_request_path(data, context):
         request = context["request"]
         return request.get_full_path()
+
+    @model_validator(mode="wrap")
+    def validate_item_id(cls, values, handler, info):
+        item_id = info.context["path_params"].get("item_id")
+        assert item_id is not None, "Item ID is required"
 
 ```
 
