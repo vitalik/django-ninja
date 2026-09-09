@@ -335,6 +335,84 @@ class NinjaAPI:
             openapi_extra=openapi_extra,
         )
 
+    def webhook(
+        self,
+        name: str,
+        *,
+        auth: Any = NOT_SET,
+        response: Any = NOT_SET,
+        operation_id: Optional[str] = None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        deprecated: Optional[bool] = None,
+        by_alias: Optional[bool] = None,
+        exclude_unset: Optional[bool] = None,
+        exclude_defaults: Optional[bool] = None,
+        exclude_none: Optional[bool] = None,
+        include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
+    ) -> Callable[[TCallable], TCallable]:
+        """
+        OpenAPI 3.1 ``webhooks`` payload definition. The function is never
+        invoked; its signature is read only to derive the requestBody schema.
+        """
+        return self.default_router.webhook(
+            name,
+            auth=auth is NOT_SET and self.auth or auth,
+            response=response,
+            operation_id=operation_id,
+            summary=summary,
+            description=description,
+            tags=tags,
+            deprecated=deprecated,
+            by_alias=by_alias,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
+            include_in_schema=include_in_schema,
+            openapi_extra=openapi_extra,
+        )
+
+    def add_api_webhook(
+        self,
+        name: str,
+        methods: List[str],
+        view_func: Callable,
+        *,
+        auth: Any = NOT_SET,
+        response: Any = NOT_SET,
+        operation_id: Optional[str] = None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        deprecated: Optional[bool] = None,
+        by_alias: Optional[bool] = None,
+        exclude_unset: Optional[bool] = None,
+        exclude_defaults: Optional[bool] = None,
+        exclude_none: Optional[bool] = None,
+        include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        self.default_router.add_api_webhook(
+            name,
+            methods,
+            view_func,
+            auth=auth is NOT_SET and self.auth or auth,
+            response=response,
+            operation_id=operation_id,
+            summary=summary,
+            description=description,
+            tags=tags,
+            deprecated=deprecated,
+            by_alias=by_alias,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
+            include_in_schema=include_in_schema,
+            openapi_extra=openapi_extra,
+        )
+
     def api_operation(
         self,
         methods: List[str],
