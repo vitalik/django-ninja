@@ -1,9 +1,11 @@
+import gc
 from typing import List, Optional, Union
 from unittest.mock import Mock
 
 import pytest
 from django.db.models import Manager, QuerySet
 from django.db.models.fields.files import ImageFieldFile
+from pydantic import field_validator
 from pydantic_core import ValidationError
 
 from ninja import Schema
@@ -227,3 +229,25 @@ def test_schema_skips_validation_when_validate_assignment_False(
         assert schema_inst.str_var == 5
     except ValidationError as ve:
         raise AssertionError() from ve
+
+
+def test_root_validator_releases_handler_after_validation_error():
+    class FailingSchema(Schema):
+        value: int
+
+        @field_validator("value")
+        @classmethod
+        def reject(cls, v):
+            raise ValueError("rejected")
+
+    with pytest.raises(ValidationError) as exc_info:
+        FailingSchema(value=1)
+
+    # exc_info keeps the traceback of the inner ValueError alive, and with it the
+    # frame of Schema._run_root_validator. If that frame still references the
+    # pydantic-core `handler`, the shared validator tree is traversed twice by the
+    # GC and its refcounts get corrupted (issue #1773).
+    gc.collect()
+    leaked = [o for o in gc.get_objects() if type(o).__name__ == "ValidatorCallable"]
+    assert leaked == []
+    assert exc_info.value.errors()[0]["msg"] == "Value error, rejected"

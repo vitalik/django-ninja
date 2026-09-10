@@ -218,13 +218,23 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
         # object, then we need to call `handler` directly on `values` before the conversion
         # to DjangoGetter, since any checks or modifications on DjangoGetter's __dict__
         # will not persist to the original object.
-        forbids_extra = cls.model_config.get("extra") == "forbid"
-        should_validate_assignment = cls.model_config.get("validate_assignment", False)
-        if forbids_extra or should_validate_assignment:
-            handler(values)
+        try:
+            forbids_extra = cls.model_config.get("extra") == "forbid"
+            should_validate_assignment = cls.model_config.get(
+                "validate_assignment", False
+            )
+            if forbids_extra or should_validate_assignment:
+                handler(values)
 
-        values = DjangoGetter(values, cls, info.context)
-        return handler(values)
+            values = DjangoGetter(values, cls, info.context)
+            return handler(values)
+        finally:
+            # pydantic-core shares the validator tree between `handler` and the
+            # model's SchemaValidator and traverses it from both during GC. A
+            # validation error keeps this frame alive through its traceback, so a
+            # surviving `handler` makes the GC visit the shared objects twice and
+            # corrupts their refcounts (vitalik/django-ninja#1773).
+            del handler
 
     @classmethod
     def from_orm(cls: Type[S], obj: Any, **kw: Any) -> S:
