@@ -4,7 +4,7 @@ from enum import IntEnum
 from typing import Optional
 
 import pytest
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field
 
 from ninja import NinjaAPI, Query, Schema
 from ninja.testing.client import TestClient
@@ -252,3 +252,43 @@ def test_nested_optional_query_schema():
     resp = client.get("/nested?label=test")
     assert resp.status_code == 200
     assert resp.json()["label"] == "test"
+
+
+class ValidationAliasFilter(Schema):
+    first_name: str = Field(validation_alias=AliasChoices("firstname", "fname"))
+    last_name: str = Field(validation_alias=AliasChoices("lastname", "lname"))
+
+
+validation_alias_api = NinjaAPI()
+
+
+@validation_alias_api.get("/test")
+def validation_alias_params(request, filters: ValidationAliasFilter = Query(...)):
+    return filters.model_dump()
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "?firstname=a&lastname=b",
+        "?fname=a&lname=b",
+        "?firstname=a&lname=b",
+        "?fname=a&lastname=b",
+    ],
+)
+def test_validation_alias_choices(query):
+    client = TestClient(validation_alias_api)
+
+    response = client.get("/test" + query)
+
+    assert response.status_code == 200
+    assert response.json() == {"first_name": "a", "last_name": "b"}
+
+
+def test_validation_alias_choices_openapi_schema():
+    schema = validation_alias_api.get_openapi_schema()
+
+    [path] = schema["paths"].values()
+    parameters = path["get"]["parameters"]
+
+    assert [parameter["name"] for parameter in parameters] == ["firstname", "lastname"]
