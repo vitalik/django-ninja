@@ -51,6 +51,10 @@ if TYPE_CHECKING:
 __all__ = ["Operation", "PathView", "ResponseObject"]
 
 
+async def _await_coroutine(coroutine: Coroutine[Any, Any, Any]) -> Any:
+    return await coroutine
+
+
 class Operation:
     def __init__(
         self,
@@ -315,7 +319,7 @@ class Operation:
                 if is_async_callable(callback) or getattr(callback, "is_async", False):
                     result = callback(request)
                     if inspect.iscoroutine(result):
-                        result = async_to_sync(callback)(request)
+                        result = async_to_sync(_await_coroutine)(result)
                 else:
                     result = callback(request)
             except Exception as exc:

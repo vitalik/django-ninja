@@ -155,6 +155,32 @@ def test_async_authenticate_method_in_sync_context():
     assert res.json() == {"auth": "secret"}
 
 
+def test_async_bearer_auth_is_called_once_in_sync_context(recwarn):
+    call_count = 0
+
+    class BearerAuth(HttpBearer):
+        def __call__(self, request):
+            nonlocal call_count
+            call_count += 1
+            return super().__call__(request)
+
+        async def authenticate(self, request, key):
+            await asyncio.sleep(0)
+            return key
+
+    api = NinjaAPI(auth=BearerAuth())
+
+    @api.get("/sync")
+    def sync_view(request):
+        return {"auth": request.auth}
+
+    response = TestClient(api).get("/sync", headers={"Authorization": "Bearer secret"})
+
+    assert response.json() == {"auth": "secret"}
+    assert call_count == 1
+    assert not recwarn
+
+
 @pytest.mark.asyncio
 async def test_async_with_bearer():
     class BearerAuth(HttpBearer):
