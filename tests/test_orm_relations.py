@@ -67,3 +67,33 @@ def test_reverse_foreign_object_relation_is_skipped():
     # The reverse relation is skipped, so it does not appear as a schema field.
     assert "details" not in OrderSchema.model_fields
     assert "id" in OrderSchema.model_fields
+
+
+@isolate_apps("tests")
+def test_reverse_foreign_object_relation_is_skipped_at_depth():
+    """``depth`` recurses through the forward ForeignObject into the referenced
+    model, so the reverse ForeignObjectRel must be skipped on the nested schema
+    as well as the top-level one."""
+
+    class Category(models.Model):
+        class Meta:
+            app_label = "tests"
+
+    class Item(models.Model):
+        category_id = models.PositiveIntegerField()
+        category = models.ForeignObject(
+            Category,
+            on_delete=models.CASCADE,
+            from_fields=["category_id"],
+            to_fields=["id"],
+            related_name="items",
+        )
+
+        class Meta:
+            app_label = "tests"
+
+    CategorySchema = create_schema(Category, depth=1)
+    assert "items" not in CategorySchema.model_fields
+
+    ItemSchema = create_schema(Item, depth=1)
+    assert "category" in ItemSchema.model_fields
