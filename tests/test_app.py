@@ -50,6 +50,11 @@ def delete(request):
     return f"this is {request.method}"
 
 
+@api.query("/query")
+def query(request):
+    return f"this is {request.method}"
+
+
 @api.api_operation(["GET", "POST"], "/multi")
 def multiple(request):
     return f"this is {request.method}"
@@ -81,6 +86,7 @@ def file_response(request):
         ("put", "/put", 200, "this is PUT", False),
         ("patch", "/patch", 200, "this is PATCH", False),
         ("delete", "/delete", 200, "this is DELETE", False),
+        ("query", "/query", 200, "this is QUERY", False),
         ("get", "/multi", 200, "this is GET", False),
         ("post", "/multi", 200, "this is POST", False),
         ("patch", "/multi", 405, b"Method not allowed", False),
