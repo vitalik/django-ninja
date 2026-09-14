@@ -211,12 +211,12 @@ class ViewSignature:
         model = _unwrap_union_model(model)
         field: FieldInfo
         for attr, field in model.model_fields.items():
-            field_name = field.alias or attr
-            name = f"{prefix}{self.FLATTEN_PATH_SEP}{field_name}"
-            if is_pydantic_model(field.annotation):
-                yield from self._model_flatten_map(field.annotation, name)  # type: ignore
-            else:
-                yield field_name, name
+            for field_name in _field_names(field, attr):
+                name = f"{prefix}{self.FLATTEN_PATH_SEP}{field_name}"
+                if is_pydantic_model(field.annotation):
+                    yield from self._model_flatten_map(field.annotation, name)  # type: ignore
+                else:
+                    yield field_name, name
 
     def _get_param_type(self, name: str, arg: inspect.Parameter) -> FuncParam:
         # _EMPTY = self.signature.empty
@@ -353,6 +353,26 @@ def is_collection_type(annotation: Any) -> bool:
         return origin in collection_types  # TODO: I guess we should handle only list
 
 
+def _field_names(field: FieldInfo, name: str) -> List[str]:
+    """
+    The names a field may be supplied under, in the order pydantic tries them.
+
+    ``validation_alias`` takes precedence over ``alias`` and the field name for
+    validation, and ``AliasChoices`` accepts any of its string choices. Any
+    other form, such as an ``AliasPath``, keeps the field name.
+    """
+    alias = field.validation_alias
+    if isinstance(alias, str):
+        return [alias]
+    if isinstance(alias, pydantic.AliasChoices):
+        choices = [choice for choice in alias.choices if isinstance(choice, str)]
+    else:
+        choices = []
+    if choices:
+        return choices
+    return [field.alias or name]
+
+
 def detect_collection_fields(
     args: List[FuncParam], flatten_map: Dict[str, Tuple[str, ...]]
 ) -> List[str]:
@@ -373,12 +393,12 @@ def detect_collection_fields(
                 annotation_or_field = _unwrap_union_model(annotation_or_field)
                 annotation_or_field = next(
                     (
-                        a
-                        for a in annotation_or_field.model_fields.values()
-                        if a.alias == attr
+                        f
+                        for field_name, f in annotation_or_field.model_fields.items()
+                        if attr in _field_names(f, field_name)
                     ),
                     annotation_or_field.model_fields.get(attr),
-                )  # pragma: no cover
+                )
 
                 annotation_or_field = getattr(
                     annotation_or_field, "outer_type_", annotation_or_field
