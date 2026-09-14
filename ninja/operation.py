@@ -52,6 +52,14 @@ __all__ = ["Operation", "PathView", "ResponseObject"]
 
 
 async def _await_coroutine(coroutine: Coroutine[Any, Any, Any]) -> Any:
+    """Await a coroutine from the sync auth path (see issue #1751).
+
+    ``HttpBearer.__call__`` is a plain ``def`` that returns the result of
+    ``authenticate``, so with an ``async def authenticate`` the sync path gets a
+    not-yet-run coroutine. We must await *that* object rather than re-run the
+    callback via ``async_to_sync(callback)``, which would call ``__call__`` twice
+    and warn. ``async_to_sync`` needs a real ``async def``, hence this helper.
+    """
     return await coroutine
 
 
