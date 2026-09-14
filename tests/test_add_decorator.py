@@ -3,7 +3,8 @@ from functools import wraps
 import pytest
 
 from ninja import NinjaAPI, Router
-from ninja.testing import TestClient
+from ninja.errors import HttpError
+from ninja.testing import TestAsyncClient, TestClient
 
 
 # Test decorators
@@ -280,3 +281,63 @@ def test_invalid_decorator_mode():
 
     with pytest.raises(ValueError, match="Invalid decorator mode"):
         router.add_decorator(operation_decorator, mode="invalid")  # type: ignore
+
+
+def error_view_decorator(func):
+    """View decorator that raises before the operation runs"""
+
+    @wraps(func)
+    def wrapper(request, *args, **kwargs):
+        raise HttpError(401, "Unauthorized chat")
+
+    return wrapper
+
+
+def test_router_view_decorator_http_error_is_handled():
+    api = NinjaAPI()
+    router = Router()
+    router.add_decorator(error_view_decorator, mode="view")
+
+    @router.get("/test")
+    def endpoint(request):
+        return {"message": "test"}
+
+    api.add_router("/", router)
+    client = TestClient(api)
+
+    response = client.get("/test")
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Unauthorized chat"}
+
+
+def test_api_view_decorator_http_error_is_handled():
+    api = NinjaAPI()
+    api.add_decorator(error_view_decorator, mode="view")
+
+    @api.get("/test")
+    def endpoint(request):
+        return {"message": "test"}
+
+    client = TestClient(api)
+
+    response = client.get("/test")
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Unauthorized chat"}
+
+
+@pytest.mark.asyncio
+async def test_view_decorator_http_error_is_handled_for_async_endpoint():
+    api = NinjaAPI()
+    router = Router()
+    router.add_decorator(error_view_decorator, mode="view")
+
+    @router.get("/test")
+    async def endpoint(request):
+        return {"message": "test"}
+
+    api.add_router("/", router)
+    async_client = TestAsyncClient(api)
+
+    response = await async_client.get("/test")
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Unauthorized chat"}
