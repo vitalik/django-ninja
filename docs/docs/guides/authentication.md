@@ -168,6 +168,18 @@ def staff_view(request):
 
 These authentication classes automatically use Django's `SESSION_COOKIE_NAME` setting and check the user's authentication status through the standard Django session framework.
 
+### HTTP Bearer
+
+```python hl_lines="1 4 5 6 7"
+{!./src/tutorial/authentication/bearer01.py!}
+```
+
+### HTTP Basic Auth
+
+```python hl_lines="1 4 5 6 7"
+{!./src/tutorial/authentication/basic01.py!}
+```
+
 ## Authorization and Permissions
 
 Authentication identifies who the user is, while permissions determine whether
@@ -191,18 +203,66 @@ For common Django use cases, Django Ninja also provides built-in authenticators
 such as `SessionAuthSuperUser`, `SessionAuthIsStaff`, and
 `django_auth_superuser` to restrict access to privileged users.
 
-### HTTP Bearer
+### Reusable permission checks with decorators
 
-```python hl_lines="1 4 5 6 7"
-{!./src/tutorial/authentication/bearer01.py!}
+Inline checks get repetitive once several endpoints need them. A small
+decorator placed **below** `@api.<method>` wraps the endpoint function itself,
+so it runs after authentication (`request.auth` is already set) and after the
+request has been validated:
+
+```python
+from functools import wraps
+
+from ninja.errors import HttpError
+from ninja.security import django_auth
+
+
+def require_perm(perm: str):
+    def decorator(func):
+        @wraps(func)  # keeps the signature, so Ninja still parses the parameters
+        def wrapper(request, *args, **kwargs):
+            if not request.auth.has_perm(perm):
+                raise HttpError(403, "Permission denied")
+            return func(request, *args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+@api.delete("/posts/{post_id}", auth=django_auth)
+@require_perm("blog.delete_post")
+def delete_post(request, post_id: int):
+    ...
+    return {"deleted": post_id}
 ```
 
-### HTTP Basic Auth
+`request.auth` is whatever your authenticator returned: a Django `User` for
+`django_auth`, so any of its methods (`has_perm`, `has_perms`, `groups`, ...)
+can drive the check. With a custom authenticator that returns e.g. a token or
+API-key object, check that object's own fields instead.
 
-```python hl_lines="1 4 5 6 7"
-{!./src/tutorial/authentication/basic01.py!}
+To protect every endpoint of a router (or the whole API) at once, register the
+same decorator with `add_decorator`:
+
+```python
+from ninja import Router
+
+router = Router(auth=django_auth)
+router.add_decorator(require_perm("blog.view_post"))
+
+
+@router.get("/posts")
+def list_posts(request):
+    return {"posts": []}
 ```
 
+!!! note
+    Decorators applied with `@decorate_view` or `add_decorator(..., mode="view")`
+    run *before* authentication, so `request.auth` is not available there yet.
+    Keep permission checks in operation mode (the default), as shown above. See
+    [Decorators](decorators.md) for details on the two modes and on writing
+    decorators for async endpoints.
 
 ## Multiple authenticators
 
