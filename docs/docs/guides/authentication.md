@@ -168,7 +168,28 @@ def staff_view(request):
 
 These authentication classes automatically use Django's `SESSION_COOKIE_NAME` setting and check the user's authentication status through the standard Django session framework.
 
+## Authorization and Permissions
 
+Authentication identifies who the user is, while permissions determine whether
+that user is allowed to perform a specific action.
+
+After a request has been authenticated, the authenticated user is available as
+`request.auth`. You can use it to implement your own permission checks.
+
+```python
+from ninja.security import django_auth
+from ninja.errors import HttpError
+
+@api.get("/admin", auth=django_auth)
+def admin_view(request):
+    if not request.auth.is_staff:
+        raise HttpError(403, "Permission denied")
+    return {"message": "Welcome!"}
+```
+
+For common Django use cases, Django Ninja also provides built-in authenticators
+such as `SessionAuthSuperUser`, `SessionAuthIsStaff`, and
+`django_auth_superuser` to restrict access to privileged users.
 
 ### HTTP Bearer
 
