@@ -1,3 +1,4 @@
+from base64 import b64encode
 from unittest.mock import Mock
 
 import pytest
@@ -265,6 +266,19 @@ def test_auth(path, kwargs, expected_code, expected_body, settings):
         response = client.get(path, **kwargs)
         assert response.status_code == expected_code
         assert response.json() == expected_body
+
+
+@pytest.mark.parametrize(
+    "username,password",
+    [
+        ("user%20name", "top%20secret"),
+        ("user%40example.com", "abc%2Fxyz"),
+    ],
+)
+def test_basic_auth_preserves_percent_sequences(username, password):
+    encoded = b64encode(f"{username}:{password}".encode()).decode()
+
+    assert BasicAuth().decode_authorization(f"Basic {encoded}") == (username, password)
 
 
 def test_schema():
