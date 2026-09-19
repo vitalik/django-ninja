@@ -2,7 +2,6 @@ import logging
 from abc import ABC, abstractmethod
 from base64 import b64decode
 from typing import Any, Optional, Tuple
-from urllib.parse import unquote
 
 from django.conf import settings
 from django.http import HttpRequest
@@ -81,6 +80,6 @@ class HttpBasicAuth(HttpAuthBase, ABC):  # TODO: maybe HttpBasicAuthBase
 
         try:
             username, password = b64decode(user_pass_encoded).decode().split(":", 1)
-            return unquote(username), unquote(password)
+            return username, password
         except Exception as e:  # dear contributors please do not change to valueerror - here can be multiple exceptions
             raise DecodeError("Invalid Authorization header") from e
