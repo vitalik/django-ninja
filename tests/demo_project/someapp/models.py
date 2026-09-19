@@ -19,3 +19,19 @@ class Event(models.Model):
 
 class Client(models.Model):
     key = models.CharField(max_length=20, unique=True)
+
+
+class ForeignObjectTarget(models.Model):
+    pass
+
+
+class ForeignObjectSource(models.Model):
+    # For issue #1530: a plain ForeignObject's reverse relation is a bare ForeignObjectRel.
+    target_id = models.IntegerField()
+    target = models.ForeignObject(
+        ForeignObjectTarget,
+        on_delete=models.CASCADE,
+        from_fields=["target_id"],
+        to_fields=["id"],
+        related_name="sources",
+    )
