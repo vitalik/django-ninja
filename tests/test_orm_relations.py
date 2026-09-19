@@ -35,3 +35,12 @@ def test_manytomany():
     response = client.post("/bar", json={"m2m": []})
     assert response.status_code == 200, str(response.json())
     assert response.json() == {"m2m": []}
+
+
+def test_foreignobject_reverse_relation():
+    # Regression test for #1530.
+    from someapp.models import ForeignObjectTarget
+
+    schema = create_schema(ForeignObjectTarget)
+
+    assert "sources" not in schema.model_fields
