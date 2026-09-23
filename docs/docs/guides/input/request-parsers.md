@@ -14,9 +14,8 @@ To create your own parser, you need to extend the `ninja.parser.Parser` class, a
 
 Let's create our custom YAML parser:
 
-```python hl_lines="4 8 9"
+```python hl_lines="3 7 8"
 import yaml
-from typing import List
 from ninja import NinjaAPI
 from ninja.parser import Parser
 
@@ -30,7 +29,7 @@ api = NinjaAPI(parser=MyYamlParser())
 
 
 class Payload(Schema):
-    ints: List[int]
+    ints: list[int]
     string: str
     f: float
 

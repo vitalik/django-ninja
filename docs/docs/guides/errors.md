@@ -111,13 +111,13 @@ the model that failed validation), you can supply your own `validation_error_fro
 
 ```python hl_lines="4"
 from ninja.errors import ValidationError, ValidationErrorContext
-from typing import Any, Dict, List
+from typing import Any
 
 class CustomNinjaAPI(NinjaAPI):
     def validation_error_from_error_contexts(
-        self, error_contexts: List[ValidationErrorContext],
+        self, error_contexts: list[ValidationErrorContext],
     ) -> ValidationError:
-        custom_error_infos: List[Dict[str, Any]] = []
+        custom_error_infos: list[dict[str, Any]] = []
         for context in error_contexts:
             model = context.model
             pydantic_schema = model.__pydantic_core_schema__

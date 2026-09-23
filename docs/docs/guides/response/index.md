@@ -70,8 +70,7 @@ class Task(models.Model):
 
 Now let's output all tasks, and for each task, output some fields about the user.
 
-```python hl_lines="13 16"
-from typing import List
+```python hl_lines="12 15"
 from ninja import Schema
 
 class UserSchema(Schema):
@@ -86,7 +85,7 @@ class TaskSchema(Schema):
     owner: UserSchema = None  # ! None - to mark it as optional
 
 
-@api.get("/tasks", response=List[TaskSchema])
+@api.get("/tasks", response=list[TaskSchema])
 def tasks(request):
     queryset = Task.objects.select_related("owner")
     return list(queryset)
@@ -165,7 +164,7 @@ class TaskSchema(Schema):
     id: int
     title: str
     is_completed: bool
-    owner: Optional[str] = None
+    owner: str | None = None
     lower_title: str
 
     @staticmethod
@@ -205,10 +204,10 @@ data = Data.model_validate({'some': 1}, context={'request': MyRequest()})
 
 In the previous example we specifically converted a queryset into a list (and executed the SQL query during evaluation).
 
-You can avoid that and return a queryset as a result, and it will be automatically evaluated to List:
+You can avoid that and return a queryset as a result, and it will be automatically evaluated to list:
 
 ```python hl_lines="3"
-@api.get("/tasks", response=List[TaskSchema])
+@api.get("/tasks", response=list[TaskSchema])
 def tasks(request):
     return Task.objects.all()
 ```
@@ -218,7 +217,7 @@ def tasks(request):
     If your operation is async, this example will not work because the ORM query needs to be called safely.
 
     ```python hl_lines="2"
-    @api.get("/tasks", response=List[TaskSchema])
+    @api.get("/tasks", response=list[TaskSchema])
     async def tasks(request):
         return Task.objects.all()
     ```
@@ -378,7 +377,7 @@ class Organization(Schema):
 Organization.model_rebuild()  # !!! this is important
 
 
-@api.get('/organizations', response=List[Organization])
+@api.get('/organizations', response=list[Organization])
 def list_organizations(request):
     ...
 ```

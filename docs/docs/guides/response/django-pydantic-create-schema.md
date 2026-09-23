@@ -92,14 +92,14 @@ UserSchema = create_schema(User, depth=1, fields=['username', 'groups'])
 #
 # class UserSchema(Schema):
 #    username: str
-#    groups: List[Group]
+#    groups: list[Group]
 ```
 
-Note here that groups became a `List[Group]` - many2many field introspected 1 level deeper and created schema as well for group:
+Note here that groups became a `list[Group]` - many2many field introspected 1 level deeper and created schema as well for group:
 
 ```python
 class Group(Schema):
     id: int
     name: str
-    permissions: List[int]
+    permissions: list[int]
 ```

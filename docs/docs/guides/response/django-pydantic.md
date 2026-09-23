@@ -86,7 +86,7 @@ class GroupSchema(ModelSchema):
 
 
 class UserSchema(ModelSchema):
-    groups: List[GroupSchema] = []
+    groups: list[GroupSchema] = []
 
     class Meta:
         model = User

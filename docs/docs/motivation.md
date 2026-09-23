@@ -78,7 +78,7 @@ urlpatterns = [
 2) The Django Ninja 'Schema' class is integrated with the ORM, so you can [serialize querysets](guides/response/index.md#returning-querysets) or ORM objects:
 
 ```python
-@api.get("/tasks", response=List[TaskSchema])
+@api.get("/tasks", response=list[TaskSchema])
 def tasks(request):
     return Task.objects.all()
 

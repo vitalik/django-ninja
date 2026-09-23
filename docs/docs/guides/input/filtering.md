@@ -7,16 +7,15 @@ parameters into database queries.
 
 Start off with defining a subclass of `FilterSchema`:
 
-```python hl_lines="6 7 8 9"
+```python hl_lines="5 6 7 8"
 from ninja import FilterSchema
-from typing import Optional
 from datetime import datetime
 
 
 class BookFilterSchema(FilterSchema):
-    name: Optional[str] = None
-    author: Optional[str] = None
-    created_after: Optional[datetime] = None
+    name: str | None = None
+    author: str | None = None
+    created_after: datetime | None = None
 ```
 
 
@@ -69,7 +68,7 @@ By default, the filters will behave the following way:
 By default, `FilterSet` will use the field names to generate Q expressions:
 ```python
 class BookFilterSchema(FilterSchema):
-    name: Optional[str] = None
+    name: str | None = None
 ```
 The `name` field will be converted into `Q(name=...)` expression.
 
@@ -79,13 +78,13 @@ from ninja import FilterSchema, FilterLookup
 from typing import Annotated
 
 class BookFilterSchema(FilterSchema):
-    name: Annotated[Optional[str], FilterLookup("name__icontains")] = None
+    name: Annotated[str | None, FilterLookup("name__icontains")] = None
 ```
 
 You can even specify multiple lookups as a list:
 ```python hl_lines="3 4 5"
 class BookFilterSchema(FilterSchema):
-    search: Annotated[Optional[str], FilterLookup(
+    search: Annotated[str | None, FilterLookup(
         ["name__icontains",
          "author__name__icontains",
          "publisher__name__icontains"]
@@ -96,7 +95,7 @@ By default, field-level expressions are combined using `"OR"` connector, so with
 
 And to make generic fields, you can make the field name implicit by skipping it:
 ```python hl_lines="1 4"
-IContainsField = Annotated[Optional[str], FilterLookup('__icontains')]
+IContainsField = Annotated[str | None, FilterLookup('__icontains')]
 
 class BookFilterSchema(FilterSchema):
     name: IContainsField = None
@@ -109,7 +108,7 @@ class BookFilterSchema(FilterSchema):
     from ninja import FilterSchema, Field
     
     class BookFilterSchema(FilterSchema):
-        name: Optional[str] = Field(None, q="name__icontains")
+        name: str | None = Field(None, q="name__icontains")
     ```
     
     This approach is still supported, but it is considered **deprecated** and **not recommended** for new code because:
@@ -131,9 +130,9 @@ So, with the following `FilterSchema`...
 ```python
 class BookFilterSchema(FilterSchema):
     search: Annotated[
-        Optional[str],
+        str | None,
         FilterLookup(["name__icontains", "author__name__icontains"])] = None
-    popular: Optional[bool] = None
+    popular: bool | None = None
 ```
 ...and the following query parameters from the user
 ```
@@ -148,12 +147,12 @@ from ninja import FilterConfigDict, FilterLookup, FilterSchema
 
 class BookFilterSchema(FilterSchema):
     active: Annotated[
-        Optional[bool],
+        bool | None,
         FilterLookup(
             ["is_active", "publisher__is_active"],
             expression_connector="AND"
         )] = None
-    name: Annotated[Optional[str], FilterLookup("name__icontains")] = None
+    name: Annotated[str | None, FilterLookup("name__icontains")] = None
     
     model_config = FilterConfigDict(expression_connector="OR")
 ```
@@ -173,8 +172,8 @@ You can make the `FilterSchema` treat `None` as a valid value that should be fil
 This can be done on a field level with a `ignore_none` kwarg:
 ```python hl_lines="3"
 class BookFilterSchema(FilterSchema):
-    name: Annotated[Optional[str], FilterLookup("name__icontains")] = None
-    tag: Annotated[Optional[str], FilterLookup("tag", ignore_none=False)] = None
+    name: Annotated[str | None, FilterLookup("name__icontains")] = None
+    tag: Annotated[str | None, FilterLookup("tag", ignore_none=False)] = None
 ```
 
 This way when no other value for `"tag"` is provided by the user, the filtering will always include a condition `tag=None`.
@@ -182,8 +181,8 @@ This way when no other value for `"tag"` is provided by the user, the filtering 
 You can also specify this setting for all fields at the same time in `model_config`:
 ```python hl_lines="5"
 class BookFilterSchema(FilterSchema):
-    name: Annotated[Optional[str], FilterLookup("name__icontains")] = None
-    tag: Optional[str] = None
+    name: Annotated[str | None, FilterLookup("name__icontains")] = None
+    tag: str | None = None
     
     model_config = FilterConfigDict(ignore_none=False)
 ```
@@ -195,8 +194,8 @@ For such cases you can implement your field filtering logic as a custom method. 
 
 ```python hl_lines="5"
 class BookFilterSchema(FilterSchema):
-    tag: Optional[str] = None
-    popular: Optional[bool] = None
+    tag: str | None = None
+    popular: bool | None = None
     
     def filter_popular(self, value: bool) -> Q:
         return Q(view_count__gt=1000) | Q(download_count__gt=100) if value else Q()
@@ -207,8 +206,8 @@ If that is not enough, you can implement your own custom filtering logic for the
 
 ```python hl_lines="5"
 class BookFilterSchema(FilterSchema):
-    name: Optional[str] = None
-    popular: Optional[bool] = None
+    name: str | None = None
+    popular: bool | None = None
 
     def custom_expression(self) -> Q:
         q = Q()
