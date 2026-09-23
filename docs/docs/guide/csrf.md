@@ -24,14 +24,16 @@ any auth class based on `APIKeyCookie` (which includes `django_auth`):
   middleware — so it recognizes both the `csrfmiddlewaretoken` form field
   and the `X-CSRFToken` header.
 
-```python hl_lines="10"
+```python hl_lines="12"
+from django.utils.crypto import constant_time_compare
+
 from ninja import NinjaAPI
 from ninja.security import APIKeyCookie
 
 
 class CookieAuth(APIKeyCookie):
     def authenticate(self, request, key):
-        return key == "test"
+        return constant_time_compare(key, "test")
 
 
 api = NinjaAPI(auth=CookieAuth())
@@ -59,7 +61,9 @@ if a particular cookie-based auth class genuinely doesn't need the check —
 for example a cookie that only carries an opaque, unguessable API key rather
 than a browser session:
 
-```python hl_lines="6"
+```python hl_lines="8"
+from django.utils.crypto import constant_time_compare
+
 from ninja.security import APIKeyCookie
 
 
@@ -68,7 +72,7 @@ class UnprotectedCookieAuth(APIKeyCookie):
         super().__init__(csrf=False)
 
     def authenticate(self, request, key):
-        return key == "test"
+        return constant_time_compare(key, "test")
 ```
 
 !!! warning

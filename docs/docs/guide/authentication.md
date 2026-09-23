@@ -72,7 +72,9 @@ returning whatever should become `request.auth` (or `None`/falsy to reject):
 
 === "Header"
 
-    ```python hl_lines="1 4-5 7-9"
+    ```python hl_lines="3 6-7 9-11"
+    from django.utils.crypto import constant_time_compare
+
     from ninja.security import APIKeyHeader
 
 
@@ -80,7 +82,7 @@ returning whatever should become `request.auth` (or `None`/falsy to reject):
         param_name = "X-API-Key"
 
         def authenticate(self, request, key):
-            if key == "supersecret":
+            if constant_time_compare(key, "supersecret"):
                 return key
 
 
@@ -91,13 +93,15 @@ returning whatever should become `request.auth` (or `None`/falsy to reject):
 
 === "Cookie"
 
-    ```python hl_lines="1 4-7"
+    ```python hl_lines="3 6-9"
+    from django.utils.crypto import constant_time_compare
+
     from ninja.security import APIKeyCookie
 
 
     class CookieKey(APIKeyCookie):
         def authenticate(self, request, key):
-            if key == "supersecret":
+            if constant_time_compare(key, "supersecret"):
                 return key
 
 
@@ -120,13 +124,15 @@ the key from — it defaults to `"key"` on all three classes.
 Subclass `HttpBearer` and implement `authenticate(self, request, token)`.
 The client sends `Authorization: Bearer <token>`:
 
-```python hl_lines="1 4-7"
+```python hl_lines="3 6-9"
+from django.utils.crypto import constant_time_compare
+
 from ninja.security import HttpBearer
 
 
 class AuthBearer(HttpBearer):
     def authenticate(self, request, token):
-        if token == "supersecret":
+        if constant_time_compare(token, "supersecret"):
             return token
 
 
@@ -146,13 +152,15 @@ still gets a chance to run.
 Subclass `HttpBasicAuth` and implement
 `authenticate(self, request, username, password)`:
 
-```python hl_lines="1 4-7"
+```python hl_lines="3 6-9"
+from django.utils.crypto import constant_time_compare
+
 from ninja.security import HttpBasicAuth
 
 
 class BasicAuth(HttpBasicAuth):
     def authenticate(self, request, username, password):
-        if username == "admin" and password == "secret":
+        if constant_time_compare(username, "admin") and constant_time_compare(password, "secret"):
             return username
 
 
@@ -211,13 +219,15 @@ Pass a list to `auth=` to accept any one of several schemes. They're tried
 in order; the first one to return a truthy value wins, and if none does,
 the request is rejected:
 
-```python hl_lines="18"
+```python hl_lines="20"
+from django.utils.crypto import constant_time_compare
+
 from ninja.security import APIKeyHeader, APIKeyQuery
 
 
 class AuthCheck:
     def authenticate(self, request, key):
-        if key == "supersecret":
+        if constant_time_compare(key, "supersecret"):
             return key
 
 
@@ -309,7 +319,9 @@ An exception raised inside `authenticate()` is handled the same way as one
 raised inside the operation itself — if you've registered a handler for it
 with `@api.exception_handler`, that handler builds the response:
 
-```python hl_lines="7 11 20"
+```python hl_lines="9 13 22"
+from django.utils.crypto import constant_time_compare
+
 from ninja import NinjaAPI
 from ninja.security import HttpBearer
 
@@ -327,7 +339,7 @@ def on_invalid_token(request, exc):
 
 class AuthBearer(HttpBearer):
     def authenticate(self, request, token):
-        if token == "supersecret":
+        if constant_time_compare(token, "supersecret"):
             return token
         raise InvalidToken
 
@@ -348,9 +360,12 @@ and awaits it correctly whether the operation itself is sync or async.
 
 A plain async function:
 
-```python hl_lines="1 5"
+```python hl_lines="4 8"
+from django.utils.crypto import constant_time_compare
+
+
 async def async_auth(request):
-    return request.headers.get("X-Token") == "supersecret"
+    return constant_time_compare(request.headers.get("X-Token", ""), "supersecret")
 
 
 @api.get("/pets", auth=async_auth)
@@ -360,14 +375,16 @@ async def pets(request):
 
 Or an async `authenticate()` method on any of the classes above:
 
-```python hl_lines="4-7"
+```python hl_lines="6-9"
+from django.utils.crypto import constant_time_compare
+
 from ninja.security import HttpBearer
 
 
 class AsyncBearer(HttpBearer):
     async def authenticate(self, request, token):
         # e.g. an async database or cache lookup
-        return token if token == "supersecret" else None
+        return token if constant_time_compare(token, "supersecret") else None
 
 
 @api.get("/async-bearer", auth=AsyncBearer())
