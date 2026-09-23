@@ -68,3 +68,41 @@ def test_reuse_router_with_url_name_prefix():
     bound_routers = test_api._get_bound_routers()
     # default router + 2 mounts of test_router
     assert len(bound_routers) == 3
+
+
+def test_bound_router_urls_paths_remains_available():
+    """BoundRouter.urls_paths is kept for direct internal compatibility."""
+    test_api = NinjaAPI(urls_namespace="bound-router-urls-paths")
+    test_router = Router()
+    plain_router = Router()
+
+    @test_router.get("/{item_id}")
+    def get_item(request, item_id: int):
+        return {"item_id": item_id}
+
+    @test_router.get("/custom", url_name="custom-item")
+    def get_custom_item(request):
+        return {"custom": True}
+
+    @plain_router.get("/status")
+    def get_status(request):
+        return {"ok": True}
+
+    test_api.add_router("/v1/items", test_router, url_name_prefix="v1")
+    test_api.add_router("/plain", plain_router)
+
+    prefixed_router = test_api._get_bound_routers()[1]
+    prefixed_urls = list(prefixed_router.urls_paths(prefixed_router.prefix))
+
+    assert len(prefixed_urls) == 2
+    assert str(prefixed_urls[0].pattern) == "v1/items/<item_id>"
+    assert prefixed_urls[0].name == "v1_get_item"
+    assert str(prefixed_urls[1].pattern) == "v1/items/custom"
+    assert prefixed_urls[1].name == "custom-item"
+
+    plain_bound_router = test_api._get_bound_routers()[2]
+    plain_urls = list(plain_bound_router.urls_paths(plain_bound_router.prefix))
+
+    assert len(plain_urls) == 1
+    assert str(plain_urls[0].pattern) == "plain/status"
+    assert plain_urls[0].name == "get_status"
