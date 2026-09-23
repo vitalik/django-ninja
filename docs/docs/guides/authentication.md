@@ -20,7 +20,7 @@ Here's an example where the client, in order to authenticate, needs to pass a he
 
 `Authorization: Bearer supersecret`
 
-```python hl_lines="4 5 6 7 10"
+```python hl_lines="6 7 8 9 12"
 {!./src/tutorial/authentication/bearer01.py!}
 ```
 
@@ -41,14 +41,16 @@ When you do test calls, the Authorization header will be passed for every reques
 In case you need to secure **all** methods of your API, you can pass the `auth` argument to the `NinjaAPI` constructor:
 
 
-```python hl_lines="11 19"
-from ninja import NinjaAPI, Form
+```python hl_lines="13"
+from django.utils.crypto import constant_time_compare
+
+from ninja import Form, NinjaAPI
 from ninja.security import HttpBearer
 
 
 class GlobalAuth(HttpBearer):
     def authenticate(self, request, token):
-        if token == "supersecret":
+        if constant_time_compare(token, "supersecret"):
             return token
 
 
@@ -63,7 +65,7 @@ api = NinjaAPI(auth=GlobalAuth())
 
 And, if you need to overrule some of those methods, you can do that on the operation level again by passing the `auth` argument. In this example, authentication will be disabled for the `/token` operation:
 
-```python hl_lines="19"
+```python hl_lines="21"
 {!./src/tutorial/authentication/global01.py!}
 ```
 
@@ -116,13 +118,13 @@ Note: **`param_name`** is the name of the GET parameter that will be checked for
 
 #### in Header
 
-```python hl_lines="1 4"
+```python hl_lines="3 6"
 {!./src/tutorial/authentication/apikey02.py!}
 ```
 
 #### in Cookie
 
-```python hl_lines="1 4"
+```python hl_lines="3 6"
 {!./src/tutorial/authentication/apikey03.py!}
 ```
 
@@ -170,13 +172,13 @@ These authentication classes automatically use Django's `SESSION_COOKIE_NAME` se
 
 ### HTTP Bearer
 
-```python hl_lines="1 4 5 6 7"
+```python hl_lines="3 6 7 8 9"
 {!./src/tutorial/authentication/bearer01.py!}
 ```
 
 ### HTTP Basic Auth
 
-```python hl_lines="1 4 5 6 7"
+```python hl_lines="3 6 7 8 9 10 11"
 {!./src/tutorial/authentication/basic01.py!}
 ```
 
@@ -268,7 +270,7 @@ def list_posts(request):
 
 The **`auth`** argument also allows you to pass multiple authenticators:
 
-```python hl_lines="18"
+```python hl_lines="20"
 {!./src/tutorial/authentication/multiple01.py!}
 ```
 
@@ -297,7 +299,7 @@ This overrides any API level authentication. To allow router operations to not u
 Raising an exception that has an exception handler will return the response from that handler in
 the same way an operation would:
 
-```python hl_lines="1 4"
+```python hl_lines="3 6"
 {!./src/tutorial/authentication/bearer02.py!}
 ```
 
