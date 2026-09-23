@@ -1,9 +1,13 @@
+from django.utils.crypto import constant_time_compare
+
 from ninja.security import HttpBasicAuth
 
 
 class BasicAuth(HttpBasicAuth):
     def authenticate(self, request, username, password):
-        if username == "admin" and password == "secret":
+        if constant_time_compare(username, "admin") and constant_time_compare(
+            password, "secret"
+        ):
             return username
 
 

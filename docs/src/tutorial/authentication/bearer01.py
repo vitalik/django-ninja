@@ -1,9 +1,11 @@
+from django.utils.crypto import constant_time_compare
+
 from ninja.security import HttpBearer
 
 
 class AuthBearer(HttpBearer):
     def authenticate(self, request, token):
-        if token == "supersecret":
+        if constant_time_compare(token, "supersecret"):
             return token
 
 

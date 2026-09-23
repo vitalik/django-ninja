@@ -17,13 +17,15 @@ In case you are using the default Django authentication, which uses cookies, you
 By default, **Django Ninja** has CSRF protection turned **OFF** for all operations, but will automatically enable csrf **for Cookie based** authentication:
 
 
-```python hl_lines="8"
+```python hl_lines="10"
+from django.utils.crypto import constant_time_compare
+
 from ninja import NinjaAPI
 from ninja.security import APIKeyCookie
 
 class CookieAuth(APIKeyCookie):
     def authenticate(self, request, key):
-        return key == "test"
+        return constant_time_compare(key, "test")
 
 api = NinjaAPI(auth=CookieAuth())
 

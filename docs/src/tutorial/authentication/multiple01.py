@@ -1,9 +1,11 @@
-from ninja.security import APIKeyQuery, APIKeyHeader
+from django.utils.crypto import constant_time_compare
+
+from ninja.security import APIKeyHeader, APIKeyQuery
 
 
 class AuthCheck:
     def authenticate(self, request, key):
-        if key == "supersecret":
+        if constant_time_compare(key, "supersecret"):
             return key
 
 
