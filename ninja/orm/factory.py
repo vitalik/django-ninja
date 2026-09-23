@@ -1,8 +1,8 @@
 import itertools
-from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Type, Union, cast
+from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Type, Union
 
 from django.db.models import Field as DjangoField
-from django.db.models import ManyToManyRel, ManyToOneRel, Model
+from django.db.models import ForeignObjectRel, Model
 from pydantic import create_model as create_pydantic_model
 
 from ninja.errors import ConfigError
@@ -158,10 +158,11 @@ class SchemaFactory:
     def _model_fields(self, model: Type[Model]) -> Iterator[DjangoField]:
         "returns iterator with all the fields that can be part of schema"
         for fld in model._meta.get_fields():
-            if isinstance(fld, (ManyToOneRel, ManyToManyRel)):
-                # skipping relations
+            if isinstance(fld, ForeignObjectRel):
+                # skipping reverse relations (ManyToOneRel, ManyToManyRel, and the
+                # bare ForeignObjectRel produced by a ForeignObject field)
                 continue
-            yield cast(DjangoField, fld)
+            yield fld
 
 
 factory = SchemaFactory()
