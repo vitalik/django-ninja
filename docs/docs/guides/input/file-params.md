@@ -27,16 +27,15 @@ def upload(request, file: File[UploadedFile]):
 
 ## Uploading array of files
 
-To **upload several files** at the same time, just declare a `List` of `UploadedFile`:
+To **upload several files** at the same time, just declare a `list` of `UploadedFile`:
 
 
-```python hl_lines="1 6"
-from typing import List
+```python hl_lines="5"
 from ninja import NinjaAPI, File
 from ninja.files import UploadedFile
 
 @api.post("/upload-many")
-def upload_many(request, files: File[List[UploadedFile]]):
+def upload_many(request, files: File[list[UploadedFile]]):
     return [f.name for f in files]
 ```
 

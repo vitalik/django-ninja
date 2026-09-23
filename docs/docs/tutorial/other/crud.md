@@ -120,10 +120,8 @@ def get_employee(request, employee_id: int):
 ### List of objects
 
 To output a list of employees, we can reuse the same `EmployeeOut` schema. We will just set the `response` schema to a *List* of `EmployeeOut`.
-```python hl_lines="3"
-from typing import List
-
-@api.get("/employees", response=List[EmployeeOut])
+```python hl_lines="1"
+@api.get("/employees", response=list[EmployeeOut])
 def list_employees(request):
     qs = Employee.objects.all()
     return qs
@@ -132,7 +130,7 @@ def list_employees(request):
 Another cool trick - notice we just returned a Django ORM queryset:
 
 ```python hl_lines="4"
-@api.get("/employees", response=List[EmployeeOut])
+@api.get("/employees", response=list[EmployeeOut])
 def list_employees(request):
     qs = Employee.objects.all()
     return qs
@@ -206,7 +204,6 @@ Here's a full CRUD example:
 
 ```python
 from datetime import date
-from typing import List
 from ninja import NinjaAPI, Schema
 from django.shortcuts import get_object_or_404
 from employees.models import Employee
@@ -242,7 +239,7 @@ def get_employee(request, employee_id: int):
     return employee
 
 
-@api.get("/employees", response=List[EmployeeOut])
+@api.get("/employees", response=list[EmployeeOut])
 def list_employees(request):
     qs = Employee.objects.all()
     return qs

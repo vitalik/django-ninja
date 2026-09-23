@@ -8,7 +8,7 @@ To apply pagination to a function - just apply `paginate` decorator:
 ```python hl_lines="1 4"
 from ninja.pagination import paginate
 
-@api.get('/users', response=List[UserSchema])
+@api.get('/users', response=list[UserSchema])
 @paginate
 def list_users(request):
     return User.objects.all()
@@ -35,7 +35,7 @@ This is the default pagination class (You can change it in your settings.py usin
 ```python hl_lines="1 4"
 from ninja.pagination import paginate, LimitOffsetPagination
 
-@api.get('/users', response=List[UserSchema])
+@api.get('/users', response=list[UserSchema])
 @paginate(LimitOffsetPagination)
 def list_users(request):
     return User.objects.all()
@@ -56,7 +56,7 @@ this class has two input parameters:
 ```python hl_lines="1 4"
 from ninja.pagination import paginate, PageNumberPagination
 
-@api.get('/users', response=List[UserSchema])
+@api.get('/users', response=list[UserSchema])
 @paginate(PageNumberPagination)
 def list_users(request):
     return User.objects.all()
@@ -95,7 +95,7 @@ Cursor-based pagination provides stable pagination for datasets that may change 
 ```python hl_lines="1 4"
 from ninja.pagination import paginate, CursorPagination
 
-@api.get('/events', response=List[EventSchema])
+@api.get('/events', response=list[EventSchema])
 @paginate(CursorPagination)
 def list_events(request):
     return Event.objects.all()
@@ -190,7 +190,7 @@ class CustomPagination(PaginationBase):
         
 
     class Output(Schema):
-        items: List[Any] # `items` is a default attribute
+        items: list[Any] # `items` is a default attribute
         total: int
         per_page: int
 
@@ -203,7 +203,7 @@ class CustomPagination(PaginationBase):
         }
 
 
-@api.get('/users', response=List[UserSchema])
+@api.get('/users', response=list[UserSchema])
 @paginate(CustomPagination)
 def list_users(request):
     return User.objects.all()
@@ -228,7 +228,7 @@ By default page items are placed to `'items'` attribute. To override this behavi
 class CustomPagination(PaginationBase):
     ...
     class Output(Schema):
-        results: List[Any]
+        results: list[Any]
         total: int
         per_page: int
     
@@ -241,7 +241,7 @@ class CustomPagination(PaginationBase):
 
 There is often a case when you need to add pagination to all views that returns querysets or list
 
-You can use a builtin router class (`RouterPaginated`) that automatically injects pagination to all operations that defined `response=List[SomeSchema]`:
+You can use a builtin router class (`RouterPaginated`) that automatically injects pagination to all operations that defined `response=list[SomeSchema]`:
 
 ```python hl_lines="1 3 6 10"
 from ninja.pagination import RouterPaginated
@@ -249,11 +249,11 @@ from ninja.pagination import RouterPaginated
 router = RouterPaginated()
 
 
-@router.get("/items", response=List[MySchema])
+@router.get("/items", response=list[MySchema])
 def items(request):
     return MyModel.objects.all()
 
-@router.get("/other-items", response=List[OtherSchema])
+@router.get("/other-items", response=list[OtherSchema])
 def other_items(request):
     return OtherModel.objects.all()
 
