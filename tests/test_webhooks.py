@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from ninja import NinjaAPI, Router, Schema
 from ninja.errors import ConfigError
-from ninja.webhooks import Webhook
+from ninja.webhooks import Webhook, get_webhooks
 
 
 class Item(Schema):
@@ -56,6 +56,53 @@ def test_decorator_returns_class_unchanged():
 
     assert api.webhook("order.paid")(OrderPaid) is OrderPaid
     assert OrderPaid(id=1).model_dump() == {"id": 1}
+
+
+def test_name_defaults_to_class_name():
+    api = NinjaAPI()
+    router = Router()
+
+    @api.webhook
+    class OrderPaid(Schema):
+        id: int
+
+    @api.webhook()
+    class OrderShipped(Schema):
+        id: int
+
+    @router.webhook
+    class OrderRefunded(Schema):
+        id: int
+
+    @router.webhook(summary="Cancelled")
+    class OrderCancelled(Schema):
+        id: int
+
+    api.add_router("/orders", router)
+
+    assert OrderPaid(id=1).id == 1  # bare decorator returns the class
+    webhooks = api.get_openapi_schema(path_prefix="")["webhooks"]
+    assert list(webhooks) == [
+        "OrderPaid",
+        "OrderShipped",
+        "OrderRefunded",
+        "OrderCancelled",
+    ]
+    assert webhooks["OrderPaid"]["post"]["summary"] == "Order Paid"
+    assert webhooks["OrderCancelled"]["post"]["summary"] == "Cancelled"
+
+
+def test_get_webhooks():
+    api = NinjaAPI()
+
+    @api.webhook("order.paid")
+    class OrderPaid(Schema):
+        id: int
+
+    webhooks = get_webhooks(api)
+    assert [(w.name, w.schema, w.method) for w in webhooks] == [
+        ("order.paid", OrderPaid, "post")
+    ]
 
 
 def test_no_webhooks_no_section():
@@ -329,4 +376,4 @@ def test_openapi_extra_webhooks_kept_without_registered_webhooks():
 )
 def test_default_summary(class_name, summary):
     schema = type(class_name, (Schema,), {"__annotations__": {"id": int}})
-    assert Webhook("x", schema).summary == summary
+    assert Webhook(schema).summary == summary

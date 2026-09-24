@@ -10,6 +10,7 @@ from typing import (
     Type,
     TypeVar,
     Union,
+    overload,
 )
 
 from django.http import HttpRequest, HttpResponse
@@ -33,7 +34,6 @@ from ninja.renderers import BaseRenderer, JSONRenderer
 from ninja.router import BoundRouter, Router, RouterMount
 from ninja.throttling import BaseThrottle
 from ninja.types import DictStrAny, TCallable, TSchemaClass
-from ninja.webhooks import Webhook
 
 if TYPE_CHECKING:
     from .operation import Operation  # pragma: no cover
@@ -377,9 +377,13 @@ class NinjaAPI:
             openapi_extra=openapi_extra,
         )
 
+    @overload
+    def webhook(self, name: TSchemaClass) -> TSchemaClass: ...
+
+    @overload
     def webhook(
         self,
-        name: str,
+        name: Optional[str] = None,
         *,
         method: str = "POST",
         summary: Optional[str] = None,
@@ -389,13 +393,31 @@ class NinjaAPI:
         deprecated: Optional[bool] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
-    ) -> Callable[[TSchemaClass], TSchemaClass]:
+    ) -> Callable[[TSchemaClass], TSchemaClass]: ...
+
+    def webhook(
+        self,
+        name: Union[str, TSchemaClass, None] = None,
+        *,
+        method: str = "POST",
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        operation_id: Optional[str] = None,
+        deprecated: Optional[bool] = None,
+        include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
+    ) -> Union[TSchemaClass, Callable[[TSchemaClass], TSchemaClass]]:
         """
         Register a Schema class as the payload of a webhook your API sends.
+        Can be used as ``@api.webhook``, ``@api.webhook()`` or
+        ``@api.webhook("order.paid")`` - name defaults to the class name.
 
         Webhooks are only documented (in the OpenAPI ``webhooks`` section),
         Django Ninja does not send them.
         """
+        if isinstance(name, type):  # used without parentheses: @api.webhook
+            return self.default_router.webhook(name)
         return self.default_router.webhook(
             name,
             method=method,
@@ -407,25 +429,6 @@ class NinjaAPI:
             include_in_schema=include_in_schema,
             openapi_extra=openapi_extra,
         )
-
-    def get_webhooks(self) -> List[Webhook]:
-        """
-        All webhooks registered on this API and its mounted routers.
-        Router tags are applied to webhooks that don't define their own.
-        """
-        registered: Dict[str, Webhook] = {}
-        result: List[Webhook] = []
-        for bound_router in self._get_bound_routers():
-            for name, webhook in bound_router.template.webhooks.items():
-                if name in registered:
-                    if registered[name] is webhook:
-                        continue  # same router mounted more than once
-                    raise ConfigError(f'Webhook "{name}" is registered more than once')
-                registered[name] = webhook
-                if webhook.tags is None and bound_router.tags is not None:
-                    webhook = webhook.clone(tags=bound_router.tags)
-                result.append(webhook)
-        return result
 
     def add_decorator(
         self,

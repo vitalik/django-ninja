@@ -23,7 +23,7 @@ from ninja.params.models import TModel, TModels
 from ninja.schema import NinjaGenerateJsonSchema
 from ninja.types import DictStrAny
 from ninja.utils import normalize_path
-from ninja.webhooks import Webhook
+from ninja.webhooks import Webhook, get_webhooks
 
 if TYPE_CHECKING:
     from ninja import NinjaAPI  # pragma: no cover
@@ -97,7 +97,7 @@ class OpenAPISchema(dict):
 
     def get_webhooks(self) -> DictStrAny:
         result: DictStrAny = {}
-        for webhook in self.api.get_webhooks():
+        for webhook in get_webhooks(self.api):
             if webhook.include_in_schema:
                 result.setdefault(webhook.name, {})[webhook.method] = (
                     self.webhook_details(webhook)

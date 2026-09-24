@@ -44,11 +44,19 @@ The webhook will appear in the `webhooks` section of the OpenAPI schema (OpenAPI
 
 The decorator returns the class unchanged, so you can keep using `OrderPaid` as a regular Schema.
 
+The name is optional - if you skip it, the class name is used:
+
+```python
+@api.webhook
+class OrderPaid(Schema):  # webhook name: "OrderPaid"
+    id: int
+```
+
 ## Options
 
 ```python
 @api.webhook(
-    "order.refunded",
+    "order.refunded",             # optional, defaults to the class name
     method="POST",                # HTTP method used to deliver the webhook
     summary="Order refunded",     # defaults to the class name: "Order Refunded"
     description="Sent when an order is fully or partially refunded",

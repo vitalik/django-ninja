@@ -10,6 +10,7 @@ from typing import (
     Optional,
     Tuple,
     Union,
+    overload,
 )
 
 from django.urls import URLPattern
@@ -575,9 +576,13 @@ class Router:
 
                 yield django_path(route, path_view.get_view(), name=url_name)
 
+    @overload
+    def webhook(self, name: TSchemaClass) -> TSchemaClass: ...
+
+    @overload
     def webhook(
         self,
-        name: str,
+        name: Optional[str] = None,
         *,
         method: str = "POST",
         summary: Optional[str] = None,
@@ -587,19 +592,37 @@ class Router:
         deprecated: Optional[bool] = None,
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
-    ) -> Callable[[TSchemaClass], TSchemaClass]:
+    ) -> Callable[[TSchemaClass], TSchemaClass]: ...
+
+    def webhook(
+        self,
+        name: Union[str, TSchemaClass, None] = None,
+        *,
+        method: str = "POST",
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        operation_id: Optional[str] = None,
+        deprecated: Optional[bool] = None,
+        include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
+    ) -> Union[TSchemaClass, Callable[[TSchemaClass], TSchemaClass]]:
         """
         Register a Schema class as the payload of a webhook your API sends.
+        Can be used as ``@router.webhook``, ``@router.webhook()`` or
+        ``@router.webhook("order.paid")`` - name defaults to the class name.
 
         Webhooks are only documented (in the OpenAPI ``webhooks`` section),
         Django Ninja does not send them.
         """
+        if isinstance(name, type):  # used without parentheses: @router.webhook
+            return self.webhook()(name)
 
         def decorator(schema: TSchemaClass) -> TSchemaClass:
             self.add_webhook(
                 Webhook(
-                    name,
                     schema,
+                    name,
                     method=method,
                     summary=summary,
                     description=description,
