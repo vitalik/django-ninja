@@ -75,6 +75,7 @@ nav:
       - guides/throttling.md
       - guides/testing.md
       - guides/api-docs.md
+      - guides/webhooks.md
       - guides/errors.md
       - guides/urls.md
       - guides/async-support.md

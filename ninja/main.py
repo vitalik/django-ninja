@@ -32,7 +32,8 @@ from ninja.parser import Parser
 from ninja.renderers import BaseRenderer, JSONRenderer
 from ninja.router import BoundRouter, Router, RouterMount
 from ninja.throttling import BaseThrottle
-from ninja.types import DictStrAny, TCallable
+from ninja.types import DictStrAny, TCallable, TSchemaClass
+from ninja.webhooks import Webhook
 
 if TYPE_CHECKING:
     from .operation import Operation  # pragma: no cover
@@ -375,6 +376,56 @@ class NinjaAPI:
             include_in_schema=include_in_schema,
             openapi_extra=openapi_extra,
         )
+
+    def webhook(
+        self,
+        name: str,
+        *,
+        method: str = "POST",
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        operation_id: Optional[str] = None,
+        deprecated: Optional[bool] = None,
+        include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
+    ) -> Callable[[TSchemaClass], TSchemaClass]:
+        """
+        Register a Schema class as the payload of a webhook your API sends.
+
+        Webhooks are only documented (in the OpenAPI ``webhooks`` section),
+        Django Ninja does not send them.
+        """
+        return self.default_router.webhook(
+            name,
+            method=method,
+            summary=summary,
+            description=description,
+            tags=tags,
+            operation_id=operation_id,
+            deprecated=deprecated,
+            include_in_schema=include_in_schema,
+            openapi_extra=openapi_extra,
+        )
+
+    def get_webhooks(self) -> List[Webhook]:
+        """
+        All webhooks registered on this API and its mounted routers.
+        Router tags are applied to webhooks that don't define their own.
+        """
+        registered: Dict[str, Webhook] = {}
+        result: List[Webhook] = []
+        for bound_router in self._get_bound_routers():
+            for name, webhook in bound_router.template.webhooks.items():
+                if name in registered:
+                    if registered[name] is webhook:
+                        continue  # same router mounted more than once
+                    raise ConfigError(f'Webhook "{name}" is registered more than once')
+                registered[name] = webhook
+                if webhook.tags is None and bound_router.tags is not None:
+                    webhook = webhook.clone(tags=bound_router.tags)
+                result.append(webhook)
+        return result
 
     def add_decorator(
         self,
