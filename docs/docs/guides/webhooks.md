@@ -40,7 +40,7 @@ The webhook will appear in the `webhooks` section of the OpenAPI schema (OpenAPI
 ```
 
 !!! note
-    Webhooks are **documentation only**. Django Ninja does not send them for you. Use your preferred HTTP client (or a task queue) to deliver them, for example: `requests.post(url, data=OrderPaid(id=1, total=10).model_dump_json())`
+    Webhooks are **documentation only**. Django Ninja does not send them for you. See [Sending webhooks](#sending-webhooks) below.
 
 The decorator returns the class unchanged, so you can keep using `OrderPaid` as a regular Schema.
 
@@ -90,3 +90,90 @@ class OrderPaid(Schema):
 ```
 
 Once the router is added to the API (`api.add_router("/orders", router)`), its webhooks (and the webhooks of its child routers) show up in the API schema. Router tags are applied to webhooks that do not define their own `tags`, the same way they are applied to operations.
+
+## Sending webhooks
+
+Django Ninja **intentionally** does not send webhooks (at least for now). Delivering webhooks in production takes decisions that belong to your project:
+
+- where subscriptions are stored (who wants which event, at what URL)
+- how payloads are signed, so receivers can verify them
+- retries, backoff, timeouts, and what to do with endpoints that keep failing
+- which task queue runs the deliveries
+
+Rather than picking one answer for everyone, Django Ninja documents the contract (the payload Schema) and leaves delivery to you. Below is one way to do it with the [Django tasks framework](https://docs.djangoproject.com/en/stable/topics/tasks/) (built into Django 6.0+; on older versions use the [django-tasks](https://pypi.org/project/django-tasks/) package, which has the same API).
+
+**1. A task that delivers one webhook:**
+
+```python
+# orders/tasks.py
+import hashlib
+import hmac
+import json
+
+import requests
+from django.tasks import task
+
+
+@task
+def deliver_webhook(url: str, secret: str, event: str, payload: dict) -> None:
+    body = json.dumps(payload).encode()
+    signature = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+    response = requests.post(
+        url,
+        data=body,
+        headers={
+            "Content-Type": "application/json",
+            "X-Webhook-Event": event,
+            "X-Webhook-Signature": f"sha256={signature}",
+        },
+        timeout=10,
+    )
+    response.raise_for_status()  # marks the task as failed
+```
+
+Task arguments must be JSON-serializable, so the payload is passed as a dict, not as a Schema instance.
+
+**2. A helper that enqueues it for every subscriber:**
+
+```python
+# orders/webhooks.py
+from django.db import transaction
+
+from ninja import Schema
+
+from .models import WebhookSubscription  # your model: url, secret, event
+from .tasks import deliver_webhook
+
+
+def send_webhook(event: str, payload: Schema) -> None:
+    data = payload.model_dump(mode="json")  # Decimal, datetime, ... -> JSON types
+
+    def enqueue():
+        for sub in WebhookSubscription.objects.filter(event=event):
+            deliver_webhook.enqueue(sub.url, sub.secret, event, data)
+
+    # don't notify anyone about data that might still be rolled back
+    transaction.on_commit(enqueue)
+```
+
+**3. Send it where the event happens:**
+
+```python
+@api.webhook("order.paid")
+class OrderPaid(Schema):
+    id: int
+    total: Decimal
+
+
+@api.post("/orders/{order_id}/pay")
+def pay(request, order_id: int):
+    order = get_object_or_404(Order, id=order_id)
+    order.mark_paid()
+    send_webhook("order.paid", OrderPaid(id=order.id, total=order.total))
+    return {"success": True}
+```
+
+Using the same `OrderPaid` Schema for the documentation and for building the payload keeps them in sync: whatever you send is exactly what your OpenAPI schema describes.
+
+!!! warning
+    Django's default task backend (`ImmediateBackend`) runs tasks right away, inside the request. That's fine for development and tests. In production, configure a backend with a real worker in the `TASKS` setting (for example the database backend from `django-tasks`), so slow or failing receivers don't slow down your API. Retries depend on the backend you choose.
