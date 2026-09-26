@@ -10,6 +10,7 @@ from typing import (
     Optional,
     Tuple,
     Union,
+    overload,
 )
 
 from django.urls import URLPattern
@@ -21,8 +22,9 @@ from ninja.decorators import DecoratorMode
 from ninja.errors import ConfigError
 from ninja.operation import PathView
 from ninja.throttling import BaseThrottle
-from ninja.types import TCallable
+from ninja.types import TCallable, TSchemaClass
 from ninja.utils import normalize_path, replace_path_param_notation
+from ninja.webhooks import Webhook
 
 if TYPE_CHECKING:
     from ninja import NinjaAPI  # pragma: no cover
@@ -211,6 +213,7 @@ class Router:
         self.exclude_none = exclude_none
 
         self.path_operations: Dict[str, PathView] = {}
+        self.webhooks: Dict[str, Webhook] = {}
         self._routers: List[Tuple[str, Router, Optional[List[str]]]] = []
         self._decorators: List[Tuple[Callable, DecoratorMode]] = []
 
@@ -572,6 +575,72 @@ class Router:
                     url_name = api.get_operation_url_name(operation, router=self)
 
                 yield django_path(route, path_view.get_view(), name=url_name)
+
+    @overload
+    def webhook(self, name: TSchemaClass) -> TSchemaClass: ...
+
+    @overload
+    def webhook(
+        self,
+        name: Optional[str] = None,
+        *,
+        method: str = "POST",
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        operation_id: Optional[str] = None,
+        deprecated: Optional[bool] = None,
+        include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
+    ) -> Callable[[TSchemaClass], TSchemaClass]: ...
+
+    def webhook(
+        self,
+        name: Union[str, TSchemaClass, None] = None,
+        *,
+        method: str = "POST",
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        operation_id: Optional[str] = None,
+        deprecated: Optional[bool] = None,
+        include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
+    ) -> Union[TSchemaClass, Callable[[TSchemaClass], TSchemaClass]]:
+        """
+        Register a Schema class as the payload of a webhook your API sends.
+        Can be used as ``@router.webhook``, ``@router.webhook()`` or
+        ``@router.webhook("order.paid")`` - name defaults to the class name.
+
+        Webhooks are only documented (in the OpenAPI ``webhooks`` section),
+        Django Ninja does not send them.
+        """
+        if isinstance(name, type):  # used without parentheses: @router.webhook
+            return self.webhook()(name)
+
+        def decorator(schema: TSchemaClass) -> TSchemaClass:
+            self.add_webhook(
+                Webhook(
+                    schema,
+                    name,
+                    method=method,
+                    summary=summary,
+                    description=description,
+                    tags=tags,
+                    operation_id=operation_id,
+                    deprecated=deprecated,
+                    include_in_schema=include_in_schema,
+                    openapi_extra=openapi_extra,
+                )
+            )
+            return schema
+
+        return decorator
+
+    def add_webhook(self, webhook: Webhook) -> None:
+        if webhook.name in self.webhooks:
+            raise ConfigError(f'Webhook "{webhook.name}" is already registered')
+        self.webhooks[webhook.name] = webhook
 
     def add_router(
         self,
