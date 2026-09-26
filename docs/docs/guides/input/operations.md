@@ -9,10 +9,11 @@ An `operation` can be one of the following [HTTP methods](https://developer.mozi
 - PUT
 - DELETE
 - PATCH
+- QUERY
 
 **Django Ninja** comes with a decorator for each operation:
 
-```python hl_lines="1 5 9 13 17"
+```python hl_lines="1 5 9 13 17 21"
 @api.get("/path")
 def get_operation(request):
     ...
@@ -32,7 +33,15 @@ def delete_operation(request):
 @api.patch("/path")
 def patch_operation(request):
     ...
+
+@api.query("/path")
+def query_operation(request):
+    ...
 ```
+
+`QUERY` is a safe, idempotent method (like `GET`) that also carries a request
+body (like `POST`), making it a good fit for complex search criteria that
+don't fit cleanly into a URL's query string.
 
 See the [operations parameters](../../reference/operations-parameters.md)
 reference docs for information on what you can pass to any of these decorators.
