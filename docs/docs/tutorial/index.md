@@ -1,74 +1,11 @@
-# Tutorial - First Steps
+# Tutorial
 
-This tutorial shows you how to use **Django Ninja** with most of its features.
+A multi-page, project-based walk-through that builds one realistic API from scratch and teaches most features along the way.
 
-This tutorial assumes that you know at least some basics of the <a href="https://www.djangoproject.com/" target="_blank">Django Framework</a>, like how to create a project and run it.
+!!! note "Planned content"
 
-## Installation
+    - Final structure not decided yet — pages below are placeholders
+    - Idea: build a single app (e.g. events / blog / todo) step by step
+    - Each step adds one or two features and links to the matching Guide page
 
-```console
-pip install django-ninja
-```
-
-!!! note
-
-    It is not required, but you can also put `ninja` to `INSTALLED_APPS`.
-    In that case the OpenAPI/Swagger UI (or Redoc) will be loaded (faster) from the included JavaScript bundle (otherwise the JavaScript bundle comes from a CDN).
-
-## Create a Django project
-
-Start a new Django project (or if you already have an existing Django project, skip to the next step).
-
-```
-django-admin startproject myproject
-```
-
-## Create the API
-
-Let's create a module for our API. Create an `api.py` file in the same directory location as your Django project's root `urls.py`:
-
-```python
-from ninja import NinjaAPI
-
-api = NinjaAPI()
-```
-
-Now go to `urls.py` and add the following:
-
-```python hl_lines="3 7"
-from django.contrib import admin
-from django.urls import path
-from .api import api
-
-urlpatterns = [
-    path("admin/", admin.site.urls),
-    path("api/", api.urls),
-]
-```
-
-## Our first operation
-
-**Django Ninja** comes with a decorator for each HTTP method (`GET`, `POST`,
-`PUT`, etc). In our `api.py` file, let's add in a simple "hello world"
-operation.
-
-```python hl_lines="5-7"
-from ninja import NinjaAPI
-
-api = NinjaAPI()
-
-@api.get("/hello")
-def hello(request):
-    return "Hello world"
-```
-
-Now browsing to <a href="http://localhost:8000/api/hello"
-target="_blank">localhost:8000/api/hello</a> will return a simple JSON
-response:
-```json
-"Hello world"
-```
-
-!!! success
-
-    Continue on to **[Parsing input](step2.md)**.
+**Existing material to port:** [legacy/tutorial/index.md](../legacy/tutorial/index.md), [legacy/tutorial/other/video.md](../legacy/tutorial/other/video.md)

@@ -36,79 +36,82 @@ theme:
   favicon: img/favicon.svg
   language: en
   features:
-    - navigation.expand
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.indexes
+    - navigation.footer
+    - navigation.top
+    - content.code.copy
     - search.highlight
     - search.suggest
   icon:
     repo: fontawesome/brands/github-alt
 nav:
-  - Intro: index.md
-  - motivation.md
+  - Home:
+      - index.md
+      - motivation.md
+  - Quick Start:
+      - quickstart/index.md
+      - quickstart/models-and-schemas.md
+      - quickstart/next-steps.md
   - Tutorial:
-      - "First Steps": tutorial/index.md
-      - "Parsing Input": tutorial/step2.md
-      - "Handling Responses": tutorial/step3.md
-      - Other Tutorials:
-          - tutorial/other/video.md
-          - tutorial/other/crud.md
-  - How-to Guides:
-      - Parsing input:
-          - guides/input/operations.md
-          - guides/input/path-params.md
-          - guides/input/query-params.md
-          - guides/input/body.md
-          - guides/input/form-params.md
-          - guides/input/file-params.md
-          - guides/input/request-parsers.md
-          - guides/input/filtering.md
-      - Handling responses:
-          - Defining a Schema: guides/response/index.md
-          - guides/response/temporal_response.md
-          - Generating a Schema from Django models: guides/response/django-pydantic.md
-          - Generating a Schema dynamically: guides/response/django-pydantic-create-schema.md
-          - guides/response/config-pydantic.md
-          - guides/response/pagination.md
-          - guides/response/response-renderers.md
-      - Splitting your API with Routers: guides/routers.md
-      - guides/decorators.md
-      - guides/authentication.md
-      - guides/throttling.md
-      - guides/testing.md
-      - guides/api-docs.md
-      - guides/errors.md
-      - guides/urls.md
-      - guides/async-support.md
-      - guides/versioning.md
-  - Reference:
-      - NinjaAPI class: reference/api.md
-      - reference/csrf.md
-      - reference/operations-parameters.md
-      - reference/management-commands.md
-      - reference/settings.md
-      - releases.md
-  - help.md
-  - Enhancement Proposals:
-      - Intro: proposals/index.md
-      - proposals/cbv.md
-      - proposals/v1.md
-  - What's new in V1: whatsnew_v1.md
+      - tutorial/index.md
+      - tutorial/part-1.md
+      - tutorial/part-2.md
+      - tutorial/part-3.md
+      - tutorial/part-4.md
+  - Guide:
+      - guide/index.md
+      - guide/api.md
+      - guide/operations.md
+      - guide/routers.md
+      - guide/urls.md
+      - guide/path-params.md
+      - guide/query-params.md
+      - guide/body.md
+      - guide/forms.md
+      - guide/files.md
+      - guide/headers-cookies.md
+      - guide/parsers.md
+      - guide/schemas.md
+      - guide/model-schema.md
+      - guide/create-schema.md
+      - guide/schema-config.md
+      - guide/responses.md
+      - guide/temporal-response.md
+      - guide/renderers.md
+      - guide/pagination.md
+      - guide/filtering.md
+      - guide/authentication.md
+      - guide/csrf.md
+      - guide/throttling.md
+      - guide/errors.md
+      - guide/decorators.md
+      - guide/async.md
+      - guide/versioning.md
+      - guide/openapi.md
+      - guide/testing.md
+      - guide/settings.md
+not_in_nav: |
+  /legacy/
+  /proposals/
+  help.md
+  releases.md
+  whatsnew_v1.md
+  chat.md
 markdown_extensions:
-  - markdown_include.include
-  - markdown.extensions.codehilite:
-      guess_lang: false
-  # Uncomment these 2 lines during development to more easily add highlights
-  #- pymdownx.highlight:
-  #    linenums: true
   - abbr
-  - codehilite
   - admonition
+  - attr_list
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
   - pymdownx.details
   - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
 plugins:
   - search
-  - mkdocstrings:
-      handlers:
-        python:
-          setup_commands:
-            - from django.conf import settings
-            - settings.configure()
