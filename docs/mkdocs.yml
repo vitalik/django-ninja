@@ -91,6 +91,7 @@ nav:
       - guide/async.md
       - guide/versioning.md
       - guide/openapi.md
+      - guide/webhooks.md
       - guide/testing.md
       - guide/settings.md
 not_in_nav: |

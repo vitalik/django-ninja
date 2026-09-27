@@ -67,5 +67,6 @@ The rest of the guide is grouped by what you're trying to do:
 **Tooling**
 
 - [OpenAPI & Interactive Docs](openapi.md)
+- [Webhooks](webhooks.md) — documenting the requests your API sends to other servers
 - [Testing](testing.md)
 - [Settings](settings.md)

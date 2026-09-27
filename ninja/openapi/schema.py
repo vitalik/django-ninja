@@ -1,10 +1,21 @@
 import itertools
 import re
 from http.client import responses
-from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Set, Tuple
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Generator,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+)
 
 from django.utils.termcolors import make_style
-from pydantic.json_schema import JsonSchemaMode
+from pydantic import BaseModel
+from pydantic.json_schema import JsonSchemaMode, models_json_schema
 
 from ninja.constants import NOT_SET
 from ninja.operation import Operation
@@ -12,6 +23,7 @@ from ninja.params.models import TModel, TModels
 from ninja.schema import NinjaGenerateJsonSchema
 from ninja.types import DictStrAny
 from ninja.utils import normalize_path
+from ninja.webhooks import Webhook, get_webhooks
 
 if TYPE_CHECKING:
     from ninja import NinjaAPI  # pragma: no cover
@@ -56,6 +68,9 @@ class OpenAPISchema(dict):
             ("components", self.get_components()),
             ("servers", api.servers),
         ])
+        webhooks = self.get_webhooks()
+        if webhooks:
+            self["webhooks"] = {**api.openapi_extra.get("webhooks", {}), **webhooks}
         for k, v in api.openapi_extra.items():
             if k not in self:
                 self[k] = v
@@ -79,6 +94,54 @@ class OpenAPISchema(dict):
                         result[full_path] = path_methods
 
         return result
+
+    def get_webhooks(self) -> DictStrAny:
+        result: DictStrAny = {}
+        for webhook in get_webhooks(self.api):
+            if webhook.include_in_schema:
+                result.setdefault(webhook.name, {})[webhook.method] = (
+                    self.webhook_details(webhook)
+                )
+        return result
+
+    def webhook_details(self, webhook: Webhook) -> DictStrAny:
+        result: DictStrAny = {"summary": webhook.summary}
+
+        if webhook.operation_id:
+            result["operationId"] = webhook.operation_id
+
+        if webhook.description:
+            result["description"] = webhook.description
+
+        if webhook.tags:
+            result["tags"] = webhook.tags
+
+        if webhook.deprecated:
+            result["deprecated"] = webhook.deprecated
+
+        payload_schema = self._create_ref_schema(webhook.schema, mode="serialization")
+        result["requestBody"] = {
+            "content": {self.api.renderer.media_type: {"schema": payload_schema}},
+            "required": True,
+        }
+        result["responses"] = {200: {"description": responses[200]}}
+
+        if webhook.openapi_extra:
+            self.deep_dict_update(result, webhook.openapi_extra)
+
+        return result
+
+    def _create_ref_schema(
+        self, model: Type[BaseModel], mode: JsonSchemaMode = "validation"
+    ) -> DictStrAny:
+        "Adds model to components/schemas and returns a $ref to it"
+        refs, top_level = models_json_schema(
+            [(model, mode)],
+            ref_template=REF_TEMPLATE,
+            schema_generator=NinjaGenerateJsonSchema,
+        )
+        self.add_schema_definitions(top_level.get("$defs", {}))
+        return refs[(model, mode)]
 
     def methods(self, operations: list) -> DictStrAny:
         result = {}
