@@ -523,12 +523,32 @@ class AsyncOperation(Operation):
         fmt = self.stream_format
 
         async def content_gen() -> Any:
-            async for item in generator:
-                data = self._validate_stream_item(item, request)
-                yield fmt.format_chunk(data)
+            try:
+                async for item in generator:
+                    data = self._validate_stream_item(item, request)
+                    yield fmt.format_chunk(data)
+            finally:
+                if inspect.isasyncgen(generator):
+                    await generator.aclose()
+
+        # Run preparation while exceptions can still become HTTP responses.
+        content = content_gen()
+        try:
+            first_chunk = await content.__anext__()
+        except StopAsyncIteration:
+            first_chunk = None
+
+        async def prepared_content() -> Any:
+            try:
+                if first_chunk is not None:
+                    yield first_chunk
+                async for chunk in content:
+                    yield chunk
+            finally:
+                await content.aclose()
 
         return await create_streaming_response(
-            content_gen(),
+            prepared_content(),
             content_type=fmt.media_type,
             status=temporal_response.status_code,
             temporal_response=temporal_response,

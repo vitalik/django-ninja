@@ -6,21 +6,27 @@ On older versions, async generators must be eagerly consumed into a list.
 TODO: When dropping Django < 4.2 support:
   1. Remove this module entirely.
   2. In AsyncOperation._async_stream_response (ninja/operation.py),
-     pass the async content generator directly to StreamingHttpResponse
-     and copy temporal_response headers lazily inside the generator:
+     keep the first-chunk preparation in _async_stream_response, pass its
+     prepared async content generator to StreamingHttpResponse, and copy
+     temporal headers before returning the response (not only at exhaustion):
+
+         content_gen = prepared_content()
 
          async def content_iter():
-             async for chunk in content_gen:
-                 yield chunk
-             for key, value in temporal_response.items():
-                 if key.lower() != "content-type":
-                     response[key] = value
-             for cookie_name, cookie in temporal_response.cookies.items():
-                 response.cookies[cookie_name] = cookie
+             try:
+                 async for chunk in content_gen:
+                     yield chunk
+             finally:
+                 await content_gen.aclose()
 
          response = StreamingHttpResponse(
              content_iter(), content_type=..., status=...,
          )
+         for key, value in temporal_response.items():
+             if key.lower() != "content-type":
+                 response[key] = value
+         for cookie_name, cookie in temporal_response.cookies.items():
+             response.cookies[cookie_name] = cookie
 """
 
 from typing import Any, Dict
@@ -55,19 +61,25 @@ if ASYNC_STREAMING:
         """Create a StreamingHttpResponse from an async content generator.
 
         Django 4.2+: passes the async generator directly and copies
-        temporal response headers/cookies lazily after the generator is exhausted.
+        temporal response headers/cookies before streaming starts and again
+        after exhaustion for compatibility. Preparation is handled by the caller.
         """
 
         async def with_lazy_headers() -> Any:
-            async for chunk in content_gen:
-                yield chunk
-            _copy_temporal_headers(temporal_response, response)
+            try:
+                async for chunk in content_gen:
+                    yield chunk
+                _copy_temporal_headers(temporal_response, response)
+            finally:
+                if hasattr(content_gen, "aclose"):
+                    await content_gen.aclose()
 
         response = StreamingHttpResponse(
             with_lazy_headers(),
             content_type=content_type,
             status=status,
         )
+        _copy_temporal_headers(temporal_response, response)
         for key, value in extra_headers.items():
             response[key] = value
         return response

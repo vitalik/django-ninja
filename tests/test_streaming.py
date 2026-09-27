@@ -1,9 +1,20 @@
+import asyncio
 import json
 
+import django
 import pytest
+from asgiref.testing import ApplicationCommunicator
+from django.core.exceptions import PermissionDenied
+from django.core.handlers.asgi import ASGIHandler
 from django.http import HttpResponse
+from django.test import RequestFactory, override_settings
+from django.urls import path, resolve
+from pydantic import ValidationError
 
 from ninja import NinjaAPI, Schema
+from ninja.compatibility.streaming import create_streaming_response
+from ninja.errors import AuthorizationError, HttpError
+from ninja.operation import AsyncOperation
 from ninja.streaming import JSONL, SSE, StreamFormat
 from ninja.testing import TestAsyncClient, TestClient
 
@@ -141,6 +152,224 @@ async def async_jsonl_with_headers(request, response: HttpResponse):
 
 
 async_client = TestAsyncClient(async_api)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("stream_format", [SSE, JSONL])
+@pytest.mark.parametrize("error", [AuthorizationError(), HttpError(403, "denied")])
+async def test_async_stream_permission_denied(stream_format, error):
+    api = NinjaAPI()
+
+    @api.get("/", response=stream_format[Item])
+    async def stream(request):
+        raise error
+        yield  # pragma: no cover
+
+    response = await TestAsyncClient(api).get("/")
+    assert response.status_code == 403
+    assert not response.streaming
+    assert response.json() == {"detail": str(error)}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("invalid_item", [False, True])
+async def test_async_stream_preparation_exception_handler(invalid_item):
+    api = NinjaAPI()
+    closed = []
+
+    @api.exception_handler(ValidationError if invalid_item else ValueError)
+    def handle_error(request, exc):
+        return api.create_response(
+            request, {"detail": "preparation failed"}, status=400
+        )
+
+    @api.get("/", response=JSONL[Item])
+    async def stream(request):
+        try:
+            if not invalid_item:
+                raise ValueError("failed")
+            yield {"price": "invalid"}
+        finally:
+            closed.append(True)
+
+    response = await TestAsyncClient(api).get("/")
+    assert response.status_code == 400
+    assert response.json() == {"detail": "preparation failed"}
+    assert closed == [True]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("empty", [False, True])
+async def test_async_stream_preparation_headers(empty):
+    api = NinjaAPI()
+
+    @api.get("/", response=SSE[Item])
+    async def stream(request, response: HttpResponse):
+        response.status_code = 201
+        response["X-Prepared"] = "yes"
+        response["Content-Type"] = "text/plain"
+        response.set_cookie("prepared", "yes")
+        if not empty:
+            yield {"name": "first"}
+
+    urls = type("URLConf", (), {"urlpatterns": [path("", api.urls)]})
+    with override_settings(
+        ROOT_URLCONF=urls, MIDDLEWARE=[], ALLOWED_HOSTS=["testserver"]
+    ):
+        response = await resolve("/", urlconf=urls).func(RequestFactory().get("/"))
+    assert response.status_code == 201
+    assert response["X-Prepared"] == "yes"
+    assert response["Content-Type"] == "text/event-stream"
+    assert response["Cache-Control"] == "no-cache"
+    assert response.cookies["prepared"].value == "yes"
+    if django.VERSION >= (4, 2):
+        chunks = [chunk async for chunk in response.streaming_content]
+    else:
+        chunks = list(response.streaming_content)
+    assert len(chunks) == (0 if empty else 1)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(django.VERSION < (4, 2), reason="Requires native async streaming")
+@pytest.mark.parametrize("ending", ["complete", "error", "cancel"])
+async def test_async_stream_remains_lazy_and_closes(ending):
+    api = NinjaAPI()
+    events = []
+    waiting = asyncio.Event()
+
+    @api.get("/", response=JSONL[Item])
+    async def stream(request):
+        try:
+            events.append("first")
+            yield {"name": "first"}
+            events.append("second")
+            if ending == "error":
+                raise HttpError(403, "late denial")
+            if ending == "cancel":
+                waiting.set()
+                await asyncio.Event().wait()
+            yield {"name": "second"}
+        finally:
+            events.append("closed")
+
+    urls = type("URLConf", (), {"urlpatterns": [path("", api.urls)]})
+    with override_settings(
+        ROOT_URLCONF=urls, MIDDLEWARE=[], ALLOWED_HOSTS=["testserver"]
+    ):
+        response = await resolve("/", urlconf=urls).func(RequestFactory().get("/"))
+    assert response.status_code == 200
+    assert events == ["first"]
+    content = response.streaming_content
+    assert json.loads(await content.__anext__()) == {"name": "first", "price": 0.0}
+    assert events == ["first"]
+    if ending == "complete":
+        assert json.loads(await content.__anext__()) == {"name": "second", "price": 0.0}
+        with pytest.raises(StopAsyncIteration):
+            await content.__anext__()
+    elif ending == "error":
+        with pytest.raises(HttpError):
+            await content.__anext__()
+    else:
+        next_chunk = asyncio.create_task(content.__anext__())
+        await asyncio.wait_for(waiting.wait(), timeout=1)
+        next_chunk.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await next_chunk
+    assert events == ["first", "second", "closed"]
+    assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_async_stream_permission_denied_asgi():
+    api = NinjaAPI()
+
+    @api.get("/", response=SSE[Item])
+    async def stream(request):
+        raise PermissionDenied
+        yield  # pragma: no cover
+
+    urls = type("URLConf", (), {"urlpatterns": [path("", api.urls)]})
+    with override_settings(
+        ROOT_URLCONF=urls, DEBUG=False, MIDDLEWARE=[], ALLOWED_HOSTS=["testserver"]
+    ):
+        application = ApplicationCommunicator(
+            ASGIHandler(),
+            {
+                "type": "http",
+                "asgi": {"version": "3.0"},
+                "http_version": "1.1",
+                "method": "GET",
+                "path": "/",
+                "query_string": b"",
+                "headers": [(b"host", b"testserver")],
+            },
+        )
+        try:
+            await application.send_input({"type": "http.request", "body": b""})
+            start = await application.receive_output()
+            assert start["type"] == "http.response.start"
+            assert start["status"] == 403
+            body = await application.receive_output()
+            assert body["type"] == "http.response.body"
+            assert body["body"]
+            await application.wait()
+        finally:
+            application.stop()
+
+
+@pytest.mark.asyncio
+async def test_async_stream_response_accepts_async_iterator():
+    class Items:
+        def __init__(self):
+            self.items = iter([{"name": "first"}, {"name": "second"}])
+
+        def __aiter__(self):
+            return self
+
+        async def __anext__(self):
+            try:
+                return next(self.items)
+            except StopIteration:
+                raise StopAsyncIteration from None
+
+    operation = AsyncOperation("/", ["GET"], lambda request: None, response=JSONL[Item])
+    response = await operation._async_stream_response(
+        RequestFactory().get("/"), Items(), HttpResponse()
+    )
+    if django.VERSION >= (4, 2):
+        chunks = [chunk async for chunk in response.streaming_content]
+    else:
+        chunks = list(response.streaming_content)
+    assert [json.loads(chunk)["name"] for chunk in chunks] == ["first", "second"]
+
+
+@pytest.mark.asyncio
+async def test_create_streaming_response_preserves_explicit_status():
+    temporal_response = HttpResponse(status=200)
+    events = []
+
+    async def content():
+        events.append("started")
+        temporal_response.status_code = 201
+        yield "first\n"
+        temporal_response["X-Finished"] = "yes"
+
+    response = await create_streaming_response(
+        content(),
+        content_type="application/jsonl",
+        status=202,
+        temporal_response=temporal_response,
+        extra_headers={},
+    )
+    assert response.status_code == 202
+    if django.VERSION >= (4, 2):
+        assert events == []
+        chunks = [chunk async for chunk in response.streaming_content]
+    else:
+        chunks = list(response.streaming_content)
+    assert chunks == [b"first\n"]
+    assert response.status_code == 202
+    assert response["X-Finished"] == "yes"
 
 
 @pytest.mark.asyncio

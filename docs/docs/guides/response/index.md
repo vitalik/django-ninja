@@ -443,6 +443,36 @@ Multiple Items: or a queryset (or list)
 [{'id':1, 'name':'Mr. Smith'},{'id': 2, 'name': 'Mrs. Smith'}...]
 ```
 
+## Preparing asynchronous streams
+
+For async generator operations using `response=SSE[Item]` or `response=JSONL[Item]`,
+Django Ninja prepares and validates the first item before returning the streaming
+response. Permission checks before the first `yield` can therefore return an HTTP
+error through the normal exception handlers:
+
+```python
+from ninja import Schema
+from ninja.errors import AuthorizationError
+from ninja.streaming import JSONL
+
+
+class Item(Schema):
+    name: str
+
+
+@api.get("/items", response=JSONL[Item])
+async def stream_items(request):
+    if not request.auth:
+        raise AuthorizationError()
+    yield {"name": "first item"}
+```
+
+Set response status, headers, and cookies before the first `yield` as well.
+The response headers wait until the first item is ready (or the generator finishes
+without yielding). On Django 4.2 and later, subsequent items are consumed lazily;
+earlier Django versions buffer the entire async stream for compatibility.
+Once streaming has started, later exceptions cannot change the HTTP status.
+
 ## Django HTTP responses
 
 It is also possible to return regular django http responses:
