@@ -48,9 +48,7 @@ theme:
   icon:
     repo: fontawesome/brands/github-alt
 nav:
-  - Home:
-      - index.md
-      - motivation.md
+  - Home: index.md
   - Quick Start:
       - quickstart/index.md
       - quickstart/models-and-schemas.md
@@ -94,6 +92,7 @@ nav:
       - guide/webhooks.md
       - guide/testing.md
       - guide/settings.md
+  - About: motivation.md
 not_in_nav: |
   /legacy/
   /proposals/
