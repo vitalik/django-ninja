@@ -510,7 +510,7 @@ class AsyncOperation(Operation):
             result = await self.view_func(request, **values)
             return self._result_to_response(request, result, temporal_response)
         except Exception as e:
-            return self.api.on_exception(request, e)
+            return await self.api.aon_exception(request, e)
 
     async def _async_stream_response(
         self,
@@ -569,12 +569,12 @@ class AsyncOperation(Operation):
                 else:
                     result = await sync_to_async(callback)(request)
             except Exception as exc:
-                return self.api.on_exception(request, exc)
+                return await self.api.aon_exception(request, exc)
 
             if result:
                 request.auth = result  # type: ignore
                 return None
-        return self.api.on_exception(request, AuthenticationError())
+        return await self.api.aon_exception(request, AuthenticationError())
 
 
 class PathView:
