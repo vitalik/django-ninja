@@ -26,6 +26,7 @@ from django.http import (
 )
 from django.http.response import HttpResponseBase
 from pydantic import BaseModel
+from typing_extensions import get_args, get_origin
 
 from ninja.compatibility.files import FIX_MIDDLEWARE_PATH, need_to_fix_request_files
 from ninja.compatibility.streaming import create_streaming_response
@@ -430,6 +431,30 @@ class Operation:
                 exclude_none=self.exclude_none,
                 **model_dump_kwargs,
             )
+            return self.api.create_response(
+                request, result, temporal_response=temporal_response
+            )
+
+        # Same for a list of such instances, e.g. response=List[Schema], unless the
+        # list itself has constraints. Dumping through the response model keeps the
+        # output limited to the fields of the item schema.
+        item_types = get_args(resp_annotation)
+        if (
+            get_origin(resp_annotation) is list
+            and len(item_types) == 1
+            and isinstance(item_types[0], type)
+            and issubclass(item_types[0], BaseModel)
+            and not response_model.model_fields["response"].metadata
+            and isinstance(result, list)
+            and all(isinstance(item, item_types[0]) for item in result)
+        ):
+            result = response_model.model_construct(response=result).model_dump(
+                by_alias=self.by_alias,
+                exclude_unset=self.exclude_unset,
+                exclude_defaults=self.exclude_defaults,
+                exclude_none=self.exclude_none,
+                **model_dump_kwargs,
+            )["response"]
             return self.api.create_response(
                 request, result, temporal_response=temporal_response
             )
