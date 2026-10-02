@@ -68,9 +68,11 @@ class Operation:
         self,
         path: str,
         methods: List[str],
-        view_func: Callable,
+        view_func: Callable[..., Any],
         *,
-        auth: Optional[Union[Sequence[Callable], Callable, NOT_SET_TYPE]] = NOT_SET,
+        auth: Optional[
+            Union[Sequence[Callable[..., Any]], Callable[..., Any], NOT_SET_TYPE]
+        ] = NOT_SET,
         throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
@@ -89,14 +91,16 @@ class Operation:
         self.is_async = False
         self.path: str = path
         self.methods: List[str] = methods
-        self.view_func: Callable = view_func
+        self.view_func: Callable[..., Any] = view_func
         self.api: NinjaAPI = cast("NinjaAPI", None)
         self.csrf_exempt: bool = getattr(view_func, "csrf_exempt", False)
         if url_name is not None:
             self.url_name = url_name
 
-        self.auth_param: Optional[Union[Sequence[Callable], Callable, object]] = auth
-        self.auth_callbacks: Sequence[Callable] = []
+        self.auth_param: Optional[
+            Union[Sequence[Callable[..., Any]], Callable[..., Any], object]
+        ] = auth
+        self.auth_callbacks: Sequence[Callable[..., Any]] = []
         self._set_auth(auth)
 
         if isinstance(throttle, BaseThrottle):
@@ -149,7 +153,9 @@ class Operation:
 
         if hasattr(view_func, "_ninja_contribute_to_operation"):
             # Allow 3rd party code to contribute to the operation behavior
-            callbacks: List[Callable] = view_func._ninja_contribute_to_operation
+            callbacks: List[Callable[..., Any]] = (
+                view_func._ninja_contribute_to_operation
+            )
             for callback in callbacks:
                 callback(self)
 
@@ -293,7 +299,8 @@ class Operation:
         return response
 
     def _set_auth(
-        self, auth: Optional[Union[Sequence[Callable], Callable, object]]
+        self,
+        auth: Optional[Union[Sequence[Callable[..., Any]], Callable[..., Any], object]],
     ) -> None:
         if auth is not None and auth is not NOT_SET:
             self.auth_callbacks = isinstance(auth, Sequence) and auth or [auth]
@@ -587,9 +594,11 @@ class PathView:
         self,
         path: str,
         methods: List[str],
-        view_func: Callable,
+        view_func: Callable[..., Any],
         *,
-        auth: Optional[Union[Sequence[Callable], Callable, NOT_SET_TYPE]] = NOT_SET,
+        auth: Optional[
+            Union[Sequence[Callable[..., Any]], Callable[..., Any], NOT_SET_TYPE]
+        ] = NOT_SET,
         throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
@@ -655,7 +664,7 @@ class PathView:
         cloned.operations = [op.clone() for op in self.operations]
         return cloned
 
-    def get_view(self) -> Callable:
+    def get_view(self) -> Callable[..., Any]:
         # Create a unique view function for this PathView
 
         if self.is_async:
