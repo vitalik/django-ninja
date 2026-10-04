@@ -119,10 +119,13 @@ def get_event(request, event_id: int):
 
 A schema-typed argument is read from the **JSON request body**:
 
-```python title="mysite/api.py" hl_lines="1-3 7"
+```python title="mysite/api.py" hl_lines="1 4-6 10"
+from ninja import Status
+
+
 @api.post("/events", response={201: EventOut})
 def create_event(request, payload: EventIn):
-    return 201, Event.objects.create(**payload.dict())
+    return Status(201, Event.objects.create(**payload.dict()))
 
 
 @api.put("/events/{event_id}", response=EventOut)
@@ -137,11 +140,11 @@ def update_event(request, event_id: int, payload: EventIn):
 @api.delete("/events/{event_id}", response={204: None})
 def delete_event(request, event_id: int):
     get_object_or_404(Event, id=event_id).delete()
-    return 204, None
+    return Status(204, None)
 ```
 
 - `payload: EventIn` means "parse the body as `EventIn`". By the time your function runs, the data is valid and typed: `starts_at` is already a `datetime`.
-- `response={201: EventOut}` maps **status codes to schemas**. Return a `(status, data)` tuple to choose the code.
+- `response={201: EventOut}` maps **status codes to schemas**. Return `Status(code, data)` to choose the code.
 - `update_event` mixes a path parameter and a body in one signature. Django Ninja works out where each argument comes from.
 
 Send an incomplete body and the error lists every problem at once:

@@ -59,6 +59,10 @@ nav:
       - tutorial/part-2.md
       - tutorial/part-3.md
       - tutorial/part-4.md
+      - tutorial/part-5.md
+      - tutorial/part-6.md
+      - tutorial/part-7.md
+      - tutorial/part-8.md
   - Guide:
       - guide/index.md
       - guide/api.md
