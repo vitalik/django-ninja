@@ -90,9 +90,9 @@ api.add_router("/events", events_router)
 
 Every endpoint now requires a logged-in user, so you have to opt the public ones back out. Here's the complete `events/api.py`:
 
-```python title="events/api.py" hl_lines="3 12 18-20 23 48-55"
+```python title="events/api.py" hl_lines="3 12 18-20 23 47-54"
 from django.shortcuts import get_object_or_404
-from ninja import Query, Router, Status
+from ninja import Query, Router
 from ninja.errors import HttpError
 from ninja.pagination import paginate
 
@@ -120,7 +120,7 @@ def get_event(request, event_id: int):
 
 @router.post("/", response={201: EventOut})
 def create_event(request, payload: EventIn):
-    return Status(201, Event.objects.create(**payload.dict()))
+    return Event.objects.create(**payload.dict())
 
 
 @router.put("/{event_id}", response=EventOut)
@@ -135,7 +135,6 @@ def update_event(request, event_id: int, payload: EventIn):
 @router.delete("/{event_id}", response={204: None})
 def delete_event(request, event_id: int):
     get_object_or_404(Event, id=event_id).delete()
-    return Status(204, None)
 
 
 @router.post("/{event_id}/register", response={201: RegistrationOut})
@@ -145,7 +144,7 @@ def register(request, event_id: int):
         raise HttpError(409, "You are already registered for this event")
     if event.registrations.count() >= event.capacity:
         raise HttpError(409, "This event is full")
-    return Status(201, Registration.objects.create(event=event, user=request.auth))
+    return Registration.objects.create(event=event, user=request.auth)
 ```
 
 What's new:

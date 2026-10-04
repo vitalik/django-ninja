@@ -119,13 +119,10 @@ def get_event(request, event_id: int):
 
 A schema-typed argument is read from the **JSON request body**:
 
-```python title="mysite/api.py" hl_lines="1 4-6 10"
-from ninja import Status
-
-
+```python title="mysite/api.py" hl_lines="1-3 7"
 @api.post("/events", response={201: EventOut})
 def create_event(request, payload: EventIn):
-    return Status(201, Event.objects.create(**payload.dict()))
+    return Event.objects.create(**payload.dict())
 
 
 @api.put("/events/{event_id}", response=EventOut)
@@ -140,11 +137,10 @@ def update_event(request, event_id: int, payload: EventIn):
 @api.delete("/events/{event_id}", response={204: None})
 def delete_event(request, event_id: int):
     get_object_or_404(Event, id=event_id).delete()
-    return Status(204, None)
 ```
 
 - `payload: EventIn` means "parse the body as `EventIn`". By the time your function runs, the data is valid and typed: `starts_at` is already a `datetime`.
-- `response={201: EventOut}` maps **status codes to schemas**. Return `Status(code, data)` to choose the code.
+- `response={201: EventOut}` maps a **status code to a schema**. With only one code listed, that's the code every response gets, so `create_event` returns `201` and `delete_event` returns `204` with an empty body.
 - `update_event` mixes a path parameter and a body in one signature. Django Ninja works out where each argument comes from.
 
 Send an incomplete body and the error lists every problem at once:
@@ -159,6 +155,29 @@ Send an incomplete body and the error lists every problem at once:
 ```
 
 Open `/api/docs` again. All five endpoints are there, with request and response schemas, and you can create an event from the browser with **Try it out**.
+
+### More than one status code
+
+When an endpoint can answer in different ways, list every status code in `response` and return `Status(code, data)` to pick one. For example, a `POST` that creates an event, or reports a clash with an existing one:
+
+```python title="mysite/api.py" hl_lines="1 9 13 14"
+from ninja import Schema, Status
+
+
+class Conflict(Schema):
+    message: str
+    existing_id: int
+
+
+@api.post("/events", response={201: EventOut, 409: Conflict})
+def create_event(request, payload: EventIn):
+    clash = Event.objects.filter(city=payload.city, starts_at=payload.starts_at).first()
+    if clash:
+        return Status(409, {"message": "Another event is already scheduled then", "existing_id": clash.id})
+    return Status(201, Event.objects.create(**payload.dict()))
+```
+
+Each response is validated against the schema for its code, and both appear in the interactive docs. See [Responses](../guide/responses.md#multiple-response-schemas) for more.
 
 !!! tip "Partial updates"
     For `PATCH`, where the client sends only the fields that change, use `PatchDict[EventIn]`. See [Request Body](../guide/body.md#partial-updates-with-patchdict).
