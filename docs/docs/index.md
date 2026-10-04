@@ -12,7 +12,7 @@ Django Ninja is a web framework for building APIs with Django and Python 3.6+ ty
 Key features:
 
  - **Easy**: Designed to be easy to use and intuitive.
- - **FAST execution**: Very high performance thanks to **<a href="https://pydantic-docs.helpmanual.io" target="_blank">Pydantic</a>** and **<a href="guides/async-support/">async support</a>**. 
+ - **FAST execution**: Very high performance thanks to **<a href="https://pydantic-docs.helpmanual.io" target="_blank">Pydantic</a>** and **<a href="guide/async/">async support</a>**. 
  - **Fast to code**: Type hints and automatic docs lets you focus only on business logic.
  - **Standards-based**: Based on the open standards for APIs: **OpenAPI** (previously known as Swagger) and **JSON Schema**.
  - **Django friendly**: (obviously) has good integration with the Django core and ORM.
@@ -38,7 +38,22 @@ django-admin startproject apidemo
 in `urls.py`
 
 ```python hl_lines="3 5 8 9 10 15"
-{!./src/index001.py!}
+from django.contrib import admin
+from django.urls import path
+from ninja import NinjaAPI
+
+api = NinjaAPI()
+
+
+@api.get("/add")
+def add(request, a: int, b: int):
+    return {"result": a + b}
+
+
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("api/", api.urls),
+]
 ```
 
 Now, run it as usual:

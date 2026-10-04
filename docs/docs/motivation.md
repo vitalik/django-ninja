@@ -1,93 +1,92 @@
-# Motivation
+# About Django Ninja
 
 !!! quote
     **Django Ninja** looks basically the same as **FastAPI**, so why not just use FastAPI?
 
-Indeed, **Django Ninja** is heavily inspired by <a href="https://fastapi.tiangolo.com/" target="_blank">FastAPI</a> (developed by <a href="https://github.com/tiangolo" target="_blank">Sebastián Ramírez</a>)
+Django Ninja is heavily inspired by <a href="https://fastapi.tiangolo.com/" target="_blank">FastAPI</a> (by <a href="https://github.com/tiangolo" target="_blank">Sebastián Ramírez</a>): the same type-hint driven style, Pydantic validation and automatic OpenAPI docs. The difference is where it lives. FastAPI is a standalone framework, and Django Ninja is built for Django.
 
-That said, there are few issues when it comes to getting FastAPI and Django to work together properly:
+|                            | FastAPI                                                  | Django Ninja                                             |
+| -------------------------- | -------------------------------------------------------- | -------------------------------------------------------- |
+| Database                   | ORM-agnostic, so you manage sessions and connections     | Django ORM, with connections managed by Django           |
+| Auth and request context   | `Depends(...)` arguments on every endpoint               | `request.auth` / `request.user`, `auth=` set once        |
+| Schemas                    | Pydantic "models" (clashes with Django's `Model`)        | `Schema`, plus `ModelSchema` generated from your models  |
+| Admin, migrations, users…  | Bring your own                                           | Django's, unchanged                                      |
+| Existing Django project    | A second service next to it                              | Mounted in `urls.py`, next to your views                 |
 
-1) **FastAPI** declares to be ORM agnostic (meaning you can use it with SQLAlchemy or the Django ORM), but in reality the Django ORM is not yet ready for async use (it may be in version 4.0 or 4.1), and if you use it in sync mode, you can have a [closed connection issue](https://github.com/tiangolo/fastapi/issues/716) which you will have to overcome with a **lot** of effort.
+## Why not FastAPI with Django?
 
-2) The dependency injection with arguments makes your code too verbose when you rely on authentication and database sessions in your operations (which for some projects is about 99% of all operations).
+**The ORM.** FastAPI is ORM-agnostic, but the Django ORM expects Django to manage database connections around each request. Used from FastAPI, it runs into problems such as [closed connections](https://github.com/tiangolo/fastapi/issues/716) that take real effort to work around.
 
-```python hl_lines="25 26"
-...
+**Dependency injection gets verbose.** When nearly every operation needs the current user and a database session, those dependencies are repeated in every signature:
 
-app = FastAPI()
+=== "FastAPI"
 
-
-# Dependency
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-async def get_current_user(token: str = Depends(oauth2_scheme)):
-    user = decode(token)
-    if not user:
-        raise HTTPException(...)
-    return user
-
-
-@app.get("/task/{task_id}", response_model=Task)
-def read_user(
+    ```python hl_lines="4 5"
+    @app.get("/tasks/{task_id}", response_model=Task)
+    def task_details(
         task_id: int,
-        db: Session = Depends(get_db), 
+        db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user),
     ):
-        ... use db with current_user ....
-```
+        ...
+    ```
 
-3) Since the word `model` in Django is "reserved" for use by the ORM, it becomes very confusing when you mix the Django ORM with Pydantic/FastAPI model naming conventions. 
+=== "Django Ninja"
 
-### Django Ninja
+    ```python
+    @api.get("/tasks/{task_id}", response=TaskSchema, auth=django_auth)
+    def task_details(request, task_id: int):
+        return get_object_or_404(Task, id=task_id, owner=request.auth)
+    ```
 
-Django Ninja addresses all those issues, and integrates very well with Django (ORM, urls, views, auth and more)
+Django Ninja uses the `request` object instead, just like a regular Django view. Authentication can be set once on the API or a router and applies to every operation below it (see [Authentication](guide/authentication.md)).
 
-Working at [Code-on a Django webdesign webedevelopment studio](https://code-on.be/) I get all sorts of challenges and to solve these I started Django-Ninja in 2020.
+**Naming.** In Django, "model" means an ORM model. Mixing that with Pydantic's `BaseModel` gets confusing fast, so Django Ninja calls its Pydantic classes **`Schema`**.
 
-Note: **Django Ninja is a production ready project** - my estimation is at this time already 100+ companies using it in production and 500 new developers joining every month. 
+## What you get with Django Ninja
 
-Some companies are already looking for developers with django ninja experience.
+**The whole Django ecosystem.** The admin, migrations, users, groups and permissions, sessions, middleware, i18n and any `django-*` package keep working. Nothing needs to be rebuilt or bolted on.
 
-#### Main Features
-
-1) Since you can have multiple Django Ninja API instances - you can run [multiple API versions](guides/versioning.md) inside one Django project.
+**Drop it into an existing project.** An API is just another entry in `urls.py`. It can live next to your existing views or Django REST Framework, so you can adopt it one endpoint at a time without a second service:
 
 ```python
-api_v1 = NinjaAPI(version='1.0', auth=token_auth)
-...
-api_v2 = NinjaAPI(version='2.0', auth=token_auth)
-...
-api_private = NinjaAPI(auth=session_auth, urls_namespace='private_api')
-...
-
-
 urlpatterns = [
-    ...
-    path('api/v1/', api_v1.urls),
-    path('api/v2/', api_v2.urls),
-    path('internal-api/', api_private.urls),
+    path("admin/", admin.site.urls),
+    path("api/v1/", include(drf_router.urls)),  # existing DRF API
+    path("api/v2/", api.urls),                  # new Django Ninja API
 ]
 ```
 
-2) The Django Ninja 'Schema' class is integrated with the ORM, so you can [serialize querysets](guides/response/index.md#returning-querysets) or ORM objects:
+**Multiple APIs in one project.** Each `NinjaAPI` instance has its own version, auth and URL namespace (see [Versioning](guide/versioning.md)):
 
 ```python
+api_v1 = NinjaAPI(version="1.0", auth=token_auth)
+api_v2 = NinjaAPI(version="2.0", auth=token_auth)
+api_private = NinjaAPI(auth=django_auth, urls_namespace="private_api")
+
+urlpatterns = [
+    path("api/v1/", api_v1.urls),
+    path("api/v2/", api_v2.urls),
+    path("internal-api/", api_private.urls),
+]
+```
+
+**Schemas that understand the ORM.** Return querysets or model instances directly (see [Returning querysets](guide/responses.md#returning-querysets)), and generate schemas from your models with [ModelSchema](guide/model-schema.md):
+
+```python
+class TaskSchema(ModelSchema):
+    class Meta:
+        model = Task
+        fields = ["id", "title", "completed"]
+
+
 @api.get("/tasks", response=list[TaskSchema])
 def tasks(request):
     return Task.objects.all()
-
-
-@api.get("/tasks", response=TaskSchema)
-def tasks_details(request):
-    task = Task.objects.first()
-    return task
 ```
-3) [Create Schema's from Django Models](guides/response/django-pydantic.md).
 
-4) Instead of dependency arguments, **Django Ninja** uses `request` instance attributes (in the same way as regular Django views) - more detail at [Authentication](guides/authentication.md).
+## Who is behind it
+
+Django Ninja was started in 2020 by Vitaliy Kucheryaviy at [Code-on](https://code-on.be/), a Django web design and development studio, to handle the API challenges of client projects.
+
+Today it is a production-ready project with 9,000+ GitHub stars, around 190 contributors and over 3 million downloads a month on PyPI.

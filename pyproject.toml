@@ -71,7 +71,7 @@ test = [
     "ruff==0.5.7",
     "django-stubs",
 ]
-doc = ["mkdocs", "mkdocs-material", "markdown-include", "mkdocstrings[python]"]
+doc = ["mkdocs", "mkdocs-material"]
 dev = [
     { include-group = "test" },
     { include-group = "doc" },
