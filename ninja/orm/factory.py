@@ -4,6 +4,7 @@ from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Type, Union,
 from django.db.models import Field as DjangoField
 from django.db.models import ManyToManyRel, ManyToOneRel, Model
 from pydantic import create_model as create_pydantic_model
+from pydantic.fields import FieldInfo
 
 from ninja.errors import ConfigError
 from ninja.orm.fields import get_schema_field
@@ -71,8 +72,15 @@ class SchemaFactory:
 
         if custom_fields:
             for fld_name, python_type, field_info in custom_fields:
-                # if not isinstance(field_info, FieldInfo):
-                #     field_info = Field(field_info)
+                if fld_name in definitions and isinstance(field_info, FieldInfo):
+                    _, model_field_info = definitions[fld_name]
+                    field_info = FieldInfo.merge_field_infos(
+                        FieldInfo(
+                            title=model_field_info.title,
+                            description=model_field_info.description,
+                        ),
+                        field_info,
+                    )
                 definitions[fld_name] = (python_type, field_info)
 
         if name in self.schema_names:
