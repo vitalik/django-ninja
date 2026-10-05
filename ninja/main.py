@@ -62,7 +62,9 @@ class NinjaAPI:
         docs_decorator: Optional[Callable[[TCallable], TCallable]] = None,
         servers: Optional[List[DictStrAny]] = None,
         urls_namespace: Optional[str] = None,
-        auth: Optional[Union[Sequence[Callable], Callable, NOT_SET_TYPE]] = NOT_SET,
+        auth: Optional[
+            Union[Sequence[Callable[..., Any]], Callable[..., Any], NOT_SET_TYPE]
+        ] = NOT_SET,
         throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         renderer: Optional[BaseRenderer] = None,
         parser: Optional[Parser] = None,
@@ -79,7 +81,7 @@ class NinjaAPI:
             openapi_extra: Additional attributes for the openAPI spec.
             docs_url: The relative URL to serve the API docs.
             servers: List of target hosts used in openAPI spec.
-            auth (Callable | Sequence[Callable] | NOT_SET | None): Authentication class
+            auth (Callable[..., Any] | Sequence[Callable[..., Any]] | NOT_SET | None): Authentication class
             renderer: Default response renderer
             parser: Default request parser
         """
@@ -99,7 +101,7 @@ class NinjaAPI:
         self._exception_handlers: Dict[Exc, ExcHandler] = {}
         self.set_default_exception_handlers()
 
-        self.auth: Optional[Union[Sequence[Callable], NOT_SET_TYPE]]
+        self.auth: Optional[Union[Sequence[Callable[..., Any]], NOT_SET_TYPE]]
 
         if callable(auth):
             self.auth = [auth]
