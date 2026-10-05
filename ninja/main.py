@@ -1,6 +1,8 @@
+import inspect
 from typing import (
     TYPE_CHECKING,
     Any,
+    Awaitable,
     Callable,
     Dict,
     List,
@@ -13,6 +15,7 @@ from typing import (
     overload,
 )
 
+from asgiref.sync import async_to_sync
 from django.http import HttpRequest, HttpResponse
 from django.urls import URLPattern, URLResolver, reverse
 from django.utils.module_loading import import_string
@@ -42,7 +45,13 @@ __all__ = ["NinjaAPI"]
 
 _E = TypeVar("_E", bound=Exception)
 Exc = Union[_E, Type[_E]]
-ExcHandler = Callable[[HttpRequest, Exc[_E]], HttpResponse]
+ExcHandler = Callable[
+    [HttpRequest, Exc[_E]], Union[HttpResponse, Awaitable[HttpResponse]]
+]
+
+
+async def _await_http_response(result: Awaitable[HttpResponse]) -> HttpResponse:
+    return await result
 
 
 class NinjaAPI:
@@ -664,11 +673,25 @@ class NinjaAPI:
     def set_default_exception_handlers(self) -> None:
         set_default_exc_handlers(self)
 
-    def on_exception(self, request: HttpRequest, exc: Exc[_E]) -> HttpResponse:
+    def _call_exception_handler(
+        self, request: HttpRequest, exc: Exc[_E]
+    ) -> Union[HttpResponse, Awaitable[HttpResponse]]:
         handler = self._lookup_exception_handler(exc)
         if handler is None:
             raise exc
         return handler(request, exc)
+
+    def on_exception(self, request: HttpRequest, exc: Exc[_E]) -> HttpResponse:
+        result = self._call_exception_handler(request, exc)
+        if inspect.iscoroutine(result):
+            return async_to_sync(_await_http_response)(result)
+        return result  # type: ignore[return-value]
+
+    async def aon_exception(self, request: HttpRequest, exc: Exc[_E]) -> HttpResponse:
+        result = self._call_exception_handler(request, exc)
+        if inspect.iscoroutine(result):
+            return await result  # type: ignore[no-any-return]
+        return result  # type: ignore[return-value]
 
     def validation_error_from_error_contexts(
         self, error_contexts: List[ValidationErrorContext]
