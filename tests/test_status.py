@@ -1,7 +1,8 @@
-from typing import List, Union
+from typing import Any, List, Union
 from unittest.mock import patch
 
 import pytest
+from typing_extensions import Annotated
 
 from ninja import Field, NinjaAPI, Schema, Status
 from ninja.operation import ResponseObject
@@ -104,6 +105,29 @@ def union_response(request, q: int):
 @api.get("/list_response", response={200: List[UserOut]})
 def list_response(request):
     return Status(200, [{"id": 1, "name": "John"}])
+
+
+@api.get("/list_model_instances", response=List[UserOut])
+def list_model_instances(request):
+    return [UserOut(id=1, name="John"), UserOut(id=2, name="Jane")]
+
+
+@api.get("/list_model_subclass", response=List[UserOut])
+def list_model_subclass(request):
+    return [UserOutSub(id=1, name="John", extra="bonus")]
+
+
+@api.get("/list_any_model_instances", response=List[Any])
+def list_any_model_instances(request):
+    return [UserOut(id=1, name="John")]
+
+
+@api.get(
+    "/constrained_list_model_instances",
+    response=Annotated[List[UserOut], Field(min_length=1)],
+)
+def constrained_list_model_instances(request):
+    return [UserOut(id=1, name="John")]
 
 
 @api.get("/by_alias_response", response=AliasOut, by_alias=True)
@@ -262,11 +286,51 @@ class TestSkipRevalidation:
             mock_resp_obj.assert_called_once()
 
     def test_list_no_skip(self):
-        # List types should still go through full validation
+        # Lists of dicts should still go through full validation
         with patch(
             "ninja.operation.ResponseObject", wraps=ResponseObject
         ) as mock_resp_obj:
             response = client.get("/list_response")
+            assert response.status_code == 200
+            assert response.json() == [{"id": 1, "name": "John"}]
+            mock_resp_obj.assert_called_once()
+
+    def test_list_of_model_instances_skips_validation(self):
+        with patch(
+            "ninja.operation.ResponseObject", wraps=ResponseObject
+        ) as mock_resp_obj:
+            response = client.get("/list_model_instances")
+            assert response.status_code == 200
+            assert response.json() == [
+                {"id": 1, "name": "John"},
+                {"id": 2, "name": "Jane"},
+            ]
+            mock_resp_obj.assert_not_called()
+
+    def test_list_of_model_subclass_keeps_schema_fields(self):
+        with patch(
+            "ninja.operation.ResponseObject", wraps=ResponseObject
+        ) as mock_resp_obj:
+            response = client.get("/list_model_subclass")
+            assert response.status_code == 200
+            assert response.json() == [{"id": 1, "name": "John"}]
+            mock_resp_obj.assert_not_called()
+
+    def test_list_of_any_no_skip(self):
+        with patch(
+            "ninja.operation.ResponseObject", wraps=ResponseObject
+        ) as mock_resp_obj:
+            response = client.get("/list_any_model_instances")
+            assert response.status_code == 200
+            assert response.json() == [{"id": 1, "name": "John"}]
+            mock_resp_obj.assert_called_once()
+
+    def test_constrained_list_no_skip(self):
+        # Constraints on the list itself still need validation
+        with patch(
+            "ninja.operation.ResponseObject", wraps=ResponseObject
+        ) as mock_resp_obj:
+            response = client.get("/constrained_list_model_instances")
             assert response.status_code == 200
             assert response.json() == [{"id": 1, "name": "John"}]
             mock_resp_obj.assert_called_once()
