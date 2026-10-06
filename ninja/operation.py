@@ -687,7 +687,12 @@ class PathView:
         operation = self._find_operation(request)
         if operation is None:
             return self._not_allowed()
-        return operation.run(request, *a, **kw)
+        try:
+            return operation.run(request, *a, **kw)
+        except Exception as e:
+            # View decorators wrap `run`, so exceptions they raise never reach
+            # the handler inside it.
+            return operation.api.on_exception(request, e)
 
     async def _async_view(
         self, request: HttpRequest, *a: Any, **kw: Any
@@ -695,9 +700,12 @@ class PathView:
         operation = self._find_operation(request)
         if operation is None:
             return self._not_allowed()
-        if operation.is_async:
-            return await cast(AsyncOperation, operation).run(request, *a, **kw)
-        return await sync_to_async(operation.run)(request, *a, **kw)
+        try:
+            if operation.is_async:
+                return await cast(AsyncOperation, operation).run(request, *a, **kw)
+            return await sync_to_async(operation.run)(request, *a, **kw)
+        except Exception as e:
+            return operation.api.on_exception(request, e)
 
     def _find_operation(self, request: HttpRequest) -> Optional[Operation]:
         for op in self.operations:
