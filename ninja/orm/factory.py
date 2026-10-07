@@ -60,12 +60,15 @@ class SchemaFactory:
             if optional_fields == "__all__":
                 optional_fields = [f.name for f in model_fields_list]
 
+        alias_generator = getattr(base_class, "model_config", {}).get("alias_generator")
+
         definitions = {}
         for fld in model_fields_list:
             python_type, field_info = get_schema_field(
                 fld,
                 depth=depth,
                 optional=optional_fields and (fld.name in optional_fields),
+                alias_generator=alias_generator,
             )
             definitions[fld.name] = (python_type, field_info)
 
