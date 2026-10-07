@@ -1,4 +1,5 @@
 from django.db import models
+from django.test.utils import isolate_apps
 
 from ninja import NinjaAPI
 from ninja.orm import create_schema
@@ -35,3 +36,64 @@ def test_manytomany():
     response = client.post("/bar", json={"m2m": []})
     assert response.status_code == 200, str(response.json())
     assert response.json() == {"m2m": []}
+
+
+@isolate_apps("tests")
+def test_reverse_foreign_object_relation_is_skipped():
+    """A ForeignObject's reverse accessor is a bare ForeignObjectRel. Building a
+    schema for the referenced model must skip it like any other reverse relation
+    instead of crashing on the missing ``help_text`` attribute (see #1530)."""
+
+    class Order(models.Model):
+        class Meta:
+            app_label = "tests"
+
+    class OrderDetail(models.Model):
+        order_id = models.PositiveIntegerField()
+        order = models.ForeignObject(
+            Order,
+            on_delete=models.CASCADE,
+            from_fields=["order_id"],
+            to_fields=["id"],
+            related_name="details",
+        )
+
+        class Meta:
+            app_label = "tests"
+
+    # Order gets a reverse ForeignObjectRel "details"; schema generation must not raise.
+    OrderSchema = create_schema(Order)
+
+    # The reverse relation is skipped, so it does not appear as a schema field.
+    assert "details" not in OrderSchema.model_fields
+    assert "id" in OrderSchema.model_fields
+
+
+@isolate_apps("tests")
+def test_reverse_foreign_object_relation_is_skipped_at_depth():
+    """``depth`` recurses through the forward ForeignObject into the referenced
+    model, so the reverse ForeignObjectRel must be skipped on the nested schema
+    as well as the top-level one."""
+
+    class Category(models.Model):
+        class Meta:
+            app_label = "tests"
+
+    class Item(models.Model):
+        category_id = models.PositiveIntegerField()
+        category = models.ForeignObject(
+            Category,
+            on_delete=models.CASCADE,
+            from_fields=["category_id"],
+            to_fields=["id"],
+            related_name="items",
+        )
+
+        class Meta:
+            app_label = "tests"
+
+    CategorySchema = create_schema(Category, depth=1)
+    assert "items" not in CategorySchema.model_fields
+
+    ItemSchema = create_schema(Item, depth=1)
+    assert "category" in ItemSchema.model_fields
