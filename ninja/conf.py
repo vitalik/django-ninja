@@ -2,8 +2,8 @@ from math import inf
 from typing import Any, Dict, Optional, Set, Tuple
 
 from django.conf import settings as django_settings
+from django.core.signals import setting_changed
 from django.dispatch import receiver
-from django.test.signals import setting_changed
 from pydantic import BaseModel, ConfigDict, Field
 
 
