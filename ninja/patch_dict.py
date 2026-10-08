@@ -25,7 +25,7 @@ class ModelToDict(dict):
     def __get_pydantic_core_schema__(cls, _source: Any, _handler: Any) -> Any:
         return core_schema.no_info_after_validator_function(
             cls._validate,
-            cls._wrapped_model.__pydantic_core_schema__,
+            _handler.generate_schema(cls._wrapped_model),
         )
 
     @classmethod
