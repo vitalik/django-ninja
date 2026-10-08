@@ -20,9 +20,9 @@ from django.db.models import QuerySet
 from django.http import HttpRequest
 from django.utils.module_loading import import_string
 from pydantic import BaseModel, field_validator
-from typing_extensions import get_args as get_collection_args
 
 from ninja import Field, Query, Router, Schema
+from ninja.compatibility.util import get_collection_item
 from ninja.conf import settings
 from ninja.constants import NOT_SET
 from ninja.errors import ConfigError, ValidationError
@@ -770,8 +770,15 @@ def _find_collection_response(op: Operation) -> Tuple[int, Any]:
 
         model = resp_model.__annotations__["response"]
         if is_collection_type(model):
-            item_schema = get_collection_args(model)[0]
-            return code, item_schema
+            # Unwrap PEP 695 `type` aliases (including parameterized generics
+            # and Annotated wrappers) before extracting the element type.
+            # get_collection_args(model)[0] would IndexError on a bare alias
+            # whose get_args() is empty, and would return the wrong type for
+            # Annotated[List[...], ...]. get_collection_item resolves type
+            # parameters and returns the concrete element type, or None.
+            item_schema = get_collection_item(model)
+            if item_schema is not None:
+                return code, item_schema
 
     raise ConfigError(
         f'"{op.view_func}" has no collection response (e.g. response=List[SomeSchema])'
