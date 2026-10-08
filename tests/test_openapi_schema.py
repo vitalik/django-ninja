@@ -210,6 +210,7 @@ def method_test_deprecated_example_examples(
         },
     ),
     param4: int = Query(None, deprecated=True, include_in_schema=False),
+    param5: Annotated[str, Field(min_length=2, examples=["AA", "BB"])] = Query(...),
 ):
     return dict(i=param2, f=param3)
 
@@ -803,6 +804,21 @@ def test_schema_deprecated_example_examples(schema):
                     "summary": "A normal example",
                     "value": "Foo",
                 },
+            },
+        },
+        {
+            "in": "query",
+            "name": "param5",
+            "required": True,
+            "schema": {
+                "minLength": 2,
+                "title": "Param5",
+                "type": "string",
+                "examples": ["AA", "BB"],
+            },
+            "examples": {
+                "example0": {"value": "AA"},
+                "example1": {"value": "BB"},
             },
         },
     ]
