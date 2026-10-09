@@ -471,7 +471,7 @@ class CursorPagination(AsyncPaginationBase):
         filters = {f"{self._order_attribute}__{cmp}": cursor.p}
         try:
             return queryset.filter(**filters)
-        except (DjangoValidationError, ValueError, TypeError) as e:
+        except (DjangoValidationError, ValueError) as e:
             raise ValidationError([{"cursor": "Invalid Cursor"}]) from e
 
     def paginate_queryset(
