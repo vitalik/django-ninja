@@ -1,3 +1,4 @@
+from base64 import b64encode
 from datetime import date, timedelta
 from http import HTTPStatus
 from typing import List
@@ -299,6 +300,17 @@ def test_cursor_pagination_invalid_cursor():
     response = client.get("/cursor_events?cursor=invalid&page_size=3")
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+
+
+@pytest.mark.parametrize("raw", ["o=abc", "o=-1", "r=maybe", "o=100000", "p=zzz"])
+def test_cursor_pagination_malformed_cursor(raw):
+    """Base64-valid but malformed cursors return 422, not 500."""
+    cursor = b64encode(raw.encode()).decode()
+
+    response = client.get(f"/cursor_events?cursor={cursor}&page_size=3")
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert response.json() == {"detail": [{"cursor": "Invalid Cursor"}]}
 
 
 def test_cursor_pagination_empty_cursor():
