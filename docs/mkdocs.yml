@@ -119,3 +119,5 @@ markdown_extensions:
       alternate_style: true
 plugins:
   - search
+hooks:
+  - hooks/single_file_markdown.py
