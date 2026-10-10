@@ -11,6 +11,7 @@ from typing import (
     List,
     Optional,
     Sequence,
+    Set,
     Type,
     Union,
     cast,
@@ -658,6 +659,22 @@ class PathView:
     def get_view(self) -> Callable:
         # Create a unique view function for this PathView
 
+        # Django's ATOMIC_REQUESTS support reads the `_non_atomic_requests`
+        # marker (set of database aliases installed by
+        # django.db.transaction.non_atomic_requests) from the URL callback.
+        # Since the callback is the wrapper created below, forward the marker
+        # from the wrapped operations. A database alias is forwarded only when
+        # every operation of the path opts out of atomic requests for it.
+        non_atomic_requests: Optional[Set[str]] = None
+        for operation in self.operations:
+            operation_non_atomic_requests = set(
+                getattr(operation.view_func, "_non_atomic_requests", ())
+            )
+            if non_atomic_requests is None:
+                non_atomic_requests = operation_non_atomic_requests
+            else:
+                non_atomic_requests &= operation_non_atomic_requests
+
         if self.is_async:
             # Create a wrapper for async view
             async def async_view_wrapper(
@@ -668,6 +685,9 @@ class PathView:
             # All django-ninja views are CSRF exempt at Django middleware level
             # Cookie-based auth (APIKeyCookie) handles CSRF checking separately
             async_view_wrapper.csrf_exempt = True  # type: ignore
+
+            if non_atomic_requests:
+                async_view_wrapper._non_atomic_requests = non_atomic_requests  # type: ignore
 
             return async_view_wrapper
         else:
@@ -680,6 +700,9 @@ class PathView:
             # All django-ninja views are CSRF exempt at Django middleware level
             # Cookie-based auth (APIKeyCookie) handles CSRF checking separately
             sync_view_wrapper.csrf_exempt = True  # type: ignore
+
+            if non_atomic_requests:
+                sync_view_wrapper._non_atomic_requests = non_atomic_requests  # type: ignore
 
             return sync_view_wrapper
 
