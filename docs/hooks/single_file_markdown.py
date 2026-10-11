@@ -24,12 +24,26 @@ def on_nav(nav: Navigation, config: MkDocsConfig, files: Files, **kwargs: Any) -
 
 
 def on_post_build(config: MkDocsConfig, **kwargs: Any) -> None:
-    parts = [f"# {config.site_name}\n"]
+    head = f"# {config.site_name}\n"
     if config.site_description:
-        parts.append(f"\n> {config.site_description}\n")
+        head += f"\n> {config.site_description}\n"
+    head += "\n## Pages\n\n"
+
+    toc = []
+    sections = []
+    # 1-based line of the first page's `<!-- source -->` line, after the TOC and a blank line.
+    line = head.count("\n") + len(_pages) + 2
     for page in _pages:
         # canonical_url is None when site_url is unset; fall back to the source path.
         source = page.canonical_url or page.file.src_uri
         text = page.file.content_string.strip()
-        parts.append(f"\n<!-- source: {source} -->\n\n{text}\n")
-    Path(config.site_dir, OUTPUT_FILE).write_text("".join(parts), encoding="utf-8")
+        section = f"\n<!-- source: {source} -->\n\n{text}\n"
+        # Title from the page's own H1: page.title is HTML-escaped and unset on --dirty builds.
+        first_line = text.split("\n", 1)[0]
+        title = first_line[2:] if first_line.startswith("# ") else page.file.src_uri
+        toc.append(f"- [{title}]({source}): line {line}\n")
+        sections.append(section)
+        line += section.count("\n")
+
+    content = head + "".join(toc) + "".join(sections)
+    Path(config.site_dir, OUTPUT_FILE).write_text(content, encoding="utf-8")
