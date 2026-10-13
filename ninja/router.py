@@ -503,7 +503,7 @@ class Router:
         path = re.sub(r"\{uuid:(\w+)\}", r"{uuidstr:\1}", path, flags=re.IGNORECASE)
         # django by default convert strings to UUIDs
         # but we want to keep them as strings to let pydantic handle conversion/validation
-        # if user whants UUID object
+        # if user wants UUID object
         # uuidstr is custom registered converter
 
         # No decoration here - will be done in build_routers
