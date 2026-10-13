@@ -481,7 +481,7 @@ class Router:
         self,
         path: str,
         methods: List[str],
-        view_func: Callable,
+        view_func: Callable[..., Any],
         *,
         auth: Any = NOT_SET,
         throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
