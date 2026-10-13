@@ -31,14 +31,14 @@ def on_post_build(config: MkDocsConfig, **kwargs: Any) -> None:
 
     toc = []
     sections = []
-    # 1-based line of the first page's `<!-- source -->` line, after the TOC and a blank line.
+    # 1-based line of the first `<!-- source -->` line, after the TOC and a blank line.
     line = head.count("\n") + len(_pages) + 2
     for page in _pages:
         # canonical_url is None when site_url is unset; fall back to the source path.
         source = page.canonical_url or page.file.src_uri
         text = page.file.content_string.strip()
         section = f"\n<!-- source: {source} -->\n\n{text}\n"
-        # Title from the page's own H1: page.title is HTML-escaped and unset on --dirty builds.
+        # Title from the H1: page.title is HTML-escaped and unset on --dirty builds.
         first_line = text.split("\n", 1)[0]
         title = first_line[2:] if first_line.startswith("# ") else page.file.src_uri
         toc.append(f"- [{title}]({source}): line {line}\n")
