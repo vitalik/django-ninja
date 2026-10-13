@@ -202,8 +202,8 @@ def test_all_fields():
     pydantic_version = tuple(map(int, pydantic.VERSION.split(".")[:2]))
     if pydantic_version >= (2, 11):
         expected_schema["properties"]["hstorefield"]["additionalProperties"] = True
-    if pydantic_version >= (2, 12):
-        # Pydantic 2.12 added pattern validation for decimal strings
+    if (2, 12) <= pydantic_version < (2, 14):
+        # Pydantic 2.12 added pattern validation for decimal strings, 2.14 dropped it
         expected_schema["properties"]["decimalfield"]["anyOf"][1]["pattern"] = (
             r"^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$"
         )
