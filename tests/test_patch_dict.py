@@ -79,7 +79,7 @@ def test_patch_inherited():
 
 
 def test_inherited_schema():
-    "Checking that json schema properties for inherithed schemas are ok"
+    "Checking that json schema properties for inherited schemas are ok"
     schema = api.get_openapi_schema()
     assert schema["components"]["schemas"]["OtherSchemaPatch"] == {
         "title": "OtherSchemaPatch",
