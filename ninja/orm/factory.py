@@ -61,7 +61,21 @@ class SchemaFactory:
                 optional_fields = [f.name for f in model_fields_list]
 
         definitions = {}
+        custom_fields_dict = {}
+        if custom_fields:
+            for fld_name, python_type, field_info in custom_fields:
+                # if not isinstance(field_info, FieldInfo):
+                #     field_info = Field(field_info)
+                custom_fields_dict[fld_name] = (python_type, field_info)
+
         for fld in model_fields_list:
+            if fld.name in custom_fields_dict:
+                # The field is redeclared as a custom field, so its
+                # definition is taken from the declaration. Resolving the
+                # underlying model field is unnecessary, and may fail for
+                # field types that get_schema_field cannot convert.
+                definitions[fld.name] = custom_fields_dict.pop(fld.name)
+                continue
             python_type, field_info = get_schema_field(
                 fld,
                 depth=depth,
@@ -69,11 +83,8 @@ class SchemaFactory:
             )
             definitions[fld.name] = (python_type, field_info)
 
-        if custom_fields:
-            for fld_name, python_type, field_info in custom_fields:
-                # if not isinstance(field_info, FieldInfo):
-                #     field_info = Field(field_info)
-                definitions[fld_name] = (python_type, field_info)
+        # custom fields that do not override a model field
+        definitions.update(custom_fields_dict)
 
         if name in self.schema_names:
             name = self._get_unique_name(name)

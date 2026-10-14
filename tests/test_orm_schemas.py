@@ -682,3 +682,32 @@ def test_register_custom_field():
     Schema = create_schema(ModelWithCustomField)
     print(Schema.json_schema())
     assert Schema.json_schema()["properties"]["some_field"]["type"] == "integer"
+
+
+def test_custom_field_override_skips_model_field_resolution():
+    # A field that is redeclared as a custom field gets its definition from
+    # the declaration, so resolving the underlying model field through
+    # get_schema_field is unnecessary - and wrong when the model field type
+    # cannot be converted by ninja at all.
+    class UnresolvableField(models.Field):
+        description = "UnresolvableField"
+
+    class ModelWithUnresolvableField(models.Model):
+        name = models.CharField(max_length=50)
+        payload = UnresolvableField()
+
+        class Meta:
+            app_label = "tests"
+
+    # without a custom declaration the unresolvable type still raises
+    with pytest.raises(ConfigError):
+        create_schema(ModelWithUnresolvableField, name="UnresolvableSchema")
+
+    # with a custom declaration the model field must not be resolved at all
+    Schema = create_schema(
+        ModelWithUnresolvableField,
+        name="OverriddenSchema",
+        custom_fields=[("payload", str, ...)],
+    )
+    assert Schema.model_fields["payload"].annotation is str
+    assert set(Schema.model_fields) == {"id", "name", "payload"}
