@@ -2,6 +2,8 @@
 
 Please feel free to share any questions or describe any problems you're encountering. Simply enter your text in the chat, and I'll be happy to assist you.
 
+To use these docs with your own AI assistant, the pages are also available as a single Markdown file: [llms-full.txt](/llms-full.txt).
+
 <style>
 .serenity_chat__powered { display: none !important; }
 .md-sidebar--secondary { display: none !important; }
