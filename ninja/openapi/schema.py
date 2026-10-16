@@ -34,6 +34,7 @@ BODY_CONTENT_TYPES: Dict[str, str] = {
     "body": "application/json",
     "form": "application/x-www-form-urlencoded",
     "file": "multipart/form-data",
+    "formjson": "application/x-www-form-urlencoded",
 }
 
 
