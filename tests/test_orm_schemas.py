@@ -8,7 +8,7 @@ from django.db import models
 from django.db.models import Manager
 from util import pydantic_ref_fix
 
-from ninja import Router
+from ninja import Router, Schema
 from ninja.errors import ConfigError
 from ninja.orm import create_schema, register_field
 from ninja.orm.shortcuts import L, S
@@ -682,3 +682,24 @@ def test_register_custom_field():
     Schema = create_schema(ModelWithCustomField)
     print(Schema.json_schema())
     assert Schema.json_schema()["properties"]["some_field"]["type"] == "integer"
+
+
+def test_create_schema_cache_respects_base_class():
+    class BaseClassModel(models.Model):
+        name = models.CharField(max_length=5)
+
+        class Meta:
+            app_label = "tests"
+
+    class BaseA(Schema):
+        pass
+
+    class BaseB(Schema):
+        pass
+
+    a = create_schema(BaseClassModel, base_class=BaseA)
+    b = create_schema(BaseClassModel, base_class=BaseB)
+
+    assert a is not b
+    assert issubclass(a, BaseA) and issubclass(b, BaseB)
+    assert create_schema(BaseClassModel, base_class=BaseA) is a
