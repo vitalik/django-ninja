@@ -40,6 +40,12 @@ def cursor_events_default_size(request, **kwargs):
     return Event.objects.all()
 
 
+@api.get("/cursor_events_tied_dates", response=List[EventSchema])
+@paginate(CursorPagination, ordering=("start_date",), page_size=100)
+def cursor_events_tied_dates(request, **kwargs):
+    return Event.objects.all()
+
+
 @api.get("/cursor_events_with_params", response=List[EventSchema])
 @paginate(CursorPagination, ordering=("start_date",), page_size=10)
 def cursor_events_with_params(request, title_filter: str = "", **kwargs):
@@ -302,6 +308,16 @@ def test_cursor_pagination_invalid_cursor():
     assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
 
 
+def test_cursor_pagination_rejects_unsigned_offset_at_cap():
+    """An untrusted cursor may not request an offset at the configured cap."""
+
+    cursor = b64encode(b"o=100").decode()
+    response = client.get(f"/cursor_events?cursor={cursor}")
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert response.json() == {"detail": [{"cursor": "Invalid Cursor"}]}
+
+
 @pytest.mark.parametrize("raw", ["o=abc", "o=-1", "r=maybe", "o=100000", "p=zzz"])
 def test_cursor_pagination_malformed_cursor(raw):
     """Base64-valid but malformed cursors return 422, not 500."""
@@ -311,6 +327,39 @@ def test_cursor_pagination_malformed_cursor(raw):
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
     assert response.json() == {"detail": [{"cursor": "Invalid Cursor"}]}
+
+
+def test_cursor_pagination_tie_run_past_max_offset():
+    """A tie run at least as long as the offset cap still paginates."""
+
+    Event.objects.all().delete()
+    tied = date(2024, 6, 1)
+    Event.objects.bulk_create([
+        Event(title=f"Tied {i}", start_date=tied, end_date=tied) for i in range(250)
+    ])
+
+    response = client.get("/cursor_events_tied_dates")
+    assert response.status_code == HTTPStatus.OK
+    page = response.json()
+    assert len(page["results"]) == 100
+    assert page["next"] is not None
+
+    seen = []
+    current = page
+    guard = 0
+    while True:
+        seen.extend(item["title"] for item in current["results"])
+        if not current["next"]:
+            break
+        guard += 1
+        assert guard < 10
+        cursor = current["next"].split("cursor=")[1].split("&")[0]
+        follow = client.get(f"/cursor_events_tied_dates?cursor={cursor}")
+        assert follow.status_code == HTTPStatus.OK
+        current = follow.json()
+
+    assert len(seen) == 250
+    assert len(set(seen)) == 250
 
 
 def test_cursor_pagination_empty_cursor():

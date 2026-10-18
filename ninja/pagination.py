@@ -17,6 +17,7 @@ from typing import (
 from urllib import parse
 
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.signing import BadSignature, Signer
 from django.db.models import QuerySet
 from django.http import HttpRequest
 from django.utils.module_loading import import_string
@@ -36,6 +37,10 @@ from ninja.utils import (
     contribute_operation_callback,
     is_async_callable,
 )
+
+# Salt for cursors whose offset is past NINJA_PAGINATION_MAX_OFFSET.
+# Those cursors are ones this server issued while walking a tie run.
+_CURSOR_SIGNING_SALT = "ninja.pagination.Cursor"
 
 
 class PaginationBase(ABC):
@@ -262,10 +267,12 @@ class CursorPagination(AsyncPaginationBase):
         # offset enables the use of a non-unique ordering field
         # e.g. if created time of two items is exactly the same, we can use the offset
         # to figure out the position exactly
+        # No lt= cap here. A tie run can need an offset at or above
+        # NINJA_PAGINATION_MAX_OFFSET, and building that cursor must not raise.
+        # from_encoded_param still rejects an untrusted cursor that large.
         o: int = Field(
             default=0,
             ge=0,
-            lt=settings.PAGINATION_MAX_OFFSET,
             title="offset",
             description="Number of items to skip from the current position",
         )
@@ -299,11 +306,21 @@ class CursorPagination(AsyncPaginationBase):
             except (ValueError, binascii.Error) as e:
                 raise ValidationError([{"cursor": "Invalid Cursor"}]) from e
 
-            parsed_querystring = parse.parse_qs(decoded, keep_blank_values=True)
             try:
-                return cls.model_validate(parsed_querystring, context=context)
+                payload = Signer(salt=_CURSOR_SIGNING_SALT).unsign(decoded)
+                signed = True
+            except BadSignature:
+                payload = decoded
+                signed = False
+
+            parsed_querystring = parse.parse_qs(payload, keep_blank_values=True)
+            try:
+                cursor = cls.model_validate(parsed_querystring, context=context)
             except PydanticValidationError as e:
                 raise ValidationError([{"cursor": "Invalid Cursor"}]) from e
+            if not signed and cursor.o >= settings.PAGINATION_MAX_OFFSET:
+                raise ValidationError([{"cursor": "Invalid Cursor"}])
+            return cursor
 
         def encode_as_param(self) -> str:
             """
@@ -313,6 +330,8 @@ class CursorPagination(AsyncPaginationBase):
                 exclude_defaults=True, exclude_none=True, exclude_unset=True
             )
             query_string = parse.urlencode(data, doseq=True)
+            if self.o >= settings.PAGINATION_MAX_OFFSET:
+                query_string = Signer(salt=_CURSOR_SIGNING_SALT).sign(query_string)
             return b64encode(query_string.encode("ascii")).decode("ascii")
 
     @staticmethod

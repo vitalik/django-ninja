@@ -189,8 +189,10 @@ Note that the response's items key is `results`, not `items` - `CursorPagination
 sets its own `items_attribute` (see [Output attribute](#output-attribute) below).
 
 !!! note
-    `NINJA_PAGINATION_MAX_OFFSET` (default 100) bounds the internal offset a
-    cursor can encode, as a safeguard against malicious cursor values.
+    `NINJA_PAGINATION_MAX_OFFSET` (default 100) bounds the offset an untrusted
+    cursor may request, as a safeguard against malicious cursor values. A
+    cursor issued by the server can carry a larger offset when many rows share
+    the ordering value, so that tie run still has a next page.
 
 ## Accessing pagination parameters in the view
 
