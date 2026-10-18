@@ -265,3 +265,29 @@ def test_model_schema_with_old_config():
             class Config:
                 model = "User"
                 model_fields = ["x"]
+
+
+def test_same_named_model_schemas_keep_their_own_body():
+    class Pub(models.Model):
+        name = models.CharField(max_length=5)
+
+        class Meta:
+            app_label = "tests"
+
+    def make(value):
+        class PubSchema(ModelSchema):
+            class Meta:
+                model = Pub
+                fields = ["id"]
+
+            @staticmethod
+            def resolve_id(obj):
+                return value
+
+        return PubSchema
+
+    first, second = make(1), make(2)
+
+    assert first is not second
+    assert first.model_validate(Pub(id=5)).id == 1
+    assert second.model_validate(Pub(id=5)).id == 2
