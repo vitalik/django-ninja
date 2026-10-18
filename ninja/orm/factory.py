@@ -114,7 +114,7 @@ class SchemaFactory:
         exclude: Optional[List[str]],
         optional_fields: Optional[Union[List[str], str]],
         custom_fields: Optional[List[Tuple[str, str, Any]]],
-        base_class: Type[Schema] = Schema,
+        base_class: Type[Schema],
     ) -> SchemaKey:
         "returns a hashable value for all given parameters"
         # TODO: must be a test that compares all kwargs from init to get_key

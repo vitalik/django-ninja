@@ -289,5 +289,6 @@ def test_same_named_model_schemas_keep_their_own_body():
     first, second = make(1), make(2)
 
     assert first is not second
+    assert first.__name__ != second.__name__
     assert first.model_validate(Pub(id=5)).id == 1
     assert second.model_validate(Pub(id=5)).id == 2
