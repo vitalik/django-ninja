@@ -16,11 +16,13 @@ from typing import (
 )
 from urllib import parse
 
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.signing import BadSignature, Signer
 from django.db.models import QuerySet
 from django.http import HttpRequest
 from django.utils.module_loading import import_string
 from pydantic import BaseModel, field_validator
+from pydantic import ValidationError as PydanticValidationError
 from typing_extensions import get_args as get_collection_args
 
 from ninja import Field, Query, Router, Schema
@@ -312,7 +314,10 @@ class CursorPagination(AsyncPaginationBase):
                 signed = False
 
             parsed_querystring = parse.parse_qs(payload, keep_blank_values=True)
-            cursor = cls.model_validate(parsed_querystring, context=context)
+            try:
+                cursor = cls.model_validate(parsed_querystring, context=context)
+            except PydanticValidationError as e:
+                raise ValidationError([{"cursor": "Invalid Cursor"}]) from e
             if not signed and cursor.o >= settings.PAGINATION_MAX_OFFSET:
                 raise ValidationError([{"cursor": "Invalid Cursor"}])
             return cursor
@@ -483,7 +488,10 @@ class CursorPagination(AsyncPaginationBase):
 
         cmp = "gte" if cursor.r == self._order_attribute_reversed else "lte"
         filters = {f"{self._order_attribute}__{cmp}": cursor.p}
-        return queryset.filter(**filters)
+        try:
+            return queryset.filter(**filters)
+        except (DjangoValidationError, ValueError) as e:
+            raise ValidationError([{"cursor": "Invalid Cursor"}]) from e
 
     def paginate_queryset(
         self, queryset: QuerySet, pagination: Input, request: HttpRequest, **params: Any

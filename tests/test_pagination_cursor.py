@@ -318,6 +318,17 @@ def test_cursor_pagination_rejects_unsigned_offset_at_cap():
     assert response.json() == {"detail": [{"cursor": "Invalid Cursor"}]}
 
 
+@pytest.mark.parametrize("raw", ["o=abc", "o=-1", "r=maybe", "o=100000", "p=zzz"])
+def test_cursor_pagination_malformed_cursor(raw):
+    """Base64-valid but malformed cursors return 422, not 500."""
+    cursor = b64encode(raw.encode()).decode()
+
+    response = client.get(f"/cursor_events?cursor={cursor}&page_size=3")
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert response.json() == {"detail": [{"cursor": "Invalid Cursor"}]}
+
+
 def test_cursor_pagination_tie_run_past_max_offset():
     """A tie run at least as long as the offset cap still paginates."""
 
@@ -797,6 +808,23 @@ async def test_async_cursor_pagination_invalid_cursor():
     response = await async_client.get("/async_cursor_events?cursor=invalid&page_size=3")
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+
+
+@pytest.mark.skipif(
+    django.VERSION < (4, 1), reason="Async QuerySet iteration requires Django 4.1+"
+)
+@pytest.mark.asyncio
+@pytest.mark.parametrize("raw", ["o=abc", "o=-1", "r=maybe", "o=100000", "p=zzz"])
+async def test_async_cursor_pagination_malformed_cursor(raw):
+    """Base64-valid but malformed cursors return 422, not 500, with async."""
+    cursor = b64encode(raw.encode()).decode()
+
+    response = await async_client.get(
+        f"/async_cursor_events?cursor={cursor}&page_size=3"
+    )
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert response.json() == {"detail": [{"cursor": "Invalid Cursor"}]}
 
 
 @pytest.mark.skipif(
