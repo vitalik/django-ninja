@@ -365,6 +365,7 @@ def test_nullable_relation_with_depth():
     Schema = create_schema(Book, fields=["id", "pub"], depth=1)
     assert Schema.model_validate(Book(id=1, pub=None)).pub is None
     assert Schema.model_validate(Book(id=1, pub=Pub(id=2, name="a"))).pub.name == "a"
+    assert {"type": "null"} in Schema.json_schema()["properties"]["pub"]["anyOf"]
 
 
 def test_default():
