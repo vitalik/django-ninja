@@ -241,6 +241,8 @@ def get_related_field_schema(field: DjangoField, *, depth: int) -> Tuple[OpenAPI
         default = None
     if isinstance(field, ManyToManyField):
         schema = List[schema]  # type: ignore
+    elif default is None:
+        schema = Union[schema, None]
 
     return (
         schema,
