@@ -71,17 +71,26 @@ class ParamModel(BaseModel, ABC):
         mapped_data: DictStrAny = {}
         for key, path in flatten_map.items():
             cls._map_data_path(mapped_data, data.get(key), path)
+        # a required nested schema is still built from its field defaults
+        for name, field in cls.model_fields.items():
+            key = field.alias or name
+            if field.is_required() and key not in mapped_data:
+                if any(
+                    path[0] == key and len(path) > 1 for path in flatten_map.values()
+                ):
+                    mapped_data[key] = {}
         return mapped_data
 
     @classmethod
     def _map_data_path(
         cls, data: DictStrAny, value: Any, path: Tuple[str, ...]
     ) -> None:
+        if value is None:
+            return
         current = data
         for key in path[:-1]:
             current = current.setdefault(key, {})
-        if value is not None:
-            current[path[-1]] = value
+        current[path[-1]] = value
 
 
 class QueryModel(ParamModel):
