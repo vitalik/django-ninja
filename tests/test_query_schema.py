@@ -255,7 +255,7 @@ def test_nested_optional_query_schema():
 
 
 def test_optional_query_schema_not_sent_uses_default():
-    """Optional[Model] = Query(None) falls back to None when no field is sent."""
+    """Optional[Model] = Query(None) falls back to None when no field is sent (issue #1805)."""
 
     class Required(Schema):
         x: int
@@ -291,6 +291,8 @@ def test_optional_query_schema_not_sent_uses_default():
 
 
 def test_required_nested_query_schema_keeps_defaults_and_loc():
+    """Required nested models are still built from defaults and report the field loc."""
+
     class Inner(Schema):
         y: Optional[int] = None
 
