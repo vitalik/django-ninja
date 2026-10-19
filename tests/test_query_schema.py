@@ -252,3 +252,39 @@ def test_nested_optional_query_schema():
     resp = client.get("/nested?label=test")
     assert resp.status_code == 200
     assert resp.json()["label"] == "test"
+
+
+def test_optional_query_schema_not_sent_uses_default():
+    """Optional[Model] = Query(None) falls back to None when no field is sent."""
+
+    class Required(Schema):
+        x: int
+
+    class AllOptional(Schema):
+        a: Optional[int] = None
+
+    temp_api = NinjaAPI()
+
+    @temp_api.get("/required")
+    def required(request, f: Optional[Required] = Query(None)):
+        return {"f": f.model_dump() if f else None}
+
+    @temp_api.get("/all-optional")
+    def all_optional(request, f: Optional[AllOptional] = Query(None)):
+        return {"f": f.model_dump() if f else None}
+
+    client = TestClient(temp_api)
+
+    resp = client.get("/required")
+    assert resp.status_code == 200
+    assert resp.json() == {"f": None}
+
+    resp = client.get("/required?x=1")
+    assert resp.json() == {"f": {"x": 1}}
+
+    resp = client.get("/all-optional")
+    assert resp.status_code == 200
+    assert resp.json() == {"f": None}
+
+    resp = client.get("/all-optional?a=2")
+    assert resp.json() == {"f": {"a": 2}}
