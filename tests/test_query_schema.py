@@ -288,3 +288,42 @@ def test_optional_query_schema_not_sent_uses_default():
 
     resp = client.get("/all-optional?a=2")
     assert resp.json() == {"f": {"a": 2}}
+
+
+def test_required_nested_query_schema_keeps_defaults_and_loc():
+    class Inner(Schema):
+        y: Optional[int] = None
+
+    class Outer(Schema):
+        i: Inner
+        z: Optional[int] = None
+
+    class Strict(Schema):
+        x: int
+
+    class Outer2(Schema):
+        s: Strict
+
+    temp_api = NinjaAPI()
+
+    @temp_api.get("/c")
+    def c(request, f: Outer = Query(...)):
+        return f.model_dump()
+
+    @temp_api.get("/o")
+    def o(request, f: Optional[Outer] = Query(None)):
+        return f.model_dump() if f else None
+
+    @temp_api.get("/s")
+    def s(request, f: Outer2 = Query(...)):
+        return f.model_dump()
+
+    client = TestClient(temp_api)
+
+    assert client.get("/c").json() == {"i": {"y": None}, "z": None}
+    assert client.get("/c?z=1").json() == {"i": {"y": None}, "z": 1}
+    assert client.get("/o").json() is None
+    assert client.get("/o?z=1").json() == {"i": {"y": None}, "z": 1}
+    resp = client.get("/s")
+    assert resp.status_code == 422
+    assert resp.json()["detail"][0]["loc"] == ["query", "f", "s", "x"]
