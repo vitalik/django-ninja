@@ -93,3 +93,15 @@ def test_multipart_body_str_is_passed_unchanged(value):
     response = TestClient(api).post("/m", data={"s": value, "f": "a"})
     assert response.status_code == 200, response.content
     assert response.json() == {"s": value}
+
+
+def test_multipart_body_str_alongside_non_str_field():
+    api = NinjaAPI()
+
+    @api.post("/m")
+    def m(request, s: str = Body(...), n: int = Body(...)):
+        return {"s": s, "n": n}
+
+    response = TestClient(api).post("/m", data={"s": '5\'10"', "n": "42"})
+    assert response.status_code == 200, response.content
+    assert response.json() == {"s": '5\'10"', "n": 42}
