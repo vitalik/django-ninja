@@ -99,9 +99,9 @@ def test_multipart_body_str_alongside_non_str_field():
     api = NinjaAPI()
 
     @api.post("/m")
-    def m(request, s: str = Body(...), n: int = Body(...)):
+    def m(request, s: str = Body(...), n: int = Body(...), f: str = Form("d")):
         return {"s": s, "n": n}
 
-    response = TestClient(api).post("/m", data={"s": '5\'10"', "n": "42"})
+    response = TestClient(api).post("/m", data={"s": "5'10\"", "n": "42", "f": "a"})
     assert response.status_code == 200, response.content
-    assert response.json() == {"s": '5\'10"', "n": 42}
+    assert response.json() == {"s": "5'10\"", "n": 42}
