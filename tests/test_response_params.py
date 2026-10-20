@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 
 from ninja import NinjaAPI, Schema
 from ninja.testing import TestClient
@@ -20,6 +20,11 @@ def op_no_params(request):
 @api.get("/test-unset", response=SomeResponse, exclude_unset=True)
 def op_exclude_unset(request):
     return {"field3": 10}
+
+
+@api.get("/test-unset-list", response=List[SomeResponse], exclude_unset=True)
+def op_exclude_unset_list(request):
+    return [SomeResponse(field3=10), SomeResponse(field1=3)]
 
 
 @api.get("/test-defaults", response=SomeResponse, exclude_defaults=True)
@@ -44,5 +49,6 @@ def test_arguments():
         "field3": None,
     }
     assert client.get("/test-unset").json() == {"field3": 10}
+    assert client.get("/test-unset-list").json() == [{"field3": 10}, {"field1": 3}]
     assert client.get("/test-defaults").json() == {"field1": 3}
     assert client.get("/test-none").json() == {"field2": "default value"}
