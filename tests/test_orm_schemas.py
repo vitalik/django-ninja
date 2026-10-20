@@ -319,7 +319,7 @@ def test_relational():
             }),
             "foreignkey": {
                 "title": "Foreignkey",
-                "allOf": [{"$ref": "#/$defs/Related"}],
+                "anyOf": [{"$ref": "#/$defs/Related"}, {"type": "null"}],
                 "description": "",
             },
             "manytomanyfield": {
@@ -346,6 +346,26 @@ def test_relational():
             }
         },
     }
+
+
+def test_nullable_relation_with_depth():
+    class Pub(models.Model):
+        name = models.CharField(max_length=5)
+
+        class Meta:
+            app_label = "tests"
+
+    class Book(models.Model):
+        title = models.CharField(max_length=5)
+        pub = models.ForeignKey(Pub, null=True, on_delete=models.CASCADE)
+
+        class Meta:
+            app_label = "tests"
+
+    Schema = create_schema(Book, fields=["id", "pub"], depth=1)
+    assert Schema.model_validate(Book(id=1, pub=None)).pub is None
+    assert Schema.model_validate(Book(id=1, pub=Pub(id=2, name="a"))).pub.name == "a"
+    assert {"type": "null"} in Schema.json_schema()["properties"]["pub"]["anyOf"]
 
 
 def test_default():
