@@ -79,8 +79,103 @@ def test_custom():
             "f3": {"title": "F3", "type": "integer"},
             "f4": {"title": "F4", "default": 1, "type": "integer"},
         },
-        "required": ["f3", "f1"],
+        "required": ["f1", "f3"],
     }
+
+
+def test_custom_fields_come_after_model_fields():
+    class OrderModel(models.Model):
+        name = models.CharField()
+        created = models.DateTimeField(null=True)
+
+        class Meta:
+            app_label = "tests"
+
+    class OrderSchema(ModelSchema):
+        extra_a: int
+        extra_b: str = "b"
+
+        class Meta:
+            model = OrderModel
+            fields = ["name", "id"]
+
+    # model fields keep the order given in Meta.fields,
+    # custom fields follow in declaration order
+    assert list(OrderSchema.model_fields) == ["name", "id", "extra_a", "extra_b"]
+    assert list(OrderSchema.json_schema()["properties"]) == [
+        "name",
+        "id",
+        "extra_a",
+        "extra_b",
+    ]
+
+    instance = OrderSchema(name="n", id=7, extra_a=1)
+    assert list(instance.model_dump()) == ["name", "id", "extra_a", "extra_b"]
+    assert instance.model_dump_json() == (
+        '{"name":"n","id":7,"extra_a":1,"extra_b":"b"}'
+    )
+
+
+def test_custom_field_overriding_model_field_keeps_model_position():
+    class OverrideModel(models.Model):
+        name = models.CharField()
+        rating = models.IntegerField()
+
+        class Meta:
+            app_label = "tests"
+
+    class OverrideSchema(ModelSchema):
+        # redefines the model field with a different type/default
+        rating: float = 0.5
+        extra: int = 0
+
+        class Meta:
+            model = OverrideModel
+            fields = ["name", "rating"]
+
+    assert list(OverrideSchema.model_fields) == ["name", "rating", "extra"]
+    assert OverrideSchema.model_fields["rating"].annotation is float
+    assert OverrideSchema(name="n").rating == 0.5
+
+
+def test_custom_field_validator_and_resolver_still_work():
+    from pydantic import field_validator
+
+    class ValidatedModel(models.Model):
+        name = models.CharField()
+
+        class Meta:
+            app_label = "tests"
+
+    class ValidatedSchema(ModelSchema):
+        shout: str = ""
+
+        class Meta:
+            model = ValidatedModel
+            fields = ["id", "name"]
+
+        @field_validator("shout")
+        @classmethod
+        def _upper_shout(cls, value: str) -> str:
+            return value.upper()
+
+    assert list(ValidatedSchema.model_fields) == ["id", "name", "shout"]
+    assert ValidatedSchema(id=1, name="n", shout="hey").shout == "HEY"
+
+    class ResolvedSchema(ModelSchema):
+        greeting: str = ""
+
+        class Meta:
+            model = ValidatedModel
+            fields = ["id", "name"]
+
+        @staticmethod
+        def resolve_greeting(obj) -> str:
+            return f"hi {obj.name}"
+
+    assert list(ResolvedSchema.model_fields) == ["id", "name", "greeting"]
+    resolved = ResolvedSchema.from_orm(ValidatedModel(id=2, name="bob"))
+    assert resolved.greeting == "hi bob"
 
 
 def test_config():
