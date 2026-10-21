@@ -1,10 +1,12 @@
 import importlib
 from sys import version_info
-from typing import Any, List
+from typing import Any, List, Optional, Union
 
 import pytest
 from django.test import override_settings
+from pydantic import Field
 from pydantic.errors import PydanticSchemaGenerationError
+from typing_extensions import Annotated, Literal
 
 from ninja import NinjaAPI, Schema
 from ninja.constants import NOT_SET
@@ -739,3 +741,144 @@ def test_find_collection_response_raises_when_no_collection():
     # Should raise ConfigError since ItemSchema is not a collection
     with pytest.raises(ConfigError, match="no collection response"):
         _find_collection_response(operation)
+
+
+class Foo1(Schema):
+    id: int
+    kind: Literal["foo1"]
+
+
+class Foo2(Schema):
+    id: int
+    kind: Literal["foo2"]
+
+
+class Bar1(Schema):
+    id: int
+    kind: Literal["bar1"]
+
+
+class Bar2(Schema):
+    id: int
+    kind: Literal["bar2"]
+
+
+FooUnion = Annotated[Union[Foo1, Foo2], Field(discriminator="kind")]
+BarUnion = Annotated[Union[Bar1, Bar2], Field(discriminator="kind")]
+
+
+def _paged_response_ref(schema, path):
+    content = schema["paths"][path]["get"]["responses"][200]["content"]
+    return content["application/json"]["schema"]["$ref"]
+
+
+def test_paginated_unions_get_their_own_schemas():
+    """
+    Each paginated union gets its own Paged schema in OpenAPI instead of
+    all of them sharing (and overwriting) "PagedAnnotated" / "PagedUnion".
+    https://github.com/vitalik/django-ninja/issues/1308
+    """
+    api = NinjaAPI(urls_namespace="paginated_unions")
+
+    @api.get("/foos", response=List[FooUnion])
+    @paginate
+    def foos(request):
+        return [{"id": 1, "kind": "foo1"}, {"id": 2, "kind": "foo2"}]
+
+    @api.get("/bars", response=List[BarUnion])
+    @paginate
+    def bars(request):
+        return [{"id": 3, "kind": "bar2"}]
+
+    @api.get("/foo1-or-bar1", response=List[Union[Foo1, Bar1]])
+    @paginate
+    def foo1_or_bar1(request):
+        return []
+
+    @api.get("/foo2-or-bar2", response=List[Union[Foo2, Bar2]])
+    @paginate
+    def foo2_or_bar2(request):
+        return []
+
+    @api.get("/optional-foo1", response=List[Optional[Foo1]])
+    @paginate
+    def optional_foo1(request):
+        return [None]
+
+    @api.get("/optional-bar1", response=List[Optional[Bar1]])
+    @paginate
+    def optional_bar1(request):
+        return []
+
+    schema = api.get_openapi_schema(path_prefix="")
+    refs = {
+        path: _paged_response_ref(schema, path)
+        for path in (
+            "/foos",
+            "/bars",
+            "/foo1-or-bar1",
+            "/foo2-or-bar2",
+            "/optional-foo1",
+            "/optional-bar1",
+        )
+    }
+    assert refs == {
+        "/foos": "#/components/schemas/PagedFoo1OrFoo2",
+        "/bars": "#/components/schemas/PagedBar1OrBar2",
+        "/foo1-or-bar1": "#/components/schemas/PagedFoo1OrBar1",
+        "/foo2-or-bar2": "#/components/schemas/PagedFoo2OrBar2",
+        "/optional-foo1": "#/components/schemas/PagedFoo1OrNone",
+        "/optional-bar1": "#/components/schemas/PagedBar1OrNone",
+    }
+
+    components = schema["components"]["schemas"]
+    foo_items = components["PagedFoo1OrFoo2"]["properties"]["items"]["items"]
+    assert foo_items["discriminator"] == {
+        "mapping": {
+            "foo1": "#/components/schemas/Foo1",
+            "foo2": "#/components/schemas/Foo2",
+        },
+        "propertyName": "kind",
+    }
+    bar_items = components["PagedBar1OrBar2"]["properties"]["items"]["items"]
+    assert bar_items["discriminator"] == {
+        "mapping": {
+            "bar1": "#/components/schemas/Bar1",
+            "bar2": "#/components/schemas/Bar2",
+        },
+        "propertyName": "kind",
+    }
+
+    client = TestClient(api)
+    assert client.get("/foos").json() == {
+        "items": [{"id": 1, "kind": "foo1"}, {"id": 2, "kind": "foo2"}],
+        "count": 2,
+    }
+    assert client.get("/bars").json() == {
+        "items": [{"id": 3, "kind": "bar2"}],
+        "count": 1,
+    }
+    assert client.get("/optional-foo1").json() == {"items": [None], "count": 1}
+
+
+@pytest.mark.skipif(version_info < (3, 10), reason="X | Y unions need Python 3.10+")
+def test_paginated_pipe_unions_get_their_own_schemas():
+    api = NinjaAPI(urls_namespace="paginated_pipe_unions")
+
+    @api.get("/foo1-or-bar1", response=List[Foo1 | Bar1])
+    @paginate
+    def foo1_or_bar1(request):
+        return []
+
+    @api.get("/foo2-or-bar2", response=List[Foo2 | Bar2])
+    @paginate
+    def foo2_or_bar2(request):
+        return []
+
+    schema = api.get_openapi_schema(path_prefix="")
+    assert _paged_response_ref(schema, "/foo1-or-bar1") == (
+        "#/components/schemas/PagedFoo1OrBar1"
+    )
+    assert _paged_response_ref(schema, "/foo2-or-bar2") == (
+        "#/components/schemas/PagedFoo2OrBar2"
+    )
