@@ -1128,5 +1128,5 @@ def test_by_alias_uses_serialization_alias_model():
             "id": {"title": "Id", "type": "string"},
             "created": {"type": "string", "format": "date-time", "title": "Created"},
         },
-        "required": ["id", "created"],
+        "required": ["created", "id"],
     }

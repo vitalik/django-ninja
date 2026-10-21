@@ -69,23 +69,54 @@ class SchemaFactory:
             )
             definitions[fld.name] = (python_type, field_info)
 
+        custom_definitions = {}
         if custom_fields:
             for fld_name, python_type, field_info in custom_fields:
                 # if not isinstance(field_info, FieldInfo):
                 #     field_info = Field(field_info)
-                definitions[fld_name] = (python_type, field_info)
+                custom_definitions[fld_name] = (python_type, field_info)
 
         if name in self.schema_names:
             name = self._get_unique_name(name)
 
-        schema: Type[Schema] = create_pydantic_model(
-            name,
-            __config__=None,
-            __base__=base_class,
-            __module__=base_class.__module__,
-            __validators__={},
-            **definitions,
-        )  # type: ignore
+        if custom_definitions and getattr(base_class, "__pydantic_fields__", None):
+            # The base class already carries the custom fields (this is the
+            # ModelSchema path, where the metaclass first creates the user's
+            # class holding only the custom fields). Pydantic always orders
+            # inherited fields before fields defined on the new class, so
+            # passing the model fields as definitions here would serialize
+            # the custom fields first. Instead, the model fields are placed
+            # on an intermediate base: pydantic collects fields from the
+            # *last* base first, so the final class - inheriting from
+            # (base_class, fields_base) - orders model fields (in selection
+            # order) before the custom fields declared on the user's class.
+            # A custom field redefining a model field keeps the model
+            # field's position while using the custom definition.
+            fields_base = create_pydantic_model(
+                f"{name}FieldsBase",
+                __config__=None,
+                __base__=Schema,
+                __module__=base_class.__module__,
+                __validators__={},
+                **definitions,
+            )  # type: ignore
+            schema: Type[Schema] = create_pydantic_model(
+                name,
+                __config__=None,
+                __base__=(base_class, fields_base),
+                __module__=base_class.__module__,
+                __validators__={},
+            )  # type: ignore
+        else:
+            definitions.update(custom_definitions)
+            schema = create_pydantic_model(
+                name,
+                __config__=None,
+                __base__=base_class,
+                __module__=base_class.__module__,
+                __validators__={},
+                **definitions,
+            )  # type: ignore
         # __model_name: str,
         # *,
         # __config__: ConfigDict | None = None,
