@@ -24,6 +24,24 @@ from ninja.schema import Schema
 
 __all__ = ["SchemaFactory", "factory", "create_schema"]
 
+
+def copy_field_info_without_alias(field_info: Any) -> Any:
+    """Return the FieldInfo with its aliases cleared.
+
+    Used when a relation field is exposed under its attname
+    (`user_id`): the schema attribute name already *is* the model
+    attribute to read and the key to emit, so the `user` -> `user_id`
+    alias indirection that get_schema_field sets up would point
+    pydantic at a second, wrong indirection. The FieldInfo is created
+    fresh by get_schema_field for each call, so clearing the alias
+    attributes on it cannot leak into other schemas.
+    """
+    field_info.alias = None
+    field_info.validation_alias = None
+    field_info.serialization_alias = None
+    field_info.alias_priority = None
+    return field_info
+
 SchemaKey = Tuple[Type[Model], str, int, str, str, str, str]
 
 
@@ -58,16 +76,25 @@ class SchemaFactory:
         model_fields_list = list(self._selected_model_fields(model, fields, exclude))
         if optional_fields:
             if optional_fields == "__all__":
-                optional_fields = [f.name for f in model_fields_list]
+                optional_fields = [name for name, _fld in model_fields_list]
 
         definitions = {}
-        for fld in model_fields_list:
+        for def_name, fld in model_fields_list:
+            # A field selected by its attname (e.g. `user_id` for the
+            # `user` ForeignKey) exposes the raw key value: it always
+            # uses the depth-0 (flat) schema field, and its name *is*
+            # the attribute pydantic should read, so the attname alias
+            # that get_schema_field attaches is dropped.
+            by_attname = def_name != fld.name
             python_type, field_info = get_schema_field(
                 fld,
-                depth=depth,
-                optional=optional_fields and (fld.name in optional_fields),
+                depth=0 if by_attname else depth,
+                optional=optional_fields
+                and (def_name in optional_fields or fld.name in optional_fields),
             )
-            definitions[fld.name] = (python_type, field_info)
+            if by_attname:
+                field_info = copy_field_info_without_alias(field_info)
+            definitions[def_name] = (python_type, field_info)
 
         if custom_fields:
             for fld_name, python_type, field_info in custom_fields:
@@ -133,13 +160,28 @@ class SchemaFactory:
         model: Type[Model],
         fields: Optional[List[str]] = None,
         exclude: Optional[List[str]] = None,
-    ) -> Iterator[DjangoField]:
-        "Returns iterator for model fields based on `exclude` or `fields` arguments"
-        all_fields = {f.name: f for f in self._model_fields(model)}
+    ) -> Iterator[Tuple[str, DjangoField]]:
+        """Returns iterator of (schema name, model field) pairs based on
+        `exclude` or `fields` arguments.
+
+        Besides field names, the attname of a concrete relation field
+        (e.g. `user_id` for a `user` ForeignKey) is accepted everywhere
+        a field name is: in `fields` it selects the field under its
+        attname, in `exclude` it excludes the underlying field.
+        """
+        all_fields: Dict[str, Tuple[str, DjangoField]] = {}
+        for f in self._model_fields(model):
+            all_fields[f.name] = (f.name, f)
+            attname = getattr(f, "attname", None)
+            if attname and attname != f.name:
+                all_fields[attname] = (attname, f)
 
         if not fields and not exclude:
-            for f in all_fields.values():
-                yield f
+            seen = set()
+            for name, f in all_fields.values():
+                if f.name not in seen:
+                    seen.add(f.name)
+                    yield name, f
 
         invalid_fields = (set(fields or []) | set(exclude or [])) - all_fields.keys()
         if invalid_fields:
@@ -151,9 +193,12 @@ class SchemaFactory:
             for name in fields:
                 yield all_fields[name]
         if exclude:
-            for f in all_fields.values():
-                if f.name not in exclude:
-                    yield f
+            excluded = {all_fields[name][1].name for name in exclude}
+            seen = set()
+            for _name, f in all_fields.values():
+                if f.name not in excluded and f.name not in seen:
+                    seen.add(f.name)
+                    yield f.name, f
 
     def _model_fields(self, model: Type[Model]) -> Iterator[DjangoField]:
         "returns iterator with all the fields that can be part of schema"
