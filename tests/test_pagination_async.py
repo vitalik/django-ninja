@@ -236,3 +236,48 @@ async def test_async_no_pagination_without_query_params():
         assert (
             param.get("required", False) is False
         ), f"Parameter {param['name']} should not be required"
+
+
+@pytest.mark.asyncio
+async def test_async_no_pagination_on_router_with_query_params():
+    """
+    Test that AsyncNoPagination works on a Router route that has other
+    query parameters.
+    Reproduces bug from https://github.com/vitalik/django-ninja/issues/1572
+
+    In 1.4.4 the empty Input was contributed as a required
+    `ninja_pagination` query parameter, so requests failed with 422
+    even though the pagination takes no input.
+    """
+    from ninja import Query, Router
+
+    class UserFilter(Schema):
+        email: str
+
+    class UserOut(Schema):
+        id: int
+        email: str
+
+    users = [
+        {"id": 1, "email": "a@example.com"},
+        {"id": 2, "email": "b@example.com"},
+    ]
+
+    router = Router()
+
+    @router.get("/users", response=List[UserOut])
+    @paginate(AsyncNoPagination)
+    async def list_users(request, filters: UserFilter = Query(...)):
+        await asyncio.sleep(0)
+        return [u for u in users if u["email"] == filters.email]
+
+    local_api = NinjaAPI()
+    local_api.add_router("/v1", router)
+    local_client = TestAsyncClient(local_api)
+
+    response = await local_client.get("/v1/users?email=a@example.com")
+    assert response.status_code == 200
+    assert response.json() == {
+        "items": [{"id": 1, "email": "a@example.com"}],
+        "count": 1,
+    }
