@@ -841,3 +841,88 @@ class TestDecorateViewMultipleCalls:
         # Both decorators should be called
         assert "deco1" in calls
         assert "deco2" in calls
+
+
+class TestCyclicRouters:
+    """Cyclic router registrations must fail fast with ConfigError.
+
+    Regression tests for the RecursionError reported when a router was
+    mounted inside itself (directly or through other routers), e.g. via
+    a TestClient built on an API whose routers form a cycle.
+    """
+
+    def test_add_router_to_itself_raises(self):
+        router = Router()
+
+        with pytest.raises(ConfigError, match="itself"):
+            router.add_router("/self", router)
+
+    def test_indirect_cycle_raises_on_urls(self):
+        router_a = Router()
+        router_b = Router()
+
+        @router_a.get("/a")
+        def view_a(request):
+            return {"a": 1}
+
+        @router_b.get("/b")
+        def view_b(request):
+            return {"b": 1}
+
+        router_a.add_router("/b", router_b)
+        router_b.add_router("/a", router_a)
+
+        api = NinjaAPI(urls_namespace="cyclic_urls")
+        api.add_router("/main", router_a)
+
+        with pytest.raises(ConfigError, match="Cyclic router registration"):
+            api.urls
+
+    def test_indirect_cycle_raises_with_test_client(self):
+        router_a = Router()
+        router_b = Router()
+        router_a.add_router("/b", router_b)
+        router_b.add_router("/a", router_a)
+
+        api = NinjaAPI(urls_namespace="cyclic_client")
+        api.add_router("/main", router_a)
+
+        client = TestClient(api)
+        with pytest.raises(ConfigError, match="Cyclic router registration"):
+            client.get("/main/b/a/b/anything")
+
+    def test_three_router_cycle_raises(self):
+        router_a = Router()
+        router_b = Router()
+        router_c = Router()
+        router_a.add_router("/b", router_b)
+        router_b.add_router("/c", router_c)
+        router_c.add_router("/a", router_a)
+
+        api = NinjaAPI(urls_namespace="cyclic_three")
+        api.add_router("/main", router_a)
+
+        with pytest.raises(ConfigError, match="Cyclic router registration"):
+            api.urls
+
+    def test_diamond_is_not_a_cycle(self):
+        """The same child router under two different parents is a DAG,
+        not a cycle, and must keep working."""
+        shared = Router()
+
+        @shared.get("/shared")
+        def shared_view(request):
+            return {"shared": True}
+
+        parent_one = Router()
+        parent_two = Router()
+        parent_one.add_router("/x", shared)
+        parent_two.add_router("/y", shared)
+
+        api = NinjaAPI(urls_namespace="diamond")
+        api.add_router("/one", parent_one)
+        api.add_router("/two", parent_two)
+
+        client = TestClient(api)
+        assert client.get("/one/x/shared").json() == {"shared": True}
+        assert client.get("/two/y/shared").json() == {"shared": True}
