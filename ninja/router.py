@@ -5,9 +5,11 @@ from typing import (
     Any,
     Callable,
     Dict,
+    FrozenSet,
     Iterator,
     List,
     Optional,
+    Set,
     Tuple,
     Union,
     overload,
@@ -217,11 +219,18 @@ class Router:
         self._routers: List[Tuple[str, Router, Optional[List[str]]]] = []
         self._decorators: List[Tuple[Callable, DecoratorMode]] = []
 
-    def _freeze(self) -> None:
+    def _freeze(self, _seen: Optional[Set[int]] = None) -> None:
         """Mark router as frozen - no more modifications allowed."""
+        if _seen is None:
+            _seen = set()
+        if id(self) in _seen:
+            # Already frozen via another mount path (or a cyclic
+            # registration, which build_routers rejects separately).
+            return
+        _seen.add(id(self))
         self._frozen = True
         for _, child_router, _ in self._routers:
-            child_router._freeze()
+            child_router._freeze(_seen)
 
     def _check_not_frozen(self) -> None:
         """Raise error if attempting to modify a frozen router."""
@@ -657,6 +666,12 @@ class Router:
             router = import_string(router)
             assert isinstance(router, Router)
 
+        if router is self:
+            raise ConfigError(
+                "Cannot add a router to itself - this creates a cyclic "
+                "router registration that can never be resolved into URLs."
+            )
+
         # Store child router with its mount-time configuration
         # Auth/throttle are stored on the child router template,
         # but tags from add_router are stored separately to distinguish from Router(tags=...)
@@ -692,6 +707,7 @@ class Router:
         inherited_auth: Any = NOT_SET,
         inherited_throttle: Any = NOT_SET,
         inherited_tags: Optional[List[str]] = None,
+        _ancestor_ids: Optional[FrozenSet[int]] = None,
     ) -> List[RouterMount]:
         """
         Build mount configurations for this router and all child routers.
@@ -711,6 +727,21 @@ class Router:
         """
         if inherited_decorators is None:
             inherited_decorators = []
+
+        # Guard against cyclic router registrations (a router mounted
+        # inside itself, directly or through other routers). Without this
+        # check the recursion below only ends in a RecursionError. Note
+        # this tracks ancestors only: mounting the same router under two
+        # different parents (a diamond) remains perfectly valid.
+        if _ancestor_ids is None:
+            _ancestor_ids = frozenset()
+        if id(self) in _ancestor_ids:
+            raise ConfigError(
+                "Cyclic router registration detected: this router is "
+                "already present in the mount chain above itself. Remove "
+                "the add_router() call that closes the cycle."
+            )
+        _ancestor_ids = _ancestor_ids | {id(self)}
 
         # Create mount configuration for this router
         mount = RouterMount(
@@ -743,6 +774,7 @@ class Router:
                 child_auth,
                 child_throttle,
                 child_tags,
+                _ancestor_ids,
             )
             # Apply mount-level tags override to the first mount (the child router itself)
             if mounts and child_mount_tags is not None:
