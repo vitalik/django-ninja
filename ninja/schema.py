@@ -222,6 +222,12 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
         should_validate_assignment = cls.model_config.get("validate_assignment", False)
         if forbids_extra or should_validate_assignment:
             handler(values)
+        elif isinstance(values, cls):
+            # The value is already an instance of this Schema: return it as-is
+            # instead of re-validating it from attributes (via DjangoGetter
+            # below), which would mark every field as set and break
+            # model_fields_set / exclude_unset for nested schemas.
+            return values
 
         values = DjangoGetter(values, cls, info.context)
         return handler(values)
