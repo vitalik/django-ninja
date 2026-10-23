@@ -227,3 +227,42 @@ def test_schema_skips_validation_when_validate_assignment_False(
         assert schema_inst.str_var == 5
     except ValidationError as ve:
         raise AssertionError() from ve
+
+
+def test_schema_exclude_unset_with_nested_schema():
+    """
+    Test that exclude_unset works for nested schemas.
+    Reproduces bug from https://github.com/vitalik/django-ninja/issues/939
+
+    A nested Schema instance passed to a parent schema must keep its own
+    model_fields_set - previously it was re-validated from attributes,
+    which marked every nested field as set.
+    """
+
+    class Bar(Schema):
+        b: Optional[str] = None
+
+    class Foo(Schema):
+        a: Optional[str] = None
+        bar: Optional[Bar] = None
+
+    foo = Foo(bar=Bar())
+    assert foo.model_dump(exclude_unset=True) == {"bar": {}}
+
+    foo = Foo(a="a", bar=Bar(b="b"))
+    assert foo.model_dump(exclude_unset=True) == {"a": "a", "bar": {"b": "b"}}
+
+
+def test_schema_nested_instance_is_not_revalidated():
+    """A Schema instance used as a nested value must be stored as-is."""
+
+    class Bar(Schema):
+        b: Optional[str] = None
+
+    class Foo(Schema):
+        bar: Optional[Bar] = None
+
+    bar = Bar()
+    foo = Foo(bar=bar)
+    assert foo.bar is bar
+    assert bar.model_fields_set == set()
