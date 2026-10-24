@@ -95,6 +95,30 @@ class ModelSchemaMetaclass(ResolverMetaclass):
                     default = namespace.get(attr_name, ...)
                     custom_fields.append((attr_name, type, default))
 
+                if meta_conf.fields:
+                    # A field that is both declared as a class attribute and
+                    # listed in Meta.fields is ambiguous: the declared
+                    # attribute silently wins over the generated model field,
+                    # which easily leads to unexpected behaviour (see #1563).
+                    # Note: meta_conf.fields is None for fields="__all__"
+                    # and when `exclude` is used - in both cases the set of
+                    # generated fields is implicit, so a declared field is
+                    # an unambiguous override and stays allowed.
+                    duplicated = [
+                        attr_name
+                        for attr_name, _type, _default in custom_fields
+                        if attr_name in meta_conf.fields
+                    ]
+                    if duplicated:
+                        raise ConfigError(
+                            f"ModelSchema class '{name}' declares field(s) "
+                            f"{duplicated} that are also listed in 'Meta.fields'. "
+                            "A field must be declared in only one place: remove "
+                            "it from 'Meta.fields' to use the declared field, or "
+                            "remove the class-level declaration to use the "
+                            "generated model field."
+                        )
+
                 # # cls.__doc__ = namespace.get("__doc__", config.model.__doc__)
                 # cls.__fields__ = {}  # forcing pydantic recreate
                 # # assert False, "!! cls.model_fields"
