@@ -76,9 +76,16 @@ class DjangoGetter:
                 except AttributeError:
                     try:
                         # value = attrgetter(key)(self._obj)
-                        value = Variable(key).resolve(self._obj)
+                        variable = Variable(key)
                         # TODO: Variable(key) __init__ is actually slower than
                         #       Variable.resolve - so it better be cached
+                        if variable.lookups is None:
+                            # The key is not a lookup at all: Django parses
+                            # keys like "0" (a numeric field alias) as a
+                            # literal and would resolve them to the literal
+                            # itself instead of an attribute of the object.
+                            raise AttributeError(key)
+                        value = variable.resolve(self._obj)
                     except VariableDoesNotExist as e:
                         raise AttributeError(key) from e
         return self._convert_result(value)
