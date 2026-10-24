@@ -31,6 +31,50 @@ from django.http import HttpResponse, StreamingHttpResponse
 ASYNC_STREAMING = django.VERSION >= (4, 2)
 
 
+class _AsyncOnly:
+    """Wrap an async iterator so that it is exposed as *only* async.
+
+    Django's ``StreamingHttpResponse._set_streaming_content`` decides
+    whether the content is synchronous or asynchronous by trying
+    ``iter(value)`` first and only falling back to ``aiter(value)`` when
+    that raises ``TypeError``::
+
+        try:
+            self._iterator = iter(value)
+            self.is_async = False
+        except TypeError:
+            self._iterator = aiter(value)
+            self.is_async = True
+
+    That detection is unreliable for async iterators: whether ``iter()``
+    raises on an async generator depends on the Python version and the
+    iterator implementation, and any async iterator that also happens to
+    define ``__iter__`` is silently misclassified as synchronous.  A
+    misclassified response makes Django's ASGI handler emit
+    "StreamingHttpResponse must consume synchronous iterators in order to
+    serve them asynchronously" on every request and consume the stream
+    through a ``sync_to_async(list)`` fallback, defeating streaming.
+
+    This wrapper exposes ``__aiter__`` only - it deliberately has no
+    ``__iter__`` - so Django always detects the content as asynchronous,
+    regardless of the wrapped iterator or the Python version.
+    """
+
+    __slots__ = ("_iterator",)
+
+    def __init__(self, iterator: Any) -> None:
+        self._iterator = iterator
+
+    def __aiter__(self) -> Any:
+        return self._iterator.__aiter__()
+
+    async def aclose(self) -> None:
+        """Forward ``aclose()`` to the wrapped iterator, if it has one."""
+        aclose = getattr(self._iterator, "aclose", None)
+        if aclose is not None:
+            await aclose()
+
+
 def _copy_temporal_headers(
     temporal_response: HttpResponse, response: StreamingHttpResponse
 ) -> None:
@@ -64,7 +108,7 @@ if ASYNC_STREAMING:
             _copy_temporal_headers(temporal_response, response)
 
         response = StreamingHttpResponse(
-            with_lazy_headers(),
+            _AsyncOnly(with_lazy_headers()),
             content_type=content_type,
             status=status,
         )
