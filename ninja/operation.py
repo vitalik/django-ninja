@@ -226,7 +226,7 @@ class Operation:
         return cloned
 
     def run(self, request: HttpRequest, **kw: Any) -> HttpResponseBase:
-        error = self._run_checks(request)
+        error = self._run_checks_once(request)
         if error:
             return error
         try:
@@ -327,6 +327,22 @@ class Operation:
                 return error
 
         return None
+
+    def _run_checks_once(self, request: HttpRequest) -> Optional[HttpResponse]:
+        """Run `_run_checks` at most once per request.
+
+        PathView runs the checks *before* invoking the (possibly
+        view-decorated) operation, so authentication happens ahead of
+        view-mode decorators (#1646); `run()` then calls this again and
+        it is a no-op.  When an operation is invoked directly, without
+        PathView, the checks run here exactly as before.
+        """
+        if getattr(request, "_ninja_operation_checks_done", False):
+            return None
+        error = self._run_checks(request)
+        if error is None:
+            request._ninja_operation_checks_done = True  # type: ignore
+        return error
 
     def _run_authentication(self, request: HttpRequest) -> Optional[HttpResponse]:
         for callback in self.auth_callbacks:
@@ -503,7 +519,7 @@ class AsyncOperation(Operation):
         self.is_async = True
 
     async def run(self, request: HttpRequest, **kw: Any) -> HttpResponseBase:  # type: ignore
-        error = await self._run_checks(request)
+        error = await self._run_checks_once(request)
         if error:
             return error
         try:
@@ -563,6 +579,15 @@ class AsyncOperation(Operation):
                 return error
 
         return None
+
+    async def _run_checks_once(self, request: HttpRequest) -> Optional[HttpResponse]:  # type: ignore
+        """Async counterpart of `Operation._run_checks_once`."""
+        if getattr(request, "_ninja_operation_checks_done", False):
+            return None
+        error = await self._run_checks(request)
+        if error is None:
+            request._ninja_operation_checks_done = True  # type: ignore
+        return error
 
     async def _run_authentication(self, request: HttpRequest) -> Optional[HttpResponse]:  # type: ignore
         for callback in self.auth_callbacks:
@@ -696,6 +721,16 @@ class PathView:
         operation = self._find_operation(request)
         if operation is None:
             return self._not_allowed()
+        # Run auth/throttle checks *before* the operation itself: view-mode
+        # decorators wrap `operation.run`, so checking here is the only way
+        # authentication can run ahead of them (#1646) - decorators then see
+        # `request.auth` already set, and unauthenticated requests are
+        # rejected without any decorator (or view) code running at all.
+        # `operation.run` re-enters `_run_checks_once`, which is a no-op
+        # once the checks have passed for this request.
+        error = operation._run_checks_once(request)
+        if error:
+            return error
         return operation.run(request, *a, **kw)
 
     async def _async_view(
@@ -704,8 +739,15 @@ class PathView:
         operation = self._find_operation(request)
         if operation is None:
             return self._not_allowed()
+        # Same ordering guarantee as `_sync_view`: checks before decorators.
         if operation.is_async:
+            error = await cast(AsyncOperation, operation)._run_checks_once(request)
+            if error:
+                return error
             return await cast(AsyncOperation, operation).run(request, *a, **kw)
+        error = await sync_to_async(operation._run_checks_once)(request)
+        if error:
+            return error
         return await sync_to_async(operation.run)(request, *a, **kw)
 
     def _find_operation(self, request: HttpRequest) -> Optional[Operation]:
