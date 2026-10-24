@@ -265,3 +265,161 @@ def test_model_schema_with_old_config():
             class Config:
                 model = "User"
                 model_fields = ["x"]
+
+
+# --- Duplicate declaration checks (issue #1563) ---
+
+
+def test_declared_field_also_in_fields_raises():
+    class Article(models.Model):
+        title = models.CharField()
+        body = models.CharField()
+
+        class Meta:
+            app_label = "tests"
+
+    with pytest.raises(ConfigError, match="also listed in 'Meta.fields'"):
+
+        class ArticleSchema(ModelSchema):
+            title: str
+
+            class Meta:
+                model = Article
+                fields = ["title", "body"]
+
+
+def test_declared_field_also_in_fields_reports_all_duplicates():
+    class Article(models.Model):
+        title = models.CharField()
+        body = models.CharField()
+
+        class Meta:
+            app_label = "tests"
+
+    with pytest.raises(ConfigError) as exc_info:
+
+        class ArticleSchema(ModelSchema):
+            title: str
+            body: str
+
+            class Meta:
+                model = Article
+                fields = ["title", "body"]
+
+    message = str(exc_info.value)
+    assert "ArticleSchema" in message
+    assert "'title'" in message
+    assert "'body'" in message
+
+
+def test_declared_nested_field_also_in_fields_raises():
+    """The exact scenario from #1563: a nested schema field repeated in fields."""
+
+    class Author(models.Model):
+        name = models.CharField()
+
+        class Meta:
+            app_label = "tests"
+
+    class Tip(models.Model):
+        name = models.CharField()
+        author = models.ForeignKey(Author, on_delete=models.CASCADE)
+
+        class Meta:
+            app_label = "tests"
+
+    class AuthorSchema(ModelSchema):
+        class Meta:
+            model = Author
+            fields = ["id", "name"]
+
+    with pytest.raises(ConfigError, match="'author'"):
+
+        class TipSchema(ModelSchema):
+            author: AuthorSchema
+
+            class Meta:
+                model = Tip
+                fields = ["id", "name", "author"]
+
+    # The same declaration is fine when the field is not repeated in fields:
+    class TipSchemaOk(ModelSchema):
+        author: AuthorSchema
+
+        class Meta:
+            model = Tip
+            fields = ["id", "name"]
+
+    properties = TipSchemaOk.json_schema()["properties"]
+    assert set(properties) == {"id", "name", "author"}
+    assert properties["author"] == {"$ref": "#/$defs/AuthorSchema"}
+
+
+def test_declared_field_with_fields_all_is_allowed():
+    class Note(models.Model):
+        title = models.CharField()
+        body = models.CharField()
+
+        class Meta:
+            app_label = "tests"
+
+    # fields="__all__" selects model fields implicitly, so a declared
+    # field is an unambiguous override of the generated one.
+    class NoteSchema(ModelSchema):
+        title: int
+
+        class Meta:
+            model = Note
+            fields = "__all__"
+
+    properties = NoteSchema.json_schema()["properties"]
+    assert properties["title"] == {"title": "Title", "type": "integer"}
+    assert properties["body"] == {"title": "Body", "type": "string"}
+
+
+def test_declared_field_in_exclude_is_allowed():
+    class Note(models.Model):
+        title = models.CharField()
+        body = models.CharField()
+
+        class Meta:
+            app_label = "tests"
+
+    # Excluding the generated field and declaring a custom one instead
+    # is an explicit, unambiguous combination.
+    class NoteSchema(ModelSchema):
+        title: int
+
+        class Meta:
+            model = Note
+            exclude = ["title"]
+
+    properties = NoteSchema.json_schema()["properties"]
+    assert properties["title"] == {"title": "Title", "type": "integer"}
+    assert properties["body"] == {"title": "Body", "type": "string"}
+
+
+def test_type_checking_annotations_are_not_declarations():
+    from typing import TYPE_CHECKING
+
+    class Author(models.Model):
+        name = models.CharField()
+        role = models.CharField()
+
+        class Meta:
+            app_label = "tests"
+
+    # Annotations under TYPE_CHECKING (the pattern from #1563) only help
+    # type checkers - they are not runtime declarations and must not raise.
+    class AuthorSchema(ModelSchema):
+        if TYPE_CHECKING:
+            id: int
+            name: str
+            role: str
+
+        class Meta:
+            model = Author
+            fields = ["id", "name", "role"]
+
+    properties = AuthorSchema.json_schema()["properties"]
+    assert set(properties) == {"id", "name", "role"}
