@@ -1,7 +1,10 @@
 import json
+import warnings
 
 import pytest
-from django.http import HttpResponse
+from django.http import HttpResponse, StreamingHttpResponse
+
+from ninja.compatibility.streaming import _AsyncOnly, create_streaming_response
 
 from ninja import NinjaAPI, Schema
 from ninja.streaming import JSONL, SSE, StreamFormat
@@ -285,3 +288,126 @@ class TestMultipleMethods:
             "name": "deleted",
             "price": 0.0,
         }
+
+
+# --- Async detection regression tests (issue #1714) ---
+#
+# Django's StreamingHttpResponse detects async content by trying
+# iter(value) first and falling back to aiter(value) on TypeError.
+# Async iterators for which iter() does not raise are misclassified
+# as synchronous (is_async=False), which makes Django's ASGI handler
+# warn on every request and consume the stream via sync_to_async(list).
+# create_streaming_response must therefore hand Django an object that
+# only exposes __aiter__.
+
+
+class _TrapAsyncIterator:
+    """An async iterator that also defines __iter__ (the detection trap).
+
+    Passed to StreamingHttpResponse directly, Django classifies this as
+    synchronous because iter() succeeds.  It must still be served as an
+    async stream when it goes through the compatibility wrapper.
+    """
+
+    def __init__(self, chunks):
+        self._chunks = list(chunks)
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        if not self._chunks:
+            raise StopAsyncIteration
+        return self._chunks.pop(0)
+
+    def __iter__(self):
+        return iter([])
+
+
+class TestAsyncOnlyWrapper:
+    def test_wrapper_has_no_sync_iterator(self):
+        async def gen():
+            yield b"x"
+
+        wrapper = _AsyncOnly(gen())
+        with pytest.raises(TypeError):
+            iter(wrapper)
+
+    @pytest.mark.asyncio
+    async def test_wrapper_delegates_async_iteration(self):
+        async def gen():
+            yield b"a"
+            yield b"b"
+
+        wrapper = _AsyncOnly(gen())
+        assert [chunk async for chunk in wrapper] == [b"a", b"b"]
+
+    @pytest.mark.asyncio
+    async def test_wrapper_makes_trap_iterator_detected_as_async(self):
+        response = StreamingHttpResponse(
+            _AsyncOnly(_TrapAsyncIterator([b"one", b"two"])),
+            content_type="text/event-stream",
+            status=200,
+        )
+        assert response.is_async is True
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            chunks = [chunk async for chunk in response]
+        assert chunks == [b"one", b"two"]
+
+    @pytest.mark.asyncio
+    async def test_wrapper_aclose_forwards_to_generator(self):
+        closed = False
+
+        async def gen():
+            nonlocal closed
+            try:
+                yield b"x"
+                yield b"y"
+            finally:
+                closed = True
+
+        wrapper = _AsyncOnly(gen())
+        assert await anext(wrapper.__aiter__()) == b"x"
+        await wrapper.aclose()
+        assert closed is True
+
+
+@pytest.mark.asyncio
+class TestCreateStreamingResponseAsyncDetection:
+    async def test_response_is_detected_as_async(self):
+        async def gen():
+            yield b"data: 1\n\n"
+            yield b"data: 2\n\n"
+
+        temporal_response = HttpResponse()
+        temporal_response["X-Custom"] = "lazy"
+
+        response = await create_streaming_response(
+            gen(),
+            content_type="text/event-stream",
+            status=200,
+            temporal_response=temporal_response,
+            extra_headers={"Cache-Control": "no-cache"},
+        )
+
+        assert response.is_async is True
+        assert response["Cache-Control"] == "no-cache"
+
+        with warnings.catch_warnings():
+            # The "synchronous iterators" warning must not fire.
+            warnings.simplefilter("error")
+            chunks = [chunk async for chunk in response]
+        assert b"".join(chunks) == b"data: 1\n\ndata: 2\n\n"
+        # Lazy temporal headers are copied once the stream is exhausted.
+        assert response["X-Custom"] == "lazy"
+
+    async def test_async_client_sse_emits_no_sync_iterator_warning(self):
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "error", message=".*synchronous iterators.*|.*asynchronous iterators.*"
+            )
+            response = await async_client.get("/sse/items")
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert len(content.strip().split("\n\n")) == 3
