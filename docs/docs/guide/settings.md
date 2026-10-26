@@ -36,7 +36,6 @@ raises a validation error.
 | `NINJA_PAGINATION_CLASS` | `"ninja.pagination.LimitOffsetPagination"` | [`@paginate`](pagination.md) with no explicit class |
 | `NINJA_PAGINATION_PER_PAGE` | `100` | Default page size for all three built-in pagination classes |
 | `NINJA_MAX_PER_PAGE_SIZE` | `100` | Upper bound on a client-supplied `page_size` for `PageNumberPagination`/`CursorPagination` |
-| `NINJA_PAGINATION_MAX_OFFSET` | `100` | Upper bound on the internal offset a `CursorPagination` cursor can encode |
 | `NINJA_PAGINATION_MAX_LIMIT` | unbounded (`inf`) | Upper bound on `limit` for `LimitOffsetPagination` |
 | `NINJA_PAGINATION_DEFAULT_ORDERING` | `("-pk",)` | Default `ordering` for `CursorPagination` |
 | `NINJA_DEFAULT_THROTTLE_RATES` | `{"auth": "10000/day", "user": "10000/day", "anon": "1000/day"}` | Rate used by a built-in [throttle](throttling.md) instantiated without one |
@@ -56,7 +55,6 @@ raises a validation error.
 NINJA_PAGINATION_CLASS = "ninja.pagination.LimitOffsetPagination"
 NINJA_PAGINATION_PER_PAGE = 100
 NINJA_MAX_PER_PAGE_SIZE = 100
-NINJA_PAGINATION_MAX_OFFSET = 100
 NINJA_PAGINATION_MAX_LIMIT = 1000
 NINJA_PAGINATION_DEFAULT_ORDERING = ("-pk",)
 ```
@@ -68,9 +66,6 @@ NINJA_PAGINATION_DEFAULT_ORDERING = ("-pk",)
 - **`NINJA_MAX_PER_PAGE_SIZE`** — caps a client-supplied `page_size` for
   `PageNumberPagination` and `CursorPagination` (`LimitOffsetPagination` has
   no such cap on `limit` — see `NINJA_PAGINATION_MAX_LIMIT` below).
-- **`NINJA_PAGINATION_MAX_OFFSET`** — safeguards `CursorPagination`: it
-  bounds the internal offset a cursor can encode, so a malicious cursor
-  value can't force an unbounded skip.
 - **`NINJA_PAGINATION_MAX_LIMIT`** — caps the `limit` query parameter
   accepted by `LimitOffsetPagination`. Unset, a client can request an
   unbounded `limit`.

@@ -40,6 +40,12 @@ def cursor_events_default_size(request, **kwargs):
     return Event.objects.all()
 
 
+@api.get("/cursor_events_tied_dates", response=List[EventSchema])
+@paginate(CursorPagination, ordering=("start_date",), page_size=100)
+def cursor_events_tied_dates(request, **kwargs):
+    return Event.objects.all()
+
+
 @api.get("/cursor_events_with_params", response=List[EventSchema])
 @paginate(CursorPagination, ordering=("start_date",), page_size=10)
 def cursor_events_with_params(request, title_filter: str = "", **kwargs):
@@ -302,7 +308,9 @@ def test_cursor_pagination_invalid_cursor():
     assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
 
 
-@pytest.mark.parametrize("raw", ["o=abc", "o=-1", "r=maybe", "o=100000", "p=zzz"])
+@pytest.mark.parametrize(
+    "raw", ["o=abc", "o=-1", "r=maybe", "o=9223372036854775808", "p=zzz"]
+)
 def test_cursor_pagination_malformed_cursor(raw):
     """Base64-valid but malformed cursors return 422, not 500."""
     cursor = b64encode(raw.encode()).decode()
@@ -311,6 +319,49 @@ def test_cursor_pagination_malformed_cursor(raw):
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
     assert response.json() == {"detail": [{"cursor": "Invalid Cursor"}]}
+
+
+def test_cursor_pagination_max_offset():
+    """The largest 64-bit offset is accepted and returns an empty page."""
+    cursor = b64encode(f"o={2**63 - 1}".encode()).decode()
+
+    response = client.get(f"/cursor_events?cursor={cursor}")
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json()["results"] == []
+
+
+def test_cursor_pagination_long_tie_run():
+    """A tie run longer than a page (offset >= 100) paginates fully."""
+
+    Event.objects.all().delete()
+    tied = date(2024, 6, 1)
+    Event.objects.bulk_create([
+        Event(title=f"Tied {i}", start_date=tied, end_date=tied) for i in range(250)
+    ])
+
+    response = client.get("/cursor_events_tied_dates")
+    assert response.status_code == HTTPStatus.OK
+    page = response.json()
+    assert len(page["results"]) == 100
+    assert page["next"] is not None
+
+    seen = []
+    current = page
+    guard = 0
+    while True:
+        seen.extend(item["title"] for item in current["results"])
+        if not current["next"]:
+            break
+        guard += 1
+        assert guard < 10
+        cursor = current["next"].split("cursor=")[1].split("&")[0]
+        follow = client.get(f"/cursor_events_tied_dates?cursor={cursor}")
+        assert follow.status_code == HTTPStatus.OK
+        current = follow.json()
+
+    assert len(seen) == 250
+    assert len(set(seen)) == 250
 
 
 def test_cursor_pagination_empty_cursor():
@@ -765,7 +816,9 @@ async def test_async_cursor_pagination_invalid_cursor():
     django.VERSION < (4, 1), reason="Async QuerySet iteration requires Django 4.1+"
 )
 @pytest.mark.asyncio
-@pytest.mark.parametrize("raw", ["o=abc", "o=-1", "r=maybe", "o=100000", "p=zzz"])
+@pytest.mark.parametrize(
+    "raw", ["o=abc", "o=-1", "r=maybe", "o=9223372036854775808", "p=zzz"]
+)
 async def test_async_cursor_pagination_malformed_cursor(raw):
     """Base64-valid but malformed cursors return 422, not 500, with async."""
     cursor = b64encode(raw.encode()).decode()
