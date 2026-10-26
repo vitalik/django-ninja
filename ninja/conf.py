@@ -16,8 +16,6 @@ class Settings(BaseModel):
     PAGINATION_DEFAULT_ORDERING: Tuple[str, ...] = Field(
         ("-pk",), alias="NINJA_PAGINATION_DEFAULT_ORDERING"
     )
-    # Deprecated: no longer used, CursorPagination offsets are not capped anymore
-    PAGINATION_MAX_OFFSET: int = Field(100, alias="NINJA_PAGINATION_MAX_OFFSET")
     PAGINATION_PER_PAGE: int = Field(100, alias="NINJA_PAGINATION_PER_PAGE")
     PAGINATION_MAX_PER_PAGE_SIZE: int = Field(100, alias="NINJA_MAX_PER_PAGE_SIZE")
     PAGINATION_MAX_LIMIT: int = Field(inf, alias="NINJA_PAGINATION_MAX_LIMIT")  # type: ignore
