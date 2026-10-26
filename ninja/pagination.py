@@ -265,7 +265,8 @@ class CursorPagination(AsyncPaginationBase):
         o: int = Field(
             default=0,
             ge=0,
-            lt=settings.PAGINATION_MAX_OFFSET,
+            # the offset becomes SQL OFFSET, keep it within a 64-bit integer
+            lt=2**63,
             title="offset",
             description="Number of items to skip from the current position",
         )

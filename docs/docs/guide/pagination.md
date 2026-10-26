@@ -188,10 +188,6 @@ def list_users(request):
 Note that the response's items key is `results`, not `items` - `CursorPagination`
 sets its own `items_attribute` (see [Output attribute](#output-attribute) below).
 
-!!! note
-    `NINJA_PAGINATION_MAX_OFFSET` (default 100) bounds the internal offset a
-    cursor can encode, as a safeguard against malicious cursor values.
-
 ## Accessing pagination parameters in the view
 
 Pass `pass_parameter` to receive the paginator's parsed `Input` in your view,
