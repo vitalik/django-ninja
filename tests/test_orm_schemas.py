@@ -368,6 +368,27 @@ def test_nullable_relation_with_depth():
     assert {"type": "null"} in Schema.json_schema()["properties"]["pub"]["anyOf"]
 
 
+def test_optional_relation_with_depth():
+    class Owner(models.Model):
+        name = models.CharField(max_length=5)
+
+        class Meta:
+            app_label = "tests"
+
+    class Pet(models.Model):
+        owner = models.OneToOneField(Owner, on_delete=models.CASCADE)
+
+        class Meta:
+            app_label = "tests"
+
+    Schema = create_schema(
+        Pet, fields=["id", "owner"], depth=1, optional_fields="__all__"
+    )
+    assert Schema.model_validate({}).owner is None
+    assert Schema.model_validate({"owner": None}).owner is None
+    assert "required" not in Schema.json_schema()
+
+
 def test_default():
     class MyModel(models.Model):
         default_static = models.CharField(default="hello")
