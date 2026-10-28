@@ -153,7 +153,7 @@ def get_schema_field(
 
     if field.is_relation:
         if depth > 0:
-            return get_related_field_schema(field, depth=depth)
+            return get_related_field_schema(field, depth=depth, optional=optional)
 
         internal_type = field.related_model._meta.pk.get_internal_type()
 
@@ -231,16 +231,20 @@ def get_schema_field(
 
 
 @no_type_check
-def get_related_field_schema(field: DjangoField, *, depth: int) -> Tuple[OpenAPISchema]:
+def get_related_field_schema(
+    field: DjangoField, *, depth: int, optional: bool = False
+) -> Tuple[OpenAPISchema]:
     from ninja.orm import create_schema
 
     model = field.related_model
     schema = create_schema(model, depth=depth - 1)
     default = ...
-    if not field.concrete and field.auto_created or field.null:
+    if not field.concrete and field.auto_created or field.null or optional:
         default = None
     if isinstance(field, ManyToManyField):
         schema = List[schema]  # type: ignore
+    elif default is None:
+        schema = Union[schema, None]
 
     return (
         schema,
