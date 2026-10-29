@@ -692,6 +692,8 @@ class Router:
         inherited_auth: Any = NOT_SET,
         inherited_throttle: Any = NOT_SET,
         inherited_tags: Optional[List[str]] = None,
+        mount_auth: Any = NOT_SET,
+        mount_throttle: Any = NOT_SET,
     ) -> List[RouterMount]:
         """
         Build mount configurations for this router and all child routers.
@@ -705,6 +707,8 @@ class Router:
             inherited_auth: Auth inherited from parent routers
             inherited_throttle: Throttle inherited from parent routers
             inherited_tags: Tags inherited from parent routers
+            mount_auth: Auth override from NinjaAPI.add_router(); beats self.auth
+            mount_throttle: Throttle override from NinjaAPI.add_router(); beats self.throttle
 
         Returns:
             List of RouterMount configurations for this router and all descendants
@@ -726,10 +730,13 @@ class Router:
         child_decorators = inherited_decorators + self._decorators
 
         # For auth/throttle/tags, effective value is used for children:
-        # priority: this router's own setting > inherited
-        child_auth = self.auth if self.auth is not NOT_SET else inherited_auth
-        child_throttle = (
-            self.throttle if self.throttle is not NOT_SET else inherited_throttle
+        # priority: mount override > this router's own setting > inherited
+        child_auth = next(
+            (a for a in (mount_auth, self.auth) if a is not NOT_SET), inherited_auth
+        )
+        child_throttle = next(
+            (t for t in (mount_throttle, self.throttle) if t is not NOT_SET),
+            inherited_throttle,
         )
         child_tags = self.tags if self.tags is not None else inherited_tags
 
