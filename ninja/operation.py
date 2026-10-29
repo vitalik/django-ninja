@@ -409,7 +409,9 @@ class Operation:
             and isinstance(result, resp_annotation)
         ):
             # Serialize with the declared schema, not the instance's own class,
-            # so subclass-only fields are not leaked into the response
+            # so subclass-only fields are not leaked into the response.
+            # (model_dump() is the same call on type(self); calling the
+            # serializer directly is also faster than model_dump())
             serializer = cast(Type[BaseModel], resp_annotation).__pydantic_serializer__
             result = serializer.to_python(
                 result,
