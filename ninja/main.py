@@ -550,6 +550,8 @@ class NinjaAPI:
                     inherited_auth=auth,
                     inherited_throttle=throttle,
                     inherited_tags=tags,
+                    mount_auth=auth,
+                    mount_throttle=throttle,
                 )
 
                 # Apply mount-level overrides to the first (parent) mount
