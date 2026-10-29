@@ -400,13 +400,19 @@ class Operation:
         model_dump_kwargs = self._model_dump_kwargs(request, status)
 
         # Skip re-validation for pydantic model instances matching the response type
-        resp_annotation = response_model.model_fields["response"].annotation
+        resp_field = response_model.model_fields["response"]
+        resp_annotation = resp_field.annotation
         if (
-            isinstance(resp_annotation, type)
+            not resp_field.metadata  # Annotated[...] serializers/validators
+            and isinstance(resp_annotation, type)
             and isinstance(result, BaseModel)
             and isinstance(result, resp_annotation)
         ):
-            result = cast(BaseModel, result).model_dump(
+            # Serialize with the declared schema, not the instance's own class,
+            # so subclass-only fields are not leaked into the response
+            serializer = cast(Type[BaseModel], resp_annotation).__pydantic_serializer__
+            result = serializer.to_python(
+                result,
                 by_alias=self.by_alias,
                 exclude_unset=self.exclude_unset,
                 exclude_defaults=self.exclude_defaults,
