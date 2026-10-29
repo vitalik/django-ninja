@@ -10,13 +10,13 @@ from typing import (
     Type,
     TypeVar,
     Union,
-    get_args,
 )
 
 from django.conf import settings
 from django.http import HttpRequest
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
+from typing_extensions import get_args
 
 from ninja.errors import HttpError
 from ninja.types import DictStrAny
