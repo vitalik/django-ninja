@@ -222,6 +222,29 @@ Both styles combine with `list[UploadedFile]` the same way — replace `file`
 above with `images: list[UploadedFile]` to accept a `Schema` plus a gallery of
 files in one request.
 
+**Prefer `Form`.** Form fields are what HTML forms and most HTTP clients send
+by default, and every field shows up as its own input in the interactive docs.
+Reach for the JSON body style when the data is nested (lists of objects,
+nested schemas) and doesn't flatten into form fields well.
+
+When a `Body` parameter is mixed with `File` or `Form`, how its part is read
+depends on its type:
+
+| Parameter type | Multipart part is read as |
+|---|---|
+| `Schema`, `list`, `dict` | a JSON-encoded string, e.g. `{"first_name": "John"}` |
+| `str`, `int`, `date`, `Enum`, … | plain text, e.g. `John` — the same as a `Form` field |
+
+So for scalar values `Body(...)` and `Form(...)` behave the same here; use
+`Form` to make the intent clear.
+
+!!! note "Swagger UI / OpenAPI"
+    This matches the OpenAPI default encoding for `multipart/form-data`:
+    object properties are sent as `application/json`, primitive ones as plain
+    text. In Swagger's "Try it out", a JSON body schema appears as a single
+    text area — type the object as JSON there — while scalar fields appear as
+    ordinary inputs. Generated API clients follow the same rules.
+
 !!! tip
     Path and query parameters can still be declared on the same operation —
     Django Ninja resolves each parameter from its own source regardless of
