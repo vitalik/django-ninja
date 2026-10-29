@@ -215,6 +215,8 @@ class Router:
         self.path_operations: Dict[str, PathView] = {}
         self.webhooks: Dict[str, Webhook] = {}
         self._routers: List[Tuple[str, Router, Optional[List[str]]]] = []
+        # (auth, throttle) passed to add_router(), aligned with self._routers
+        self._router_overrides: List[Tuple[Any, Any]] = []
         self._decorators: List[Tuple[Callable, DecoratorMode]] = []
 
     def _freeze(self) -> None:
@@ -657,15 +659,11 @@ class Router:
             router = import_string(router)
             assert isinstance(router, Router)
 
-        # Store child router with its mount-time configuration
-        # Auth/throttle are stored on the child router template,
-        # but tags from add_router are stored separately to distinguish from Router(tags=...)
-        if auth != NOT_SET:
-            router.auth = auth
-        if throttle != NOT_SET:
-            router.throttle = throttle
-        # Store as (prefix, router, tags) - tags here are mount-level overrides
+        # Store child router with its mount-time configuration.
+        # Auth/throttle/tags overrides are kept per mount (not written to the child
+        # template), so a child reused under several parents stays isolated.
         self._routers.append((prefix, router, tags))
+        self._router_overrides.append((auth, throttle))
 
     def add_decorator(
         self,
@@ -707,8 +705,8 @@ class Router:
             inherited_auth: Auth inherited from parent routers
             inherited_throttle: Throttle inherited from parent routers
             inherited_tags: Tags inherited from parent routers
-            mount_auth: Auth override from NinjaAPI.add_router(); beats self.auth
-            mount_throttle: Throttle override from NinjaAPI.add_router(); beats self.throttle
+            mount_auth: Auth override from add_router() for this mount; beats self.auth
+            mount_throttle: Throttle override from add_router() for this mount
 
         Returns:
             List of RouterMount configurations for this router and all descendants
@@ -742,7 +740,10 @@ class Router:
 
         # Build mounts for child routers
         child_mounts: List[RouterMount] = []
-        for child_prefix, child_router, child_mount_tags in self._routers:
+        for (child_prefix, child_router, child_mount_tags), (
+            child_mount_auth,
+            child_mount_throttle,
+        ) in zip(self._routers, self._router_overrides):
             child_path = normalize_path("/".join((prefix, child_prefix))).lstrip("/")
             mounts = child_router.build_routers(
                 child_path,
@@ -750,9 +751,15 @@ class Router:
                 child_auth,
                 child_throttle,
                 child_tags,
+                mount_auth=child_mount_auth,
+                mount_throttle=child_mount_throttle,
             )
-            # Apply mount-level tags override to the first mount (the child router itself)
-            if mounts and child_mount_tags is not None:
+            # Apply mount-level overrides to the first mount (the child router itself)
+            if child_mount_auth is not NOT_SET:
+                mounts[0].auth = child_mount_auth
+            if child_mount_throttle is not NOT_SET:
+                mounts[0].throttle = child_mount_throttle
+            if child_mount_tags is not None:
                 mounts[0].tags = child_mount_tags
             child_mounts.extend(mounts)
 
