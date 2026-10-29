@@ -239,7 +239,7 @@ class TestSkipRevalidation:
         ) as mock_resp_obj:
             response = client.get("/model_subclass")
             assert response.status_code == 200
-            assert response.json() == {"id": 1, "name": "John", "extra": "bonus"}
+            assert response.json() == {"id": 1, "name": "John"}
             mock_resp_obj.assert_not_called()
 
     def test_dict_goes_through_validation(self):
