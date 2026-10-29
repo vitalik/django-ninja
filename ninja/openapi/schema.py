@@ -415,6 +415,7 @@ def flatten_properties(
     extracts all nested model's properties into flat properties
     (used f.e. in GET params with multiple arguments and models)
     """
+    optional_model = _optional_model_definition(prop_details, definitions)
     if "allOf" in prop_details:
         resolve_allOf(prop_details, definitions)
         if len(prop_details["allOf"]) == 1 and "enum" in prop_details["allOf"][0]:
@@ -431,6 +432,13 @@ def flatten_properties(
         del prop_details["items"]["$ref"]  # seems num data is there so ref not needed
         yield prop_name, prop_details, prop_required
 
+    elif optional_model is not None:
+        # Optional[Model]: its fields are flattened, and none is required
+        for p_name, p_details, _ in flatten_properties(
+            prop_name, optional_model, False, definitions
+        ):
+            yield p_name, p_details, False
+
     elif "$ref" in prop_details:
         def_name = prop_details["$ref"].split("/")[-1]
         definition = definitions[def_name]
@@ -443,6 +451,18 @@ def flatten_properties(
             yield from flatten_properties(k, v, is_required, definitions)
     else:
         yield prop_name, prop_details, prop_required
+
+
+def _optional_model_definition(
+    prop_details: DictStrAny, definitions: DictStrAny
+) -> Optional[DictStrAny]:
+    "Returns the model definition for an `anyOf: [$ref, null]` property"
+    choices = prop_details.get("anyOf", [])
+    if len(choices) != 2 or {"type": "null"} not in choices:
+        return None
+    ref = next(c for c in choices if c != {"type": "null"}).get("$ref")
+    definition = definitions.get(ref.split("/")[-1]) if ref else None
+    return definition if definition and "properties" in definition else None
 
 
 def resolve_allOf(details: DictStrAny, definitions: DictStrAny) -> None:

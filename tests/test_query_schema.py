@@ -6,7 +6,7 @@ from typing import Optional
 import pytest
 from pydantic import BaseModel, Field
 
-from ninja import NinjaAPI, Query, Schema
+from ninja import Form, Header, NinjaAPI, Query, Schema
 from ninja.testing.client import TestClient
 
 PY_310 = sys.version_info >= (3, 10)
@@ -252,3 +252,152 @@ def test_nested_optional_query_schema():
     resp = client.get("/nested?label=test")
     assert resp.status_code == 200
     assert resp.json()["label"] == "test"
+
+
+def test_optional_query_schema_not_sent_uses_default():
+    """Optional[Model] = Query(None) falls back to None when no field is sent (issue #1805)."""
+
+    class Required(Schema):
+        x: int
+
+    class AllOptional(Schema):
+        a: Optional[int] = None
+
+    temp_api = NinjaAPI()
+
+    @temp_api.get("/required")
+    def required(request, f: Optional[Required] = Query(None)):
+        return {"f": f.model_dump() if f else None}
+
+    @temp_api.get("/all-optional")
+    def all_optional(request, f: Optional[AllOptional] = Query(None)):
+        return {"f": f.model_dump() if f else None}
+
+    client = TestClient(temp_api)
+
+    resp = client.get("/required")
+    assert resp.status_code == 200
+    assert resp.json() == {"f": None}
+
+    resp = client.get("/required?x=1")
+    assert resp.json() == {"f": {"x": 1}}
+
+    resp = client.get("/all-optional")
+    assert resp.status_code == 200
+    assert resp.json() == {"f": None}
+
+    resp = client.get("/all-optional?a=2")
+    assert resp.json() == {"f": {"a": 2}}
+
+
+def test_required_nested_query_schema_keeps_defaults_and_loc():
+    """Required nested models are still built from defaults and report the field loc."""
+
+    class Inner(Schema):
+        y: Optional[int] = None
+
+    class Outer(Schema):
+        i: Inner
+        z: Optional[int] = None
+
+    class Strict(Schema):
+        x: int
+
+    class Outer2(Schema):
+        s: Strict
+
+    temp_api = NinjaAPI()
+
+    @temp_api.get("/c")
+    def c(request, f: Outer = Query(...)):
+        return f.model_dump()
+
+    @temp_api.get("/o")
+    def o(request, f: Optional[Outer] = Query(None)):
+        return f.model_dump() if f else None
+
+    @temp_api.get("/s")
+    def s(request, f: Outer2 = Query(...)):
+        return f.model_dump()
+
+    client = TestClient(temp_api)
+
+    assert client.get("/c").json() == {"i": {"y": None}, "z": None}
+    assert client.get("/c?z=1").json() == {"i": {"y": None}, "z": 1}
+    assert client.get("/o").json() is None
+    assert client.get("/o?z=1").json() == {"i": {"y": None}, "z": 1}
+    resp = client.get("/s")
+    assert resp.status_code == 422
+    assert resp.json()["detail"][0]["loc"][-1] == "x"
+
+
+def test_optional_schema_default_only_when_annotation_allows_none():
+    class Required(Schema):
+        x: int
+
+    class AllOptional(Schema):
+        a: Optional[int] = None
+
+    temp_api = NinjaAPI()
+
+    @temp_api.get("/header")
+    def header(request, f: Optional[Required] = Header(None)):
+        return f and f.model_dump()
+
+    @temp_api.post("/form")
+    def form(request, f: Optional[Required] = Form(None)):
+        return f and f.model_dump()
+
+    @temp_api.get("/other-param")
+    def other_param(request, q: int = 0, f: Optional[Required] = Query(None)):
+        return {"q": q, "f": f and f.model_dump()}
+
+    @temp_api.get("/not-optional")
+    def not_optional(request, f: AllOptional = Query(None)):
+        return f.model_dump()
+
+    @temp_api.get("/instance-default")
+    def instance_default(request, f: Optional[AllOptional] = Query(AllOptional(a=5))):
+        return f.model_dump()
+
+    client = TestClient(temp_api)
+
+    assert client.get("/header").json() is None
+    assert client.get("/header", headers={"x": "1"}).json() == {"x": 1}
+    assert client.post("/form").json() is None
+    assert client.post("/form", POST={"x": "1"}).json() == {"x": 1}
+    assert client.get("/other-param?q=3").json() == {"q": 3, "f": None}
+    # without Optional the schema is still built from its field defaults
+    assert client.get("/not-optional").json() == {"a": None}
+    assert client.get("/instance-default").json() == {"a": 5}
+    assert client.get("/instance-default?a=1").json() == {"a": 1}
+
+
+def test_optional_query_schema_openapi_params():
+    class Filters(Schema):
+        x: int
+        y: Optional[str] = None
+
+    class Order(IntEnum):
+        ASC = 1
+        DESC = 2
+
+    temp_api = NinjaAPI()
+
+    @temp_api.get("/optional")
+    def optional(
+        request, f: Optional[Filters] = Query(None), order: Optional[Order] = None
+    ):
+        pass
+
+    @temp_api.get("/required")
+    def required(request, f: Filters = Query(...)):
+        pass
+
+    paths = temp_api.get_openapi_schema()["paths"]
+
+    def params(path):
+        return {p["name"]: p["required"] for p in paths[path]["get"]["parameters"]}
+
+    assert params("/api/optional") == {"x": False, "y": False, "order": False}
+    assert params("/api/required") == {"x": True, "y": False}

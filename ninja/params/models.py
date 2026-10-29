@@ -16,6 +16,7 @@ from django.conf import settings
 from django.http import HttpRequest
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
+from typing_extensions import get_args
 
 from ninja.errors import HttpError
 from ninja.types import DictStrAny
@@ -69,8 +70,17 @@ class ParamModel(BaseModel, ABC):
             return data
 
         mapped_data: DictStrAny = {}
+        sent = set()
         for key, path in flatten_map.items():
-            cls._map_data_path(mapped_data, data.get(key), path)
+            value = data.get(key)
+            if value is not None:
+                sent.add(path[0])
+            cls._map_data_path(mapped_data, value, path)
+        # an optional nested schema with nothing sent falls back to its default
+        for name, field in cls.model_fields.items():
+            key = field.alias or name
+            if key not in sent and type(None) in get_args(field.annotation):
+                mapped_data.pop(key, None)
         return mapped_data
 
     @classmethod
