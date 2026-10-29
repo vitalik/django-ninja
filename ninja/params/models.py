@@ -10,6 +10,7 @@ from typing import (
     Type,
     TypeVar,
     Union,
+    get_args,
 )
 
 from django.conf import settings
@@ -78,8 +79,8 @@ class ParamModel(BaseModel, ABC):
         # an optional nested schema with nothing sent falls back to its default
         for name, field in cls.model_fields.items():
             key = field.alias or name
-            if key in mapped_data and key not in sent and not field.is_required():
-                del mapped_data[key]
+            if key not in sent and type(None) in get_args(field.annotation):
+                mapped_data.pop(key, None)
         return mapped_data
 
     @classmethod
