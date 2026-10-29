@@ -183,12 +183,10 @@ class _MultiPartBodyModel(BodyModel):
         for name, annotation in cls.__ninja_body_params__.items():
             if name in request.POST:
                 data = request.POST[name]
-                if (
-                    annotation is str
-                    and not data.startswith('"')
-                    and not data.endswith('"')
-                ):
-                    data = f'"{data}"'
+                if not annotation:
+                    # scalars are plain form values (as documented in OpenAPI)
+                    results[name] = data
+                    continue
                 req.body = data.encode()
                 results[name] = get_request_data(req, api, path_params)
         return results

@@ -162,7 +162,10 @@ class ViewSignature:
                 assert attrs["__ninja_param_source__"] == "body"
                 if is_multipart_response_with_body:
                     attrs["__ninja_body_params__"] = {
-                        i.alias: i.annotation for i in args
+                        i.alias: is_pydantic_model(i.annotation)
+                        or is_collection_type(i.annotation)
+                        or get_origin(i.annotation) is dict
+                        for i in args
                     }
                 else:
                     # ::TODO:: this is still sus.  build some test cases
