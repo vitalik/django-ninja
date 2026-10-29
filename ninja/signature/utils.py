@@ -38,7 +38,8 @@ else:  # pragma: no cover
 def get_typed_signature(call: Callable[..., Any]) -> inspect.Signature:
     "Finds call signature and resolves all forwardrefs"
     signature = inspect.signature(call, **_FORWARDREF_KWARGS)
-    globalns = getattr(call, "__globals__", {})
+    unwrapped_call = inspect.unwrap(call)
+    globalns = getattr(unwrapped_call, "__globals__", {})
     typed_params = [
         inspect.Parameter(
             name=param.name,
