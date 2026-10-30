@@ -76,9 +76,20 @@ class DjangoGetter:
                 except AttributeError:
                     try:
                         # value = attrgetter(key)(self._obj)
-                        value = Variable(key).resolve(self._obj)
+                        variable = Variable(key)
                         # TODO: Variable(key) __init__ is actually slower than
                         #       Variable.resolve - so it better be cached
+                        if variable.lookups is None:
+                            # Variable comes from the template language, so
+                            # it parses constants as well as lookups: "0" and
+                            # "1.5" are numbers, "'x'" is a string. These have
+                            # no lookups, and resolve() returns the constant
+                            # without touching the object. A field with
+                            # alias="0" would then be "found" with the value 0.
+                            # Report it as missing instead, so that pydantic
+                            # tries the field name or uses the default.
+                            raise AttributeError(key)
+                        value = variable.resolve(self._obj)
                     except VariableDoesNotExist as e:
                         raise AttributeError(key) from e
         return self._convert_result(value)
