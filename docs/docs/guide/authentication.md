@@ -217,7 +217,9 @@ def ipwhitelist(request):
 
 Pass a list to `auth=` to accept any one of several schemes. They're tried
 in order; the first one to return a truthy value wins, and if none does,
-the request is rejected:
+the request is rejected. An authenticator that raises an exception with HTTP
+status 401 is treated as a rejected scheme and the next one is tried. Other
+exceptions, including authorization failures, stop authentication immediately:
 
 ```python hl_lines="20"
 from django.utils.crypto import constant_time_compare
