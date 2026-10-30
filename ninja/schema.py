@@ -80,10 +80,14 @@ class DjangoGetter:
                         # TODO: Variable(key) __init__ is actually slower than
                         #       Variable.resolve - so it better be cached
                         if variable.lookups is None:
-                            # The key is not a lookup at all: Django parses
-                            # keys like "0" (a numeric field alias) as a
-                            # literal and would resolve them to the literal
-                            # itself instead of an attribute of the object.
+                            # Variable comes from the template language, so
+                            # it parses constants as well as lookups: "0" and
+                            # "1.5" are numbers, "'x'" is a string. These have
+                            # no lookups, and resolve() returns the constant
+                            # without touching the object. A field with
+                            # alias="0" would then be "found" with the value 0.
+                            # Report it as missing instead, so that pydantic
+                            # tries the field name or uses the default.
                             raise AttributeError(key)
                         value = variable.resolve(self._obj)
                     except VariableDoesNotExist as e:
