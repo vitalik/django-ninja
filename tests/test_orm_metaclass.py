@@ -1,3 +1,5 @@
+import warnings
+
 import pytest
 from django.db import models
 
@@ -116,7 +118,7 @@ def test_custom_fields_come_after_model_fields():
     )
 
 
-def test_custom_field_overriding_model_field_keeps_model_position():
+def test_custom_field_overriding_model_field():
     class OverrideModel(models.Model):
         name = models.CharField()
         rating = models.IntegerField()
@@ -131,7 +133,7 @@ def test_custom_field_overriding_model_field_keeps_model_position():
 
         class Meta:
             model = OverrideModel
-            fields = ["name", "rating"]
+            fields = ["name"]
 
     assert list(OverrideSchema.model_fields) == ["name", "rating", "extra"]
     assert OverrideSchema.model_fields["rating"].annotation is float
@@ -347,3 +349,71 @@ def test_same_named_model_schemas_keep_their_own_body():
     assert first.__name__ != second.__name__
     assert first.model_validate(CacheKeyPub(id=5)).id == 1
     assert second.model_validate(CacheKeyPub(id=5)).id == 2
+
+
+def test_declared_field_also_in_fields_warns():
+    """#1563: a declared field repeated in Meta.fields - the declaration wins, with a warning."""
+
+    class Author(models.Model):
+        name = models.CharField()
+
+        class Meta:
+            app_label = "tests"
+
+    class Tip(models.Model):
+        name = models.CharField()
+        author = models.ForeignKey(Author, on_delete=models.CASCADE)
+
+        class Meta:
+            app_label = "tests"
+
+    class AuthorSchema(ModelSchema):
+        class Meta:
+            model = Author
+            fields = ["id", "name"]
+
+    with pytest.warns(
+        DeprecationWarning, match=r"'TipSchema' declares field\(s\) \['author'\]"
+    ):
+
+        class TipSchema(ModelSchema):
+            author: AuthorSchema
+
+            class Meta:
+                model = Tip
+                fields = ["id", "name", "author"]
+
+    properties = TipSchema.json_schema()["properties"]
+    assert set(properties) == {"id", "name", "author"}
+    assert properties["author"] == {"$ref": "#/$defs/AuthorSchema"}
+
+
+def test_declared_field_not_repeated_in_fields_does_not_warn():
+    class Note(models.Model):
+        title = models.CharField()
+        body = models.CharField()
+
+        class Meta:
+            app_label = "tests"
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+
+        class NoteSchema(ModelSchema):
+            title: int
+
+            class Meta:
+                model = Note
+                fields = ["body"]
+
+        class NoteSchemaAll(ModelSchema):
+            title: int
+
+            class Meta:
+                model = Note
+                fields = "__all__"
+
+    for schema in (NoteSchema, NoteSchemaAll):
+        properties = schema.json_schema()["properties"]
+        assert properties["title"] == {"title": "Title", "type": "integer"}
+        assert properties["body"] == {"title": "Body", "type": "string"}

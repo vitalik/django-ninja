@@ -140,7 +140,7 @@ class TaskUpdate(ModelSchema):
 
     class Meta:
         model = Task
-        fields = ["title", "description", "priority", "due_date"]
+        fields = ["title", "description", "due_date"]
 
     @field_validator("title", "description", "priority", check_fields=False)
     @classmethod

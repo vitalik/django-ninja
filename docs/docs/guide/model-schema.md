@@ -204,6 +204,11 @@ This is also how you nest a related object's full schema instead of just its pri
 [Relations](#relations) above), and how you attach validators, defaults or a different type to
 any individual field.
 
+Don't list a declared field in `Meta.fields` as well. The declaration already includes it and
+takes priority, so the generated field would be ignored anyway. `ModelSchema` emits a
+`DeprecationWarning` when a name appears in both places; this will become an error in a future
+release.
+
 Methods work as usual too - a `ModelSchema` is still a regular `Schema`/Pydantic model:
 
 ```python hl_lines="6-7"

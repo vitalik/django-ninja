@@ -26,10 +26,7 @@ def test_modelschema_custom_annotation():
 
         class Meta:
             model = CompatTestModel
-            # NOTE: "value" is not repeated in fields - declaring a field
-            # that is also listed in Meta.fields is a ConfigError (#1563);
-            # the declared field is included (and wins) without the repeat.
-            fields = ["name"]
+            fields = ["name"]  # "value" is declared above (#1563)
 
     assert CompatTestModelSchema.model_fields["value"].annotation is int
 
@@ -58,8 +55,6 @@ def test_modelschema_fk_schema_annotation():
 
         class Meta:
             model = CompatChildModel
-            # NOTE: "parent" is not repeated in fields - see #1563 note in
-            # test_modelschema_custom_annotation above.
-            fields = ["name"]
+            fields = ["name"]  # "parent" is declared above (#1563)
 
     assert CompatChildSchema.model_fields["parent"].annotation is CompatParentSchema
