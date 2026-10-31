@@ -8,7 +8,7 @@ from django.db import models
 from django.db.models import Manager
 from util import pydantic_ref_fix
 
-from ninja import Router, Schema
+from ninja import ModelSchema, Router, Schema
 from ninja.errors import ConfigError
 from ninja.orm import create_schema, register_field
 from ninja.orm.shortcuts import L, S
@@ -538,6 +538,45 @@ def test_exceptions():
 
     with pytest.raises(ConfigError):
         create_schema(MyModel2, fields=["f_invalid"])
+
+
+def test_fk_attname_hint():
+    class AttnameParent(models.Model):
+        class Meta:
+            app_label = "tests"
+
+    class AttnameChild(models.Model):
+        parent = models.ForeignKey(AttnameParent, on_delete=models.CASCADE)
+
+        class Meta:
+            app_label = "tests"
+
+    msg = (
+        "DjangoField\\(s\\) {'parent_id'} are not in model .*AttnameChild.*"
+        "Use 'parent' instead of 'parent_id', or declare 'parent_id: int' on the schema."
+    )
+    with pytest.raises(ConfigError, match=msg):
+        create_schema(AttnameChild, fields=["id", "parent_id"])
+
+    with pytest.raises(ConfigError, match=msg):
+        create_schema(AttnameChild, exclude=["parent_id"])
+
+    # plain unknown names get no hint
+    with pytest.raises(ConfigError, match=r"not in model .*AttnameChild.*>\.$"):
+        create_schema(AttnameChild, fields=["nope"])
+
+    # the documented way: declare the attname as a schema field
+    class ChildSchema(ModelSchema):
+        parent_id: int
+
+        class Meta:
+            model = AttnameChild
+            fields = ["id"]
+
+    assert ChildSchema.from_orm(AttnameChild(id=1, parent_id=7)).dict() == {
+        "id": 1,
+        "parent_id": 7,
+    }
 
 
 def test_shortcuts():

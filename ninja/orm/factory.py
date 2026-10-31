@@ -163,9 +163,18 @@ class SchemaFactory:
 
         invalid_fields = (set(fields or []) | set(exclude or [])) - all_fields.keys()
         if invalid_fields:
-            raise ConfigError(
-                f"DjangoField(s) {invalid_fields} are not in model {model}"
-            )
+            msg = f"DjangoField(s) {invalid_fields} are not in model {model}."
+            # "user_id" is the attname of the "user" ForeignKey, not a field name
+            attnames = {
+                f.attname: f.name for f in model._meta.concrete_fields if f.is_relation
+            }
+            for name in sorted(invalid_fields):
+                if name in attnames:
+                    msg += (
+                        f" Use '{attnames[name]}' instead of '{name}',"
+                        f" or declare '{name}: int' on the schema."
+                    )
+            raise ConfigError(msg)
 
         if fields:
             for name in fields:
