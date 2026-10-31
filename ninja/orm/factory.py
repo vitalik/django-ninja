@@ -5,6 +5,7 @@ from django.db.models import Field as DjangoField
 from django.db.models import ManyToManyRel, ManyToOneRel, Model
 from pydantic import create_model as create_pydantic_model
 
+from ninja.compatibility.util import PYDANTIC_FIELDS_ATTR
 from ninja.errors import ConfigError
 from ninja.orm.fields import get_schema_field
 from ninja.schema import Schema
@@ -109,11 +110,7 @@ class SchemaFactory:
             # and rebuild the core schema / serializer.
             ordered = {k: schema.model_fields[k] for k in definitions}
             ordered.update(schema.model_fields)  # keep any other inherited fields
-            # pydantic < 2.10 stores the fields in `model_fields` directly
-            attr = "__pydantic_fields__"
-            if not hasattr(schema, attr):  # pragma: no cover
-                attr = "model_fields"
-            setattr(schema, attr, ordered)
+            setattr(schema, PYDANTIC_FIELDS_ATTR, ordered)
             schema.model_rebuild(force=True)
         self.schemas[key] = schema
         self.schema_names.add(name)

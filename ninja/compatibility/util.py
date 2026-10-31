@@ -1,7 +1,17 @@
 import sys
 from typing import Union
 
-__all__ = ["UNION_TYPES", "get_annotations_from_namespace"]
+import pydantic
+
+__all__ = ["UNION_TYPES", "PYDANTIC_FIELDS_ATTR", "get_annotations_from_namespace"]
+
+_pydantic_version = tuple(int(part) for part in pydantic.VERSION.split(".")[:2])
+
+# the class attribute that holds a model's fields:
+# pydantic < 2.10 stores them in `model_fields` directly
+PYDANTIC_FIELDS_ATTR = (
+    "__pydantic_fields__" if _pydantic_version >= (2, 10) else "model_fields"
+)
 
 
 # python3.10+ syntax of creating a union or optional type (with str | int)

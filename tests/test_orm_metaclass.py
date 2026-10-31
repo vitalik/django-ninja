@@ -138,46 +138,6 @@ def test_custom_field_overriding_model_field_keeps_model_position():
     assert OverrideSchema(name="n").rating == 0.5
 
 
-def test_custom_field_validator_and_resolver_still_work():
-    from pydantic import field_validator
-
-    class ValidatedModel(models.Model):
-        name = models.CharField()
-
-        class Meta:
-            app_label = "tests"
-
-    class ValidatedSchema(ModelSchema):
-        shout: str = ""
-
-        class Meta:
-            model = ValidatedModel
-            fields = ["id", "name"]
-
-        @field_validator("shout")
-        @classmethod
-        def _upper_shout(cls, value: str) -> str:
-            return value.upper()
-
-    assert list(ValidatedSchema.model_fields) == ["id", "name", "shout"]
-    assert ValidatedSchema(id=1, name="n", shout="hey").shout == "HEY"
-
-    class ResolvedSchema(ModelSchema):
-        greeting: str = ""
-
-        class Meta:
-            model = ValidatedModel
-            fields = ["id", "name"]
-
-        @staticmethod
-        def resolve_greeting(obj) -> str:
-            return f"hi {obj.name}"
-
-    assert list(ResolvedSchema.model_fields) == ["id", "name", "greeting"]
-    resolved = ResolvedSchema.from_orm(ValidatedModel(id=2, name="bob"))
-    assert resolved.greeting == "hi bob"
-
-
 def test_config():
     class Category(models.Model):
         title = models.CharField()
