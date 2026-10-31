@@ -34,6 +34,16 @@ def op_exclude_none(request):
     return {"field1": None, "field2": "default value"}
 
 
+class NestedResponse(Schema):
+    nested: Optional[SomeResponse] = None
+
+
+@api.get("/test-unset-nested", response=NestedResponse, exclude_unset=True)
+def op_exclude_unset_nested(request):
+    # nested Schema *instance* must keep its own model_fields_set (#939)
+    return NestedResponse(nested=SomeResponse(field3=10))
+
+
 client = TestClient(api)
 
 
@@ -46,3 +56,4 @@ def test_arguments():
     assert client.get("/test-unset").json() == {"field3": 10}
     assert client.get("/test-defaults").json() == {"field1": 3}
     assert client.get("/test-none").json() == {"field2": "default value"}
+    assert client.get("/test-unset-nested").json() == {"nested": {"field3": 10}}
