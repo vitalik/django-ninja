@@ -112,6 +112,30 @@ in the response instead of just its id, declare that field explicitly with anoth
 [Overriding and adding fields](#overriding-and-adding-fields)), or build one with
 [`create_schema(..., depth=...)`](create-schema.md).
 
+### Foreign key ids (`author_id`)
+
+`Meta.fields` takes Django **field names**, so a `ForeignKey` is listed as `author`, not by its
+database column `author_id` - the latter raises a `ConfigError`. If you want the raw id under
+the `author_id` name (for example next to a nested `author` object), declare it as a regular
+annotated field. It reads `obj.author_id` straight from the instance, with no extra query:
+
+```python hl_lines="7-8"
+class UserSchema(ModelSchema):
+    class Meta:
+        model = User
+        fields = ["id", "username"]
+
+class CommentSchema(ModelSchema):
+    author: UserSchema  # nested object
+    author_id: int  # plain id
+
+    class Meta:
+        model = Comment
+        fields = ["id", "text"]
+
+# {"id": 1, "text": "...", "author": {"id": 3, "username": "jane"}, "author_id": 3}
+```
+
 ## Making fields optional
 
 For `PATCH`-style endpoints you often want every field optional regardless of what's required on
