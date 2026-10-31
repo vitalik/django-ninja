@@ -5,6 +5,7 @@ from django.db.models import Field as DjangoField
 from django.db.models import ManyToManyRel, ManyToOneRel, Model
 from pydantic import create_model as create_pydantic_model
 
+from ninja.compatibility.util import PYDANTIC_FIELDS_ATTR
 from ninja.errors import ConfigError
 from ninja.orm.fields import get_schema_field
 from ninja.schema import Schema
@@ -101,6 +102,16 @@ class SchemaFactory:
         # __validators__: dict[str, AnyClassMethod] | None = None,
         # __cls_kwargs__: dict[str, Any] | None = None,
         # **field_definitions: Any,
+        if custom_fields and list(schema.model_fields) != list(definitions):
+            # pydantic orders fields inherited from base_class first. For a
+            # ModelSchema the base class is the user's class, which already
+            # holds the custom fields, so they would precede the model fields.
+            # Restore the definition order (model fields, then custom fields)
+            # and rebuild the core schema / serializer.
+            ordered = {k: schema.model_fields[k] for k in definitions}
+            ordered.update(schema.model_fields)  # keep any other inherited fields
+            setattr(schema, PYDANTIC_FIELDS_ATTR, ordered)
+            schema.model_rebuild(force=True)
         self.schemas[key] = schema
         self.schema_names.add(name)
         return schema
