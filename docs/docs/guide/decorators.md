@@ -192,6 +192,43 @@ def list_posts(request):
     run *before* authentication, so `request.auth` isn't available there yet —
     keep permission checks in OPERATION mode (the default), as shown above.
 
+    If you need per-request setup that depends on the authenticated user but has
+    to happen before the body is validated — activating a tenant, for example — do
+    it in the auth callback. It is the first place where the user is known, and it
+    runs right before parameter parsing:
+
+    ```python
+    from ninja.security import APIKeyHeader
+
+
+    class TenantKey(APIKeyHeader):
+        def authenticate(self, request, key):
+            user = lookup_user(key)
+            if user:
+                activate_tenant(user.tenant)  # instead of a VIEW decorator
+            return user
+
+
+    api = NinjaAPI(auth=TenantKey())
+    ```
+
+    A VIEW decorator that needs both the raw body *and* the authenticated user
+    should read the body first, call the wrapped view (auth runs inside it), and
+    use `request.auth` only afterwards:
+
+    ```python
+    def save_request(view):
+        @wraps(view)
+        def wrapper(request, *args, **kwargs):
+            raw = request.body  # before parsing, so malformed bodies are kept too
+            response = view(request, *args, **kwargs)  # auth + tenant activation
+            if getattr(request, "auth", None):
+                store_raw_request(raw)  # the tenant is active now
+            return response
+
+        return wrapper
+    ```
+
 See [Authentication](authentication.md) for the full picture on `auth=` and
 what `request.auth` holds for each built-in authenticator.
 
