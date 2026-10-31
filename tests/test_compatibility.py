@@ -26,7 +26,7 @@ def test_modelschema_custom_annotation():
 
         class Meta:
             model = CompatTestModel
-            fields = ["name", "value"]
+            fields = ["name"]  # "value" is declared above (#1563)
 
     assert CompatTestModelSchema.model_fields["value"].annotation is int
 
@@ -55,6 +55,6 @@ def test_modelschema_fk_schema_annotation():
 
         class Meta:
             model = CompatChildModel
-            fields = ["name", "parent"]
+            fields = ["name"]  # "parent" is declared above (#1563)
 
     assert CompatChildSchema.model_fields["parent"].annotation is CompatParentSchema

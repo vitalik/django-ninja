@@ -1,3 +1,4 @@
+import warnings
 from typing import Any, List, Optional, Union, no_type_check
 
 from django.apps import apps
@@ -94,6 +95,27 @@ class ModelSchemaMetaclass(ResolverMetaclass):
                         continue
                     default = namespace.get(attr_name, ...)
                     custom_fields.append((attr_name, type, default))
+
+                if meta_conf.fields:
+                    # A declared attribute wins over the generated model field,
+                    # so listing it in Meta.fields as well is redundant and
+                    # confusing (see #1563). Warn for now; error later.
+                    duplicated = [
+                        attr_name
+                        for attr_name, _type, _default in custom_fields
+                        if attr_name in meta_conf.fields
+                    ]
+                    if duplicated:
+                        warnings.warn(
+                            f"ModelSchema class '{name}' declares field(s) "
+                            f"{duplicated} that are also listed in 'Meta.fields'. "
+                            "The declared field is used and the generated model "
+                            "field is ignored. Remove the name from 'Meta.fields' "
+                            "(or drop the declaration); this will become an error "
+                            "in a future release.",
+                            DeprecationWarning,
+                            stacklevel=2,
+                        )
 
                 # # cls.__doc__ = namespace.get("__doc__", config.model.__doc__)
                 # cls.__fields__ = {}  # forcing pydantic recreate
