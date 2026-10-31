@@ -227,3 +227,103 @@ def test_schema_skips_validation_when_validate_assignment_False(
         assert schema_inst.str_var == 5
     except ValidationError as ve:
         raise AssertionError() from ve
+
+
+def test_schema_exclude_unset_with_nested_schema():
+    """
+    Test that exclude_unset works for nested schemas.
+    Reproduces bug from https://github.com/vitalik/django-ninja/issues/939
+
+    A nested Schema instance passed to a parent schema must keep its own
+    model_fields_set - previously it was re-validated from attributes,
+    which marked every nested field as set.
+    """
+
+    class Bar(Schema):
+        b: Optional[str] = None
+
+    class Foo(Schema):
+        a: Optional[str] = None
+        bar: Optional[Bar] = None
+
+    foo = Foo(bar=Bar())
+    assert foo.model_dump(exclude_unset=True) == {"bar": {}}
+
+    foo = Foo(a="a", bar=Bar(b="b"))
+    assert foo.model_dump(exclude_unset=True) == {"a": "a", "bar": {"b": "b"}}
+
+
+def test_schema_nested_instance_is_not_revalidated():
+    """A Schema instance used as a nested value must be stored as-is."""
+
+    class Bar(Schema):
+        b: Optional[str] = None
+
+    class Foo(Schema):
+        bar: Optional[Bar] = None
+
+    bar = Bar()
+    foo = Foo(bar=bar)
+    assert foo.bar is bar
+    assert bar.model_fields_set == set()
+
+
+@pytest.mark.parametrize(
+    "config",
+    [{}, {"extra": "forbid"}, {"validate_assignment": True}],
+    ids=["default", "forbid", "validate_assignment"],
+)
+def test_schema_exclude_unset_with_nested_schema_configs(config):
+    """exclude_unset works for nested schemas regardless of model_config."""
+
+    class Bar(Schema):
+        b: Optional[str] = None
+        c: int = 0
+        model_config = config
+
+    class Foo(Schema):
+        bar: Optional[Bar] = None
+        model_config = config
+
+    assert Foo(bar=Bar()).model_dump(exclude_unset=True) == {"bar": {}}
+    assert Foo(bar=Bar(b="x")).model_dump(exclude_unset=True) == {"bar": {"b": "x"}}
+    # dict input still goes through the regular path
+    assert Foo(bar={}).model_dump(exclude_unset=True) == {"bar": {}}
+
+
+def test_schema_nested_assignment_is_validated():
+    """validate_assignment still validates (and rejects) nested values."""
+
+    class Bar(Schema):
+        b: Optional[str] = None
+        model_config = {"validate_assignment": True}
+
+    class Foo(Schema):
+        n: int = 0
+        bar: Optional[Bar] = None
+        model_config = {"validate_assignment": True}
+
+    foo = Foo()
+
+    # a valid nested instance is stored as-is and keeps its fields_set
+    bar = Bar(b="z")
+    foo.bar = bar
+    assert foo.bar is bar
+    assert foo.model_dump(exclude_unset=True) == {"bar": {"b": "z"}}
+
+    # a dict is still coerced into the nested schema
+    foo.bar = {"b": "y"}
+    assert isinstance(foo.bar, Bar)
+    assert foo.bar.b == "y"
+
+    with pytest.raises(ValidationError):
+        foo.bar = 123
+    with pytest.raises(ValidationError):
+        foo.bar = {"b": 1}
+    with pytest.raises(ValidationError):
+        foo.n = "x"
+
+    # top-level assignment still updates fields_set
+    bar2 = Bar()
+    bar2.b = "w"
+    assert bar2.model_fields_set == {"b"}

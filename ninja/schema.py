@@ -225,6 +225,14 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
     def _run_root_validator(
         cls, values: Any, handler: ModelWrapValidatorHandler[S], info: ValidationInfo
     ) -> Any:
+        # An input that is already an instance of this Schema is handed straight
+        # to pydantic. With the default revalidate_instances='never' it is kept
+        # as-is, so its model_fields_set survives and exclude_unset keeps working
+        # for nested schemas (#939). Rebuilding it via DjangoGetter would mark
+        # every field as set.
+        if isinstance(values, cls):
+            return handler(values)
+
         # If Pydantic intends to validate against the __dict__ of the immediate Schema
         # object, then we need to call `handler` directly on `values` before the conversion
         # to DjangoGetter, since any checks or modifications on DjangoGetter's __dict__
