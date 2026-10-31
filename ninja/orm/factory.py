@@ -111,7 +111,7 @@ class SchemaFactory:
             ordered.update(schema.model_fields)  # keep any other inherited fields
             # pydantic < 2.10 stores the fields in `model_fields` directly
             attr = "__pydantic_fields__"
-            if not hasattr(schema, attr):
+            if not hasattr(schema, attr):  # pragma: no cover
                 attr = "model_fields"
             setattr(schema, attr, ordered)
             schema.model_rebuild(force=True)
