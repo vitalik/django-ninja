@@ -268,27 +268,27 @@ def test_model_schema_with_old_config():
 
 
 def test_same_named_model_schemas_keep_their_own_body():
-    class Pub(models.Model):
+    class CacheKeyPub(models.Model):
         name = models.CharField(max_length=5)
 
         class Meta:
             app_label = "tests"
 
     def make(value):
-        class PubSchema(ModelSchema):
+        class CacheKeyPubSchema(ModelSchema):
             class Meta:
-                model = Pub
+                model = CacheKeyPub
                 fields = ["id"]
 
             @staticmethod
             def resolve_id(obj):
                 return value
 
-        return PubSchema
+        return CacheKeyPubSchema
 
     first, second = make(1), make(2)
 
     assert first is not second
     assert first.__name__ != second.__name__
-    assert first.model_validate(Pub(id=5)).id == 1
-    assert second.model_validate(Pub(id=5)).id == 2
+    assert first.model_validate(CacheKeyPub(id=5)).id == 1
+    assert second.model_validate(CacheKeyPub(id=5)).id == 2
