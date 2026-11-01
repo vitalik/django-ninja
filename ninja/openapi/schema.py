@@ -45,7 +45,7 @@ def get_schema(api: "NinjaAPI", path_prefix: str = "") -> "OpenAPISchema":
 bold_red_style = make_style(opts=("bold",), fg="red")
 
 
-class OpenAPISchema(dict):  # noqa: FURB189 - Must remain JSON-serializable as a dict.
+class OpenAPISchema(dict):
     def __init__(self, api: "NinjaAPI", path_prefix: str) -> None:
         self.api = api
         self.path_prefix = path_prefix

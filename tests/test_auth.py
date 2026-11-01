@@ -112,19 +112,19 @@ for path, auth in [
 client = TestClient(api)
 
 
-class MockUser(str):  # noqa: FURB189 - Auth results must serialize as JSON strings.
+class MockUser(str):
     is_authenticated = True
     is_superuser = False
     is_staff = False
 
 
-class MockSuperUser(str):  # noqa: FURB189 - Auth results must serialize as JSON strings.
+class MockSuperUser(str):
     is_authenticated = True
     is_superuser = True
     is_staff = True
 
 
-class MockStaffUser(str):  # noqa: FURB189 - Auth results must serialize as JSON strings.
+class MockStaffUser(str):
     is_authenticated = True
     is_superuser = False
     is_staff = True

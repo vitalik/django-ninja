@@ -9,7 +9,7 @@ from ninja.utils import is_async_callable
 __all__ = ["SecuritySchema", "AuthBase"]
 
 
-class SecuritySchema(dict):  # noqa: FURB189 - Must remain JSON-serializable as a dict.
+class SecuritySchema(dict):
     def __init__(self, type: str, **kwargs: Any) -> None:
         super().__init__(type=type, **kwargs)
 
