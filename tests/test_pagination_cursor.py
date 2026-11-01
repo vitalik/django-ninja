@@ -256,9 +256,9 @@ def test_cursor_pagination_end_date_offset_backwards():
 
     # Verify results are sorted by start_date when iterating backwards
     start_dates = [result["start_date"] for result in all_results_backwards]
-    assert start_dates == sorted(
-        start_dates
-    ), "Results should be sorted by start_date when iterating backwards"
+    assert start_dates == sorted(start_dates), (
+        "Results should be sorted by start_date when iterating backwards"
+    )
 
 
 def test_cursor_pagination_default_page_size():
@@ -741,9 +741,9 @@ async def test_async_cursor_pagination_end_date_offset_backwards():
 
     # Verify results are sorted by start_date when iterating backwards
     start_dates = [result["start_date"] for result in all_results_backwards]
-    assert start_dates == sorted(
-        start_dates
-    ), "Results should be sorted by start_date when iterating backwards"
+    assert start_dates == sorted(start_dates), (
+        "Results should be sorted by start_date when iterating backwards"
+    )
 
 
 @pytest.mark.skipif(

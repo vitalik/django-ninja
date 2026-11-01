@@ -12,7 +12,7 @@ def _serialize_item(item: Any) -> str:
     return json.dumps(item, cls=NinjaJSONEncoder)
 
 
-class _StreamAlias:
+class _StreamAlias:  # noqa: B903 - Keep identity-based equality for this marker.
     """Marker created by StreamFormat[ItemType]."""
 
     def __init__(self, format_cls: Type["StreamFormat[Any]"], item_type: type) -> None:

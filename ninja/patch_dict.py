@@ -17,7 +17,7 @@ from ninja.schema import Schema
 from ninja.utils import is_optional_type
 
 
-class ModelToDict(dict):
+class ModelToDict(dict):  # noqa: FURB189 - Preserve the public dict subclass contract.
     _wrapped_model: Any = None
     _wrapped_model_dump_params: Dict[str, Any] = {}
 
