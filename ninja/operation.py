@@ -109,9 +109,9 @@ class Operation:
         self.throttle_objects: List[BaseThrottle] = []
         if throttle is not NOT_SET:
             for th in throttle:  # type: ignore
-                assert isinstance(
-                    th, BaseThrottle
-                ), "Throttle should be an instance of BaseThrottle"
+                assert isinstance(th, BaseThrottle), (
+                    "Throttle should be an instance of BaseThrottle"
+                )
                 self.throttle_objects.append(th)
 
         self.signature = ViewSignature(self.path, self.view_func)
@@ -729,7 +729,7 @@ class PathView:
         return HttpResponseNotAllowed(allowed_methods, content=b"Method not allowed")
 
 
-class ResponseObject:
+class ResponseObject:  # noqa: B903 - Keep this attribute wrapper's existing semantics.
     "Basically this is just a helper to be able to pass response to pydantic's model_validate"
 
     def __init__(self, response: HttpResponse) -> None:
