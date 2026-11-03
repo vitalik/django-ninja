@@ -97,6 +97,18 @@ def on_auth_error(request, exc):
     return HttpResponse("Please sign in", status=401)
 ```
 
+### 404 responses for undefined URLs
+
+`@api.exception_handler(Http404)` handles `Http404` raised inside a Ninja operation (for example, by `get_object_or_404`), including when `DEBUG=True`. Requests to undefined URLs never reach a Ninja operation, so Django handles those 404 responses instead.
+
+To customize undefined-URL responses, set Django's [`handler404`](https://docs.djangoproject.com/en/stable/ref/urls/#handler404) in your project's root `urls.py`:
+
+```python
+handler404 = "myapp.views.custom_404"
+```
+
+The view must accept `request` and `exception` and return a response with status `404`. Django uses this handler only when `DEBUG=False`; with `DEBUG=True`, it shows its technical 404 page.
+
 ## Customizing validation errors
 
 Request validation failures raise `ninja.errors.ValidationError` (not to be confused with `pydantic.ValidationError`) and are handled by default with a `422` response shaped like:
