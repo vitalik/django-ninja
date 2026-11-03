@@ -50,6 +50,20 @@ jobs:
           - python-version: '3.14'
             django-version: '<5.2'
 
+          # Django versions older than 5.2 fail on Python 3.15.
+          - python-version: '3.15'
+            django-version: '<3.2'
+          - python-version: '3.15'
+            django-version: '<3.3'
+          - python-version: '3.15'
+            django-version: '<4.2'
+          - python-version: '3.15'
+            django-version: '<4.3'
+          - python-version: '3.15'
+            django-version: '<5.1'
+          - python-version: '3.15'
+            django-version: '<5.2'
+
     steps:
       - uses: actions/checkout@v6
       - name: Set up Python
