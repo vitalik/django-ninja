@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
+        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12', '3.13', '3.14', '3.15']
         django-version: ['<3.2', '<3.3', '<4.2', '<4.3', '<5.1', '<5.2', '<5.3', '<6.1', '<6.2']
         exclude:
           - python-version: '3.7'
@@ -48,6 +48,20 @@ jobs:
           - python-version: '3.14'
             django-version: '<5.1'
           - python-version: '3.14'
+            django-version: '<5.2'
+
+          # Django versions older than 5.2 fail on Python 3.15.
+          - python-version: '3.15'
+            django-version: '<3.2'
+          - python-version: '3.15'
+            django-version: '<3.3'
+          - python-version: '3.15'
+            django-version: '<4.2'
+          - python-version: '3.15'
+            django-version: '<4.3'
+          - python-version: '3.15'
+            django-version: '<5.1'
+          - python-version: '3.15'
             django-version: '<5.2'
 
     steps:
