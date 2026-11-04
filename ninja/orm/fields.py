@@ -5,7 +5,7 @@ from uuid import UUID
 
 from django.db.models import ManyToManyField
 from django.db.models.fields import Field as DjangoField
-from pydantic import AfterValidator, IPvAnyAddress
+from pydantic import AfterValidator, AliasGenerator, IPvAnyAddress
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticKnownError, PydanticUndefined, core_schema
 from typing_extensions import Annotated
@@ -137,12 +137,46 @@ def _request_max_length(limit: int) -> AfterValidator:
     return AfterValidator(check)
 
 
+def _relation_field_aliases(attname: str, alias_generator: Any) -> Tuple[str, Any, Any]:
+    """Aliases for a relation's ``_id`` field, per validation/serialization direction.
+
+    A relation field is exposed under its ``_id`` attname (e.g. ``author_id``) by
+    setting the alias explicitly. That explicit alias otherwise bypasses the
+    schema's ``alias_generator``, so the ``_id`` field keeps its snake_case name
+    while every other field is transformed (see #1691). We reproduce pydantic's
+    own alias generation here, honoring an ``AliasGenerator``'s independent
+    ``alias`` / ``validation_alias`` / ``serialization_alias`` callbacks and
+    falling back to the ``_id`` attname for any direction the generator leaves
+    unset, so a single-callback generator still aliases both directions.
+    """
+    if alias_generator is None:
+        return attname, attname, attname
+    if isinstance(alias_generator, AliasGenerator):
+        alias, validation_alias, serialization_alias = alias_generator.generate_aliases(
+            attname
+        )
+        alias = alias if alias is not None else attname
+        return (
+            alias,
+            validation_alias if validation_alias is not None else alias,
+            serialization_alias if serialization_alias is not None else alias,
+        )
+    generated = str(alias_generator(attname))
+    return generated, generated, generated
+
+
 @no_type_check
 def get_schema_field(
-    field: DjangoField, *, depth: int = 0, optional: bool = False
+    field: DjangoField,
+    *,
+    depth: int = 0,
+    optional: bool = False,
+    alias_generator: Any = None,
 ) -> Tuple:
     "Returns pydantic field from django's model field"
     alias = None
+    validation_alias = None
+    serialization_alias = None
     default = ...
     default_factory = None
     description = None
@@ -161,7 +195,11 @@ def get_schema_field(
             default = None
             nullable = True
 
-        alias = getattr(field, "get_attname", None) and field.get_attname()
+        attname = getattr(field, "get_attname", None) and field.get_attname()
+        if attname:
+            alias, validation_alias, serialization_alias = _relation_field_aliases(
+                attname, alias_generator
+            )
 
         pk_type = TYPES.get(internal_type, int)
         if field.one_to_many or field.many_to_many:
@@ -219,8 +257,8 @@ def get_schema_field(
         FieldInfo(
             default=default,
             alias=alias,
-            validation_alias=alias,
-            serialization_alias=alias,
+            validation_alias=validation_alias,
+            serialization_alias=serialization_alias,
             default_factory=default_factory,
             title=title,
             description=description,
