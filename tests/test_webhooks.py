@@ -377,3 +377,31 @@ def test_openapi_extra_webhooks_kept_without_registered_webhooks():
 def test_default_summary(class_name, summary):
     schema = type(class_name, (Schema,), {"__annotations__": {"id": int}})
     assert Webhook(schema).summary == summary
+
+
+def test_webhooks_ignore_bound_routers_without_template():
+    # Extensions such as django-ninja-extra add their own bound router objects
+    # that only provide `prefix` and `path_operations`.
+    controller = Router()
+
+    @controller.get("/items")
+    def list_items(request):
+        return []
+
+    class ControllerBoundRouter:
+        prefix = "controller"
+        path_operations = controller.path_operations
+
+    class ExtendedAPI(NinjaAPI):
+        def _get_bound_routers(self):
+            return [*super()._get_bound_routers(), ControllerBoundRouter()]
+
+    api = ExtendedAPI()
+
+    @api.webhook("order.paid")
+    class OrderPaid(Schema):
+        id: int
+
+    schema = api.get_openapi_schema(path_prefix="")
+    assert list(schema["webhooks"]) == ["order.paid"]
+    assert "/controller/items" in schema["paths"]
