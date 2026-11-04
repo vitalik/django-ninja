@@ -1,9 +1,10 @@
 from datetime import date
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
+from typing_extensions import Annotated, Literal, TypedDict
 
 from ninja import Body, File, Form, NinjaAPI, Schema, UploadedFile
 from ninja.testing import TestClient
@@ -152,3 +153,85 @@ def test_multipart_json_body_parts():
         "tags": ["a", "b"],
         "meta": {"x": 1},
     }
+
+
+def test_multipart_structured_body_annotations():
+    # https://github.com/vitalik/django-ninja/issues/1847
+    from pydantic import Field
+
+    api = NinjaAPI()
+
+    class Item(Schema):
+        name: str = "default"
+
+    class Point(TypedDict):
+        x: int
+
+    @api.post("/structured")
+    def structured(
+        request,
+        file: UploadedFile = File(...),
+        bare_dict: dict = Body(...),
+        optional_dict: Optional[Dict[str, int]] = Body(None),
+        typed_dict: Point = Body(...),
+        annotated_list: Annotated[List[int], Field(min_length=1)] = Body(...),
+        anything: Any = Body(...),
+        literal_or_model: Union[Literal["none"], Item] = Body(...),
+    ):
+        return {
+            "bare_dict": bare_dict,
+            "optional_dict": optional_dict,
+            "typed_dict": typed_dict,
+            "annotated_list": annotated_list,
+            "anything_type": type(anything).__name__,
+            "anything": anything,
+            "literal_or_model": literal_or_model,
+        }
+
+    file = SimpleUploadedFile("test.txt", b"data123")
+    response = TestClient(api).post(
+        "/structured",
+        FILES={"file": file},
+        POST={
+            "bare_dict": '{"a": 1}',
+            "optional_dict": '{"a": 1}',
+            "typed_dict": '{"x": 1}',
+            "annotated_list": "[1, 2]",
+            "anything": '{"a": 1}',
+            "literal_or_model": '{"name": "sent"}',
+        },
+    )
+    assert response.status_code == 200, response.content
+    assert response.json() == {
+        "bare_dict": {"a": 1},
+        "optional_dict": {"a": 1},
+        "typed_dict": {"x": 1},
+        "annotated_list": [1, 2],
+        "anything_type": "dict",
+        "anything": {"a": 1},
+        "literal_or_model": {"name": "sent"},
+    }
+
+
+def test_multipart_annotated_list_validation_still_applies():
+    from pydantic import Field
+
+    api = NinjaAPI()
+
+    @api.post("/annotated")
+    def annotated(
+        request,
+        file: UploadedFile = File(...),
+        items: Annotated[List[int], Field(min_length=1)] = Body(...),
+    ):
+        return {"items": items}
+
+    file = SimpleUploadedFile("test.txt", b"data123")
+    response = TestClient(api).post(
+        "/annotated",
+        FILES={"file": file},
+        POST={"items": "[]"},
+    )
+    # the part is parsed as JSON, so Field constraints still apply
+    assert response.status_code == 422, response.content
+    assert response.json()["detail"][0]["loc"] == ["body", "items"]

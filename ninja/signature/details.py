@@ -1,14 +1,18 @@
 import inspect
 import warnings
 from collections import defaultdict, namedtuple
+from datetime import date, datetime
+from decimal import Decimal
+from enum import Enum
 from sys import version_info
 from typing import Any, Callable, Dict, Generator, List, Optional, Tuple
+from uuid import UUID
 
 import pydantic
 from django.http import HttpResponse
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
-from typing_extensions import Annotated, get_args, get_origin
+from typing_extensions import Annotated, Literal, get_args, get_origin
 
 from ninja import UploadedFile
 from ninja.compatibility.util import UNION_TYPES
@@ -162,10 +166,7 @@ class ViewSignature:
                 assert attrs["__ninja_param_source__"] == "body"
                 if is_multipart_response_with_body:
                     attrs["__ninja_body_params__"] = {
-                        i.alias: is_pydantic_model(i.annotation)
-                        or is_collection_type(i.annotation)
-                        or get_origin(i.annotation) is dict
-                        for i in args
+                        i.alias: not is_plain_text_type(i.annotation) for i in args
                     }
                 else:
                     # ::TODO:: this is still sus.  build some test cases
@@ -354,6 +355,40 @@ def is_collection_type(annotation: Any) -> bool:
         )
     else:
         return origin in collection_types  # TODO: I guess we should handle only list
+
+
+PLAIN_TEXT_TYPES = (str, int, float, bool, Decimal, date, datetime, UUID, Enum)
+
+
+def is_plain_text_type(annotation: Any) -> bool:
+    """Whether a body part of a multipart request is read as a plain form value.
+
+    Only known scalar types (and unions of them) are passed through as plain
+    text; every other annotation (dicts, TypedDicts, collections, models, Any,
+    unions with models, ...) is parsed as JSON. Inverted on purpose so that
+    unlisted structured types keep their JSON semantics (#1847).
+    """
+    origin = get_origin(annotation)
+
+    if origin is Annotated:
+        return is_plain_text_type(get_args(annotation)[0])
+
+    if origin is Literal:
+        return True
+
+    if origin in UNION_TYPES:
+        return all(
+            is_plain_text_type(arg)
+            for arg in get_args(annotation)
+            if arg is not type(None)
+        )
+
+    try:
+        if isinstance(annotation, type):
+            return issubclass(annotation, PLAIN_TEXT_TYPES)
+    except TypeError:  # pragma: no cover
+        pass
+    return False
 
 
 def detect_collection_fields(
