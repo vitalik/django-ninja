@@ -270,6 +270,31 @@ register_field("VectorField", list[float])
 use for it, and only needs to run once (e.g. at import time in your `schemas.py`) before any
 `ModelSchema` that uses that field type is defined.
 
+### Registering a field class
+
+A custom field that subclasses a built-in one inherits its internal type - e.g. a subclass of
+`UUIDField` reports `"UUIDField"` - so registering by name would change every `UUIDField`.
+Pass the field class instead to target just that field (and its subclasses):
+
+```python hl_lines="12"
+from typing import Annotated
+from pydantic import BeforeValidator
+from ninja.orm import register_field
+
+
+class PublicIDField(models.UUIDField):
+    "stored as uuid, but returns a custom PublicID object"
+    def from_db_value(self, value, expression, connection):
+        return PublicID(value)
+
+
+register_field(PublicIDField, Annotated[str, BeforeValidator(str)])
+```
+
+A class registration takes priority over a registration by name, and the most specific class
+wins. It also applies to foreign keys and one-to-one fields that point at a model whose primary
+key (or `to_field`) is that field.
+
 ## Edge cases & tips
 
 - **`fields` and `exclude` can't be combined** - pick one per schema; mixing them raises a
