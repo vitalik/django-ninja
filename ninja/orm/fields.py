@@ -44,7 +44,7 @@ class AnyObject:
         return value
 
 
-TYPES = {
+TYPES: Dict[str, Any] = {
     "AutoField": int,
     "BigAutoField": int,
     "BigIntegerField": int,
@@ -83,8 +83,47 @@ TYPES = {
 TModel = TypeVar("TModel")
 
 
-def register_field(django_field: str, python_type: Any) -> None:
-    TYPES[django_field] = python_type
+# Registrations by field class (see register_field). Kept apart from TYPES so
+# TYPES keeps its historical meaning: internal type name -> python type.
+FIELD_CLASS_TYPES: Dict[Type[DjangoField], Any] = {}
+
+
+def register_field(
+    django_field: Union[str, Type[DjangoField]], python_type: Any
+) -> None:
+    """
+    Tells ModelSchema which python type to use for a django model field.
+
+    `django_field` is either:
+     - a field class, e.g. `register_field(MyIDField, str)` - applies to that
+       class and its subclasses, takes priority over internal type names
+     - an internal type name (`field.get_internal_type()`), e.g.
+       `register_field("VectorField", list[float])`
+    """
+    if isinstance(django_field, type) and issubclass(django_field, DjangoField):
+        FIELD_CLASS_TYPES[django_field] = python_type
+    else:
+        # internal type name (any other key is stored as before)
+        TYPES[django_field] = python_type  # type: ignore[index]
+
+
+def _lookup_python_type(field: DjangoField) -> Any:
+    "Raises KeyError when the field is not registered"
+    if FIELD_CLASS_TYPES:
+        for klass in type(field).__mro__:
+            if klass in FIELD_CLASS_TYPES:
+                return FIELD_CLASS_TYPES[klass]
+    return TYPES[field.get_internal_type()]
+
+
+def _relation_target_field(field: DjangoField) -> DjangoField:
+    "Model field whose values a relation holds"
+    if field.concrete and (field.many_to_one or field.one_to_one):
+        # forward ForeignKey / OneToOneField: the referenced field
+        # (the related pk, or `to_field` when given)
+        return field.target_field
+    # many-to-many and reverse relations: lists of related primary keys
+    return field.related_model._meta.pk
 
 
 @no_type_check
@@ -155,7 +194,8 @@ def get_schema_field(
         if depth > 0:
             return get_related_field_schema(field, depth=depth, optional=optional)
 
-        internal_type = field.related_model._meta.pk.get_internal_type()
+        target_field = _relation_target_field(field)
+        internal_type = target_field.get_internal_type()
 
         if not field.concrete and field.auto_created or field.null or optional:
             default = None
@@ -163,7 +203,10 @@ def get_schema_field(
 
         alias = getattr(field, "get_attname", None) and field.get_attname()
 
-        pk_type = TYPES.get(internal_type, int)
+        try:
+            pk_type = _lookup_python_type(target_field)
+        except KeyError:
+            pk_type = int
         if field.one_to_many or field.many_to_many:
             m2m_type = create_m2m_link_type(pk_type)
             python_type = List[m2m_type]  # type: ignore
@@ -178,12 +221,13 @@ def get_schema_field(
 
         internal_type = field.get_internal_type()
         try:
-            python_type = TYPES[internal_type]
+            python_type = _lookup_python_type(field)
         except KeyError as e:
             msg = [
                 f"Do not know how to convert django field '{internal_type}'.",
                 "Try from ninja.orm import register_field",
                 f"register_field('{internal_type}', <your-python-type>)",
+                f"or register_field({type(field).__name__}, <your-python-type>)",
             ]
             raise ConfigError("\n".join(msg)) from e
 
