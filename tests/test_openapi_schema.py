@@ -1,6 +1,6 @@
 import sys
 from sys import version_info
-from typing import Any, List, Union
+from typing import Any, List, Optional, Union
 from unittest.mock import Mock
 from uuid import uuid4
 
@@ -782,17 +782,7 @@ def test_schema_deprecated_example_examples(schema):
                 "maxLength": 5,
                 "title": "Param3",
                 "type": "string",
-                "examples": {
-                    "invalid": {
-                        "summary": "Invalid data is rejected with an error",
-                        "value": "MoreThan5Length",
-                    },
-                    "normal": {
-                        "description": "A **normal** string works correctly.",
-                        "summary": "A normal example",
-                        "value": "Foo",
-                    },
-                },
+                "examples": ["MoreThan5Length", "Foo"],
             },
             "examples": {
                 "invalid": {
@@ -1145,4 +1135,34 @@ def test_by_alias_uses_serialization_alias_model():
             "created": {"type": "string", "format": "date-time", "title": "Created"},
         },
         "required": ["created", "id"],
+    }
+
+
+def test_schema_field_examples_list_in_query_schema():
+    # pydantic Field(examples=[...]) is a JSON Schema list;
+    # OpenAPI Parameter.examples must be a map of Example Objects (#1636)
+    from ninja import FilterSchema
+
+    class Filters(FilterSchema):
+        status: Optional[str] = Field(None, examples=["active", "pending"])
+        # a dict *value* must not be mistaken for an Example Object
+        size: Optional[dict] = Field(None, examples=[{"value": 1, "unit": "cm"}])
+
+    api = NinjaAPI()
+
+    @api.get("/items")
+    def items(request, filters: Query[Filters]):
+        pass  # pragma: no cover
+
+    params = api.get_openapi_schema()["paths"]["/api/items"]["get"]["parameters"]
+    examples = {p["name"]: (p["examples"], p["schema"]["examples"]) for p in params}
+    assert examples == {
+        "status": (
+            {"example0": {"value": "active"}, "example1": {"value": "pending"}},
+            ["active", "pending"],
+        ),
+        "size": (
+            {"example0": {"value": {"value": 1, "unit": "cm"}}},
+            [{"value": 1, "unit": "cm"}],
+        ),
     }

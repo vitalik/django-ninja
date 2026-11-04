@@ -253,13 +253,23 @@ class OpenAPISchema(dict):
                 # copy description from schema description to param description
                 if "description" in p_schema:
                     param["description"] = p_schema["description"]
-                if "examples" in p_schema:
-                    examples = p_schema["examples"]
-                    param["examples"] = (
-                        {f"example{i}": {"value": v} for i, v in enumerate(examples)}
-                        if isinstance(examples, list)
-                        else examples
-                    )
+                # Parameter `examples` is a map of Example Objects,
+                # while JSON Schema `examples` is a list of plain values
+                examples = p_schema.get("examples")
+                if isinstance(examples, list):  # Field(examples=["a", "b"])
+                    param["examples"] = {
+                        f"example{i}": {"value": v} for i, v in enumerate(examples)
+                    }
+                elif isinstance(examples, dict):  # Query(examples={"a": {...}})
+                    param["examples"] = examples
+                    param["schema"] = {
+                        **p_schema,
+                        "examples": [
+                            e["value"]
+                            for e in examples.values()
+                            if isinstance(e, dict) and "value" in e
+                        ],
+                    }
                 elif "example" in p_schema:
                     param["example"] = p_schema["example"]
                 if "deprecated" in p_schema:
