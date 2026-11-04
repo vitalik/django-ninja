@@ -104,7 +104,7 @@ def register_field(
         FIELD_CLASS_TYPES[django_field] = python_type
     else:
         # internal type name (any other key is stored as before)
-        TYPES[django_field] = python_type  # type: ignore[index]
+        TYPES[django_field] = python_type
 
 
 def _lookup_python_type(field: DjangoField) -> Any:
@@ -116,6 +116,7 @@ def _lookup_python_type(field: DjangoField) -> Any:
     return TYPES[field.get_internal_type()]
 
 
+@no_type_check
 def _relation_target_field(field: DjangoField) -> DjangoField:
     "Model field whose values a relation holds"
     if field.concrete and (field.many_to_one or field.one_to_one):
