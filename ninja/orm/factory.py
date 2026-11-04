@@ -68,20 +68,22 @@ class SchemaFactory:
             if optional_fields == "__all__":
                 optional_fields = [f.name for f in model_fields_list]
 
+        declared = {name: (type_, info) for name, type_, info in custom_fields or ()}
+
         definitions = {}
         for fld in model_fields_list:
-            python_type, field_info = get_schema_field(
-                fld,
-                depth=depth,
-                optional=optional_fields and (fld.name in optional_fields),
-            )
-            definitions[fld.name] = (python_type, field_info)
-
-        if custom_fields:
-            for fld_name, python_type, field_info in custom_fields:
-                # if not isinstance(field_info, FieldInfo):
-                #     field_info = Field(field_info)
-                definitions[fld_name] = (python_type, field_info)
+            if fld.name in declared:
+                # The declaration wins and keeps the model field's position. The
+                # model field itself is not converted: its type may be one ninja
+                # does not know, which is often why it was declared (#1482).
+                definitions[fld.name] = declared[fld.name]
+            else:
+                definitions[fld.name] = get_schema_field(
+                    fld,
+                    depth=depth,
+                    optional=optional_fields and (fld.name in optional_fields),
+                )
+        definitions.update(declared)  # the rest of the declared fields go last
 
         if name in self.schema_names:
             name = self._get_unique_name(name)

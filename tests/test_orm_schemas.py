@@ -6,6 +6,7 @@ import pytest
 from django.contrib.postgres import fields as ps_fields
 from django.db import models
 from django.db.models import Manager
+from django.test.utils import isolate_apps
 from util import pydantic_ref_fix
 
 from ninja import ModelSchema, Router, Schema
@@ -678,6 +679,40 @@ def test_custom_fields():
         "required": ["f1", "f2"],
         "title": "SmallModel2",
     }
+
+
+@pytest.mark.parametrize(
+    "selection", [{}, {"fields": ["value", "name"]}, {"exclude": ["id"]}]
+)
+@pytest.mark.parametrize("optional_fields", [None, "__all__"])
+@isolate_apps()
+def test_declared_field_is_not_converted(selection, optional_fields):
+    """#1482: a declared field is used as-is, its model field is never converted"""
+
+    class UnknownField(models.Field):
+        pass  # not registered with ninja
+
+    class DeclaredModel(models.Model):
+        value = UnknownField()
+        name = models.CharField()
+
+        class Meta:
+            app_label = "tests"
+
+    with pytest.raises(ConfigError, match="Do not know how to convert"):
+        create_schema(DeclaredModel, **selection)
+
+    schema = create_schema(
+        DeclaredModel,
+        **selection,
+        optional_fields=optional_fields,
+        custom_fields=[("extra", int, 1), ("value", str, ...)],
+    )
+    # the declaration keeps the model field's position, other declared fields go last
+    expected = (["id"] if not selection else []) + ["value", "name", "extra"]
+    assert list(schema.model_fields) == expected
+    assert schema.model_fields["value"].annotation is str
+    assert schema.model_fields["value"].is_required()
 
 
 def test_duplicate_schema_names():
