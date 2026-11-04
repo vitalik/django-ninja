@@ -3,11 +3,11 @@ register_field() with field classes and relation types (#1661)
 """
 
 import uuid
-from typing import Annotated
 
 import pytest
 from django.db import models
 from pydantic import BeforeValidator, ValidationError
+from typing_extensions import Annotated
 
 from ninja import ModelSchema
 from ninja.errors import ConfigError
