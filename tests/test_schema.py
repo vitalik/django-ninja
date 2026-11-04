@@ -253,8 +253,8 @@ def test_schema_exclude_unset_with_nested_schema():
     assert foo.model_dump(exclude_unset=True) == {"a": "a", "bar": {"b": "b"}}
 
 
-def test_schema_nested_instance_is_not_revalidated():
-    """A Schema instance used as a nested value must be stored as-is."""
+def test_schema_nested_instance_keeps_fields_set():
+    """A nested Schema instance is re-validated, but keeps its model_fields_set."""
 
     class Bar(Schema):
         b: Optional[str] = None
@@ -264,8 +264,51 @@ def test_schema_nested_instance_is_not_revalidated():
 
     bar = Bar()
     foo = Foo(bar=bar)
-    assert foo.bar is bar
+    assert foo.bar == bar
+    assert foo.bar.model_fields_set == set()
     assert bar.model_fields_set == set()
+
+
+def test_schema_nested_instance_is_revalidated():
+    """
+    A nested Schema instance is re-validated against the declared type, so values
+    that never went through validation (model_construct, plain attribute
+    assignment) can't reach the output unfiltered.
+    """
+
+    class Profile(Schema):
+        bio: str
+
+    class User(Schema):
+        profile: Profile
+
+    class Users(Schema):
+        items: List[User]
+
+    constructed = User.model_construct(profile={"bio": "hi", "password": "secret"})
+    assigned = User(profile=Profile(bio="x"))
+    assigned.profile = {"bio": "hi", "password": "secret"}  # no validate_assignment
+
+    users = Users(items=[constructed, assigned])
+    assert users.model_dump() == {
+        "items": [{"profile": {"bio": "hi"}}, {"profile": {"bio": "hi"}}]
+    }
+
+
+def test_schema_nested_subclass_instance_keeps_only_declared_fields_set():
+    class Bar(Schema):
+        b: Optional[str] = None
+
+    class BarFull(Bar):
+        secret: str = "s"
+
+    class Foo(Schema):
+        bar: Optional[Bar] = None
+
+    foo = Foo(bar=BarFull(b="x", secret="s"))
+    assert type(foo.bar) is Bar
+    assert foo.bar.model_fields_set == {"b"}
+    assert foo.model_dump(exclude_unset=True) == {"bar": {"b": "x"}}
 
 
 @pytest.mark.parametrize(
@@ -305,10 +348,10 @@ def test_schema_nested_assignment_is_validated():
 
     foo = Foo()
 
-    # a valid nested instance is stored as-is and keeps its fields_set
+    # a valid nested instance is re-validated and keeps its fields_set
     bar = Bar(b="z")
     foo.bar = bar
-    assert foo.bar is bar
+    assert foo.bar == bar
     assert foo.model_dump(exclude_unset=True) == {"bar": {"b": "z"}}
 
     # a dict is still coerced into the nested schema

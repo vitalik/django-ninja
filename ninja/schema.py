@@ -225,14 +225,6 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
     def _run_root_validator(
         cls, values: Any, handler: ModelWrapValidatorHandler[S], info: ValidationInfo
     ) -> Any:
-        # An input that is already an instance of this Schema is handed straight
-        # to pydantic. With the default revalidate_instances='never' it is kept
-        # as-is, so its model_fields_set survives and exclude_unset keeps working
-        # for nested schemas (#939). Rebuilding it via DjangoGetter would mark
-        # every field as set.
-        if isinstance(values, cls):
-            return handler(values)
-
         # If Pydantic intends to validate against the __dict__ of the immediate Schema
         # object, then we need to call `handler` directly on `values` before the conversion
         # to DjangoGetter, since any checks or modifications on DjangoGetter's __dict__
@@ -242,8 +234,21 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
         if forbids_extra or should_validate_assignment:
             handler(values)
 
-        values = DjangoGetter(values, cls, info.context)
-        return handler(values)
+        # An instance of this Schema (e.g. nested in another schema, or an item of a
+        # List[...] response) is rebuilt via DjangoGetter like any other input, so its
+        # values are re-validated and resolvers run with the current context. Values
+        # that never went through validation (model_construct, plain attribute
+        # assignment) can't reach the output unfiltered that way.
+        # Its model_fields_set is carried over, so exclude_unset keeps working for
+        # nested schemas (#939).
+        fields_set = None
+        if isinstance(values, cls):
+            fields_set = values.model_fields_set & cls.model_fields.keys()
+
+        result = handler(DjangoGetter(values, cls, info.context))
+        if fields_set is not None:
+            object.__setattr__(result, "__pydantic_fields_set__", fields_set)
+        return result
 
     @classmethod
     def from_orm(cls: Type[S], obj: Any, **kw: Any) -> S:
