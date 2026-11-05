@@ -208,7 +208,7 @@ def add(request, a: int, b: int):
 
 
 @router.get("/multiply/{c}")
-def multiply(request, c: int, a: int = Path(...), b: int = Path(...)):
+def multiply(request, c: int, a: Path[int], b: Path[int]):
     return {"result": (a + b) * c}
 
 

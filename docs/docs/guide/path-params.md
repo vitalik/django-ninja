@@ -122,17 +122,17 @@ def events(request, year: int, month: int, day: int):
 ## Extra validation with `Path`
 
 For constraints beyond a plain type — numeric ranges, string length, a regex
-pattern — annotate the argument with `ninja.Path(...)` instead of (or in
-addition to) a type:
+pattern — annotate the argument with `Path[...]` and pass the options in
+`P(...)`:
 
 ```python hl_lines="1 7"
-from ninja import NinjaAPI, Path
+from ninja import NinjaAPI, P, Path
 
 api = NinjaAPI()
 
 
 @api.get("/items/{item_id}")
-def read_item(request, item_id: int = Path(..., gt=0, le=1000)):
+def read_item(request, item_id: Path[int, P(gt=0, le=1000)]):
     return {"item_id": item_id}
 ```
 
@@ -192,7 +192,7 @@ router = Router()
 
 
 @router.get("/multiply/{c}")
-def multiply(request, c: int, a: int = Path(...), b: int = Path(...)):
+def multiply(request, c: int, a: Path[int], b: Path[int]):
     return {"result": (a + b) * c}
 
 

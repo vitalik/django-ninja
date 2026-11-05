@@ -144,7 +144,7 @@ api = NinjaAPI(parser=CommaSeparatedListParser())
 
 
 @api.get("/tags")
-def list_tags(request, tags: list[str] = Query(...)):
+def list_tags(request, tags: Query[list[str]]):
     return {"tags": tags}
 ```
 

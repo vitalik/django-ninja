@@ -245,7 +245,7 @@ api = NinjaAPI()
 
 
 @api.post("/upload")
-def upload(request, file: UploadedFile = File(...)):
+def upload(request, file: File[UploadedFile]):
     return {"name": file.name, "data": file.read().decode()}
 
 

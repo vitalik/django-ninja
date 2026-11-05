@@ -33,7 +33,7 @@ api = NinjaAPI()
 
 
 @api.post("/upload")
-def upload(request, file: UploadedFile = File(...)):
+def upload(request, file: File[UploadedFile]):
     data = file.read()
     return {"name": file.name, "len": len(data)}
 ```
@@ -99,7 +99,7 @@ api = NinjaAPI()
 
 
 @api.post("/upload-optional")
-def upload_optional(request, file: UploadedFile | None = File(None)):
+def upload_optional(request, file: File[UploadedFile | None] = None):
     if file is None:
         return {"uploaded": False}
     return {"uploaded": True, "name": file.name}
@@ -107,7 +107,8 @@ def upload_optional(request, file: UploadedFile | None = File(None)):
 
 ## Validation and metadata
 
-`File()` accepts the same arguments as [`Form()`](forms.md#validation-constraints):
+Validation and metadata arguments go in `P(...)`, the same as for
+[`Form`](forms.md#validation-constraints):
 `gt`, `ge`, `lt`, `le`, `min_length`, `max_length`, `pattern`, plus `alias`,
 `title`, `description`, `example`/`examples`, `deprecated` and
 `include_in_schema` for the generated OpenAPI schema.
@@ -116,14 +117,14 @@ def upload_optional(request, file: UploadedFile | None = File(None)):
 constrain how many files must be sent:
 
 ```python hl_lines="8"
-from ninja import File, NinjaAPI, UploadedFile
+from ninja import File, NinjaAPI, P, UploadedFile
 
 api = NinjaAPI()
 
 
 @api.post("/upload-gallery")
 def upload_gallery(
-    request, images: list[UploadedFile] = File(..., min_length=1, max_length=5)
+    request, images: File[list[UploadedFile], P(min_length=1, max_length=5)]
 ):
     return [f.name for f in images]
 ```
@@ -131,29 +132,18 @@ def upload_gallery(
 Use `alias` when the multipart field name isn't a valid Python identifier:
 
 ```python hl_lines="7"
-from ninja import File, NinjaAPI, UploadedFile
+from ninja import File, NinjaAPI, P, UploadedFile
 
 api = NinjaAPI()
 
 
 @api.post("/upload-legacy")
-def upload_legacy(request, file: UploadedFile = File(..., alias="user-file")):
+def upload_legacy(request, file: File[UploadedFile, P(alias="user-file")]):
     return {"name": file.name}
 ```
 
-The same shorthand available for the other parameter sources works here too —
-`File[UploadedFile]` is equivalent to `UploadedFile = File(...)`:
-
-```python hl_lines="1 7"
-from ninja import File, NinjaAPI, UploadedFile
-
-api = NinjaAPI()
-
-
-@api.post("/upload")
-def upload(request, file: File[UploadedFile]):
-    return {"name": file.name}
-```
+The older default form, `file: UploadedFile = File(...)`, still works and means
+the same thing as `file: File[UploadedFile]`, but the annotation is preferred.
 
 ## Files with form data or a JSON body
 
@@ -184,7 +174,7 @@ don't need to configure anything.
 
 
     @api.post("/users")
-    def create_user(request, details: Form[UserDetails], file: UploadedFile = File(...)):
+    def create_user(request, details: Form[UserDetails], file: File[UploadedFile]):
         return [details.dict(), file.name]
     ```
 
@@ -211,7 +201,7 @@ don't need to configure anything.
 
 
     @api.post("/users")
-    def create_user(request, details: UserDetails, file: UploadedFile = File(...)):
+    def create_user(request, details: UserDetails, file: File[UploadedFile]):
         return [details.dict(), file.name]
     ```
 
