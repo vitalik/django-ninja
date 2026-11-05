@@ -190,10 +190,10 @@ class _MultiPartBodyModel(BodyModel):
         req = _HttpRequest()
         get_request_data = super().get_request_data
         results: DictStrAny = {}
-        for name, annotation in cls.__ninja_body_params__.items():
+        for name, is_json in cls.__ninja_body_params__.items():
             if name in request.POST:
                 data = request.POST[name]
-                if not annotation:
+                if not is_json:
                     # scalars are plain form values (as documented in OpenAPI)
                     results[name] = data
                     continue
