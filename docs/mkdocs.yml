@@ -119,3 +119,5 @@ markdown_extensions:
       alternate_style: true
 plugins:
   - search
+hooks:
+  - hooks/llms_txt.py

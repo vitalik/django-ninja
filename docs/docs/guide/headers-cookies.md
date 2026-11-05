@@ -13,7 +13,7 @@ api = NinjaAPI()
 
 
 @api.get("/agent")
-def get_agent(request, user_agent: str = Header(...)):
+def get_agent(request, user_agent: Header[str]):
     return {"user_agent": user_agent}
 ```
 
@@ -31,7 +31,7 @@ api = NinjaAPI()
 
 
 @api.get("/session")
-def get_session(request, session_id: str = Cookie(...)):
+def get_session(request, session_id: Cookie[str]):
     return {"session_id": session_id}
 ```
 
@@ -62,7 +62,7 @@ header genuinely might not be sent:
 
 ```python hl_lines="2"
 @api.get("/agent")
-def get_agent(request, user_agent: str | None = Header(None)):
+def get_agent(request, user_agent: Header[str | None] = None):
     return {"user_agent": user_agent}
 ```
 
@@ -74,7 +74,7 @@ you:
 
 ```python hl_lines="2"
 @api.get("/rate-limit")
-def rate_limit(request, x_rate_limit: int = Header(100)):
+def rate_limit(request, x_rate_limit: Header[int] = 100):
     return {"x_rate_limit": x_rate_limit}
 ```
 
@@ -89,12 +89,12 @@ argument something else:
 
 ```python hl_lines="2 7"
 @api.get("/request-id")
-def request_id(request, req_id: str = Header(..., alias="X-Request-ID")):
+def request_id(request, req_id: Header[str, P(alias="X-Request-ID")]):
     return {"request_id": req_id}
 
 
 @api.get("/weapon")
-def weapon(request, weapon: str = Cookie(..., alias="preferred-weapon")):
+def weapon(request, weapon: Cookie[str, P(alias="preferred-weapon")]):
     return {"weapon": weapon}
 ```
 
@@ -121,16 +121,16 @@ def client_info(request, client: Header[ClientInfo]):
     return client.model_dump()
 ```
 
-`client: Header[ClientInfo]` is equivalent to `client: ClientInfo =
-Header(...)` — use whichever reads better. The same works with `Cookie[...]`
-for a group of cookies. You can mix a header/cookie schema with plain
+`client: Header[ClientInfo]` is the preferred style; the older
+`client: ClientInfo = Header(...)` still works the same way. The same works
+with `Cookie[...]` for a group of cookies. You can mix a header/cookie schema with plain
 parameters and other sources (query, path, body) in the same operation —
 **Django Ninja** merges them all before calling your view.
 
 ## Validation constraints
 
-`Header()` and `Cookie()` accept the same validation and metadata arguments
-as [`Query`](query-params.md#validation-constraints): `gt`, `ge`, `lt`, `le`
+Validation and metadata arguments for `Header` and `Cookie` go in `P(...)`,
+the same as for [`Query`](query-params.md#validation-constraints): `gt`, `ge`, `lt`, `le`
 for numbers, `min_length`, `max_length`, `pattern` for strings, plus `title`,
 `description`, `example`/`examples`, `deprecated` and `include_in_schema`
 for the generated OpenAPI schema:
@@ -138,7 +138,7 @@ for the generated OpenAPI schema:
 ```python hl_lines="3"
 @api.get("/token")
 def token(
-    request, x_api_token: str = Header(..., min_length=32, max_length=64)
+    request, x_api_token: Header[str, P(min_length=32, max_length=64)]
 ):
     return {"x_api_token": x_api_token}
 ```

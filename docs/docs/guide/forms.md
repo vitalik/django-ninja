@@ -19,8 +19,8 @@ def login(request, username: Form[str], password: Form[str]):
     return {"username": username, "password": "*****"}
 ```
 
-`Form[str]` is shorthand for `username: str = Form(...)` — use whichever
-reads better:
+`Form[str]` is the preferred style. The older default form still works and
+means the same thing:
 
 ```python hl_lines="2"
 @api.post("/login")
@@ -32,7 +32,7 @@ A default value makes the field optional:
 
 ```python
 @api.post("/login")
-def login(request, remember_me: bool = Form(False)):
+def login(request, remember_me: Form[bool] = False):
     return {"remember_me": remember_me}
 ```
 
@@ -92,7 +92,7 @@ from the form fields — all in the same call.
 
 ## Validation constraints
 
-`Form()` accepts the same validation arguments as
+Validation arguments go in `P(...)`, the same as for
 [`Query`](query-params.md#validation-constraints): `gt`, `ge`, `lt`, `le` for
 numbers, `min_length`, `max_length`, `pattern` for strings, plus `title`,
 `description`, `example`/`examples`, `deprecated` and `include_in_schema` for
@@ -102,8 +102,8 @@ the generated OpenAPI schema.
 @api.post("/items/quick")
 def create_quick(
     request,
-    name: str = Form(..., min_length=1, max_length=100),
-    quantity: int = Form(1, gt=0),
+    name: Form[str, P(min_length=1, max_length=100)],
+    quantity: Form[int, P(gt=0)] = 1,
 ):
     return {"name": name, "quantity": quantity}
 ```
@@ -118,7 +118,7 @@ simply differs from your parameter name:
 
 ```python hl_lines="2"
 @api.post("/items/legacy")
-def create_legacy(request, name: str = Form(..., alias="item-name")):
+def create_legacy(request, name: Form[str, P(alias="item-name")]):
     return {"name": name}
 ```
 
@@ -184,7 +184,7 @@ api = NinjaAPI()
 
 
 @api.post("/upload")
-def upload(request, title: str = Form(...), file: UploadedFile = File(...)):
+def upload(request, title: Form[str], file: File[UploadedFile]):
     return {"title": title, "size": file.size}
 ```
 

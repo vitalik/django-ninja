@@ -131,7 +131,7 @@ api = NinjaAPI()
 
 
 @api.put("/items/{item_id}")
-def update_item(request, item_id: int, importance: int = Body(...)):
+def update_item(request, item_id: int, importance: Body[int]):
     return {"item_id": item_id, "importance": importance}
 ```
 
@@ -139,9 +139,9 @@ def update_item(request, item_id: int, importance: int = Body(...)):
 [`Query`](query-params.md#validation-constraints): `gt` / `ge` / `lt` / `le`,
 `min_length`, `max_length`, `pattern`, plus `alias`, `title`, `description`,
 `example` / `examples`, `deprecated` and `include_in_schema`, and any extra
-keyword Pydantic's `Field` understands. The same annotated shortcut used for
-path and query params works here too — `importance: Annotated[int,
-Body(gt=0)]`, or equivalently `Body[int, P(gt=0)]` using the `P(...)` helper:
+keyword Pydantic's `Field` understands. Pass them in `P(...)` as the second
+item of `Body[...]`, e.g. `Body[int, P(gt=0)]` (the same as
+`Annotated[int, Body(gt=0)]`):
 
 ```python hl_lines="1 10"
 from ninja import NinjaAPI, P, Body
@@ -249,13 +249,13 @@ def create_items(request, items: list[Item]):
 constrain a list body directly without wrapping it in a `Schema`:
 
 ```python hl_lines="7"
-from ninja import Body, NinjaAPI
+from ninja import Body, NinjaAPI, P
 
 api = NinjaAPI()
 
 
 @api.post("/tags")
-def create_tags(request, tags: list[str] = Body(..., min_length=1)):
+def create_tags(request, tags: Body[list[str], P(min_length=1)]):
     return {"tags": tags}
 ```
 

@@ -126,16 +126,16 @@ into a list, declare the parameter explicitly with `Query`:
 from ninja import Query
 
 @api.get("/weapons/by-ids")
-def weapons_by_ids(request, ids: list[int] = Query(...)):
+def weapons_by_ids(request, ids: Query[list[int]]):
     return [w for i, w in enumerate(WEAPONS) if i in ids]
 ```
 
-`GET /api/weapons/by-ids?ids=1&ids=2&ids=3` gives `ids == [1, 2, 3]`. `Query()`
-also accepts a default, so the list itself can be optional:
+`GET /api/weapons/by-ids?ids=1&ids=2&ids=3` gives `ids == [1, 2, 3]`. Give it a
+default to make the list itself optional:
 
 ```python
 @api.get("/weapons/by-ids")
-def weapons_by_ids(request, ids: list[int] = Query([])):
+def weapons_by_ids(request, ids: Query[list[int]] = []):
     ...
 ```
 
@@ -163,27 +163,27 @@ def filter_weapons(request, filters: Query[Filters]):
     return filters.model_dump()
 ```
 
-`filters: Query[Filters]` is equivalent to `filters: Filters = Query(...)` —
-use whichever reads better. A query schema can also be made optional as a
-whole:
+`filters: Query[Filters]` is the preferred style. The older default form,
+`filters: Filters = Query(...)`, still works and means the same thing, and the
+same goes for `Path`, `Body`, `Header`, `Cookie`, `Form` and `File`. A query
+schema can also be made optional as a whole:
 
 ```python
 @api.get("/filter")
-def filter_weapons(request, filters: Filters | None = Query(None)):
+def filter_weapons(request, filters: Query[Filters | None] = None):
     ...
 ```
 
 You can mix a query schema with plain query parameters and other sources in
 the same operation — **Django Ninja** merges them all before calling your
-view. Note that a parameter typed with `Filters = Query(...)` has a real
-default in the signature, so it can be placed after parameters that don't:
+view:
 
 ```python hl_lines="5"
 @api.get("/filter-mixed")
 def filter_mixed(
     request,
     page: int,
-    filters: Filters = Query(...),
+    filters: Query[Filters],
     sort: str = "name",
 ):
     return dict(page=page, sort=sort, **filters.model_dump())
@@ -194,8 +194,9 @@ schema), see [Filtering](filtering.md).
 
 ## Validation constraints
 
-`Query()` accepts the same validation arguments as [path
-parameters](path-params.md): `gt`, `ge`, `lt`, `le` for numbers,
+Pass validation arguments in `P(...)` (`from ninja import P`) as the second
+item of `Query[...]`, and the default after `=`. `P()` takes the same arguments
+as for [path parameters](path-params.md): `gt`, `ge`, `lt`, `le` for numbers,
 `min_length`, `max_length`, `pattern` for strings, plus `title`, `description`,
 `example`/`examples` and `deprecated` for the generated OpenAPI schema:
 
@@ -203,8 +204,8 @@ parameters](path-params.md): `gt`, `ge`, `lt`, `le` for numbers,
 @api.get("/weapons/page")
 def weapons_page(
     request,
-    limit: int = Query(10, gt=0, le=100),
-    q: str | None = Query(None, min_length=3, max_length=50),
+    limit: Query[int, P(gt=0, le=100)] = 10,
+    q: Query[str | None, P(min_length=3, max_length=50)] = None,
 ):
     return {"limit": limit, "q": q}
 ```
@@ -219,7 +220,7 @@ identifier, or simply differs from your parameter name:
 
 ```python hl_lines="2"
 @api.get("/weapons/legacy")
-def legacy_search(request, q: str = Query(..., alias="search-term")):
+def legacy_search(request, q: Query[str, P(alias="search-term")]):
     return [w for w in WEAPONS if q.lower() in w.lower()]
 ```
 
