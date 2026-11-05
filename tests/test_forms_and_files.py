@@ -2,13 +2,13 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 from enum import Enum
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from pydantic import Field, HttpUrl, Json, RootModel
 from pydantic_core import core_schema, to_jsonable_python
-from typing_extensions import Annotated, TypedDict
+from typing_extensions import Annotated, Literal, TypedDict
 
 from ninja import Body, File, Form, NinjaAPI, Schema, UploadedFile
 from ninja.testing import TestClient
