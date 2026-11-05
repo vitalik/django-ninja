@@ -222,8 +222,14 @@ depends on its type:
 
 | Parameter type | Multipart part is read as |
 |---|---|
-| `Schema`, `list`, `dict` | a JSON-encoded string, e.g. `{"first_name": "John"}` |
-| `str`, `int`, `date`, `Enum`, … | plain text, e.g. `John` — the same as a `Form` field |
+| `Schema`, `list`, `dict`, `TypedDict`, dataclass, `Any`, … | a JSON-encoded string, e.g. `{"first_name": "John"}` |
+| `str`, `int`, `date`, `Enum`, `Literal`, `UUID`, … | plain text, e.g. `John` — the same as a `Form` field |
+
+The rule follows the parameter's JSON schema: primitives (string, number,
+integer, boolean) are plain text, anything else is JSON. `Optional[...]` and
+`Annotated[...]` don't change it, and a union that includes a structured type
+is read as JSON as a whole: for `Union[str, dict]` send `{"a": 1}` or `"hello"`
+(JSON-quoted).
 
 So for scalar values `Body(...)` and `Form(...)` behave the same here; use
 `Form` to make the intent clear.

@@ -1,9 +1,14 @@
+from dataclasses import dataclass
 from datetime import date
+from decimal import Decimal
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
+from pydantic import Field, HttpUrl, Json, RootModel
+from pydantic_core import core_schema, to_jsonable_python
+from typing_extensions import Annotated, Literal, TypedDict
 
 from ninja import Body, File, Form, NinjaAPI, Schema, UploadedFile
 from ninja.testing import TestClient
@@ -152,3 +157,73 @@ def test_multipart_json_body_parts():
         "tags": ["a", "b"],
         "meta": {"x": 1},
     }
+
+
+class _Item(Schema):
+    name: str = "default"
+
+
+class _Point(TypedDict):
+    x: int
+
+
+@dataclass
+class _DataPoint:
+    x: int
+
+
+class _Color(str, Enum):
+    red = "red"
+
+
+class _Name(RootModel[str]):
+    pass
+
+
+class _Opaque:
+    """A custom type without a JSON schema."""
+
+    @classmethod
+    def __get_pydantic_core_schema__(cls, source, handler):
+        return core_schema.no_info_plain_validator_function(lambda v: v)
+
+
+@pytest.mark.parametrize(
+    "annotation,value,expected",
+    [
+        # read as JSON
+        (dict, '{"a": 1}', {"a": 1}),
+        (Optional[Dict[str, int]], '{"a": 1}', {"a": 1}),
+        (_Point, '{"x": 1}', {"x": 1}),
+        (_DataPoint, '{"x": 1}', {"x": 1}),
+        (Annotated[List[int], Field(min_length=1)], "[1, 2]", [1, 2]),
+        (Any, '{"a": 1}', {"a": 1}),
+        (Optional[_Item], '{"name": "sent"}', {"name": "sent"}),
+        (Union[Literal["none"], _Item], '{"name": "sent"}', {"name": "sent"}),
+        (_Opaque, '{"a": 1}', {"a": 1}),
+        # a union with a structured branch is JSON as a whole
+        (Union[str, Dict[str, int]], '{"a": 1}', {"a": 1}),
+        (Union[str, Dict[str, int]], '"hello"', "hello"),
+        # read as plain text
+        (Optional[_Color], "red", "red"),
+        (Literal[1, "a"], "a", "a"),
+        (Decimal, "1.50", "1.50"),
+        (HttpUrl, "https://example.com/", "https://example.com/"),
+        (_Name, "bob", "bob"),
+        (Json[Dict[str, int]], '{"a": 1}', {"a": 1}),
+    ],
+)
+def test_multipart_body_part_type(annotation, value, expected):
+    # #1847: only primitive schemas are plain text; everything else is JSON
+    api = NinjaAPI()
+
+    def view(request, file: File[UploadedFile], data=Body(...)):
+        return {"data": to_jsonable_python(data)}
+
+    view.__annotations__["data"] = annotation
+    api.post("/part")(view)
+
+    file = SimpleUploadedFile("test.txt", b"data123")
+    response = TestClient(api).post("/part", FILES={"file": file}, POST={"data": value})
+    assert response.status_code == 200, response.content
+    assert response.json() == {"data": expected}

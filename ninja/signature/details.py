@@ -162,10 +162,7 @@ class ViewSignature:
                 assert attrs["__ninja_param_source__"] == "body"
                 if is_multipart_response_with_body:
                     attrs["__ninja_body_params__"] = {
-                        i.alias: is_pydantic_model(i.annotation)
-                        or is_collection_type(i.annotation)
-                        or get_origin(i.annotation) is dict
-                        for i in args
+                        i.alias: is_multipart_json_part(i.annotation) for i in args
                     }
                 else:
                     # ::TODO:: this is still sus.  build some test cases
@@ -354,6 +351,38 @@ def is_collection_type(annotation: Any) -> bool:
         )
     else:
         return origin in collection_types  # TODO: I guess we should handle only list
+
+
+_JSON_PRIMITIVE_TYPES = {"string", "integer", "number", "boolean", "null"}
+
+
+def is_multipart_json_part(annotation: Any) -> bool:
+    """
+    Whether a Body param mixed with File/Form is read from its multipart part as
+    JSON (True) or as a plain text value (False).
+
+    Follows the OpenAPI default multipart encoding for the param's schema:
+    primitives (str, int, date, Enum, Literal, UUID, ...) are plain text,
+    everything else (models, dicts, lists, TypedDict, Any, ...) is JSON.
+    """
+    try:
+        schema = pydantic.TypeAdapter(annotation).json_schema()
+        return not _is_primitive_schema(schema, schema.get("$defs", {}))
+    except Exception:  # no usable JSON schema - read JSON, as before 1.8
+        return True
+
+
+def _is_primitive_schema(schema: Dict[str, Any], defs: Dict[str, Any]) -> bool:
+    if "$ref" in schema:
+        return _is_primitive_schema(defs[schema["$ref"].split("/")[-1]], defs)
+    for key in ("anyOf", "oneOf", "allOf"):
+        if key in schema:
+            return all(_is_primitive_schema(s, defs) for s in schema[key])
+    if "type" not in schema:
+        # an untyped Literal[1, "a"] is primitive, {} (Any) is not
+        return "enum" in schema or "const" in schema
+    types = schema["type"]
+    return set(types if isinstance(types, list) else [types]) <= _JSON_PRIMITIVE_TYPES
 
 
 def detect_collection_fields(
