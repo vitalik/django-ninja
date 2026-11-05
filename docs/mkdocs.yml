@@ -120,4 +120,4 @@ markdown_extensions:
 plugins:
   - search
 hooks:
-  - hooks/single_file_markdown.py
+  - hooks/llms_txt.py
