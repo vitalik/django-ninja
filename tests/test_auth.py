@@ -374,3 +374,12 @@ async def test_async_auth():
     assert _sync_auth_called is True
     assert _async_auth_called is True
     assert _async_unsafe_func_called is True
+
+
+def test_bearer_debug_log_does_not_include_credential(settings, caplog):
+    settings.DEBUG = True
+    with caplog.at_level("ERROR", logger="django"):
+        response = client.get("/bearer", headers={"Authorization": "Token s3cr3t"})
+    assert response.status_code == 401
+    assert "s3cr3t" not in caplog.text
+    assert "'Token'" in caplog.text

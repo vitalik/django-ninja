@@ -31,7 +31,11 @@ class HttpBearer(HttpAuthBase, ABC):
 
         if parts[0].lower() != self.openapi_scheme:
             if settings.DEBUG:
-                logger.error(f"Unexpected auth - '{auth_value}'")
+                # Log only the scheme: the rest of the header is a credential
+                logger.error(
+                    f"Unexpected auth scheme - '{parts[0]}' "
+                    f"(expected '{self.openapi_scheme}')"
+                )
             return None
         token = " ".join(parts[1:])
         return self.authenticate(request, token)
