@@ -62,7 +62,12 @@ def get_webhooks(api: "NinjaAPI") -> List[Webhook]:
     registered: Dict[str, Webhook] = {}
     result: List[Webhook] = []
     for bound_router in api._get_bound_routers():
-        for name, webhook in bound_router.template.webhooks.items():
+        # Bound routers added by extensions may only provide prefix and
+        # path_operations, so they have no template and no webhooks.
+        template = getattr(bound_router, "template", None)
+        if template is None:
+            continue
+        for name, webhook in template.webhooks.items():
             if name in registered:
                 if registered[name] is webhook:
                     continue  # same router mounted more than once
