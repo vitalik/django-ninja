@@ -2,7 +2,7 @@ import pytest
 from django.conf import settings
 
 from ninja import NinjaAPI
-from ninja.security import APIKeyCookie
+from ninja.security import APIKeyCookie, HttpBearer, django_auth
 from ninja.testing import TestAsyncClient as BaseTestAsyncClient
 
 
@@ -26,6 +26,8 @@ class TestAsyncClient(BaseTestAsyncClient):
 
 TOKEN = "1bcdefghij2bcdefghij3bcdefghij4bcdefghij5bcdefghij6bcdefghijABCD"
 COOKIES = {settings.CSRF_COOKIE_NAME: TOKEN}
+# CSRF cookie plus the auth cookie that AnyCookieAuth reads
+AUTH_COOKIES = {**COOKIES, "key": "any"}
 
 
 @pytest.mark.asyncio
@@ -51,18 +53,18 @@ async def test_csrf_on():
 
     client = TestAsyncClient(csrf_ON)
 
-    response = await client.post("/post", COOKIES=COOKIES)
+    response = await client.post("/post", COOKIES=AUTH_COOKIES)
     assert response.status_code == 403
 
     # check with token in formdata
     response = await client.post(
-        "/post", {"csrfmiddlewaretoken": TOKEN}, COOKIES=COOKIES
+        "/post", {"csrfmiddlewaretoken": TOKEN}, COOKIES=AUTH_COOKIES
     )
     assert response.status_code == 200
 
     # check with headers
     response = await client.post(
-        "/post", COOKIES=COOKIES, headers={"X-CSRFTOKEN": TOKEN}
+        "/post", COOKIES=AUTH_COOKIES, headers={"X-CSRFTOKEN": TOKEN}
     )
     assert response.status_code == 200
 
@@ -87,3 +89,34 @@ async def test_csrf_exempt_async():
     # This should succeed even without CSRF token because of csrf_exempt attribute
     response = await client.post("/post/csrf_exempt", COOKIES=COOKIES)
     assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_cookie_auth_without_cookie_falls_back_to_next_auth_async():
+    "Issue #1464, async variant"
+
+    class GoodBearer(HttpBearer):
+        def authenticate(self, request, token):
+            return token == "good" and token
+
+    api = NinjaAPI(
+        urls_namespace="csrf_multi_fallback_async",
+        auth=[django_auth, GoodBearer()],
+    )
+
+    @api.post("/post")
+    async def post(request):
+        return {"auth": request.auth}
+
+    client = TestAsyncClient(api)
+
+    response = await client.post("/post", headers={"Authorization": "Bearer good"})
+    assert response.status_code == 200, response.content
+    assert response.json() == {"auth": "good"}
+
+    response = await client.post(
+        "/post",
+        COOKIES={settings.SESSION_COOKIE_NAME: "abc"},
+        headers={"Authorization": "Bearer good"},
+    )
+    assert response.status_code == 403

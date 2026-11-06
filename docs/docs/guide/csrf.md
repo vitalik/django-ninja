@@ -42,6 +42,20 @@ api = NinjaAPI(auth=CookieAuth())
 A `POST`/`PUT`/`PATCH`/`DELETE` against any operation on this `api` now
 requires a valid CSRF token, exactly as it would for a regular Django view.
 
+The check only matters when the browser actually sent the auth cookie. If
+the CSRF check fails and the request has no cookie named `param_name` (the
+session cookie, for `django_auth`), the cookie auth class treats the request
+as unauthenticated: `authenticate()` is not called, and the next class in a
+[multiple-authenticators](authentication.md#multiple-authenticators) list
+still gets a chance to run. If the cookie is present, a failed check is
+always a `403`, even when a later authenticator would accept the request.
+
+```python
+api = NinjaAPI(auth=[django_auth, BearerAuth()])
+# browser with a session cookie, no CSRF token -> 403
+# mobile client with only "Authorization: Bearer ..." -> BearerAuth runs
+```
+
 ## Session (`django_auth`) authentication
 
 `django_auth` is just `SessionAuth()`, itself a subclass of `APIKeyCookie` —
