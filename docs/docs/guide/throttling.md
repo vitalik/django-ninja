@@ -110,6 +110,8 @@ NINJA_DEFAULT_THROTTLE_RATES = {
 
 These are the built-in defaults, so `AnonRateThrottle()`, `UserRateThrottle()` and `AuthRateThrottle()` all work out of the box without passing a rate — override the settings dict to change them project-wide.
 
+Set a scope's rate to `None` to turn that throttle off without removing it from your code (for example `{"anon": None}` in a test or staging settings file). A throttle with no rate lets every request through.
+
 ### Client IP and `NINJA_NUM_PROXIES`
 
 `AnonRateThrottle` and the "fall back to IP" branches of the other throttles use `get_ident()`, which reads `HTTP_X_FORWARDED_FOR` / `REMOTE_ADDR`. If your API sits behind a known number of trusted reverse proxies, set `NINJA_NUM_PROXIES` so the real client IP is extracted from `X-Forwarded-For` correctly instead of picking up a proxy's address:
