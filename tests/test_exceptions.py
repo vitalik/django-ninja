@@ -85,6 +85,57 @@ async def test_asyncio_exceptions():
     assert response.status_code == 404
 
 
+@pytest.mark.asyncio
+async def test_async_exception_handler():
+    api = NinjaAPI()
+
+    @api.exception_handler(RuntimeError)
+    async def on_runtime_error(request, exc):
+        return api.create_response(request, {"c": -1, "m": "error"}, status=200)
+
+    @api.get("/boom")
+    async def boom(request):
+        raise RuntimeError("fail")
+
+    client = TestAsyncClient(api)
+    response = await client.get("/boom")
+    assert response.status_code == 200
+    assert response.json() == {"c": -1, "m": "error"}
+
+
+def test_async_exception_handler_from_sync_view():
+    api = NinjaAPI()
+
+    @api.exception_handler(RuntimeError)
+    async def on_runtime_error(request, exc):
+        return api.create_response(request, {"async": True}, status=200)
+
+    @api.get("/boom")
+    def boom(request):
+        raise RuntimeError("fail")
+
+    response = TestClient(api).get("/boom")
+    assert response.status_code == 200
+    assert response.json() == {"async": True}
+
+
+@pytest.mark.asyncio
+async def test_sync_exception_handler_on_async_view():
+    api = NinjaAPI()
+
+    @api.exception_handler(RuntimeError)
+    def on_runtime_error(request, exc):
+        return api.create_response(request, {"sync": True}, status=200)
+
+    @api.get("/boom")
+    async def boom(request):
+        raise RuntimeError("fail")
+
+    response = await TestAsyncClient(api).get("/boom")
+    assert response.status_code == 200
+    assert response.json() == {"sync": True}
+
+
 def test_no_handlers():
     api = NinjaAPI()
     api._exception_handlers = {}
