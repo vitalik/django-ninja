@@ -474,7 +474,8 @@ class Operation:
         for model in self.models:
             try:
                 data = model.resolve(request, self.api, path_params)
-                values.update(data)
+                # iterating a pydantic model is much slower than its __dict__
+                values.update(data.__dict__)
             except pydantic.ValidationError as e:
                 error_contexts.append(
                     ValidationErrorContext(pydantic_validation_error=e, model=model)
