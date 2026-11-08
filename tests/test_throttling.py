@@ -1,6 +1,7 @@
 import pytest
 from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
+from django.utils.asyncio import async_unsafe
 
 from ninja import NinjaAPI, Router
 from ninja.testing import TestAsyncClient, TestClient
@@ -398,3 +399,21 @@ def set_throttle_timer(throttle: BaseThrottle, value: int):
     Explicitly set the timer, overriding time.time()
     """
     throttle.timer = lambda: value
+
+
+@pytest.mark.asyncio
+async def test_async_view_runs_throttles_outside_event_loop():
+    class SyncOnlyThrottle(BaseThrottle):
+        # like DatabaseCache, raises SynchronousOnlyOperation in an event loop
+        @async_unsafe
+        def allow_request(self, request):
+            return True
+
+    api = NinjaAPI(throttle=SyncOnlyThrottle())
+
+    @api.get("/check")
+    async def check(request):
+        return "OK"
+
+    resp = await TestAsyncClient(api).get("/check")
+    assert resp.status_code == 200
