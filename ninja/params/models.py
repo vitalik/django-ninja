@@ -41,6 +41,16 @@ TModels = List[TModel]
 
 class ParamModel(BaseModel, ABC):
     __ninja_param_source__ = None
+    __ninja_optional_keys__: Tuple[str, ...] = ()
+
+    @classmethod
+    def __pydantic_init_subclass__(cls, **kwargs: Any) -> None:
+        super().__pydantic_init_subclass__(**kwargs)
+        cls.__ninja_optional_keys__ = tuple(
+            field.alias or name
+            for name, field in cls.model_fields.items()
+            if type(None) in get_args(field.annotation)
+        )
 
     @classmethod
     @abstractmethod
@@ -77,9 +87,8 @@ class ParamModel(BaseModel, ABC):
                 sent.add(path[0])
             cls._map_data_path(mapped_data, value, path)
         # an optional nested schema with nothing sent falls back to its default
-        for name, field in cls.model_fields.items():
-            key = field.alias or name
-            if key not in sent and type(None) in get_args(field.annotation):
+        for key in cls.__ninja_optional_keys__:
+            if key not in sent:
                 mapped_data.pop(key, None)
         return mapped_data
 
