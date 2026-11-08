@@ -1,3 +1,4 @@
+import copy
 import inspect
 import math
 import warnings
@@ -348,6 +349,9 @@ class Operation:
     def _check_throttles(self, request: HttpRequest) -> Optional[HttpResponse]:
         throttle_durations = []
         for throttle in self.throttle_objects:
+            # allow_request() keeps request state on the instance, which is
+            # shared by concurrent requests
+            throttle = copy.copy(throttle)
             if not throttle.allow_request(request):
                 throttle_durations.append(throttle.wait())
 

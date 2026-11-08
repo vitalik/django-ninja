@@ -398,3 +398,30 @@ def set_throttle_timer(throttle: BaseThrottle, value: int):
     Explicitly set the timer, overriding time.time()
     """
     throttle.timer = lambda: value
+
+
+def test_throttle_state_is_per_request():
+    # the timer of the first request runs a second one from another client,
+    # like two threads interleaving on the same throttle instance
+    th = AnonRateThrottle("1/m")
+    api = NinjaAPI(throttle=th)
+
+    @api.get("/check")
+    def check(request):
+        return "OK"
+
+    client = TestClient(api)
+    nested = {}
+
+    def timer():
+        if not nested:
+            nested["resp"] = None
+            nested["resp"] = client.get("/check", META={"REMOTE_ADDR": "2.2.2.2"})
+        return 0
+
+    th.timer = timer
+
+    assert client.get("/check", META={"REMOTE_ADDR": "1.1.1.1"}).status_code == 200
+    assert nested["resp"].status_code == 200
+    assert client.get("/check", META={"REMOTE_ADDR": "1.1.1.1"}).status_code == 429
+    assert client.get("/check", META={"REMOTE_ADDR": "2.2.2.2"}).status_code == 429
