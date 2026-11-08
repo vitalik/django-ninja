@@ -566,7 +566,8 @@ class AsyncOperation(Operation):
 
         # Throttling:
         if self.throttle_objects:
-            error = self._check_throttles(request)
+            # cache backends are sync only (DatabaseCache raises here)
+            error = await sync_to_async(self._check_throttles)(request)
             if error:
                 return error
 
