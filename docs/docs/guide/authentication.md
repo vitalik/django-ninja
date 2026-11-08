@@ -244,6 +244,11 @@ def multiple(request):
     return f"Token = {request.auth}"
 ```
 
+A cookie auth class (`django_auth` or any `APIKeyCookie`) can be combined
+with header-based ones: when its cookie is missing it steps aside instead of
+failing the CSRF check, so a client that only sends a token reaches the next
+authenticator. See [CSRF](csrf.md#how-it-fits-together).
+
 ## Applying auth at different levels
 
 `auth` can be set on the API, a router, or an individual operation. The most
