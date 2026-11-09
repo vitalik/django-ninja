@@ -329,7 +329,7 @@ class Operation:
         return None
 
     def _run_authentication(self, request: HttpRequest) -> Optional[HttpResponse]:
-        for callback in self.auth_callbacks:
+        for index, callback in enumerate(self.auth_callbacks):
             try:
                 if is_async_callable(callback) or getattr(callback, "is_async", False):
                     result = callback(request)
@@ -338,6 +338,15 @@ class Operation:
                 else:
                     result = callback(request)
             except Exception as exc:
+                # Third-party authentication libraries commonly raise their own
+                # HTTP 401 exceptions for rejected credentials. In a list of
+                # authenticators, that rejection should allow the next scheme
+                # to run; authorization and application errors remain terminal.
+                if (
+                    index < len(self.auth_callbacks) - 1
+                    and getattr(exc, "status_code", None) == 401
+                ):
+                    continue
                 return self.api.on_exception(request, exc)
 
             if result:
@@ -573,7 +582,7 @@ class AsyncOperation(Operation):
         return None
 
     async def _run_authentication(self, request: HttpRequest) -> Optional[HttpResponse]:  # type: ignore
-        for callback in self.auth_callbacks:
+        for index, callback in enumerate(self.auth_callbacks):
             try:
                 if is_async_callable(callback) or getattr(callback, "is_async", False):
                     cor: Optional[Coroutine] = callback(request)
@@ -584,6 +593,13 @@ class AsyncOperation(Operation):
                 else:
                     result = await sync_to_async(callback)(request)
             except Exception as exc:
+                # Keep the sync path consistent: only an authentication
+                # rejection may fall through to another configured scheme.
+                if (
+                    index < len(self.auth_callbacks) - 1
+                    and getattr(exc, "status_code", None) == 401
+                ):
+                    continue
                 return self.api.on_exception(request, exc)
 
             if result:

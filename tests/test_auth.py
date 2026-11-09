@@ -268,6 +268,81 @@ def test_auth(path, kwargs, expected_code, expected_body, settings):
         assert response.json() == expected_body
 
 
+def test_multi_auth_falls_back_after_unauthorized_exception():
+    class ExternalAuthenticationFailed(Exception):
+        status_code = 401
+
+    calls = []
+    api = NinjaAPI()
+
+    def jwt_auth(request):
+        calls.append("jwt")
+        raise ExternalAuthenticationFailed
+
+    def anonymous_auth(request):
+        calls.append("anonymous")
+        return "anonymous"
+
+    @api.get("/multiple", auth=[jwt_auth, anonymous_auth])
+    def view(request):
+        return {"auth": request.auth}
+
+    response = TestClient(api).get("/multiple")
+
+    assert response.status_code == 200
+    assert response.json() == {"auth": "anonymous"}
+    assert calls == ["jwt", "anonymous"]
+
+
+def test_multi_auth_does_not_fall_back_after_forbidden_exception():
+    calls = []
+    api = NinjaAPI()
+
+    def forbidden_auth(request):
+        calls.append("forbidden")
+        raise AuthorizationError
+
+    def anonymous_auth(request):
+        calls.append("anonymous")
+        return "anonymous"
+
+    @api.get("/multiple", auth=[forbidden_auth, anonymous_auth])
+    def view(request):
+        return {"auth": request.auth}
+
+    response = TestClient(api).get("/multiple")
+
+    assert response.status_code == 403
+    assert response.json() == BODY_FORBIDDEN_DEFAULT
+    assert calls == ["forbidden"]
+
+
+def test_multi_auth_preserves_last_unauthorized_exception():
+    class ExternalAuthenticationFailed(Exception):
+        status_code = 401
+
+    api = NinjaAPI()
+
+    @api.exception_handler(ExternalAuthenticationFailed)
+    def on_authentication_failed(request, exc):
+        return api.create_response(request, {"detail": "Token expired"}, status=401)
+
+    def no_credentials(request):
+        return None
+
+    def expired_token(request):
+        raise ExternalAuthenticationFailed
+
+    @api.get("/multiple", auth=[no_credentials, expired_token])
+    def view(request):
+        return {"auth": request.auth}
+
+    response = TestClient(api).get("/multiple")
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Token expired"}
+
+
 @pytest.mark.parametrize(
     "username,password",
     [
