@@ -140,8 +140,10 @@ class SimpleRateThrottle(BaseThrottle):
         On success calls `throttle_success`.
         On failure calls `throttle_failure`.
         """
-        # if self.rate is None:
-        #     return True
+        # A rate of None (e.g. NINJA_DEFAULT_THROTTLE_RATES = {"anon": None})
+        # disables this throttle
+        if self.rate is None:
+            return True
 
         self.key = self.get_cache_key(request)
         if self.key is None:

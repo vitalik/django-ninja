@@ -398,3 +398,21 @@ def set_throttle_timer(throttle: BaseThrottle, value: int):
     Explicitly set the timer, overriding time.time()
     """
     throttle.timer = lambda: value
+
+
+def test_rate_none_disables_throttle():
+    class NoAnonLimit(AnonRateThrottle):
+        THROTTLE_RATES = {"anon": None}
+
+    th = NoAnonLimit()
+    assert th.rate is None
+
+    api = NinjaAPI(throttle=th)
+
+    @api.get("/check")
+    def check(request):
+        return "OK"
+
+    client = TestClient(api)
+    for _ in range(3):
+        assert client.get("/check").status_code == 200
