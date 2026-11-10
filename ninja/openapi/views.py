@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, Any, NoReturn
 
-from django.http import Http404, HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 
 from ninja.openapi.docs import DocsBase
 from ninja.responses import Response
@@ -12,8 +12,7 @@ if TYPE_CHECKING:
 
 def default_home(request: HttpRequest, api: "NinjaAPI", **kwargs: Any) -> NoReturn:
     "This view is mainly needed to determine the full path for API operations"
-    docs_url = f"{request.path}{api.docs_url}".replace("//", "/")
-    raise Http404(f"docs_url = {docs_url}")
+    return HttpResponseRedirect(f"{request.path}{api.docs_url}".replace("//", "/"))
 
 
 def openapi_json(request: HttpRequest, api: "NinjaAPI", **kwargs: Any) -> HttpResponse:
