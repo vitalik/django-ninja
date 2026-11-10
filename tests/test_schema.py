@@ -7,7 +7,7 @@ from django.db.models.fields.files import ImageFieldFile
 from pydantic_core import ValidationError
 
 from ninja import Schema
-from ninja.schema import DjangoGetter, Field
+from ninja.schema import Field
 
 
 class FakeManager(Manager):
@@ -185,16 +185,6 @@ def test_with_attr_that_has_resolve():
         resolve_attr = "2"
 
     assert ResolveAttrSchema.from_orm(Obj()).dict() == {"id": "1", "resolve_attr": "2"}
-
-
-def test_django_getter():
-    "Coverage for DjangoGetter __repr__ method"
-
-    class Somechema(Schema):
-        i: int
-
-    dg = DjangoGetter({"i": 1}, Somechema)
-    assert repr(dg) == "<DjangoGetter: {'i': 1}>"
 
 
 def test_schema_validates_assignment_and_reassigns_the_value():

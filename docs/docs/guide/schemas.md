@@ -329,6 +329,10 @@ matter day to day:
 - **`FileField` / `ImageField` values become their `.url`** (or `None`, when
   the field is typed to allow it), as covered above.
 - **Resolvers must be `@staticmethod`** — see above.
+- **`@model_validator(mode="before")` always receives a `dict`.** When the
+  source is an object, its fields (aliases, resolvers and the conversions above
+  already applied) are read into a `dict` first. Use `mode="wrap"` to get the
+  original object.
 - A couple of Pydantic v1-style convenience methods are kept around:
   `.from_orm(obj)` is an alias for `.model_validate(obj)`, and `.dict()` is an
   alias for `.model_dump()`.
