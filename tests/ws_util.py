@@ -37,16 +37,28 @@ class FakeTransport:
         self.incoming = [CONNECT] if incoming is None else list(incoming)
         self.sent = []
         self.send_error = send_error
+        self.disconnected = False
 
     async def receive(self):
         await asyncio.sleep(0)
-        if not self.incoming:
-            return {"type": "websocket.disconnect", "code": 1000}
-        return self.incoming.pop(0)
+        message = (
+            self.incoming.pop(0)
+            if self.incoming
+            else {"type": "websocket.disconnect", "code": 1000}
+        )
+        if message["type"] == "websocket.disconnect":
+            self.disconnected = True
+        return message
 
     async def send(self, message):
         if self.send_error:
             raise self.send_error
+        if self.disconnected:
+            # strict like uvicorn's "websockets" implementation: nothing may
+            # be sent once the disconnect message was delivered
+            if message["type"] == "websocket.close":
+                raise RuntimeError("websocket.close sent after the client left")
+            raise OSError("client disconnected")
         self.sent.append(message)
 
     @property

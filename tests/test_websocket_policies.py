@@ -317,3 +317,18 @@ async def test_handler_reraising_validation_error_closes_with_1011():
 
     t = await connect(NinjaASGI(urlconf=api_urlconf(api)), "/api/ws", query=b"n=x")
     assert t.sent == [{"type": "websocket.close", "code": 1011, "reason": ""}]
+
+
+@pytest.mark.asyncio
+async def test_error_after_client_left_sends_nothing():
+    api = NinjaAPI(urls_namespace=unique_namespace())
+
+    @api.websocket("/ws")
+    async def ws(websocket: WebSocket):
+        await websocket.accept()
+        async for _ in websocket.iter_text():
+            pass  # pragma: no cover
+        raise HttpError(400, "too late")  # the client is already gone
+
+    t = await connect(NinjaASGI(urlconf=api_urlconf(api)), "/api/ws")
+    assert t.types == ["websocket.accept"]

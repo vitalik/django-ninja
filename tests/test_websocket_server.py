@@ -5,6 +5,7 @@ Skipped when uvicorn/websockets are not installed (they are only part of
 the "test" dependency group, never runtime dependencies).
 """
 
+import logging
 import socket
 import threading
 import time
@@ -21,7 +22,12 @@ uvicorn = pytest.importorskip("uvicorn")
 ws_client = pytest.importorskip("websockets.sync.client")
 ws_exceptions = pytest.importorskip("websockets.exceptions")
 
-pytestmark = pytest.mark.django_db(transaction=True)
+pytestmark = [
+    pytest.mark.django_db(transaction=True),
+    # testing the deprecated implementation on purpose
+    pytest.mark.filterwarnings("ignore:The `websockets` implementation is deprecated"),
+    pytest.mark.filterwarnings("ignore::DeprecationWarning:websockets.legacy"),
+]
 
 
 class KeyQuery(APIKeyQuery):
@@ -50,15 +56,20 @@ def make_api():
     return api
 
 
-@pytest.fixture
-def server(settings):
+# uvicorn's websocket implementations differ (e.g. "websockets" raises if the
+# app sends anything after the client disconnected): test with each of them
+WS_IMPLEMENTATIONS = ["websockets", "websockets-sansio"]
+
+
+@pytest.fixture(params=WS_IMPLEMENTATIONS)
+def server(request, settings, caplog):
     settings.ALLOWED_HOSTS = ["127.0.0.1"]
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind(("127.0.0.1", 0))
     port = sock.getsockname()[1]
 
     app = NinjaASGI(urlconf=api_urlconf(make_api()))
-    config = uvicorn.Config(app, lifespan="off", log_level="warning")
+    config = uvicorn.Config(app, lifespan="off", log_level="warning", ws=request.param)
     server = uvicorn.Server(config)
     thread = threading.Thread(target=server.run, kwargs={"sockets": [sock]})
     thread.start()
@@ -72,6 +83,9 @@ def server(settings):
         server.should_exit = True
         thread.join(10)
         sock.close()
+    # no "Exception in ASGI application" (or any other error) on the server
+    errors = [r for r in caplog.records if r.levelno >= logging.ERROR]
+    assert errors == [], [r.getMessage() for r in errors]
 
 
 def rejection(url, **kwargs):

@@ -205,7 +205,11 @@ def _get_script_prefix(scope: Scope) -> str:
 
 
 async def _close(websocket: WebSocket, code: int, reason: str = "") -> None:
-    """Close the connection unless the handler already did it."""
+    """Close the connection unless the handler or the client already did it."""
+    if websocket.client_state == WebSocketState.DISCONNECTED:
+        # nothing may be sent once the client is gone (ASGI spec); some
+        # servers raise, e.g. uvicorn's "websockets" implementation
+        return
     if websocket.application_state not in {
         WebSocketState.CONNECTING,
         WebSocketState.CONNECTED,

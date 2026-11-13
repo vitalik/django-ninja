@@ -78,8 +78,21 @@ async def test_echo_and_auto_close():
     )
     assert t.sent[0]["type"] == "websocket.accept"
     assert t.sent[1] == {"type": "websocket.send", "text": "hello"}
-    # handler returned while connected -> normal closure
-    assert t.sent[2] == {"type": "websocket.close", "code": 1000, "reason": ""}
+    # the client disconnected (ending iter_text): nothing else may be sent
+    assert len(t.sent) == 2
+
+
+@pytest.mark.asyncio
+async def test_handler_returning_while_connected_closes_with_1000():
+    api = NinjaAPI(urls_namespace=unique_namespace())
+
+    @api.websocket("/ws")
+    async def ws(websocket: WebSocket):
+        await websocket.accept()
+        await websocket.send_text("bye")
+
+    t = await connect(NinjaASGI(urlconf=api_urlconf(api)), "/api/ws")
+    assert t.sent[-1] == {"type": "websocket.close", "code": 1000, "reason": ""}
 
 
 @pytest.mark.asyncio

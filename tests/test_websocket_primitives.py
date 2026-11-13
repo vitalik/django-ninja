@@ -107,8 +107,7 @@ async def test_echo_flow():
         {"type": "websocket.send", "bytes": b"b"},
         {"type": "websocket.send", "text": '{"d":"2020-01-02","ñ":1}'},
         {"type": "websocket.send", "bytes": b"[1]"},
-        {"type": "websocket.close", "code": 1000, "reason": ""},
-    ]
+    ]  # no close frame: the client had already disconnected
 
 
 @pytest.mark.asyncio

@@ -78,6 +78,8 @@ async def reject(websocket: WebSocket, response: HttpResponseBase) -> None:
     body). Otherwise the connection is closed with a code derived from the
     status (429 -> 1013, 5xx -> 1011, else 1008) and the error detail as reason.
     """
+    if websocket.client_state == WebSocketState.DISCONNECTED:
+        return  # the client is gone: nothing may be sent anymore
     state = websocket.application_state
     if state == WebSocketState.CONNECTING and _supports_http_response(websocket):
         await websocket.send({

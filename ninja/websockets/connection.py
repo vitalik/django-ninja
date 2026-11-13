@@ -212,6 +212,11 @@ class WebSocket:
     async def close(
         self, code: int = WebSocketClose.NORMAL_CLOSURE, reason: Optional[str] = None
     ) -> None:
+        if self.client_state == WebSocketState.DISCONNECTED:
+            # the client already left: nothing may be sent (ASGI spec), so
+            # closing in a ``finally`` block after a disconnect is a no-op
+            self.application_state = WebSocketState.DISCONNECTED
+            return
         await self.send({
             "type": "websocket.close",
             "code": int(code),
