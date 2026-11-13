@@ -15,7 +15,7 @@ async def echo(websocket: WebSocket):
         await websocket.send_text(f"echo: {message}")
 ```
 
-## Requirements: ASGI
+## Setup: an ASGI server
 
 WebSockets only work with an **ASGI** server such as [uvicorn](https://www.uvicorn.org/), [daphne](https://github.com/django/daphne) or [hypercorn](https://hypercorn.readthedocs.io/). WSGI servers (gunicorn sync workers, `mod_wsgi`, `manage.py runserver` without daphne) can't handle them.
 
@@ -30,7 +30,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "mysite.settings")
 application = get_asgi_application()
 ```
 
-HTTP requests still go to Django as before. WebSocket connections are resolved against your `urls.py`, where websocket routes are added through `api.urls` like any other operation:
+HTTP requests still go to Django as before. WebSocket connections are resolved against your `urls.py`, where websocket routes are added through `api.urls`, like any other operation:
 
 ```python title="urls.py"
 urlpatterns = [
@@ -45,26 +45,26 @@ uvicorn mysite.asgi:application --reload
 ```
 
 !!! note "What if the project runs under WSGI?"
-    The websocket path still exists as an HTTP URL. A plain HTTP request returns **426 Upgrade Required**. If an upgrade request reaches Django's HTTP stack (for example a WSGI server), the response explains that an ASGI server and `ninja.asgi` are required. You can also use `reverse()` on websocket routes by their url name.
+    The websocket path also exists as an HTTP URL, and it answers **426 Upgrade Required**. If an upgrade request reaches Django's HTTP stack (for example through a WSGI server), the response body explains that an ASGI server and `ninja.asgi` are required.
 
 ## The `WebSocket` object
 
-The handler must be an `async def` with a parameter annotated as `WebSocket` (any name works):
+A websocket handler is an `async def` function with a parameter annotated as `WebSocket` (any name works). Handlers don't receive a `request` argument; the handshake request is available as `websocket.request`.
 
-| Method | Description |
+| Method / attribute | Description |
 | --- | --- |
 | `await websocket.accept(subprotocol=None, headers=None)` | Accept the connection |
 | `await websocket.receive_text()` / `receive_bytes()` | Receive a message |
-| `await websocket.receive_json(mode="text", schema=None)` | Receive and decode JSON, optionally validated with a schema |
+| `await websocket.receive_json(mode="text", schema=None)` | Receive and decode JSON, optionally [validated with a schema](#validating-messages-with-schemas) |
 | `await websocket.send_text(data)` / `send_bytes(data)` | Send a message |
-| `await websocket.send_json(data, mode="text", schema=None)` | Send JSON (pydantic models are serialized automatically) |
+| `await websocket.send_json(data, mode="text", schema=None)` | Send JSON, encoded with the API [renderer](renderers.md) (pydantic models are serialized automatically) |
 | `websocket.iter_text()` / `iter_bytes()` / `iter_json()` | Async iterators that stop when the client disconnects |
 | `await websocket.close(code=1000, reason=None)` | Close the connection |
-| `websocket.query_params`, `headers`, `cookies`, `path_params`, `client`, `subprotocols` | Handshake information |
-| `websocket.auth` | The result of the authentication callback |
+| `websocket.path`, `path_params`, `query_params`, `headers`, `cookies`, `client`, `subprotocols` | Handshake information |
+| `websocket.auth` | The result of the [authentication](#authentication) callback |
 | `websocket.request` | A read-only Django `HttpRequest` built from the handshake |
 
-When the client disconnects, `receive_*` raises `WebSocketDisconnect`:
+When the client disconnects, `receive_*` raises `WebSocketDisconnect`. The `iter_*` iterators stop instead:
 
 ```python
 from ninja import WebSocket, WebSocketDisconnect
@@ -82,30 +82,6 @@ async def chat(websocket: WebSocket):
 ```
 
 If the handler returns while the connection is still open, it is closed with code `1000`.
-
-Exceptions go through the API [exception handlers](errors.md), just like in HTTP operations:
-
-* **Before `accept()`**, the handler's response is sent as the handshake answer. For example, `raise HttpError(404, "Room not found")` returns a 404 with the usual JSON body.
-* **After `accept()`**, an HTTP response can no longer be sent. The connection is closed with code `1008` and the error `detail` as the reason. If the status is 5xx, the code is `1011` instead.
-* **Exceptions that no handler deals with**:
-    * the error is logged (logger `ninja.websockets`);
-    * Django's `got_request_exception` signal is sent, so error reporting tools such as Sentry see it;
-    * the connection is closed with code `1011`.
-
-To close the connection with a specific code, raise `WebSocketException`. It works from the handler and from auth callbacks. Raised before `accept()`, it rejects the handshake:
-
-```python
-from ninja import WebSocketException
-from ninja.websockets import WebSocketClose
-
-
-@api.websocket("/rooms/{room_id}")
-async def room(websocket: WebSocket, room_id: int):
-    if not await Room.objects.filter(id=room_id).aexists():
-        raise WebSocketException(code=WebSocketClose.POLICY_VIOLATION, reason="Unknown room")
-    await websocket.accept()
-    ...
-```
 
 ## Path, Query, Header and Cookie parameters
 
@@ -126,7 +102,7 @@ async def room(
     await websocket.send_json({"room": room_id, "nickname": nickname})
 ```
 
-If validation fails, the connection is rejected before the handler runs. `Body`, `Form` and `File` parameters aren't allowed: a handshake has no body. Use `receive_json()` instead.
+If validation fails, the handshake is rejected with a 422 before the handler runs (see [Errors](#errors)). `Body`, `Form` and `File` parameters aren't allowed: a handshake has no body. Use `receive_json()` instead.
 
 ## Validating messages with schemas
 
@@ -135,9 +111,8 @@ Pass `schema=` to validate incoming messages (any type pydantic accepts) or to s
 ```python
 from typing import List
 
-import pydantic
-
 from ninja import Schema
+from ninja.errors import ValidationError
 
 
 class Message(Schema):
@@ -161,14 +136,49 @@ async def bulk(websocket: WebSocket):
     await websocket.accept()
     try:
         items = await websocket.receive_json(schema=List[Message])
-    except pydantic.ValidationError as e:
-        await websocket.send_json({"errors": e.errors(include_url=False)})
+    except ValidationError as e:
+        await websocket.send_json({"errors": e.errors})
         return
     users = [u async for u in User.objects.all()]  # Django 4.1+
     await websocket.send_json(users, schema=List[UserOut])
 ```
 
-With `schema=`, type checkers know the result type: `receive_json(schema=Message)` is a `Message` and `receive_json(schema=List[Message])` is a `List[Message]`.
+* Invalid messages raise `ninja.errors.ValidationError`. Its `errors` list has the same JSON-safe format as the body of HTTP 422 responses, so you can send it back to the client. If you don't catch it, the connection is closed with code `1008`.
+* With `schema=`, type checkers know the result type: `receive_json(schema=Message)` is a `Message`, and `receive_json(schema=List[Message])` is a `List[Message]`.
+
+## Errors
+
+Exceptions go through the API [exception handlers](errors.md), just like in HTTP operations:
+
+* **Before `accept()`**, the handler's response is sent as the answer to the handshake. For example, `raise HttpError(404, "Room not found")` returns a 404 with the usual JSON body.
+* **After `accept()`**, an HTTP response can no longer be sent. The connection is closed with code `1008` and the error `detail` as the reason, or with code `1011` when the status is 5xx.
+* **Exceptions that no handler deals with**:
+    * the error is logged (logger `ninja.websockets`);
+    * Django's `got_request_exception` signal is sent, so error reporting tools such as Sentry see it;
+    * the connection is closed with code `1011`.
+
+```python
+from ninja.errors import HttpError
+
+
+@api.websocket("/rooms/{room_id}")
+async def room(websocket: WebSocket, room_id: int):
+    if not await Room.objects.filter(id=room_id).aexists():  # Django 4.1+
+        raise HttpError(404, "Room not found")
+    await websocket.accept()
+    ...
+```
+
+To close the connection with a specific websocket close code, raise `WebSocketException`. It works from the handler and from auth callbacks, before or after `accept()`:
+
+```python
+from ninja import WebSocketException
+
+raise WebSocketException(code=4000, reason="Game over")
+```
+
+!!! note "Sending HTTP responses during the handshake"
+    Sending an HTTP response (401, 404, 422...) to a handshake requires an ASGI server that supports the `websocket.http.response` extension; uvicorn does. Otherwise the connection is closed with code `1008` (`1013` for throttling, `1011` for 5xx) and the error detail as the reason, and the server answers the handshake with 403.
 
 ## Authentication
 
@@ -192,7 +202,7 @@ class SubprotocolToken(APIKeyHeader):
 @api.websocket("/notifications", auth=SubprotocolToken())
 async def notifications(websocket: WebSocket):
     token = websocket.auth
-    # the browser requires the server to select one of the requested subprotocols
+    # browsers require the server to select one of the requested subprotocols
     await websocket.accept(subprotocol="access_token")
     ...
 ```
@@ -207,16 +217,17 @@ Browsers can't set custom headers like `Authorization` on a WebSocket. That leav
 * **A cookie**: the session cookie with `django_auth`, or `APIKeyCookie`.
 * **The query string** (`APIKeyQuery`): simple, but be careful. Servers and proxies write full URLs to their access logs, so the token ends up in those logs. If you use it, prefer short-lived, single-use tickets obtained through an authenticated HTTP endpoint over long-lived API keys.
 
+Good to know:
+
 * Sync auth callbacks run in a thread (`sync_to_async`), so they can use the ORM.
-* `django_auth` / `SessionAuth` work: the handshake request has lazy `session` and `user` attributes, filled from the session cookie. Django middlewares don't run for websockets.
-* The `Host` header is validated against `ALLOWED_HOSTS`, as for HTTP requests.
+* `django_auth` / `SessionAuth` work: the handshake request has lazy `session` and `user` attributes, filled from the session cookie (Django middlewares don't run for websockets).
 * Authentication only runs during the handshake. Long-lived connections are not re-checked if the session ends or the token expires. Close them from your own code when that matters.
 
-If the origin check, authentication, throttling or validation fails, the client receives the response from the API exception handlers (403, 401, 429, 422...). Your custom handlers and renderer are used. This requires an ASGI server that supports the `websocket.http.response` extension (uvicorn does). Otherwise the connection is closed with code `1008` (`1013` for throttling) and the error detail as the reason; the server answers the handshake with 403.
+## Security
 
 ### Origin check
 
-Browsers send cookies on cross-site WebSocket handshakes, and the same-origin policy doesn't apply to WebSockets. Any website could otherwise open a connection on behalf of a logged-in user ("cross-site WebSocket hijacking"). So by default **every handshake with an `Origin` header** must come from the request host or from an origin listed in `CSRF_TRUSTED_ORIGINS`. Non-browser clients usually don't send `Origin`, and they are not affected.
+Browsers send cookies on cross-site WebSocket handshakes, and the same-origin policy doesn't apply to WebSockets. Without a check, any website could open a connection on behalf of a logged-in user ("cross-site WebSocket hijacking"). So by default **every handshake with an `Origin` header** must come from the request host or from an origin listed in `CSRF_TRUSTED_ORIGINS`; otherwise it is rejected with a 403. Non-browser clients usually don't send `Origin`, and they are not affected.
 
 To accept connections from any website (for example a public widget):
 
@@ -228,23 +239,36 @@ async def public_feed(websocket: WebSocket):
 
 To disable it for the whole project, set `NINJA_WEBSOCKET_CHECK_ORIGIN = False` in settings; routes can still opt in with `check_origin=True`. Cookie auth with CSRF enabled (`django_auth`, `APIKeyCookie()`) always checks the origin.
 
+### Allowed hosts
+
+The `Host` header is validated against `ALLOWED_HOSTS`, as for HTTP requests. Invalid hosts get a 400.
+
 ### Throttling
 
-`throttle=` works like in HTTP operations, including inheritance from the router and the API. It limits **new connections** (handshakes), not messages:
+`throttle=` works like in HTTP operations, including inheritance from the router and the API. It limits **new connections** (handshakes), not messages. Throttled handshakes get a 429 with a `Retry-After` header:
 
 ```python
 from ninja.throttling import AnonRateThrottle
+
 
 @api.websocket("/live", throttle=AnonRateThrottle("10/m"))
 async def live(websocket: WebSocket):
     ...
 ```
 
-!!! warning "Use the ORM through async methods"
-    Handlers run in the event loop. Use the async ORM API (`aget`, `acreate`, `async for`...) or `sync_to_async`, as described in [Async support](async.md).
-    For example, use `await sync_to_async(lambda: websocket.request.user.username)()`.
+## Using the ORM
 
-## Routers
+Handlers run in the event loop. Use the async ORM API (`aget`, `acreate`, `async for`...) or `sync_to_async`, as described in [Async support](async.md). For example:
+
+```python
+from asgiref.sync import sync_to_async
+
+username = await sync_to_async(lambda: websocket.request.user.username)()
+```
+
+By default, `sync_to_async` runs all the sync code in a single shared thread. With many connections making sync database calls at the same time, those calls run one after another; prefer the async ORM methods in busy handlers.
+
+## Routers and URLs
 
 `Router` has the same `websocket()` decorator, and routes get the router prefix:
 
@@ -260,14 +284,17 @@ async def live(websocket: WebSocket):
 api.add_router("/events", router)  # ws://.../api/events/live
 ```
 
-An HTTP operation and a websocket can share the same path.
+* An HTTP operation and a websocket can share the same path.
+* Websocket routes have a url name, like HTTP operations. It defaults to the function name, or you can set it with `url_name=`. So `reverse()` works for them.
+* If a websocket gets the same url name as an HTTP route, `api.urls` raises a `ConfigError`. In that case, pass a different `url_name=`.
 
 ## Testing
 
 `TestClient` and `TestAsyncClient` have a `websocket_connect()` method that runs the connection in memory, with no server:
 
 ```python
-from ninja import WebSocketDisconnect
+import pytest
+
 from ninja.testing import TestClient, WebSocketDenied
 
 
@@ -281,12 +308,17 @@ def test_echo():
 def test_auth_required():
     client = TestClient(api)
     with pytest.raises(WebSocketDenied) as exc:
-        with client.websocket_connect("/notifications?token=wrong"):
+        with client.websocket_connect("/notifications", subprotocols=["access_token", "wrong"]):
             pass
     assert exc.value.status_code == 401
 ```
 
 ```python
+import pytest
+
+from ninja.testing import TestAsyncClient
+
+
 @pytest.mark.asyncio
 async def test_echo_async():
     client = TestAsyncClient(api)
@@ -295,7 +327,10 @@ async def test_echo_async():
         assert await ws.receive_text() == "echo: hi"
 ```
 
-`websocket_connect()` accepts `headers=`, `cookies=` and `subprotocols=`. If the handler raises an exception, the test re-raises it.
+* `websocket_connect()` accepts `headers=`, `cookies=`, `subprotocols=` and `timeout=`.
+* A rejected handshake raises `WebSocketDenied`, which has `status_code`, `headers`, `body` and `json()`.
+* If the server closes the connection, `WebSocketDisconnect` is raised.
+* If the handler raises an exception, the test re-raises it.
 
 !!! note
     Database code that runs through `sync_to_async` uses a different thread. With pytest-django, use `@pytest.mark.django_db(transaction=True)` so that data created in the test is visible there.
@@ -323,6 +358,7 @@ The `WebSocket` API (`accept`, `receive_*`, `send_*`, `iter_*`, `close`), `WebSo
 * There is no dependency injection (`Depends`). Use `auth=` and Path/Query/Header/Cookie parameters.
 * `websocket.url`, `websocket.state` and `websocket.app` don't exist. Use `websocket.path`, `websocket.query_params` and `websocket.request` instead.
 * `receive_json()`, `iter_json()` and `send_json()` take a `schema=` argument for validation.
+* Errors go through the API exception handlers (see [Errors](#errors)).
 
 ## Limitations
 

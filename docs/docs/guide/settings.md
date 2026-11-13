@@ -41,6 +41,7 @@ raises a validation error.
 | `NINJA_DEFAULT_THROTTLE_RATES` | `{"auth": "10000/day", "user": "10000/day", "anon": "1000/day"}` | Rate used by a built-in [throttle](throttling.md) instantiated without one |
 | `NINJA_NUM_PROXIES` | `None` | Number of trusted proxies `AnonRateThrottle`/friends skip in `X-Forwarded-For` |
 | `NINJA_FIX_REQUEST_FILES_METHODS` | `{"PUT", "PATCH", "DELETE"}` | Methods the [file-upload compatibility middleware](files.md#requestfiles-with-put-and-patch) covers |
+| `NINJA_WEBSOCKET_CHECK_ORIGIN` | `True` | Validate the `Origin` header of [websocket](websockets.md#origin-check) handshakes |
 
 !!! note
     `NINJA_MAX_PER_PAGE_SIZE` is the odd one out — the underlying Python
@@ -114,6 +115,21 @@ NINJA_FIX_REQUEST_FILES_METHODS = {"PUT", "PATCH"}
   middleware or a narrower/wider set here. See
   [File Uploads](files.md#requestfiles-with-put-and-patch) for the full
   explanation and setup.
+
+## WebSocket settings
+
+```python
+# settings.py
+NINJA_WEBSOCKET_CHECK_ORIGIN = True
+```
+
+- **`NINJA_WEBSOCKET_CHECK_ORIGIN`** — when `True` (the default), websocket
+  handshakes sent by browsers must come from the request host or from an
+  origin in `CSRF_TRUSTED_ORIGINS`. This protects against cross-site
+  WebSocket hijacking. Single routes can override it with
+  `@api.websocket(..., check_origin=...)`, and cookie auth with CSRF
+  enabled always checks the origin. See
+  [WebSockets](websockets.md#origin-check).
 
 ## Removed settings
 
