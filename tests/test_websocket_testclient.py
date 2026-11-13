@@ -263,3 +263,55 @@ def test_token_in_subprotocol_header():
     with pytest.raises(WebSocketDenied):
         with client.websocket_connect("/ws", subprotocols=["access_token", "bad"]):
             pass  # pragma: no cover
+
+
+def make_slow_api():
+    import asyncio
+
+    api = NinjaAPI(urls_namespace=unique_namespace())
+
+    @api.websocket("/ticker")
+    async def ticker(websocket: WebSocket):
+        await websocket.accept()
+        n = 0
+        while True:  # only sends, never receives
+            await websocket.send_json(n)
+            n += 1
+            await asyncio.sleep(0.001)
+
+    @api.websocket("/stuck")
+    async def stuck(websocket: WebSocket):
+        await websocket.accept()
+        await websocket.send_text("ready")
+        await asyncio.sleep(3600)
+
+    return api
+
+
+def test_send_only_handler_stops_when_client_leaves():
+    import time
+
+    client = TestClient(make_slow_api())
+    started = time.monotonic()
+    with client.websocket_connect("/ticker") as ws:
+        assert ws.receive_json() == 0
+    assert time.monotonic() - started < 2
+
+
+def test_failing_test_body_is_not_masked_by_busy_handler():
+    import time
+
+    client = TestClient(make_slow_api())
+    started = time.monotonic()
+    with pytest.raises(AssertionError, match="real failure"):
+        with client.websocket_connect("/stuck") as ws:
+            assert ws.receive_text() == "ready"
+            raise AssertionError("real failure")
+    assert time.monotonic() - started < 2
+
+
+def test_handler_ignoring_disconnect_times_out():
+    client = TestClient(make_slow_api())
+    with pytest.raises(RuntimeError, match="did not finish within 0.2s"):
+        with client.websocket_connect("/stuck", timeout=0.2) as ws:
+            assert ws.receive_text() == "ready"

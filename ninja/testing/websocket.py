@@ -105,6 +105,7 @@ class AsyncWebSocketTestSession:
         self._from_app: Optional[asyncio.Queue[Message]] = None
         self._task: Optional[asyncio.Future[None]] = None
         self._error: Optional[BaseException] = None
+        self._client_closed = False
 
     # connection lifecycle ----------------------------------------------------
 
@@ -132,15 +133,40 @@ class AsyncWebSocketTestSession:
         self.accepted_headers = list(message.get("headers") or [])
         return self
 
-    async def __aexit__(self, *exc_info: Any) -> None:
-        if self._task is not None and not self._task.done():
-            await self.close()
-        await self._wait_app()
+    async def __aexit__(self, exc_type: Any, *exc_info: Any) -> None:
+        assert self._task is not None
+        if self._task.done():
+            # a handler error is the root cause of whatever the test saw
+            # (e.g. a 1011 close): surface it
+            self._raise_app_error()
+            return
+        if exc_type is not None:
+            # the test body failed: stop the handler and keep the original error
+            await self._cancel_app()
+            return
+        await self.close()
+        try:
+            await asyncio.wait_for(asyncio.shield(self._task), self.timeout)
+        except asyncio.TimeoutError:
+            await self._cancel_app()
+            raise RuntimeError(
+                f"The websocket handler did not finish within {self.timeout}s "
+                "after the test client disconnected"
+            ) from None
+        self._raise_app_error()
+
+    async def _cancel_app(self) -> None:
+        assert self._task is not None
+        self._client_closed = True
+        self._task.cancel()
+        await asyncio.gather(self._task, return_exceptions=True)
 
     async def _run_app(self) -> None:
         assert self._from_app is not None
         try:
             await self.app(self.scope, self._app_receive, self._app_send)
+        except asyncio.CancelledError:
+            pass  # stopped by the session itself (see _cancel_app)
         except BaseException as e:  # noqa: B036 - re-raised in the test
             self._error = e
         finally:
@@ -152,6 +178,10 @@ class AsyncWebSocketTestSession:
 
     async def _app_send(self, message: Message) -> None:
         assert self._from_app is not None
+        if self._client_closed:
+            # like real servers once the client is gone (uvicorn raises an
+            # OSError subclass): WebSocket.send turns it into WebSocketDisconnect
+            raise OSError("The test client closed the connection")
         await self._from_app.put(message)
 
     async def _wait_app(self) -> None:
@@ -193,6 +223,7 @@ class AsyncWebSocketTestSession:
 
     async def close(self, code: int = WebSocketClose.NORMAL_CLOSURE) -> None:
         await self.send({"type": "websocket.disconnect", "code": code})
+        self._client_closed = True
 
     async def receive(self) -> Message:
         message = await self._next_message()
