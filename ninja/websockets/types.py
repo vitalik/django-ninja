@@ -9,6 +9,7 @@ __all__ = [
     "WebSocketClose",
     "WebSocketState",
     "WebSocketDisconnect",
+    "WebSocketException",
 ]
 
 Scope = MutableMapping[str, Any]
@@ -46,6 +47,20 @@ class WebSocketDisconnect(Exception):
     def __init__(
         self, code: int = WebSocketClose.NORMAL_CLOSURE, reason: Optional[str] = None
     ) -> None:
+        self.code = code
+        self.reason = reason or ""
+        super().__init__(code, self.reason)
+
+
+class WebSocketException(Exception):
+    """
+    Raise it from a handler or an auth callback to close the connection with
+    the given code (before ``accept()`` the handshake is rejected)::
+
+        raise WebSocketException(code=WebSocketClose.POLICY_VIOLATION, reason="...")
+    """
+
+    def __init__(self, code: int, reason: Optional[str] = None) -> None:
         self.code = code
         self.reason = reason or ""
         super().__init__(code, self.reason)

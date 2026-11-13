@@ -251,3 +251,39 @@ async def test_got_request_exception_signal():
     finally:
         got_request_exception.disconnect(receiver)
     assert received == [(None, "/api/chat/boom", "ValueError('boom')")]
+
+
+@pytest.mark.asyncio
+async def test_websocket_exception_closes_with_code():
+    from ninja import WebSocketException
+
+    def auth(request):
+        if request.GET.get("ban"):
+            raise WebSocketException(code=4003, reason="banned")
+        return True
+
+    api = NinjaAPI(urls_namespace=unique_namespace())
+
+    @api.websocket("/before", auth=auth)
+    async def before(websocket: WebSocket):
+        raise WebSocketException(code=4000, reason="x" * 200)
+
+    @api.websocket("/after")
+    async def after(websocket: WebSocket):
+        await websocket.accept()
+        raise WebSocketException(code=4001)
+
+    app = NinjaASGI(urlconf=api_urlconf(api))
+
+    # before accept: the handshake is rejected with the code
+    t = await connect(app, "/api/before")
+    assert t.types == ["websocket.close"]
+    assert t.sent[0]["code"] == 4000
+    assert len(t.sent[0]["reason"].encode()) <= 123
+
+    t = await connect(app, "/api/after")
+    assert t.sent[1] == {"type": "websocket.close", "code": 4001, "reason": ""}
+
+    # raised from an auth callback
+    t = await connect(app, "/api/before", query=b"ban=1")
+    assert t.sent == [{"type": "websocket.close", "code": 4003, "reason": "banned"}]

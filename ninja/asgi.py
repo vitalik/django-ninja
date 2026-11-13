@@ -30,7 +30,7 @@ from django.core.exceptions import DisallowedHost
 from django.urls import Resolver404, resolve, set_script_prefix
 
 from ninja.websockets.connection import WebSocket
-from ninja.websockets.handshake import deny
+from ninja.websockets.handshake import deny, truncate_reason
 from ninja.websockets.operation import WebSocketOperation
 from ninja.websockets.types import (
     Receive,
@@ -38,6 +38,7 @@ from ninja.websockets.types import (
     Send,
     WebSocketClose,
     WebSocketDisconnect,
+    WebSocketException,
     WebSocketState,
 )
 
@@ -120,6 +121,8 @@ class NinjaASGI:
                 await operation.run(websocket, path_params)
             except WebSocketDisconnect:
                 pass
+            except WebSocketException as e:
+                await _close(websocket, e.code, truncate_reason(e.reason))
             except Exception:
                 logger.exception("Error in websocket handler for %s", websocket.path)
                 # error reporting tools (Sentry, Rollbar...) listen to this signal;
