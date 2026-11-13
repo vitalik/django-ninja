@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Sequence, cast
 
 import pydantic
-from django.http import HttpRequest
+from django.http import HttpRequest, HttpResponse, JsonResponse
 
 from ninja.constants import NOT_SET
 from ninja.errors import ConfigError, ValidationErrorContext
@@ -15,6 +15,13 @@ if TYPE_CHECKING:
 __all__ = ["WebSocketOperation"]
 
 _ALLOWED_PARAM_SOURCES = {"path", "query", "header", "cookie"}
+
+UPGRADE_NOT_HANDLED_DETAIL = (
+    "WebSocket upgrade requests cannot be handled by Django's HTTP handler. "
+    "Run an ASGI server (uvicorn, daphne, hypercorn...) and serve "
+    "'ninja.asgi.get_asgi_application()' from your asgi.py. "
+    "WSGI servers do not support WebSockets."
+)
 
 
 class WebSocketOperation:
@@ -74,6 +81,35 @@ class WebSocketOperation:
         cloned.api = cast("NinjaAPI", None)
         cloned.auth_callbacks = list(self.auth_callbacks)
         return cloned
+
+    def get_http_view(self) -> Callable[..., HttpResponse]:
+        """
+        The Django view mounted at this path in ``api.urls``.
+
+        Real websocket connections never reach it when the ninja ASGI app is
+        used: it only answers plain HTTP requests (426 Upgrade Required) and
+        explains the ASGI requirement when an upgrade request arrives through
+        Django's HTTP stack (WSGI server, or ASGI without the ninja wrapper).
+        """
+        operation = self
+
+        def websocket_http_view(
+            request: HttpRequest, *args: Any, **kwargs: Any
+        ) -> HttpResponse:
+            return operation.http_response(request)
+
+        websocket_http_view.csrf_exempt = True  # type: ignore
+        websocket_http_view.ninja_websocket_operation = operation  # type: ignore
+        return websocket_http_view
+
+    def http_response(self, request: HttpRequest) -> HttpResponse:
+        if request.headers.get("upgrade", "").lower() == "websocket":
+            detail = UPGRADE_NOT_HANDLED_DETAIL
+        else:
+            detail = "This endpoint only accepts WebSocket connections."
+        # Note: 'Upgrade'/'Connection' headers are hop-by-hop and rejected by
+        # WSGI servers (wsgiref), so only the status code and body are sent.
+        return JsonResponse({"detail": detail}, status=426)
 
     def _get_values(self, request: HttpRequest, path_params: DictStrAny) -> DictStrAny:
         values: DictStrAny = {}

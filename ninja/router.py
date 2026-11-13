@@ -195,6 +195,7 @@ class BoundRouter:
         """Generate URL patterns for this bound router."""
         prefix = replace_path_param_notation(prefix)
         for path, path_view in self.path_operations.items():
+            ws_operation = self.websocket_operations.get(path)
             path = replace_path_param_notation(path)
             route = "/".join([i for i in (prefix, path) if i])
             route = normalize_path(route)
@@ -210,7 +211,27 @@ class BoundRouter:
                     if self.url_name_prefix and url_name:
                         url_name = f"{self.url_name_prefix}_{url_name}"
 
-                yield django_path(route, path_view.get_view(), name=url_name)
+                view = path_view.get_view()
+                if ws_operation is not None:
+                    # same path serves HTTP and websocket: the ASGI dispatcher
+                    # finds the websocket operation through this attribute
+                    view.ninja_websocket_operation = ws_operation  # type: ignore
+                yield django_path(route, view, name=url_name)
+
+        # websocket-only paths get an HTTP view that explains how to connect
+        # (it is also what makes them resolvable and reversible)
+        for path, ws_operation in self.websocket_operations.items():
+            if path in self.path_operations:
+                continue
+            route = replace_path_param_notation(path)
+            route = "/".join([i for i in (prefix, route) if i])
+            route = normalize_path(route).lstrip("/")
+            url_name = ws_operation.url_name or ""
+            if not url_name:
+                url_name = ws_operation.view_func.__name__
+                if self.url_name_prefix:
+                    url_name = f"{self.url_name_prefix}_{url_name}"
+            yield django_path(route, ws_operation.get_http_view(), name=url_name)
 
 
 class Router:
