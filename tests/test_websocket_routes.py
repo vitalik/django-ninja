@@ -156,6 +156,12 @@ def test_config_errors():
     with pytest.raises(ConfigError, match="already registered"):
         router.add_websocket_operation("/dup", dup)
 
+    with pytest.raises(ConfigError, match="websocket.request"):
+
+        @router.websocket("/req")
+        async def with_request(websocket: WebSocket, request):
+            pass  # pragma: no cover
+
     with pytest.raises(ConfigError, match="@api.websocket"):
 
         @router.get("/http")
@@ -183,11 +189,11 @@ async def test_run_resolves_params():
     async def room(
         websocket: WebSocket,
         room_id: int,
-        request,
         tags: List[str] = Query([]),
         lang: str = "en",
         x_token: str = Header(None),
     ):
+        request = websocket.request
         calls.append((room_id, tags, lang, x_token, request.path, request.method))
         await websocket.accept()
 

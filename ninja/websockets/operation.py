@@ -94,8 +94,13 @@ class WebSocketOperation:
                     "params: only Path, Query, Header and Cookie are available "
                     "during the handshake. Use websocket.receive_json() instead."
                 )
+        if "request" in self.signature.signature.parameters:
+            raise ConfigError(
+                f"WebSocket handler '{view_func.__name__}' declares a 'request' "
+                "parameter: websocket handlers receive only the WebSocket, use "
+                "'websocket.request' to access the handshake request"
+            )
         self.models = self.signature.models
-        self._pass_request = "request" in self.signature.signature.parameters
 
     def _set_auth(self, auth: Any) -> None:
         if auth is not None and auth is not NOT_SET:
@@ -226,6 +231,4 @@ class WebSocketOperation:
             return
 
         values[cast(str, self.signature.websocket_arg)] = websocket
-        if self._pass_request:
-            values["request"] = request
         await self.view_func(**values)

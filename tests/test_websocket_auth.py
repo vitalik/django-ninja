@@ -52,11 +52,11 @@ class CookieKey(APIKeyCookie):
 def make_app():
     api = NinjaAPI(urls_namespace=unique_namespace())
 
-    async def whoami(websocket: WebSocket, request):
+    async def whoami(websocket: WebSocket):
         await websocket.accept()
         await websocket.send_json({
             "auth": str(websocket.auth),
-            "req": str(request.auth),
+            "req": str(websocket.request.auth),
         })
 
     api.websocket("/key", auth=KeyQuery())(whoami)
