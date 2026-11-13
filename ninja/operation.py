@@ -63,6 +63,30 @@ async def _await_coroutine(coroutine: Coroutine[Any, Any, Any]) -> Any:
     return await coroutine
 
 
+def check_throttles(
+    api: "NinjaAPI", throttle_objects: List[BaseThrottle], request: HttpRequest
+) -> Optional[HttpResponse]:
+    """Run throttles; return the 429 response (with Retry-After) if any denies."""
+    throttle_durations = []
+    for throttle in throttle_objects:
+        if not throttle.allow_request(request):
+            throttle_durations.append(throttle.wait())
+
+    if throttle_durations:
+        # Filter out `None` values which may happen in case of config / rate
+        durations = [
+            duration for duration in throttle_durations if duration is not None
+        ]
+
+        duration = max(durations, default=None)
+        response = api.on_exception(request, Throttled(wait=duration))  # type: ignore
+        if duration is not None:
+            # Retry-After must be integer delta-seconds (RFC 9110)
+            response["Retry-After"] = str(math.ceil(duration))
+        return response
+    return None
+
+
 class Operation:
     def __init__(
         self,
@@ -351,24 +375,7 @@ class Operation:
         return self.api.on_exception(request, AuthenticationError())
 
     def _check_throttles(self, request: HttpRequest) -> Optional[HttpResponse]:
-        throttle_durations = []
-        for throttle in self.throttle_objects:
-            if not throttle.allow_request(request):
-                throttle_durations.append(throttle.wait())
-
-        if throttle_durations:
-            # Filter out `None` values which may happen in case of config / rate
-            durations = [
-                duration for duration in throttle_durations if duration is not None
-            ]
-
-            duration = max(durations, default=None)
-            response = self.api.on_exception(request, Throttled(wait=duration))  # type: ignore
-            if duration is not None:
-                # Retry-After must be integer delta-seconds (RFC 9110)
-                response["Retry-After"] = str(math.ceil(duration))
-            return response
-        return None
+        return check_throttles(self.api, self.throttle_objects, request)
 
     def _model_dump_kwargs(self, request: HttpRequest, status: int) -> Dict[str, Any]:
         kwargs: Dict[str, Any] = {}

@@ -62,6 +62,10 @@ def make_app():
     api.websocket("/multi", auth=[forbid, KeyQuery(), AsyncKeyQuery()])(whoami)
     api.websocket("/cookie", auth=CookieKey())(whoami)
     api.websocket("/cookie-nocsrf", auth=CookieKey(csrf=False))(whoami)
+    api.websocket("/cookie-public", auth=CookieKey(csrf=False), check_origin=False)(
+        whoami
+    )
+    api.websocket("/cookie-csrf-wins", auth=CookieKey(), check_origin=False)(whoami)
 
     @api.websocket("/session", auth=django_auth)
     async def session(websocket: WebSocket):
@@ -97,7 +101,7 @@ async def test_denied_with_http_response_extension():
     assert sent[0] == {
         "type": "websocket.http.response.start",
         "status": 401,
-        "headers": [(b"content-type", b"application/json")],
+        "headers": [(b"content-type", b"application/json; charset=utf-8")],
     }
     assert sent[1] == {
         "type": "websocket.http.response.body",
@@ -112,11 +116,12 @@ async def test_denied_with_http_response_extension():
 
 
 @pytest.mark.asyncio
-async def test_validation_error_close_reason_is_json():
+async def test_validation_error_close_reason_is_status_phrase():
     app = make_app()
     sent = await handshake(app, "/api/params", b"n=x")
-    assert sent[0]["code"] == 1008
-    assert sent[0]["reason"].startswith('[{"type": "int_parsing"')
+    assert sent == [
+        {"type": "websocket.close", "code": 1008, "reason": "Unprocessable Content"}
+    ]
 
 
 @pytest.mark.asyncio
@@ -156,9 +161,17 @@ async def test_cookie_auth_checks_origin():
         {"type": "websocket.close", "code": 1008, "reason": "Origin not allowed"}
     ]
 
-    # csrf=False disables the origin check
+    # the origin is checked for every handshake by default
     sent = await handshake(app, "/api/cookie-nocsrf", headers=[cookie, evil])
+    assert sent[0]["reason"] == "Origin not allowed"
+
+    # it can be disabled per route...
+    sent = await handshake(app, "/api/cookie-public", headers=[cookie, evil])
     assert sent[0]["type"] == "websocket.accept"
+
+    # ...unless the cookie auth itself asks for CSRF protection
+    sent = await handshake(app, "/api/cookie-csrf-wins", headers=[cookie, evil])
+    assert sent[0]["reason"] == "Origin not allowed"
 
 
 @pytest.mark.asyncio

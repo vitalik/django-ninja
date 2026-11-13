@@ -384,6 +384,8 @@ class NinjaAPI:
         path: str,
         *,
         auth: Any = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
+        check_origin: Optional[bool] = None,
         url_name: Optional[str] = None,
     ) -> Callable[[TCallable], TCallable]:
         """
@@ -396,7 +398,13 @@ class NinjaAPI:
                 async for message in websocket.iter_text():
                     await websocket.send_text(message)
         """
-        return self.default_router.websocket(path, auth=auth, url_name=url_name)
+        return self.default_router.websocket(
+            path,
+            auth=auth,
+            throttle=throttle,
+            check_origin=check_origin,
+            url_name=url_name,
+        )
 
     @overload
     def webhook(self, name: TSchemaClass) -> TSchemaClass: ...

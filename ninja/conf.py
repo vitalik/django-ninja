@@ -31,6 +31,9 @@ class Settings(BaseModel):
         alias="NINJA_DEFAULT_THROTTLE_RATES",
     )
 
+    # WebSockets: validate the Origin header of browser handshakes
+    WEBSOCKET_CHECK_ORIGIN: bool = Field(True, alias="NINJA_WEBSOCKET_CHECK_ORIGIN")
+
     FIX_REQUEST_FILES_METHODS: Set[str] = Field(
         {"PUT", "PATCH", "DELETE"}, alias="NINJA_FIX_REQUEST_FILES_METHODS"
     )

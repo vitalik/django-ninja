@@ -5,6 +5,7 @@ import pydantic
 from asgiref.sync import sync_to_async
 from django.http import HttpRequest, HttpResponse, JsonResponse
 
+from ninja.conf import settings as ninja_settings
 from ninja.constants import NOT_SET
 from ninja.errors import (
     AuthenticationError,
@@ -13,17 +14,20 @@ from ninja.errors import (
     ValidationError,
     ValidationErrorContext,
 )
+from ninja.operation import check_throttles
 from ninja.security.apikey import APIKeyCookie
 from ninja.signature import ViewSignature, is_async
+from ninja.throttling import BaseThrottle
 from ninja.types import DictStrAny
 from ninja.utils import is_async_callable
 from ninja.websockets.connection import WebSocket
 from ninja.websockets.handshake import (
     UPGRADE_NOT_HANDLED_DETAIL,
     WEBSOCKET_ONLY_DETAIL,
-    deny,
     origin_is_allowed,
+    reject,
 )
+from ninja.websockets.types import WebSocketException
 
 if TYPE_CHECKING:
     from ninja import NinjaAPI  # pragma: no cover
@@ -48,6 +52,8 @@ class WebSocketOperation:
         view_func: Callable[..., Any],
         *,
         auth: Any = NOT_SET,
+        throttle: Any = NOT_SET,
+        check_origin: Optional[bool] = None,
         url_name: Optional[str] = None,
     ) -> None:
         if not is_async(view_func):
@@ -62,6 +68,20 @@ class WebSocketOperation:
         self.auth_param: Any = auth
         self.auth_callbacks: Sequence[Callable[..., Any]] = []
         self._set_auth(auth)
+
+        # None: use settings.NINJA_WEBSOCKET_CHECK_ORIGIN
+        self.check_origin = check_origin
+
+        if isinstance(throttle, BaseThrottle):
+            throttle = [throttle]
+        self.throttle_param = throttle
+        self.throttle_objects: List[BaseThrottle] = []
+        if throttle is not NOT_SET:
+            for th in throttle:
+                assert isinstance(th, BaseThrottle), (
+                    "Throttle should be an instance of BaseThrottle"
+                )
+                self.throttle_objects.append(th)
 
         self.signature = ViewSignature(path, view_func)
         if self.signature.websocket_arg is None:
@@ -89,6 +109,7 @@ class WebSocketOperation:
         cloned.__dict__.update(self.__dict__)
         cloned.api = cast("NinjaAPI", None)
         cloned.auth_callbacks = list(self.auth_callbacks)
+        cloned.throttle_objects = list(self.throttle_objects)
         return cloned
 
     def get_http_view(self) -> Callable[..., HttpResponse]:
@@ -135,11 +156,28 @@ class WebSocketOperation:
         return values
 
     def _requires_origin_check(self) -> bool:
-        return any(
-            isinstance(cb, APIKeyCookie) and cb.csrf for cb in self.auth_callbacks
-        )
+        if any(isinstance(cb, APIKeyCookie) and cb.csrf for cb in self.auth_callbacks):
+            # cookie auth asked for CSRF protection: never skip it
+            return True
+        if self.check_origin is not None:
+            return self.check_origin
+        return ninja_settings.WEBSOCKET_CHECK_ORIGIN
 
-    async def _authenticate(self, websocket: WebSocket) -> Optional[HttpError]:
+    def response_for_exception(
+        self, request: HttpRequest, exc: Exception
+    ) -> Optional[HttpResponse]:
+        """
+        The response the API exception handlers produce for ``exc``, or None
+        when no handler deals with it (it re-raises, e.g. with DEBUG=False).
+        """
+        try:
+            return self.api.on_exception(request, exc)
+        except Exception as raised:
+            if raised is exc:
+                return None
+            raise
+
+    async def _authenticate(self, websocket: WebSocket) -> Optional[Exception]:
         request = websocket.request
         for callback in self.auth_callbacks:
             try:
@@ -150,7 +188,9 @@ class WebSocketOperation:
                 else:
                     # sync callbacks may hit the database (tokens, sessions...)
                     result = await sync_to_async(callback)(request)
-            except HttpError as e:
+            except WebSocketException:
+                raise
+            except Exception as e:
                 return e
             if result:
                 request.auth = result  # type: ignore[attr-defined]
@@ -158,27 +198,46 @@ class WebSocketOperation:
                 return None
         return AuthenticationError()
 
+    async def _reject_with(self, websocket: WebSocket, exc: Exception) -> None:
+        response = self.response_for_exception(websocket.request, exc)
+        if response is None:
+            raise exc
+        await reject(websocket, response)
+
     async def run(self, websocket: WebSocket, path_params: Dict[str, Any]) -> None:
+        """
+        Process the handshake (origin, auth, throttling, params) and call the
+        handler. Rejections are built by the API exception handlers, so custom
+        handlers and renderers apply like for HTTP operations.
+        """
         request = websocket.request
         websocket.path_params = path_params
+        # Browsers send cookies on cross-site websocket handshakes and Django's
+        # CSRF check does not protect GET requests: the Origin check replaces it.
+        request._ninja_csrf_exempt = True  # type: ignore[attr-defined]
+
+        if self._requires_origin_check() and not origin_is_allowed(request):
+            await self._reject_with(websocket, HttpError(403, "Origin not allowed"))
+            return
 
         if self.auth_callbacks:
-            # Cookies are sent by browsers on cross-site websocket handshakes and
-            # Django's CSRF check does not protect GET requests, so cookie based
-            # auth is protected by validating the Origin header instead.
-            request._ninja_csrf_exempt = True  # type: ignore[attr-defined]
-            if self._requires_origin_check() and not origin_is_allowed(request):
-                await deny(websocket, 403, "Origin not allowed")
-                return
             error = await self._authenticate(websocket)
             if error is not None:
-                await deny(websocket, error.status_code, error.message)
+                await self._reject_with(websocket, error)
+                return
+
+        if self.throttle_objects:
+            response = await sync_to_async(check_throttles)(
+                self.api, self.throttle_objects, request
+            )
+            if response is not None:
+                await reject(websocket, response)
                 return
 
         try:
             values = self._get_values(request, path_params)
         except ValidationError as e:
-            await deny(websocket, 422, e.errors)
+            await self._reject_with(websocket, e)
             return
 
         values[cast(str, self.signature.websocket_arg)] = websocket

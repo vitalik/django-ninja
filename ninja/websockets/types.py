@@ -32,6 +32,7 @@ class WebSocketClose(enum.IntEnum):
     MESSAGE_TOO_BIG = 1009
     MANDATORY_EXTENSION = 1010
     INTERNAL_ERROR = 1011
+    TRY_AGAIN_LATER = 1013
 
 
 class WebSocketState(enum.Enum):

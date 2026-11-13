@@ -30,7 +30,7 @@ from django.core.exceptions import DisallowedHost
 from django.urls import Resolver404, resolve, set_script_prefix
 
 from ninja.websockets.connection import WebSocket
-from ninja.websockets.handshake import deny, truncate_reason
+from ninja.websockets.handshake import deny, reject, truncate_reason
 from ninja.websockets.operation import WebSocketOperation
 from ninja.websockets.types import (
     Receive,
@@ -115,7 +115,7 @@ class NinjaASGI:
                 return
             operation, path_params = self.resolve_operation(websocket)
             if operation is None:
-                await _close(websocket, WebSocketClose.POLICY_VIOLATION, "Not Found")
+                await deny(websocket, 404, "Not Found")
                 return
             try:
                 await operation.run(websocket, path_params)
@@ -123,13 +123,15 @@ class NinjaASGI:
                 pass
             except WebSocketException as e:
                 await _close(websocket, e.code, truncate_reason(e.reason))
-            except Exception:
-                logger.exception("Error in websocket handler for %s", websocket.path)
-                # error reporting tools (Sentry, Rollbar...) listen to this signal;
-                # sync_to_async keeps sys.exc_info() available to receivers
-                await sync_to_async(
-                    signals.got_request_exception.send, thread_sensitive=True
-                )(sender=None, request=websocket.request)
+            except Exception as exc:
+                # API exception handlers apply like for HTTP (e.g. HttpError(404)
+                # before accept() becomes a 404 response, after it a 1008 close)
+                response = operation.response_for_exception(websocket.request, exc)
+                if response is None or response.status_code >= 500:
+                    await self._report_error(websocket)
+                if response is not None:
+                    await reject(websocket, response)
+                    return
                 await _close(websocket, WebSocketClose.INTERNAL_ERROR)
                 if self.raise_exceptions:
                     raise
@@ -140,6 +142,14 @@ class NinjaASGI:
                 await sync_to_async(
                     signals.request_finished.send, thread_sensitive=True
                 )(sender=self.__class__)
+
+    async def _report_error(self, websocket: WebSocket) -> None:
+        logger.exception("Error in websocket handler for %s", websocket.path)
+        # error reporting tools (Sentry, Rollbar...) listen to this signal;
+        # sync_to_async keeps sys.exc_info() available to receivers
+        await sync_to_async(signals.got_request_exception.send, thread_sensitive=True)(
+            sender=None, request=websocket.request
+        )
 
 
 async def _check_host(websocket: WebSocket) -> bool:

@@ -1,4 +1,5 @@
 import re
+import warnings
 from dataclasses import dataclass, field
 from typing import (
     TYPE_CHECKING,
@@ -118,8 +119,30 @@ class BoundRouter:
         self.websocket_operations: Dict[str, WebSocketOperation] = {}
         self._bind_websocket_operations()
 
+    def _inherited_throttle_objects(self) -> Optional[List[BaseThrottle]]:
+        """Throttles from this mount/router, falling back to the API ones."""
+        throttle = self.throttle if self.throttle != NOT_SET else self.api.throttle
+        if throttle == NOT_SET:
+            return None
+        if isinstance(throttle, BaseThrottle):
+            return [throttle]
+        return list(throttle)
+
     def _bind_websocket_operations(self) -> None:
-        for path, ws_operation in self.template.websocket_operations.items():
+        websocket_operations = self.template.websocket_operations
+        decorators = self.mount.inherited_decorators + self.template._decorators
+        if websocket_operations and decorators:
+            names = ", ".join(
+                op.view_func.__name__ for op in websocket_operations.values()
+            )
+            warnings.warn(
+                "Decorators added with add_decorator() are not applied to "
+                f"websocket handlers ({names}): they wrap HTTP views/operations.",
+                UserWarning,
+                stacklevel=2,
+            )
+
+        for path, ws_operation in websocket_operations.items():
             operation = ws_operation.clone()
             operation.api = self.api
             if operation.auth_param == NOT_SET:
@@ -127,6 +150,10 @@ class BoundRouter:
                     operation._set_auth(self.auth)
                 elif self.api.auth != NOT_SET:
                     operation._set_auth(self.api.auth)
+            if operation.throttle_param == NOT_SET:
+                inherited = self._inherited_throttle_objects()
+                if inherited is not None:
+                    operation.throttle_objects = inherited
             self.websocket_operations[path] = operation
 
     def websocket_routes(self, prefix: str) -> Iterator[Tuple[str, WebSocketOperation]]:
@@ -159,20 +186,9 @@ class BoundRouter:
 
                 # Apply throttle inheritance
                 if operation.throttle_param == NOT_SET:
-                    if self.api.throttle != NOT_SET:
-                        throttle = self.api.throttle
-                        operation.throttle_objects = (
-                            isinstance(throttle, BaseThrottle)
-                            and [throttle]
-                            or throttle  # type: ignore
-                        )
-                    if self.throttle != NOT_SET:
-                        throttle = self.throttle
-                        operation.throttle_objects = (
-                            isinstance(throttle, BaseThrottle)
-                            and [throttle]
-                            or throttle  # type: ignore
-                        )
+                    inherited = self._inherited_throttle_objects()
+                    if inherited is not None:
+                        operation.throttle_objects = inherited
 
                 # Apply tags inheritance
                 if operation.tags is None and self.tags is not None:  # type: ignore[has-type]
@@ -596,6 +612,8 @@ class Router:
         path: str,
         *,
         auth: Any = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
+        check_origin: Optional[bool] = None,
         url_name: Optional[str] = None,
     ) -> Callable[[TCallable], TCallable]:
         """
@@ -605,10 +623,20 @@ class Router:
             async def chat(websocket: WebSocket, room: str):
                 await websocket.accept()
                 ...
+
+        ``throttle`` limits new connections (handshakes). ``check_origin``
+        overrides ``settings.NINJA_WEBSOCKET_CHECK_ORIGIN`` for this route.
         """
 
         def decorator(view_func: TCallable) -> TCallable:
-            self.add_websocket_operation(path, view_func, auth=auth, url_name=url_name)
+            self.add_websocket_operation(
+                path,
+                view_func,
+                auth=auth,
+                throttle=throttle,
+                check_origin=check_origin,
+                url_name=url_name,
+            )
             return view_func
 
         return decorator
@@ -619,13 +647,22 @@ class Router:
         view_func: Callable[..., Any],
         *,
         auth: Any = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
+        check_origin: Optional[bool] = None,
         url_name: Optional[str] = None,
     ) -> WebSocketOperation:
         self._check_not_frozen()
         path = re.sub(r"\{uuid:(\w+)\}", r"{uuidstr:\1}", path, flags=re.IGNORECASE)
         if path in self.websocket_operations:
             raise ConfigError(f"WebSocket route '{path}' is already registered")
-        operation = WebSocketOperation(path, view_func, auth=auth, url_name=url_name)
+        operation = WebSocketOperation(
+            path,
+            view_func,
+            auth=auth,
+            throttle=throttle,
+            check_origin=check_origin,
+            url_name=url_name,
+        )
         self.websocket_operations[path] = operation
         view_func._ninja_operation = operation  # type: ignore
         return operation

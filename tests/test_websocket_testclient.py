@@ -127,7 +127,7 @@ def test_denied_invalid_params():
         with client.websocket_connect("/json?scale=x"):
             pass  # pragma: no cover
     assert exc.value.status_code == 422
-    assert exc.value.headers == [(b"content-type", b"application/json")]
+    assert exc.value.headers == [(b"content-type", b"application/json; charset=utf-8")]
 
 
 def test_closed_before_accept():
@@ -148,10 +148,10 @@ def test_closed_by_server():
 
 def test_not_found():
     client = TestClient(make_api())
-    with pytest.raises(WebSocketDisconnect) as exc:
+    with pytest.raises(WebSocketDenied) as exc:
         with client.websocket_connect("/missing"):
             pass  # pragma: no cover
-    assert exc.value.code == 1008
+    assert exc.value.status_code == 404
 
 
 def test_handler_exceptions_are_raised():
