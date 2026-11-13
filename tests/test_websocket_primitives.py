@@ -244,3 +244,18 @@ async def test_send_os_error_becomes_disconnect():
         await ws.send_text("x")
     assert exc.value.code == WebSocketClose.ABNORMAL_CLOSURE
     assert ws.application_state == WebSocketState.DISCONNECTED
+
+
+def test_connection_details_match_django_request():
+    ws, _ = make_ws(
+        scope={
+            "query_string": "q=ñandú&raw=%C3%B1".encode(),
+            "headers": [(b"x-token", b"abc"), (b"x_spoofed", b"1")],
+        }
+    )
+    assert ws.query_params["q"] == "ñandú"
+    assert ws.query_params["raw"] == "ñ"
+    assert ws.headers["X-Token"] == ws.headers["x-token"] == "abc"
+    # like Django, underscores are dropped to prevent header spoofing
+    assert "x_spoofed" not in ws.headers
+    assert ws.query_params is ws.request.GET

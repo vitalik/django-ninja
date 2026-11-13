@@ -13,6 +13,7 @@ from typing import (
     Dict,
     Iterable,
     List,
+    Mapping,
     Optional,
     Tuple,
     Type,
@@ -62,9 +63,6 @@ class WebSocket:
         self.application_state = WebSocketState.CONNECTING
         self.path_params: Dict[str, Any] = {}
         self.auth: Any = None
-        self._query_params: Optional[QueryDict] = None
-        self._headers: Optional[Dict[str, str]] = None
-        self._cookies: Optional[Dict[str, str]] = None
         self._request: Optional[HttpRequest] = None
 
     # Connection details ------------------------------------------------------
@@ -75,31 +73,18 @@ class WebSocket:
 
     @property
     def query_params(self) -> QueryDict:
-        if self._query_params is None:
-            raw = self.scope.get("query_string", b"")
-            self._query_params = QueryDict(raw.decode("latin-1"))
-        return self._query_params
+        """Same as ``websocket.request.GET``."""
+        return self.request.GET
 
     @property
-    def headers(self) -> Dict[str, str]:
-        """Request headers with lower-cased names (repeated values are joined)."""
-        if self._headers is None:
-            headers: Dict[str, str] = {}
-            raw: Iterable[Tuple[bytes, bytes]] = self.scope.get("headers", [])
-            for name, value in raw:
-                key = name.decode("latin-1").lower()
-                val = value.decode("latin-1")
-                headers[key] = f"{headers[key]},{val}" if key in headers else val
-            self._headers = headers
-        return self._headers
+    def headers(self) -> Mapping[str, str]:
+        """Same as ``websocket.request.headers`` (case-insensitive)."""
+        return self.request.headers
 
     @property
     def cookies(self) -> Dict[str, str]:
-        if self._cookies is None:
-            from django.http.cookie import parse_cookie
-
-            self._cookies = parse_cookie(self.headers.get("cookie", ""))
-        return self._cookies
+        """Same as ``websocket.request.COOKIES``."""
+        return self.request.COOKIES
 
     @property
     def client(self) -> Optional[Tuple[str, int]]:
