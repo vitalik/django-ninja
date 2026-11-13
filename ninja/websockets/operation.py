@@ -133,6 +133,7 @@ class WebSocketOperation:
 
         websocket_http_view.csrf_exempt = True  # type: ignore
         websocket_http_view.ninja_websocket_operation = operation  # type: ignore
+        websocket_http_view.ninja_websocket_only = True  # type: ignore
         return websocket_http_view
 
     def http_response(self, request: HttpRequest) -> HttpResponse:

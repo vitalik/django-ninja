@@ -253,3 +253,28 @@ async def test_run_without_params():
         "websocket.accept",
         "websocket.close",
     ]
+
+
+def test_websocket_url_name_collision():
+    api = NinjaAPI(urls_namespace=unique_namespace())
+
+    @api.get("/chat")
+    def chat(request):
+        pass  # pragma: no cover
+
+    @api.websocket("/ws/chat")
+    async def chat_ws(websocket: WebSocket):
+        pass  # pragma: no cover
+
+    chat_ws.__name__ = "chat"  # same default url name as the HTTP view
+    api2 = NinjaAPI(urls_namespace=unique_namespace())
+    api2.get("/chat")(chat)
+    api2.websocket("/ws/chat")(chat_ws)
+    with pytest.raises(ConfigError, match="url_name="):
+        api2.urls  # noqa: B018
+
+    # an explicit url_name fixes it
+    api3 = NinjaAPI(urls_namespace=unique_namespace())
+    api3.get("/chat")(chat)
+    api3.websocket("/ws/chat", url_name="chat_ws")(chat_ws)
+    assert api3.urls

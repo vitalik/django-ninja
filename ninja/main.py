@@ -6,6 +6,7 @@ from typing import (
     List,
     Optional,
     Sequence,
+    Set,
     Tuple,
     Type,
     TypeVar,
@@ -619,6 +620,7 @@ class NinjaAPI:
             result.extend(bound_router.urls_paths(bound_router.prefix))
 
         result.append(get_root_url(self))
+        _check_websocket_url_names(result)
         return result
 
     def get_root_path(self, path_params: DictStrAny) -> str:
@@ -734,3 +736,26 @@ class NinjaAPI:
         # Registry check no longer needed - routers are independent templates
         # and can be reused across multiple APIs without conflicts
         pass
+
+
+def _check_websocket_url_names(patterns: List[Union[URLResolver, URLPattern]]) -> None:
+    """
+    A websocket route sharing its url name with an HTTP route makes reverse()
+    silently return one of them: require an explicit url_name instead.
+    (Reusing a handler on several websocket routes is fine, like for HTTP.)
+    """
+    http_names: Set[Optional[str]] = set()
+    websocket_patterns: List[Any] = []
+    for pattern in patterns:
+        callback = getattr(pattern, "callback", None)
+        if getattr(callback, "ninja_websocket_only", False):
+            websocket_patterns.append(pattern)
+        else:
+            http_names.add(getattr(pattern, "name", None))
+    for ws_pattern in websocket_patterns:
+        if ws_pattern.name in http_names:
+            raise ConfigError(
+                f"WebSocket route '{ws_pattern.pattern}' has the url name "
+                f"'{ws_pattern.name}', which is also used by an HTTP route. "
+                "Pass a different url_name= to the websocket decorator."
+            )
