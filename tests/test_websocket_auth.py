@@ -3,7 +3,7 @@ import json
 
 import pytest
 from asgiref.sync import sync_to_async
-from django.urls import path
+from ws_util import HTTP_RESPONSE_EXTENSION, api_urlconf, connect, unique_namespace
 
 from ninja import NinjaAPI, WebSocket
 from ninja.asgi import NinjaASGI
@@ -13,42 +13,12 @@ from ninja.websockets.handshake import origin_is_allowed
 
 pytestmark = pytest.mark.django_db(transaction=True)
 
-HTTP_EXT = {"websocket.http.response": {}}
+HTTP_EXT = HTTP_RESPONSE_EXTENSION
 
 
-class UrlConf:
-    def __init__(self, urlpatterns):
-        self.urlpatterns = urlpatterns
-
-
-class Transport:
-    def __init__(self):
-        self.incoming = [{"type": "websocket.connect"}]
-        self.sent = []
-
-    async def receive(self):
-        await asyncio.sleep(0)
-        if self.incoming:
-            return self.incoming.pop(0)
-        return {"type": "websocket.disconnect", "code": 1000}  # pragma: no cover
-
-    async def send(self, message):
-        self.sent.append(message)
-
-
-async def connect(app, path, query=b"", headers=None, extensions=None):
-    transport = Transport()
-    scope = {
-        "type": "websocket",
-        "path": path,
-        "query_string": query,
-        "headers": [(b"host", b"testserver")] + (headers or []),
-        "scheme": "ws",
-    }
-    if extensions is not None:
-        scope["extensions"] = extensions
-    await app(scope, transport.receive, transport.send)
-    return transport.sent
+async def handshake(app, path, query=b"", **scope_kwargs):
+    """Connect and return the messages sent by the application."""
+    return (await connect(app, path, query=query, **scope_kwargs)).sent
 
 
 class KeyQuery(APIKeyQuery):
@@ -79,7 +49,7 @@ class CookieKey(APIKeyCookie):
 
 
 def make_app():
-    api = NinjaAPI(urls_namespace=f"wsauth-{id(object())}")
+    api = NinjaAPI(urls_namespace=unique_namespace())
 
     async def whoami(websocket: WebSocket, request):
         await websocket.accept()
@@ -103,27 +73,27 @@ def make_app():
     async def params(websocket: WebSocket, n: int):
         pass  # pragma: no cover
 
-    return NinjaASGI(urlconf=UrlConf([path("api/", api.urls)]))
+    return NinjaASGI(urlconf=api_urlconf(api))
 
 
 @pytest.mark.asyncio
 async def test_query_key_auth():
     app = make_app()
-    sent = await connect(app, "/api/key", b"key=secret")
+    sent = await handshake(app, "/api/key", b"key=secret")
     assert sent[0]["type"] == "websocket.accept"
     assert json.loads(sent[1]["text"]) == {
         "auth": "user-from-key",
         "req": "user-from-key",
     }
 
-    sent = await connect(app, "/api/key", b"key=wrong")
+    sent = await handshake(app, "/api/key", b"key=wrong")
     assert sent == [{"type": "websocket.close", "code": 1008, "reason": "Unauthorized"}]
 
 
 @pytest.mark.asyncio
 async def test_denied_with_http_response_extension():
     app = make_app()
-    sent = await connect(app, "/api/key", extensions=HTTP_EXT)
+    sent = await handshake(app, "/api/key", extensions=HTTP_EXT)
     assert sent[0] == {
         "type": "websocket.http.response.start",
         "status": 401,
@@ -135,7 +105,7 @@ async def test_denied_with_http_response_extension():
     }
     assert len(sent) == 2
 
-    sent = await connect(app, "/api/params", b"n=x", extensions=HTTP_EXT)
+    sent = await handshake(app, "/api/params", b"n=x", extensions=HTTP_EXT)
     assert sent[0]["status"] == 422
     detail = json.loads(sent[1]["body"])["detail"]
     assert detail[0]["loc"] == ["query", "n"]
@@ -144,7 +114,7 @@ async def test_denied_with_http_response_extension():
 @pytest.mark.asyncio
 async def test_validation_error_close_reason_is_json():
     app = make_app()
-    sent = await connect(app, "/api/params", b"n=x")
+    sent = await handshake(app, "/api/params", b"n=x")
     assert sent[0]["code"] == 1008
     assert sent[0]["reason"].startswith('[{"type": "int_parsing"')
 
@@ -152,13 +122,15 @@ async def test_validation_error_close_reason_is_json():
 @pytest.mark.asyncio
 async def test_multiple_and_async_callbacks():
     app = make_app()
-    sent = await connect(app, "/api/multi", b"akey=asecret")
+    sent = await handshake(app, "/api/multi", b"akey=asecret")
     assert json.loads(sent[1]["text"])["auth"] == "async-user"
 
-    sent = await connect(app, "/api/multi", b"key=secret")
+    sent = await handshake(app, "/api/multi", b"key=secret")
     assert json.loads(sent[1]["text"])["auth"] == "user-from-key"
 
-    sent = await connect(app, "/api/multi", b"forbid=1&key=secret", extensions=HTTP_EXT)
+    sent = await handshake(
+        app, "/api/multi", b"forbid=1&key=secret", extensions=HTTP_EXT
+    )
     assert sent[0]["status"] == 403
     assert sent[1]["body"] == b'{"detail": "Forbidden"}'
 
@@ -169,23 +141,23 @@ async def test_cookie_auth_checks_origin():
     cookie = (b"cookie", b"token=c00kie")
 
     # non-browser client (no Origin)
-    sent = await connect(app, "/api/cookie", headers=[cookie])
+    sent = await handshake(app, "/api/cookie", headers=[cookie])
     assert sent[0]["type"] == "websocket.accept"
 
     # same origin
     origin = (b"origin", b"http://testserver")
-    sent = await connect(app, "/api/cookie", headers=[cookie, origin])
+    sent = await handshake(app, "/api/cookie", headers=[cookie, origin])
     assert sent[0]["type"] == "websocket.accept"
 
     # cross-site websocket hijacking attempt
     evil = (b"origin", b"https://evil.example")
-    sent = await connect(app, "/api/cookie", headers=[cookie, evil])
+    sent = await handshake(app, "/api/cookie", headers=[cookie, evil])
     assert sent == [
         {"type": "websocket.close", "code": 1008, "reason": "Origin not allowed"}
     ]
 
     # csrf=False disables the origin check
-    sent = await connect(app, "/api/cookie-nocsrf", headers=[cookie, evil])
+    sent = await handshake(app, "/api/cookie-nocsrf", headers=[cookie, evil])
     assert sent[0]["type"] == "websocket.accept"
 
 
@@ -207,10 +179,10 @@ async def test_session_auth():
     app = make_app()
 
     cookie = (b"cookie", f"sessionid={session_key}".encode())
-    sent = await connect(app, "/api/session", headers=[cookie])
+    sent = await handshake(app, "/api/session", headers=[cookie])
     assert sent[1] == {"type": "websocket.send", "text": "wsuser"}
 
-    sent = await connect(app, "/api/session")
+    sent = await handshake(app, "/api/session")
     assert sent[0]["code"] == 1008
 
 
@@ -273,13 +245,13 @@ async def test_callback_flagged_async_returning_plain_value():
 
     flagged.is_async = True
 
-    api = NinjaAPI(urls_namespace="wsauth-flagged")
+    api = NinjaAPI(urls_namespace=unique_namespace())
 
     @api.websocket("/f", auth=flagged)
     async def handler(websocket: WebSocket):
         await websocket.accept()
         await websocket.send_text(websocket.auth)
 
-    app = NinjaASGI(urlconf=UrlConf([path("api/", api.urls)]))
-    sent = await connect(app, "/api/f")
+    app = NinjaASGI(urlconf=api_urlconf(api))
+    sent = await handshake(app, "/api/f")
     assert sent[1]["text"] == "flagged"

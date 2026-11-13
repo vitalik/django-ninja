@@ -1,9 +1,9 @@
-import asyncio
 import logging
 
 import pytest
 from django.urls import path, reverse
 from django.urls.exceptions import NoReverseMatch
+from ws_util import FakeTransport, api_urlconf, connect, make_scope, unique_namespace
 
 from ninja import NinjaAPI, Router, WebSocket, WebSocketDisconnect
 from ninja.asgi import NinjaASGI, _get_script_prefix, get_asgi_application
@@ -13,55 +13,8 @@ from ninja.testing import TestClient
 pytestmark = pytest.mark.django_db
 
 
-class FakeTransport:
-    def __init__(self, incoming=None, send_error=None):
-        self.incoming = list(incoming or [{"type": "websocket.connect"}])
-        self.sent = []
-        self.send_error = send_error
-
-    async def receive(self):
-        await asyncio.sleep(0)
-        if not self.incoming:
-            return {"type": "websocket.disconnect", "code": 1000}
-        return self.incoming.pop(0)
-
-    async def send(self, message):
-        if self.send_error:
-            raise self.send_error
-        self.sent.append(message)
-
-    @property
-    def types(self):
-        return [m["type"] for m in self.sent]
-
-
-async def connect(app, path, incoming=None, query=b"", root_path="", **kw):
-    transport = FakeTransport(incoming, **kw)
-    scope = {
-        "type": "websocket",
-        "path": path,
-        "root_path": root_path,
-        "query_string": query,
-        "headers": [],
-        "scheme": "ws",
-    }
-    await app(scope, transport.receive, transport.send)
-    return transport
-
-
-class UrlConf:
-    """Hashable urlconf object (django caches resolvers per urlconf)."""
-
-    def __init__(self, urlpatterns):
-        self.urlpatterns = urlpatterns
-
-
-def build(api, prefix="api/"):
-    return UrlConf([path(prefix, api.urls)])
-
-
 def make_api():
-    api = NinjaAPI(urls_namespace=f"ws-{id(object())}")
+    api = NinjaAPI(urls_namespace=unique_namespace())
     router = Router()
 
     @api.websocket("/echo")
@@ -105,7 +58,7 @@ def make_api():
 
 @pytest.mark.asyncio
 async def test_echo_and_auto_close():
-    app = NinjaASGI(urlconf=build(make_api()))
+    app = NinjaASGI(urlconf=api_urlconf(make_api()))
     t = await connect(
         app,
         "/api/echo",
@@ -122,7 +75,7 @@ async def test_echo_and_auto_close():
 
 @pytest.mark.asyncio
 async def test_path_params_converters_and_root_path():
-    app = NinjaASGI(urlconf=build(make_api()))
+    app = NinjaASGI(urlconf=api_urlconf(make_api()))
     t = await connect(
         app, "/prefix/api/chat/rooms/5", query=b"name=bob", root_path="/prefix"
     )
@@ -134,7 +87,7 @@ async def test_path_params_converters_and_root_path():
 
 @pytest.mark.asyncio
 async def test_not_found():
-    urlconf = build(make_api())
+    urlconf = api_urlconf(make_api())
     urlconf.urlpatterns.append(path("plain/", lambda request: None))
     app = NinjaASGI(urlconf=urlconf)
     for p in ("/nope", "/plain/"):
@@ -146,7 +99,7 @@ async def test_not_found():
 
 @pytest.mark.asyncio
 async def test_handler_error_closes_with_1011(caplog):
-    app = NinjaASGI(urlconf=build(make_api()))
+    app = NinjaASGI(urlconf=api_urlconf(make_api()))
     with caplog.at_level(logging.ERROR, logger="ninja.websockets"):
         t = await connect(app, "/api/chat/boom")
     assert t.sent[-1] == {"type": "websocket.close", "code": 1011, "reason": ""}
@@ -155,52 +108,42 @@ async def test_handler_error_closes_with_1011(caplog):
 
 @pytest.mark.asyncio
 async def test_client_disconnect_is_silent():
-    app = NinjaASGI(urlconf=build(make_api()))
+    app = NinjaASGI(urlconf=api_urlconf(make_api()))
     t = await connect(app, "/api/chat/gone")
     assert t.types == ["websocket.accept"]
 
 
 @pytest.mark.asyncio
 async def test_handler_returning_without_accept_rejects():
-    app = NinjaASGI(urlconf=build(make_api()))
+    app = NinjaASGI(urlconf=api_urlconf(make_api()))
     t = await connect(app, "/api/chat/reject")
     assert t.sent == [{"type": "websocket.close", "code": 1000, "reason": ""}]
 
 
 @pytest.mark.asyncio
 async def test_close_on_broken_connection_is_ignored():
-    app = NinjaASGI(urlconf=build(make_api()))
-    transport = FakeTransport()
-    scope = {"type": "websocket", "path": "/api/echo", "headers": []}
-
-    async def send(message):
-        if message["type"] == "websocket.close":
-            raise OSError("broken")
-        transport.sent.append(message)
-
-    async def receive():
-        await asyncio.sleep(0)
-        if transport.incoming:
-            return transport.incoming.pop(0)
-        # handler is blocked in receive: make it fail on the next send
-        raise RuntimeError("unexpected")
-
-    api = NinjaAPI(urls_namespace="broken")
+    api = NinjaAPI(urls_namespace=unique_namespace())
 
     @api.websocket("/once")
     async def once(websocket: WebSocket):
         await websocket.accept()
 
-    app = NinjaASGI(urlconf=build(api))
-    scope["path"] = "/api/once"
-    await app(scope, receive, send)
-    assert [m["type"] for m in transport.sent] == ["websocket.accept"]
+    class BrokenOnClose(FakeTransport):
+        async def send(self, message):
+            if message["type"] == "websocket.close":
+                raise OSError("broken")
+            await super().send(message)
+
+    transport = BrokenOnClose()
+    app = NinjaASGI(urlconf=api_urlconf(api))
+    await app(make_scope("/api/once"), transport.receive, transport.send)
+    assert transport.types == ["websocket.accept"]
 
 
 @pytest.mark.asyncio
 async def test_shared_http_and_websocket_path():
     api = make_api()
-    app = NinjaASGI(urlconf=build(api))
+    app = NinjaASGI(urlconf=api_urlconf(api))
     t = await connect(app, "/api/chat/shared")
     assert t.sent[1] == {"type": "websocket.send", "text": "ws"}
 
@@ -252,7 +195,7 @@ def test_http_mirror_view():
 
 def test_reverse_websocket_routes():
     api = make_api()
-    urlconf = build(api)
+    urlconf = api_urlconf(api)
     ns = api.urls_namespace
     assert reverse(f"{ns}:echo", urlconf=urlconf) == "/api/echo"
     assert (

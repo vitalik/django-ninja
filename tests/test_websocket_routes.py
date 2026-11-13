@@ -1,7 +1,7 @@
-import asyncio
 from typing import List
 
 import pytest
+from ws_util import FakeTransport, make_scope, unique_namespace
 
 from ninja import Header, NinjaAPI, Query, Router, Schema, WebSocket
 from ninja.errors import ConfigError
@@ -9,28 +9,9 @@ from ninja.websockets.handshake import truncate_reason
 from ninja.websockets.operation import WebSocketOperation
 
 
-class FakeTransport:
-    def __init__(self, incoming):
-        self.incoming = list(incoming)
-        self.sent = []
-
-    async def receive(self):
-        await asyncio.sleep(0)
-        return self.incoming.pop(0)
-
-    async def send(self, message):
-        self.sent.append(message)
-
-
 def make_ws(path="/ws", query=b"", headers=None):
-    transport = FakeTransport([{"type": "websocket.connect"}])
-    scope = {
-        "type": "websocket",
-        "path": path,
-        "query_string": query,
-        "headers": headers or [],
-        "scheme": "ws",
-    }
+    transport = FakeTransport()
+    scope = make_scope(path, query=query, headers=headers)
     return WebSocket(scope, transport.receive, transport.send), transport
 
 
@@ -82,7 +63,10 @@ def test_router_reused_in_two_apis():
     async def handler(websocket: WebSocket):
         pass  # pragma: no cover
 
-    api1, api2 = NinjaAPI(urls_namespace="a"), NinjaAPI(urls_namespace="b")
+    api1, api2 = (
+        NinjaAPI(urls_namespace=unique_namespace()),
+        NinjaAPI(urls_namespace=unique_namespace()),
+    )
     api1.add_router("/one", router)
     api2.add_router("/two", router)
     assert get_routes(api1)["one/ws"].api is api1

@@ -3,6 +3,7 @@ from typing import List
 
 import pydantic
 from typing_extensions import Annotated
+from ws_util import unique_namespace
 
 from ninja import NinjaAPI, Schema, WebSocket
 from ninja.testing import TestClient
@@ -26,7 +27,7 @@ class OrmLike:
 
 
 def make_client():
-    api = NinjaAPI(urls_namespace=f"wsschema-{id(object())}")
+    api = NinjaAPI(urls_namespace=unique_namespace())
 
     @api.websocket("/items")
     async def items(websocket: WebSocket):

@@ -1,28 +1,10 @@
-import asyncio
 from datetime import date
 
 import pytest
+from ws_util import CONNECT, FakeTransport
 
 from ninja import WebSocket, WebSocketDisconnect
 from ninja.websockets import WebSocketClose, WebSocketState
-
-
-class FakeTransport:
-    """Minimal ASGI receive/send pair driven by a list of incoming messages."""
-
-    def __init__(self, incoming=None, send_error=None):
-        self.incoming = list(incoming or [])
-        self.sent = []
-        self.send_error = send_error
-
-    async def receive(self):
-        await asyncio.sleep(0)
-        return self.incoming.pop(0)
-
-    async def send(self, message):
-        if self.send_error:
-            raise self.send_error
-        self.sent.append(message)
 
 
 def make_ws(incoming=None, scope=None, **kw):
@@ -32,7 +14,6 @@ def make_ws(incoming=None, scope=None, **kw):
     return WebSocket(base_scope, transport.receive, transport.send), transport
 
 
-CONNECT = {"type": "websocket.connect"}
 DISCONNECT = {"type": "websocket.disconnect", "code": 1001, "reason": "bye"}
 
 

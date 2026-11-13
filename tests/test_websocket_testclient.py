@@ -1,4 +1,5 @@
 import pytest
+from ws_util import unique_namespace
 
 from ninja import NinjaAPI, Router, WebSocket, WebSocketDisconnect
 from ninja.security import APIKeyCookie, APIKeyHeader
@@ -20,7 +21,7 @@ class CookieKey(APIKeyCookie):
 
 
 def make_api():
-    api = NinjaAPI(urls_namespace=f"wsclient-{id(object())}")
+    api = NinjaAPI(urls_namespace=unique_namespace())
 
     @api.websocket("/echo")
     async def echo(websocket: WebSocket):
