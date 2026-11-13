@@ -58,7 +58,7 @@ class ValidationError(Exception):
         super().__init__(errors)
 
 
-def clean_pydantic_errors(error: pydantic.ValidationError) -> List[DictStrAny]:
+def _clean_pydantic_errors(error: pydantic.ValidationError) -> List[DictStrAny]:
     """
     ``error.errors()`` without pydantic hints, safe to render as JSON: the
     ``input`` is removed and exceptions in ``ctx`` are turned into strings.

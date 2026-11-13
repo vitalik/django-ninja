@@ -24,7 +24,7 @@ from ninja.errors import (
     ConfigError,
     ValidationError,
     ValidationErrorContext,
-    clean_pydantic_errors,
+    _clean_pydantic_errors,
     set_default_exc_handlers,
 )
 from ninja.openapi import get_schema
@@ -711,7 +711,7 @@ class NinjaAPI:
         for context in error_contexts:
             model = context.model
             e = context.pydantic_validation_error
-            for i in clean_pydantic_errors(e):
+            for i in _clean_pydantic_errors(e):
                 i["loc"] = (
                     model.__ninja_param_source__,
                 ) + model.__ninja_flatten_map_reverse__.get(i["loc"], i["loc"])

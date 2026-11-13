@@ -4,7 +4,7 @@ from typing import Any
 import pydantic
 from pydantic import TypeAdapter
 
-from ninja.errors import ValidationError, clean_pydantic_errors
+from ninja.errors import ValidationError, _clean_pydantic_errors
 
 __all__ = ["type_adapter", "validate_message"]
 
@@ -30,4 +30,4 @@ def validate_message(schema: Any, data: Any) -> Any:
     try:
         return type_adapter(schema).validate_python(data)
     except pydantic.ValidationError as e:
-        raise ValidationError(clean_pydantic_errors(e)) from e
+        raise ValidationError(_clean_pydantic_errors(e)) from e

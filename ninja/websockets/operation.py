@@ -12,7 +12,7 @@ from ninja.errors import (
     ValidationError,
     ValidationErrorContext,
 )
-from ninja.operation import authenticate_async, check_throttles
+from ninja.operation import _authenticate_async, _throttled_response
 from ninja.renderers import BaseRenderer
 from ninja.security.apikey import APIKeyCookie
 from ninja.signature import ViewSignature, is_async
@@ -194,7 +194,7 @@ class WebSocketOperation:
                 raise exc
             return response
 
-        response = await authenticate_async(self.auth_callbacks, request, on_error)
+        response = await _authenticate_async(self.auth_callbacks, request, on_error)
         if response is None:
             websocket.auth = request.auth  # type: ignore[attr-defined]
         return response
@@ -230,7 +230,7 @@ class WebSocketOperation:
                 return
 
         if self.throttle_objects:
-            response = await sync_to_async(check_throttles)(
+            response = await sync_to_async(_throttled_response)(
                 self.api, self.throttle_objects, request
             )
             if response is not None:

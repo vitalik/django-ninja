@@ -67,7 +67,7 @@ async def _await_coroutine(coroutine: Coroutine[Any, Any, Any]) -> Any:
 _T = TypeVar("_T")
 
 
-async def authenticate_async(
+async def _authenticate_async(
     callbacks: Sequence[Callable[..., Any]],
     request: HttpRequest,
     on_error: Callable[[Exception], _T],
@@ -97,7 +97,7 @@ async def authenticate_async(
     return on_error(AuthenticationError())
 
 
-def check_throttles(
+def _throttled_response(
     api: "NinjaAPI", throttle_objects: List[BaseThrottle], request: HttpRequest
 ) -> Optional[HttpResponse]:
     """Run throttles; return the 429 response (with Retry-After) if any denies."""
@@ -409,7 +409,7 @@ class Operation:
         return self.api.on_exception(request, AuthenticationError())
 
     def _check_throttles(self, request: HttpRequest) -> Optional[HttpResponse]:
-        return check_throttles(self.api, self.throttle_objects, request)
+        return _throttled_response(self.api, self.throttle_objects, request)
 
     def _model_dump_kwargs(self, request: HttpRequest, status: int) -> Dict[str, Any]:
         kwargs: Dict[str, Any] = {}
@@ -619,7 +619,7 @@ class AsyncOperation(Operation):
         return None
 
     async def _run_authentication(self, request: HttpRequest) -> Optional[HttpResponse]:  # type: ignore
-        return await authenticate_async(
+        return await _authenticate_async(
             self.auth_callbacks,
             request,
             lambda exc: self.api.on_exception(request, exc),
