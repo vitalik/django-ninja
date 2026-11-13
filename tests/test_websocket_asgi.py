@@ -469,7 +469,7 @@ async def test_each_connection_has_its_own_sync_thread():
     seen = []
 
     def auth(request):
-        seen.append(("auth", threading.get_ident()))
+        seen.append(threading.current_thread())
         return True
 
     api = NinjaAPI(urls_namespace=unique_namespace())
@@ -477,16 +477,22 @@ async def test_each_connection_has_its_own_sync_thread():
     @api.websocket("/ws", auth=auth)
     async def ws(websocket: WebSocket):
         await websocket.accept()
-        seen.append(("handler", await sync_to_async(threading.get_ident)()))
+        seen.append(await sync_to_async(threading.current_thread)())
 
     app = NinjaASGI(urlconf=api_urlconf(api))
     await connect(app, "/api/ws")
-    outside = await sync_to_async(threading.get_ident)()
+    await connect(app, "/api/ws")
+    outside = await sync_to_async(threading.current_thread)()
 
-    # auth and the handler's sync code share the connection's thread,
-    # which is not the global thread used outside the connection
-    assert seen[0][1] == seen[1][1]
-    assert seen[0][1] != outside
+    # (Thread objects, not idents: the OS reuses idents of finished threads)
+    first, second = seen[:2], seen[2:]
+    # auth and the handler's sync code share the connection's thread...
+    assert first[0] is first[1] and second[0] is second[1]
+    # ...which belongs to that connection only, not to the global executor
+    assert first[0] is not second[0]
+    assert outside not in seen
+    # and it ends with the connection
+    assert not first[0].is_alive() and not second[0].is_alive()
 
 
 @pytest.mark.asyncio
