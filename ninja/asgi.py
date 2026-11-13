@@ -54,9 +54,28 @@ def get_asgi_application() -> "NinjaASGI":
 
 
 class NinjaASGI:
-    def __init__(self, app: Optional[ASGIApp] = None, *, urlconf: Any = None):
+    """
+    Args:
+        app: ASGI application for non-websocket scopes (usually Django's).
+        urlconf: URLconf used to resolve websocket paths (default ROOT_URLCONF).
+        raise_exceptions: re-raise handler errors after closing with 1011
+            (used by the test client so failures surface in tests).
+        send_signals: send Django's request_started/request_finished signals
+            (they close stale database connections, like for HTTP requests).
+    """
+
+    def __init__(
+        self,
+        app: Optional[ASGIApp] = None,
+        *,
+        urlconf: Any = None,
+        raise_exceptions: bool = False,
+        send_signals: bool = True,
+    ):
         self.app = app
         self.urlconf = urlconf
+        self.raise_exceptions = raise_exceptions
+        self.send_signals = send_signals
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] == "websocket":
@@ -83,9 +102,10 @@ class NinjaASGI:
         self, scope: Scope, receive: Receive, send: Send
     ) -> None:
         set_script_prefix(_get_script_prefix(scope))
-        await sync_to_async(signals.request_started.send, thread_sensitive=True)(
-            sender=self.__class__, scope=scope
-        )
+        if self.send_signals:
+            await sync_to_async(signals.request_started.send, thread_sensitive=True)(
+                sender=self.__class__, scope=scope
+            )
         websocket = WebSocket(scope, receive, send)
         try:
             operation, path_params = self.resolve_operation(websocket)
@@ -99,12 +119,15 @@ class NinjaASGI:
             except Exception:
                 logger.exception("Error in websocket handler for %s", websocket.path)
                 await _close(websocket, WebSocketClose.INTERNAL_ERROR)
+                if self.raise_exceptions:
+                    raise
             else:
                 await _close(websocket, WebSocketClose.NORMAL_CLOSURE)
         finally:
-            await sync_to_async(signals.request_finished.send, thread_sensitive=True)(
-                sender=self.__class__
-            )
+            if self.send_signals:
+                await sync_to_async(
+                    signals.request_finished.send, thread_sensitive=True
+                )(sender=self.__class__)
 
 
 def _get_script_prefix(scope: Scope) -> str:
