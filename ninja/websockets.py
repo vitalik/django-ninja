@@ -159,7 +159,9 @@ class WebSocket:
             scope = dict(self.scope)
             scope["method"] = "GET"
             scope["scheme"] = _HTTP_SCHEMES.get(str(scope.get("scheme")), "http")
-            self._request = ASGIRequest(scope, io.BytesIO(b""))
+            request = ASGIRequest(scope, io.BytesIO(b""))
+            _attach_session_and_user(request)
+            self._request = request
         return self._request
 
     # Low level ASGI messages -------------------------------------------------
@@ -341,3 +343,29 @@ class WebSocket:
                 yield await self.receive_json()
         except WebSocketDisconnect:
             pass
+
+
+def _attach_session_and_user(request: HttpRequest) -> None:
+    """
+    Django middlewares do not run for websockets: emulate what
+    SessionMiddleware/AuthenticationMiddleware add to the request so that
+    session based auth (e.g. ninja.security.django_auth) keeps working.
+    Both are lazy, the database is only hit when they are used.
+    """
+    from django.apps import apps
+
+    if not apps.is_installed("django.contrib.sessions"):
+        return
+    from importlib import import_module
+
+    from django.conf import settings
+
+    engine = import_module(settings.SESSION_ENGINE)
+    session_key = request.COOKIES.get(settings.SESSION_COOKIE_NAME)
+    request.session = engine.SessionStore(session_key)
+
+    if apps.is_installed("django.contrib.auth"):
+        from django.contrib.auth import get_user
+        from django.utils.functional import SimpleLazyObject
+
+        request.user = SimpleLazyObject(lambda: get_user(request))  # type: ignore
