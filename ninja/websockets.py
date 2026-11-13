@@ -7,6 +7,7 @@ an exchange of dictionaries between the server and the application
 """
 
 import enum
+import io
 import json
 from typing import (
     Any,
@@ -21,7 +22,7 @@ from typing import (
     Tuple,
 )
 
-from django.http import QueryDict
+from django.http import HttpRequest, QueryDict
 
 from ninja.responses import NinjaJSONEncoder
 
@@ -36,6 +37,8 @@ Scope = MutableMapping[str, Any]
 Message = MutableMapping[str, Any]
 Receive = Callable[[], Awaitable[Message]]
 Send = Callable[[Message], Awaitable[None]]
+
+_HTTP_SCHEMES = {"ws": "http", "wss": "https", "http": "http", "https": "https"}
 
 
 class WebSocketClose(enum.IntEnum):
@@ -97,6 +100,7 @@ class WebSocket:
         self._query_params: Optional[QueryDict] = None
         self._headers: Optional[Dict[str, str]] = None
         self._cookies: Optional[Dict[str, str]] = None
+        self._request: Optional[HttpRequest] = None
 
     # Connection details ------------------------------------------------------
 
@@ -140,6 +144,23 @@ class WebSocket:
     @property
     def subprotocols(self) -> List[str]:
         return list(self.scope.get("subprotocols", []))
+
+    @property
+    def request(self) -> HttpRequest:
+        """
+        A read-only Django request built from the handshake (method GET, no body).
+
+        It is what auth callbacks and Query/Header/Cookie/Path params receive,
+        so existing ninja security classes work unchanged for websockets.
+        """
+        if self._request is None:
+            from django.core.handlers.asgi import ASGIRequest
+
+            scope = dict(self.scope)
+            scope["method"] = "GET"
+            scope["scheme"] = _HTTP_SCHEMES.get(str(scope.get("scheme")), "http")
+            self._request = ASGIRequest(scope, io.BytesIO(b""))
+        return self._request
 
     # Low level ASGI messages -------------------------------------------------
 

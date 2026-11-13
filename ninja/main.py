@@ -379,6 +379,25 @@ class NinjaAPI:
             openapi_extra=openapi_extra,
         )
 
+    def websocket(
+        self,
+        path: str,
+        *,
+        auth: Any = NOT_SET,
+        url_name: Optional[str] = None,
+    ) -> Callable[[TCallable], TCallable]:
+        """
+        Register an ``async def`` websocket handler (requires an ASGI server
+        and the ``ninja.asgi`` application wrapper)::
+
+            @api.websocket("/ws")
+            async def echo(websocket: WebSocket):
+                await websocket.accept()
+                async for message in websocket.iter_text():
+                    await websocket.send_text(message)
+        """
+        return self.default_router.websocket(path, auth=auth, url_name=url_name)
+
     @overload
     def webhook(self, name: TSchemaClass) -> TSchemaClass: ...
 

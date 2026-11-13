@@ -115,6 +115,11 @@ class Operation:
                 self.throttle_objects.append(th)
 
         self.signature = ViewSignature(self.path, self.view_func)
+        if self.signature.websocket_arg:
+            raise ConfigError(
+                f"'{view_func.__name__}' declares a WebSocket parameter: "
+                "register it with @api.websocket(...) instead of an HTTP method"
+            )
         self.models: TModels = self.signature.models
 
         self.stream_format: Optional[Type[StreamFormat]] = None

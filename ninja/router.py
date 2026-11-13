@@ -25,6 +25,7 @@ from ninja.throttling import BaseThrottle
 from ninja.types import TCallable, TSchemaClass
 from ninja.utils import normalize_path, replace_path_param_notation
 from ninja.webhooks import Webhook
+from ninja.websocket_operation import WebSocketOperation
 
 if TYPE_CHECKING:
     from ninja import NinjaAPI  # pragma: no cover
@@ -114,6 +115,27 @@ class BoundRouter:
         # Clone operations and apply decorators
         self.path_operations: Dict[str, PathView] = {}
         self._bind_operations()
+        self.websocket_operations: Dict[str, WebSocketOperation] = {}
+        self._bind_websocket_operations()
+
+    def _bind_websocket_operations(self) -> None:
+        for path, ws_operation in self.template.websocket_operations.items():
+            operation = ws_operation.clone()
+            operation.api = self.api
+            if operation.auth_param == NOT_SET:
+                if self.auth != NOT_SET:
+                    operation._set_auth(self.auth)
+                elif self.api.auth != NOT_SET:
+                    operation._set_auth(self.api.auth)
+            self.websocket_operations[path] = operation
+
+    def websocket_routes(self, prefix: str) -> Iterator[Tuple[str, WebSocketOperation]]:
+        """Yield (django route, operation) for every websocket endpoint."""
+        prefix = replace_path_param_notation(prefix)
+        for path, operation in self.websocket_operations.items():
+            path = replace_path_param_notation(path)
+            route = "/".join([i for i in (prefix, path) if i])
+            yield normalize_path(route).lstrip("/"), operation
 
     def _bind_operations(self) -> None:
         """Clone operations from template and apply effective settings."""
@@ -213,6 +235,7 @@ class Router:
         self.exclude_none = exclude_none
 
         self.path_operations: Dict[str, PathView] = {}
+        self.websocket_operations: Dict[str, WebSocketOperation] = {}
         self.webhooks: Dict[str, Webhook] = {}
         self._routers: List[Tuple[str, Router, Optional[List[str]]]] = []
         # (auth, throttle) passed to add_router(), aligned with self._routers
@@ -546,6 +569,45 @@ class Router:
         # Note: API binding is now done via BoundRouter when urls are generated
 
         return None
+
+    def websocket(
+        self,
+        path: str,
+        *,
+        auth: Any = NOT_SET,
+        url_name: Optional[str] = None,
+    ) -> Callable[[TCallable], TCallable]:
+        """
+        Register an ``async def`` websocket handler::
+
+            @router.websocket("/ws/{room}")
+            async def chat(websocket: WebSocket, room: str):
+                await websocket.accept()
+                ...
+        """
+
+        def decorator(view_func: TCallable) -> TCallable:
+            self.add_websocket_operation(path, view_func, auth=auth, url_name=url_name)
+            return view_func
+
+        return decorator
+
+    def add_websocket_operation(
+        self,
+        path: str,
+        view_func: Callable[..., Any],
+        *,
+        auth: Any = NOT_SET,
+        url_name: Optional[str] = None,
+    ) -> WebSocketOperation:
+        self._check_not_frozen()
+        path = re.sub(r"\{uuid:(\w+)\}", r"{uuidstr:\1}", path, flags=re.IGNORECASE)
+        if path in self.websocket_operations:
+            raise ConfigError(f"WebSocket route '{path}' is already registered")
+        operation = WebSocketOperation(path, view_func, auth=auth, url_name=url_name)
+        self.websocket_operations[path] = operation
+        view_func._ninja_operation = operation  # type: ignore
+        return operation
 
     def urls_paths(
         self, prefix: str, api: Optional["NinjaAPI"] = None
