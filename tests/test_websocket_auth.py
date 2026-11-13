@@ -3,6 +3,7 @@ import json
 
 import pytest
 from asgiref.sync import sync_to_async
+from django.http import HttpResponse
 from ws_util import HTTP_RESPONSE_EXTENSION, api_urlconf, connect, unique_namespace
 
 from ninja import NinjaAPI, WebSocket
@@ -119,9 +120,9 @@ async def test_denied_with_http_response_extension():
 async def test_validation_error_close_reason_is_status_phrase():
     app = make_app()
     sent = await handshake(app, "/api/params", b"n=x")
-    assert sent == [
-        {"type": "websocket.close", "code": 1008, "reason": "Unprocessable Content"}
-    ]
+    # the phrase depends on the Python version ("Unprocessable Entity"/"Content")
+    phrase = HttpResponse(status=422).reason_phrase
+    assert sent == [{"type": "websocket.close", "code": 1008, "reason": phrase}]
 
 
 @pytest.mark.asyncio
