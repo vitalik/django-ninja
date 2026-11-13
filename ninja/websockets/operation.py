@@ -1,4 +1,3 @@
-import inspect
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Sequence, cast
 
 import pydantic
@@ -8,18 +7,16 @@ from django.http import HttpRequest, HttpResponse, JsonResponse
 from ninja.conf import settings as ninja_settings
 from ninja.constants import NOT_SET
 from ninja.errors import (
-    AuthenticationError,
     ConfigError,
     HttpError,
     ValidationError,
     ValidationErrorContext,
 )
-from ninja.operation import check_throttles
+from ninja.operation import authenticate_async, check_throttles
 from ninja.security.apikey import APIKeyCookie
 from ninja.signature import ViewSignature, is_async
 from ninja.throttling import BaseThrottle
 from ninja.types import DictStrAny
-from ninja.utils import is_async_callable
 from ninja.websockets.connection import WebSocket
 from ninja.websockets.handshake import (
     UPGRADE_NOT_HANDLED_DETAIL,
@@ -179,24 +176,12 @@ class WebSocketOperation:
 
     async def _authenticate(self, websocket: WebSocket) -> Optional[Exception]:
         request = websocket.request
-        for callback in self.auth_callbacks:
-            try:
-                if is_async_callable(callback) or getattr(callback, "is_async", False):
-                    result = callback(request)
-                    if inspect.isawaitable(result):
-                        result = await result
-                else:
-                    # sync callbacks may hit the database (tokens, sessions...)
-                    result = await sync_to_async(callback)(request)
-            except WebSocketException:
-                raise
-            except Exception as e:
-                return e
-            if result:
-                request.auth = result  # type: ignore[attr-defined]
-                websocket.auth = result
-                return None
-        return AuthenticationError()
+        error = await authenticate_async(self.auth_callbacks, request)
+        if isinstance(error, WebSocketException):
+            raise error  # closes with its own code (see ninja.asgi)
+        if error is None:
+            websocket.auth = request.auth  # type: ignore[attr-defined]
+        return error
 
     async def _reject_with(self, websocket: WebSocket, exc: Exception) -> None:
         response = self.response_for_exception(websocket.request, exc)

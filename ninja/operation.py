@@ -63,6 +63,31 @@ async def _await_coroutine(coroutine: Coroutine[Any, Any, Any]) -> Any:
     return await coroutine
 
 
+async def authenticate_async(
+    callbacks: Sequence[Callable[..., Any]], request: HttpRequest
+) -> Optional[Exception]:
+    """
+    Run auth callbacks from async code (sync ones in a thread, as they may hit
+    the database). On success sets ``request.auth`` and returns None, otherwise
+    returns the exception to report (AuthenticationError if none matched).
+    """
+    for callback in callbacks:
+        try:
+            if is_async_callable(callback) or getattr(callback, "is_async", False):
+                result = callback(request)
+                if inspect.isawaitable(result):
+                    result = await result
+            else:
+                result = await sync_to_async(callback)(request)
+        except Exception as exc:
+            return exc
+
+        if result:
+            request.auth = result  # type: ignore
+            return None
+    return AuthenticationError()
+
+
 def check_throttles(
     api: "NinjaAPI", throttle_objects: List[BaseThrottle], request: HttpRequest
 ) -> Optional[HttpResponse]:
@@ -585,23 +610,10 @@ class AsyncOperation(Operation):
         return None
 
     async def _run_authentication(self, request: HttpRequest) -> Optional[HttpResponse]:  # type: ignore
-        for callback in self.auth_callbacks:
-            try:
-                if is_async_callable(callback) or getattr(callback, "is_async", False):
-                    cor: Optional[Coroutine] = callback(request)
-                    if cor is None:
-                        result = None
-                    else:
-                        result = await cor
-                else:
-                    result = await sync_to_async(callback)(request)
-            except Exception as exc:
-                return self.api.on_exception(request, exc)
-
-            if result:
-                request.auth = result  # type: ignore
-                return None
-        return self.api.on_exception(request, AuthenticationError())
+        error = await authenticate_async(self.auth_callbacks, request)
+        if error is not None:
+            return self.api.on_exception(request, error)
+        return None
 
 
 class PathView:
