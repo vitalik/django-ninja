@@ -81,11 +81,16 @@ async def chat(websocket: WebSocket):
         print("client left with code", e.code)
 ```
 
-If the handler returns while the connection is still open, it is closed with code `1000`. If the handler raises an exception:
+If the handler returns while the connection is still open, it is closed with code `1000`.
 
-* the error is logged (logger `ninja.websockets`);
-* Django's `got_request_exception` signal is sent, so error reporting tools such as Sentry see it;
-* the connection is closed with code `1011`.
+Exceptions go through the API [exception handlers](errors.md), just like in HTTP operations:
+
+* **Before `accept()`**, the handler's response is sent as the handshake answer. For example, `raise HttpError(404, "Room not found")` returns a 404 with the usual JSON body.
+* **After `accept()`**, an HTTP response can no longer be sent. The connection is closed with code `1008` and the error `detail` as the reason. If the status is 5xx, the code is `1011` instead.
+* **Exceptions that no handler deals with**:
+    * the error is logged (logger `ninja.websockets`);
+    * Django's `got_request_exception` signal is sent, so error reporting tools such as Sentry see it;
+    * the connection is closed with code `1011`.
 
 To close the connection with a specific code, raise `WebSocketException`. It works from the handler and from auth callbacks. Raised before `accept()`, it rejects the handshake:
 
@@ -204,11 +209,36 @@ Browsers can't set custom headers like `Authorization` on a WebSocket. That leav
 
 * Sync auth callbacks run in a thread (`sync_to_async`), so they can use the ORM.
 * `django_auth` / `SessionAuth` work: the handshake request has lazy `session` and `user` attributes, filled from the session cookie. Django middlewares don't run for websockets.
-* **Cookie-based auth is protected against cross-site WebSocket hijacking.** When `APIKeyCookie` (or `django_auth`) has CSRF enabled, the `Origin` header must match the request host or be listed in `CSRF_TRUSTED_ORIGINS`.
 * The `Host` header is validated against `ALLOWED_HOSTS`, as for HTTP requests.
 * Authentication only runs during the handshake. Long-lived connections are not re-checked if the session ends or the token expires. Close them from your own code when that matters.
 
-If authentication or validation fails, the client receives an HTTP error (401, 403, 422) with a JSON body, as long as the server supports the `websocket.http.response` ASGI extension. Otherwise the connection is closed with code `1008` and the server answers the handshake with 403.
+If the origin check, authentication, throttling or validation fails, the client receives the response from the API exception handlers (403, 401, 429, 422...). Your custom handlers and renderer are used. This requires an ASGI server that supports the `websocket.http.response` extension (uvicorn does). Otherwise the connection is closed with code `1008` (`1013` for throttling) and the error detail as the reason; the server answers the handshake with 403.
+
+### Origin check
+
+Browsers send cookies on cross-site WebSocket handshakes, and the same-origin policy doesn't apply to WebSockets. Any website could otherwise open a connection on behalf of a logged-in user ("cross-site WebSocket hijacking"). So by default **every handshake with an `Origin` header** must come from the request host or from an origin listed in `CSRF_TRUSTED_ORIGINS`. Non-browser clients usually don't send `Origin`, and they are not affected.
+
+To accept connections from any website (for example a public widget):
+
+```python
+@api.websocket("/public-feed", check_origin=False)
+async def public_feed(websocket: WebSocket):
+    ...
+```
+
+To disable it for the whole project, set `NINJA_WEBSOCKET_CHECK_ORIGIN = False` in settings; routes can still opt in with `check_origin=True`. Cookie auth with CSRF enabled (`django_auth`, `APIKeyCookie()`) always checks the origin.
+
+### Throttling
+
+`throttle=` works like in HTTP operations, including inheritance from the router and the API. It limits **new connections** (handshakes), not messages:
+
+```python
+from ninja.throttling import AnonRateThrottle
+
+@api.websocket("/live", throttle=AnonRateThrottle("10/m"))
+async def live(websocket: WebSocket):
+    ...
+```
 
 !!! warning "Use the ORM through async methods"
     Handlers run in the event loop. Use the async ORM API (`aget`, `acreate`, `async for`...) or `sync_to_async`, as described in [Async support](async.md).
@@ -297,5 +327,7 @@ The `WebSocket` API (`accept`, `receive_*`, `send_*`, `iter_*`, `close`), `WebSo
 ## Limitations
 
 * Websocket routes aren't part of the OpenAPI schema (OpenAPI can't describe websockets).
-* Django middlewares and `add_decorator()` don't apply to websocket handlers. Throttling isn't supported yet.
+* Django middlewares don't run for websocket connections.
+* Decorators added with `add_decorator()` wrap HTTP views, so they don't apply to websocket handlers. A warning is emitted when an API or router has both.
+* Throttling applies to handshakes. To limit messages, count them in your handler.
 * Broadcasting between connections across several processes needs your own pub/sub layer, for example Redis or PostgreSQL `LISTEN/NOTIFY`.
