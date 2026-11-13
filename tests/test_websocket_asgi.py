@@ -209,3 +209,45 @@ def test_reverse_websocket_routes():
 
 def test_disconnect_exception_is_exported():
     assert issubclass(WebSocketDisconnect, Exception)
+
+
+@pytest.mark.asyncio
+async def test_disallowed_host_is_rejected(caplog):
+    app = NinjaASGI(urlconf=api_urlconf(make_api()))
+    evil = [(b"host", b"evil.example")]
+
+    with caplog.at_level(logging.ERROR, logger="django.security.DisallowedHost"):
+        t = await connect(app, "/api/echo", host=False, headers=evil)
+    assert t.sent == [
+        {"type": "websocket.close", "code": 1008, "reason": "Invalid Host header"}
+    ]
+    assert "evil.example" in caplog.text
+
+    t = await connect(
+        app,
+        "/api/echo",
+        host=False,
+        headers=evil,
+        extensions={"websocket.http.response": {}},
+    )
+    assert t.sent[0]["status"] == 400
+
+
+@pytest.mark.asyncio
+async def test_got_request_exception_signal():
+    import sys
+
+    from django.core.signals import got_request_exception
+
+    received = []
+
+    def receiver(sender, request, **kwargs):
+        received.append((sender, request.path, repr(sys.exc_info()[1])))
+
+    got_request_exception.connect(receiver)
+    try:
+        app = NinjaASGI(urlconf=api_urlconf(make_api()))
+        await connect(app, "/api/chat/boom")
+    finally:
+        got_request_exception.disconnect(receiver)
+    assert received == [(None, "/api/chat/boom", "ValueError('boom')")]

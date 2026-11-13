@@ -26,9 +26,11 @@ from typing import Any, Dict, Optional, Tuple
 from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.core import signals
+from django.core.exceptions import DisallowedHost
 from django.urls import Resolver404, resolve, set_script_prefix
 
 from ninja.websockets.connection import WebSocket
+from ninja.websockets.handshake import deny
 from ninja.websockets.operation import WebSocketOperation
 from ninja.websockets.types import (
     Receive,
@@ -108,6 +110,8 @@ class NinjaASGI:
             )
         websocket = WebSocket(scope, receive, send)
         try:
+            if not await _check_host(websocket):
+                return
             operation, path_params = self.resolve_operation(websocket)
             if operation is None:
                 await _close(websocket, WebSocketClose.POLICY_VIOLATION, "Not Found")
@@ -118,6 +122,11 @@ class NinjaASGI:
                 pass
             except Exception:
                 logger.exception("Error in websocket handler for %s", websocket.path)
+                # error reporting tools (Sentry, Rollbar...) listen to this signal;
+                # sync_to_async keeps sys.exc_info() available to receivers
+                await sync_to_async(
+                    signals.got_request_exception.send, thread_sensitive=True
+                )(sender=None, request=websocket.request)
                 await _close(websocket, WebSocketClose.INTERNAL_ERROR)
                 if self.raise_exceptions:
                     raise
@@ -128,6 +137,17 @@ class NinjaASGI:
                 await sync_to_async(
                     signals.request_finished.send, thread_sensitive=True
                 )(sender=self.__class__)
+
+
+async def _check_host(websocket: WebSocket) -> bool:
+    """Validate the Host header against ALLOWED_HOSTS, like Django does for HTTP."""
+    try:
+        websocket.request.get_host()
+    except DisallowedHost as e:
+        logging.getLogger("django.security.DisallowedHost").error(str(e))
+        await deny(websocket, 400, "Invalid Host header")
+        return False
+    return True
 
 
 def _get_script_prefix(scope: Scope) -> str:
