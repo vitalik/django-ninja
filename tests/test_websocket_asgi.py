@@ -1,3 +1,4 @@
+import json
 import logging
 
 import pytest
@@ -393,3 +394,67 @@ def test_paths_added_without_router_api_are_kept():
     api.add_router("", router)
     names = [p.name for p in api.urls[0]]
     assert names.index("a") < names.index("b")
+
+
+@pytest.mark.asyncio
+async def test_malformed_client_input_is_not_a_server_error(caplog):
+    from django.core.signals import got_request_exception
+
+    from ninja.errors import ValidationError
+
+    api = NinjaAPI(urls_namespace=unique_namespace())
+
+    @api.websocket("/json")
+    async def json_handler(websocket: WebSocket):
+        await websocket.accept()
+        try:
+            await websocket.receive_json()
+        except ValidationError as e:
+            await websocket.send_json(e.errors)
+        await websocket.receive_json(mode="binary")  # uncaught this time
+
+    @api.websocket("/text")
+    async def text_handler(websocket: WebSocket):
+        await websocket.accept()
+        await websocket.receive_text()
+
+    signals = []
+
+    def receiver(**kwargs):
+        signals.append(kwargs)  # pragma: no cover
+
+    app = NinjaASGI(urlconf=api_urlconf(api))
+    got_request_exception.connect(receiver)
+    try:
+        with caplog.at_level(logging.ERROR):
+            t = await connect(
+                app,
+                "/api/json",
+                incoming=[
+                    CONNECT,
+                    {"type": "websocket.receive", "text": "not json"},
+                    {"type": "websocket.receive", "bytes": b"\xff\xfe broken"},
+                ],
+            )
+            t2 = await connect(
+                app,
+                "/api/text",
+                incoming=[CONNECT, {"type": "websocket.receive", "bytes": b"x"}],
+            )
+    finally:
+        got_request_exception.disconnect(receiver)
+
+    errors = json.loads(t.sent[1]["text"])
+    assert errors[0]["type"] == "json_invalid"
+    assert errors[0]["msg"].startswith("Invalid JSON: ")
+    assert t.sent[2]["type"] == "websocket.close"
+    assert t.sent[2]["code"] == 1008
+
+    assert t2.sent[-1] == {
+        "type": "websocket.close",
+        "code": 1003,
+        "reason": "Expected a text frame",
+    }
+    # client mistakes are neither logged as errors nor reported
+    assert caplog.records == []
+    assert signals == []

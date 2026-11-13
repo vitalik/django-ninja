@@ -18,11 +18,13 @@ from typing import (
     Tuple,
     Type,
     TypeVar,
+    Union,
     overload,
 )
 
 from django.http import HttpRequest, QueryDict
 
+from ninja.errors import ValidationError
 from ninja.renderers import BaseRenderer
 from ninja.responses import NinjaJSONEncoder
 from ninja.websockets.request import build_handshake_request
@@ -34,6 +36,7 @@ from ninja.websockets.types import (
     Send,
     WebSocketClose,
     WebSocketDisconnect,
+    WebSocketException,
     WebSocketState,
 )
 
@@ -235,14 +238,19 @@ class WebSocket:
         message = await self._receive_data()
         text = message.get("text")
         if text is None:
-            raise TypeError("Expected a text frame but received a binary frame")
+            # a client error: close with 1003 instead of a server error
+            raise WebSocketException(
+                WebSocketClose.UNSUPPORTED_DATA, "Expected a text frame"
+            )
         return str(text)
 
     async def receive_bytes(self) -> bytes:
         message = await self._receive_data()
         data = message.get("bytes")
         if data is None:
-            raise TypeError("Expected a binary frame but received a text frame")
+            raise WebSocketException(
+                WebSocketClose.UNSUPPORTED_DATA, "Expected a binary frame"
+            )
         return bytes(data)
 
     @overload
@@ -257,16 +265,25 @@ class WebSocket:
     async def receive_json(self, mode: str = "text", *, schema: Any = None) -> Any:
         """
         Receive a JSON message. With ``schema`` (a pydantic model or any type
-        such as ``List[Item]``) the data is validated and converted, raising
-        ``ninja.errors.ValidationError`` (like HTTP 422 errors) when it does
-        not match.
+        such as ``List[Item]``) the data is validated and converted.
+
+        Invalid JSON, or data not matching ``schema``, raise
+        ``ninja.errors.ValidationError`` (same errors format as HTTP 422
+        responses); left uncaught, the connection is closed with 1008.
         """
         if mode not in {"text", "binary"}:
             raise ValueError('The "mode" argument should be "text" or "binary".')
+        raw: Union[str, bytes]
         if mode == "text":
-            data = json.loads(await self.receive_text())
+            raw = await self.receive_text()
         else:
-            data = json.loads((await self.receive_bytes()).decode("utf-8"))
+            raw = await self.receive_bytes()
+        try:
+            data = json.loads(raw)
+        except ValueError as e:  # includes JSONDecodeError and UnicodeDecodeError
+            raise ValidationError([
+                {"type": "json_invalid", "loc": (), "msg": f"Invalid JSON: {e}"}
+            ]) from e
         if schema is not None:
             return validate_message(schema, data)
         return data

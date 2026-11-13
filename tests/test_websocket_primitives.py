@@ -3,7 +3,7 @@ from datetime import date
 import pytest
 from ws_util import CONNECT, FakeTransport
 
-from ninja import WebSocket, WebSocketDisconnect
+from ninja import WebSocket, WebSocketDisconnect, WebSocketException
 from ninja.websockets import WebSocketClose, WebSocketState
 
 
@@ -148,9 +148,10 @@ async def test_disconnect_defaults():
 async def test_frame_type_mismatch():
     ws, _ = make_ws([CONNECT, binary(b"x"), text("x")])
     await ws.accept()
-    with pytest.raises(TypeError):
+    with pytest.raises(WebSocketException) as exc:
         await ws.receive_text()
-    with pytest.raises(TypeError):
+    assert exc.value.code == WebSocketClose.UNSUPPORTED_DATA
+    with pytest.raises(WebSocketException, match="binary frame"):
         await ws.receive_bytes()
 
 
