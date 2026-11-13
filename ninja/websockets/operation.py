@@ -206,10 +206,20 @@ class WebSocketOperation:
         await reject(websocket, response)
 
     async def run(self, websocket: WebSocket, path_params: Dict[str, Any]) -> None:
+        """Process the handshake and, if it is not rejected, call the handler."""
+        values = await self.handshake(websocket, path_params)
+        if values is not None:
+            await self.view_func(**values)
+
+    async def handshake(
+        self, websocket: WebSocket, path_params: Dict[str, Any]
+    ) -> Optional[DictStrAny]:
         """
-        Process the handshake (origin, auth, throttling, params) and call the
-        handler. Rejections are built by the API exception handlers, so custom
-        handlers and renderers apply like for HTTP operations.
+        Process the handshake (origin, auth, throttling, params).
+
+        Returns the handler arguments, or None when the handshake was rejected
+        (the rejection is built by the API exception handlers, so custom
+        handlers and renderers apply like for HTTP operations).
         """
         request = websocket.request
         websocket.path_params = path_params
@@ -221,13 +231,13 @@ class WebSocketOperation:
 
         if self._requires_origin_check() and not origin_is_allowed(request):
             await self._reject_with(websocket, HttpError(403, "Origin not allowed"))
-            return
+            return None
 
         if self.auth_callbacks:
             response = await self._authenticate(websocket)
             if response is not None:
                 await reject(websocket, response)
-                return
+                return None
 
         if self.throttle_objects:
             response = await sync_to_async(_throttled_response)(
@@ -235,16 +245,16 @@ class WebSocketOperation:
             )
             if response is not None:
                 await reject(websocket, response)
-                return
+                return None
 
         try:
             values = self._get_values(request, path_params)
         except ValidationError as e:
             await self._reject_with(websocket, e)
-            return
+            return None
 
         values[cast(str, self.signature.websocket_arg)] = websocket
-        await self.view_func(**values)
+        return values
 
 
 def _is_json_renderer(renderer: BaseRenderer) -> bool:

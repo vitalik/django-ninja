@@ -285,10 +285,17 @@ user = await websocket.request.auser()  # the logged-in user (session auth)
 rooms = [room async for room in Room.objects.filter(owner=user)]  # Django 4.1+
 ```
 
-Like Django does for each HTTP request, each websocket connection runs its sync code (sync auth callbacks, throttles, `sync_to_async` calls) in a thread of its own. Database connections opened there are closed when the websocket closes. Keep in mind:
+The handshake is processed like a Django HTTP request:
 
-* A connection can stay open for hours, and so does its thread when it uses sync code. Prefer the async ORM methods in handlers that serve many clients.
-* Like any Django project served with ASGI, use `CONN_MAX_AGE = 0` (the default). Persistent database connections are not reused across threads.
+* `request_started` and `request_finished` are sent;
+* its sync code (sync auth callbacks, throttles) runs in a thread of its own;
+* the database connections it opened are closed when the handshake ends.
+
+The handler runs after that, for as long as the connection stays open, so it doesn't keep a thread of its own: `sync_to_async` calls and the async ORM methods (which use `sync_to_async` internally) run in the thread Django uses for sync code outside requests. That thread is shared by all connections, as with Django Channels. Keep in mind:
+
+* Those calls run one after another, so keep database work in busy handlers short.
+* Django doesn't close the database connections opened there. If a handler stays connected for a long time and the database may drop idle connections, call `await sync_to_async(close_old_connections)()` (from `django.db`) before using the ORM, like Channels' `database_sync_to_async` does.
+* As Django recommends for ASGI projects, use `CONN_MAX_AGE = 0` (the default).
 
 ## Routers and URLs
 

@@ -66,9 +66,8 @@ class NinjaASGI:
     """
 
     # Overridden by ninja.testing: re-raise handler errors so they surface in
-    # tests, and skip request_started/finished (they close DB connections).
+    # tests (it also replaces the request signals of the handshake).
     _raise_exceptions = False
-    _send_signals = True
 
     def __init__(self, app: Optional[ASGIApp] = None, *, urlconf: Any = None):
         self.app = app
@@ -76,11 +75,7 @@ class NinjaASGI:
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] == "websocket":
-            # Like Django's ASGIHandler for each request: sync code called with
-            # sync_to_async (auth, ORM, signals) runs in a thread of its own for
-            # this connection, and request_finished closes only its DB connections.
-            async with _thread_sensitive_context():
-                await self.handle_websocket(scope, receive, send)
+            await self.handle_websocket(scope, receive, send)
             return
         if self.app is None:
             raise RuntimeError(
@@ -118,48 +113,65 @@ class NinjaASGI:
         self, scope: Scope, receive: Receive, send: Send
     ) -> None:
         set_script_prefix(_get_script_prefix(scope))
-        if self._send_signals:
-            await sync_to_async(signals.request_started.send, thread_sensitive=True)(
-                sender=self.__class__, scope=scope
-            )
         websocket = WebSocket(scope, receive, send)
+        operation: Optional[WebSocketOperation] = None
+        values: Optional[Dict[str, Any]] = None
         try:
-            if not await _check_host(websocket):
-                return
-            operation, path_params = self.resolve_operation(websocket)
+            # The handshake is processed like a Django request: its sync code
+            # (signals, auth callbacks, throttles) runs in a thread of its own and
+            # request_finished closes the database connections it opened. That
+            # thread is released before the handler runs, so long-lived
+            # connections don't keep one each (sync code in handlers uses the
+            # thread shared by code outside requests, as with Channels).
+            async with _thread_sensitive_context():
+                await self._handshake_started(scope)
+                try:
+                    if await _check_host(websocket):
+                        operation, path_params = self.resolve_operation(websocket)
+                        if operation is None:
+                            await deny(websocket, 404, "Not Found")
+                        else:
+                            values = await operation.handshake(websocket, path_params)
+                finally:
+                    await self._handshake_finished()
+            if operation is None or values is None:
+                return  # rejected
+            await operation.view_func(**values)
+            await _close(websocket, WebSocketClose.NORMAL_CLOSURE)
+        except WebSocketDisconnect:
+            pass
+        except WebSocketException as e:
+            await _close(websocket, e.code, truncate_reason(e.reason))
+        except asyncio.CancelledError:
+            raise  # server shutdown (an Exception subclass on Python 3.7)
+        except Exception as exc:
             if operation is None:
-                await deny(websocket, 404, "Not Found")
+                raise  # not raised by user code (host check, URL resolution)
+            # API exception handlers apply like for HTTP (e.g. HttpError(404)
+            # before accept() becomes a 404 response, after it a 1008 close)
+            response = operation.response_for_exception(websocket.request, exc)
+            # unexpected errors only: not HttpError(503) raised on purpose
+            if response is None or (
+                response.status_code >= 500 and not isinstance(exc, HttpError)
+            ):
+                await self._report_error(websocket)
+            if response is not None:
+                await reject(websocket, response)
                 return
-            try:
-                await operation.run(websocket, path_params)
-            except WebSocketDisconnect:
-                pass
-            except WebSocketException as e:
-                await _close(websocket, e.code, truncate_reason(e.reason))
-            except asyncio.CancelledError:
-                raise  # server shutdown (an Exception subclass on Python 3.7)
-            except Exception as exc:
-                # API exception handlers apply like for HTTP (e.g. HttpError(404)
-                # before accept() becomes a 404 response, after it a 1008 close)
-                response = operation.response_for_exception(websocket.request, exc)
-                # unexpected errors only: not HttpError(503) raised on purpose
-                if response is None or (
-                    response.status_code >= 500 and not isinstance(exc, HttpError)
-                ):
-                    await self._report_error(websocket)
-                if response is not None:
-                    await reject(websocket, response)
-                    return
-                await _close(websocket, WebSocketClose.INTERNAL_ERROR)
-                if self._raise_exceptions:
-                    raise
-            else:
-                await _close(websocket, WebSocketClose.NORMAL_CLOSURE)
-        finally:
-            if self._send_signals:
-                await sync_to_async(
-                    signals.request_finished.send, thread_sensitive=True
-                )(sender=self.__class__)
+            await _close(websocket, WebSocketClose.INTERNAL_ERROR)
+            if self._raise_exceptions:
+                raise
+
+    async def _handshake_started(self, scope: Scope) -> None:
+        await sync_to_async(signals.request_started.send, thread_sensitive=True)(
+            sender=self.__class__, scope=scope
+        )
+
+    async def _handshake_finished(self) -> None:
+        # closes the database connections opened during the handshake
+        await sync_to_async(signals.request_finished.send, thread_sensitive=True)(
+            sender=self.__class__
+        )
 
     async def _report_error(self, websocket: WebSocket) -> None:
         logger.exception("Error in websocket handler for %s", websocket.path)

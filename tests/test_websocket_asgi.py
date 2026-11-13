@@ -474,15 +474,16 @@ async def test_malformed_client_input_is_not_a_server_error(caplog):
 
 
 @pytest.mark.asyncio
-async def test_each_connection_has_its_own_sync_thread():
+async def test_handshake_thread_is_released_before_the_handler():
     import threading
 
     from asgiref.sync import sync_to_async
 
-    seen = []
+    auth_threads = []
+    handler_checks = []
 
     def auth(request):
-        seen.append(threading.current_thread())
+        auth_threads.append(threading.current_thread())
         return True
 
     api = NinjaAPI(urls_namespace=unique_namespace())
@@ -490,22 +491,22 @@ async def test_each_connection_has_its_own_sync_thread():
     @api.websocket("/ws", auth=auth)
     async def ws(websocket: WebSocket):
         await websocket.accept()
-        seen.append(await sync_to_async(threading.current_thread)())
+        handshake_thread = auth_threads[-1]
+        handler_thread = await sync_to_async(threading.current_thread)()
+        handler_checks.append((handshake_thread.is_alive(), handler_thread))
 
     app = NinjaASGI(urlconf=api_urlconf(api))
     await connect(app, "/api/ws")
     await connect(app, "/api/ws")
-    outside = await sync_to_async(threading.current_thread)()
 
     # (Thread objects, not idents: the OS reuses idents of finished threads)
-    first, second = seen[:2], seen[2:]
-    # auth and the handler's sync code share the connection's thread...
-    assert first[0] is first[1] and second[0] is second[1]
-    # ...which belongs to that connection only, not to the global executor
-    assert first[0] is not second[0]
-    assert outside not in seen
-    # and it ends with the connection
-    assert not first[0].is_alive() and not second[0].is_alive()
+    # each handshake runs its sync code in a thread of its own...
+    assert auth_threads[0] is not auth_threads[1]
+    for (alive, handler_thread), auth_thread in zip(handler_checks, auth_threads):
+        # ...which is gone while the handler runs: open connections don't
+        # keep a thread each, and the handler's sync code doesn't use it
+        assert alive is False
+        assert handler_thread is not auth_thread
 
 
 @pytest.mark.asyncio
@@ -553,3 +554,13 @@ async def test_intentional_5xx_is_not_reported(caplog):
         "reason": "Maintenance",
     }
     assert caplog.records == []
+
+
+@pytest.mark.asyncio
+async def test_errors_outside_user_code_propagate():
+    class BrokenUrlconf(NinjaASGI):
+        def get_urlconf(self, websocket):
+            return "module.that.does.not.exist"
+
+    with pytest.raises(ModuleNotFoundError):
+        await connect(BrokenUrlconf(), "/api/echo")

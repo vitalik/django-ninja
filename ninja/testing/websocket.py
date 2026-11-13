@@ -45,15 +45,13 @@ class TestNinjaASGI(NinjaASGI):
 
     __test__ = False  # not a pytest test class
     _raise_exceptions = True
-    _send_signals = False
 
-    async def handle_websocket(self, scope: Scope, receive: Any, send: Any) -> None:
-        try:
-            await super().handle_websocket(scope, receive, send)
-        finally:
-            # Without request_finished nothing closes the database connections
-            # opened from the connection's own thread (it ends with it).
-            await sync_to_async(connections.close_all)()
+    async def _handshake_started(self, scope: Scope) -> None:
+        pass  # like Django's test client: no close_old_connections in tests
+
+    async def _handshake_finished(self) -> None:
+        # Instead of request_finished: close what the handshake thread opened.
+        await sync_to_async(connections.close_all, thread_sensitive=True)()
 
 
 class WebSocketDenied(Exception):
