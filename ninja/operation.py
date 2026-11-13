@@ -12,6 +12,7 @@ from typing import (
     Optional,
     Sequence,
     Type,
+    TypeVar,
     Union,
     cast,
 )
@@ -63,13 +64,21 @@ async def _await_coroutine(coroutine: Coroutine[Any, Any, Any]) -> Any:
     return await coroutine
 
 
+_T = TypeVar("_T")
+
+
 async def authenticate_async(
-    callbacks: Sequence[Callable[..., Any]], request: HttpRequest
-) -> Optional[Exception]:
+    callbacks: Sequence[Callable[..., Any]],
+    request: HttpRequest,
+    on_error: Callable[[Exception], _T],
+) -> Optional[_T]:
     """
     Run auth callbacks from async code (sync ones in a thread, as they may hit
     the database). On success sets ``request.auth`` and returns None, otherwise
-    returns the exception to report (AuthenticationError if none matched).
+    returns ``on_error(exception)`` (AuthenticationError if none matched).
+
+    ``on_error`` is called inside the ``except`` block, so exception handlers
+    can still use the traceback (``logger.exception``, DEBUG 500 pages).
     """
     for callback in callbacks:
         try:
@@ -80,12 +89,12 @@ async def authenticate_async(
             else:
                 result = await sync_to_async(callback)(request)
         except Exception as exc:
-            return exc
+            return on_error(exc)
 
         if result:
             request.auth = result  # type: ignore
             return None
-    return AuthenticationError()
+    return on_error(AuthenticationError())
 
 
 def check_throttles(
@@ -610,10 +619,11 @@ class AsyncOperation(Operation):
         return None
 
     async def _run_authentication(self, request: HttpRequest) -> Optional[HttpResponse]:  # type: ignore
-        error = await authenticate_async(self.auth_callbacks, request)
-        if error is not None:
-            return self.api.on_exception(request, error)
-        return None
+        return await authenticate_async(
+            self.auth_callbacks,
+            request,
+            lambda exc: self.api.on_exception(request, exc),
+        )
 
 
 class PathView:

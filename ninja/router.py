@@ -133,6 +133,8 @@ class BoundRouter:
         throttle = self.throttle if self.throttle != NOT_SET else self.api.throttle
         if throttle == NOT_SET:
             return None
+        if throttle is None:  # explicit "no throttling" (as on master)
+            return []
         if isinstance(throttle, BaseThrottle):
             return [throttle]
         return list(throttle)

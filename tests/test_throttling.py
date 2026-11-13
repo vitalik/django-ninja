@@ -398,3 +398,48 @@ def set_throttle_timer(throttle: BaseThrottle, value: int):
     Explicitly set the timer, overriding time.time()
     """
     throttle.timer = lambda: value
+
+
+class _AlwaysDeny(BaseThrottle):
+    def allow_request(self, request):
+        return False
+
+
+def test_throttle_none_disables_throttling():
+    """throttle=None means "no throttling" at api, router and mount level."""
+    api = NinjaAPI(urls_namespace="throttle-none-api", throttle=None)
+
+    @api.get("/a")
+    def a(request):
+        return 1
+
+    router = Router(throttle=None)
+
+    @router.get("/b")
+    def b(request):
+        return 2
+
+    mounted = Router()
+
+    @mounted.get("/c")
+    def c(request):
+        return 3
+
+    api.add_router("/r", router)
+    api.add_router("/m", mounted, throttle=None)
+    client = TestClient(api)
+    assert client.get("/a").status_code == 200
+    assert client.get("/r/b").status_code == 200
+    assert client.get("/m/c").status_code == 200
+
+
+def test_router_throttle_none_overrides_api_throttle():
+    api = NinjaAPI(urls_namespace="throttle-none-override", throttle=_AlwaysDeny())
+    router = Router(throttle=None)
+
+    @router.get("/b")
+    def b(request):
+        return 2
+
+    api.add_router("/r", router)
+    assert TestClient(api).get("/r/b").status_code == 200

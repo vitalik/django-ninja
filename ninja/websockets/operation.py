@@ -74,7 +74,7 @@ class WebSocketOperation:
             throttle = [throttle]
         self.throttle_param = throttle
         self.throttle_objects: List[BaseThrottle] = []
-        if throttle is not NOT_SET:
+        if throttle is not NOT_SET and throttle is not None:
             for th in throttle:
                 assert isinstance(th, BaseThrottle), (
                     "Throttle should be an instance of BaseThrottle"
@@ -181,14 +181,23 @@ class WebSocketOperation:
                 return None
             raise
 
-    async def _authenticate(self, websocket: WebSocket) -> Optional[Exception]:
+    async def _authenticate(self, websocket: WebSocket) -> Optional[HttpResponse]:
+        """None when authenticated, otherwise the rejection response."""
         request = websocket.request
-        error = await authenticate_async(self.auth_callbacks, request)
-        if isinstance(error, WebSocketException):
-            raise error  # closes with its own code (see ninja.asgi)
-        if error is None:
+
+        def on_error(exc: Exception) -> HttpResponse:
+            # runs inside the ``except`` block: handlers keep the traceback
+            if isinstance(exc, WebSocketException):
+                raise exc  # closes with its own code (see ninja.asgi)
+            response = self.response_for_exception(request, exc)
+            if response is None:
+                raise exc
+            return response
+
+        response = await authenticate_async(self.auth_callbacks, request, on_error)
+        if response is None:
             websocket.auth = request.auth  # type: ignore[attr-defined]
-        return error
+        return response
 
     async def _reject_with(self, websocket: WebSocket, exc: Exception) -> None:
         response = self.response_for_exception(websocket.request, exc)
@@ -215,9 +224,9 @@ class WebSocketOperation:
             return
 
         if self.auth_callbacks:
-            error = await self._authenticate(websocket)
-            if error is not None:
-                await self._reject_with(websocket, error)
+            response = await self._authenticate(websocket)
+            if response is not None:
+                await reject(websocket, response)
                 return
 
         if self.throttle_objects:

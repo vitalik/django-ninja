@@ -284,3 +284,36 @@ async def test_debug_traceback_response(settings):
     )
     assert t.sent[0]["status"] == 500
     assert b"ValueError: bug" in t.sent[1]["body"]
+
+
+@pytest.mark.asyncio
+async def test_debug_traceback_for_auth_errors(settings):
+    settings.DEBUG = True
+    app = NinjaASGI(urlconf=api_urlconf(make_api()))
+    t = await connect(app, "/api/auth-down", extensions={"websocket.http.response": {}})
+    assert t.sent[0]["status"] == 500
+    assert b"RuntimeError: auth backend down" in t.sent[1]["body"]
+
+
+def test_throttle_none_on_websocket():
+    api = NinjaAPI(urls_namespace=unique_namespace(), throttle=QueryThrottle("api"))
+    api.websocket("/ws", throttle=None)(echo)
+    assert bound_operations(api)["ws"].throttle_objects == []
+
+
+@pytest.mark.asyncio
+async def test_handler_reraising_validation_error_closes_with_1011():
+    from ninja.errors import ValidationError
+
+    api = NinjaAPI(urls_namespace=unique_namespace())
+
+    @api.exception_handler(ValidationError)
+    def reraise(request, exc):
+        raise exc
+
+    @api.websocket("/ws")
+    async def ws(websocket: WebSocket, n: int):
+        pass  # pragma: no cover
+
+    t = await connect(NinjaASGI(urlconf=api_urlconf(api)), "/api/ws", query=b"n=x")
+    assert t.sent == [{"type": "websocket.close", "code": 1011, "reason": ""}]
