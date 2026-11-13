@@ -81,7 +81,26 @@ async def chat(websocket: WebSocket):
         print("client left with code", e.code)
 ```
 
-If the handler returns while the connection is still open, it is closed with code `1000`. If the handler raises an exception, the error is logged (logger `ninja.websockets`) and the connection is closed with code `1011`.
+If the handler returns while the connection is still open, it is closed with code `1000`. If the handler raises an exception:
+
+* the error is logged (logger `ninja.websockets`);
+* Django's `got_request_exception` signal is sent, so error reporting tools such as Sentry see it;
+* the connection is closed with code `1011`.
+
+To close the connection with a specific code, raise `WebSocketException`. It works from the handler and from auth callbacks. Raised before `accept()`, it rejects the handshake:
+
+```python
+from ninja import WebSocketException
+from ninja.websockets import WebSocketClose
+
+
+@api.websocket("/rooms/{room_id}")
+async def room(websocket: WebSocket, room_id: int):
+    if not await Room.objects.filter(id=room_id).aexists():
+        raise WebSocketException(code=WebSocketClose.POLICY_VIOLATION, reason="Unknown room")
+    await websocket.accept()
+    ...
+```
 
 ## Path, Query, Header and Cookie parameters
 
@@ -140,41 +159,54 @@ async def bulk(websocket: WebSocket):
     except pydantic.ValidationError as e:
         await websocket.send_json({"errors": e.errors(include_url=False)})
         return
-    users = [u async for u in User.objects.all()]
+    users = [u async for u in User.objects.all()]  # Django 4.1+
     await websocket.send_json(users, schema=List[UserOut])
 ```
+
+With `schema=`, type checkers know the result type: `receive_json(schema=Message)` is a `Message` and `receive_json(schema=List[Message])` is a `List[Message]`.
 
 ## Authentication
 
 The usual `auth=` argument works, including inheritance from the router or the `NinjaAPI` instance. Pass `auth=None` to make a websocket public when the API has global auth. Authentication runs during the handshake, before the handler:
 
 ```python
-from ninja.security import APIKeyQuery
+from ninja.security import APIKeyHeader
 
 
-class TokenAuth(APIKeyQuery):
-    param_name = "token"
+class SubprotocolToken(APIKeyHeader):
+    """Reads the token sent as `new WebSocket(url, ["access_token", token])`."""
+
+    param_name = "Sec-WebSocket-Protocol"
 
     def authenticate(self, request, key):
-        return Token.objects.filter(key=key).first()  # sync code is fine
+        name, _, token = (key or "").partition(",")
+        if name.strip() == "access_token":
+            return Token.objects.filter(key=token.strip()).first()  # sync code is fine
 
 
-@api.websocket("/notifications", auth=TokenAuth())
+@api.websocket("/notifications", auth=SubprotocolToken())
 async def notifications(websocket: WebSocket):
     token = websocket.auth
-    await websocket.accept()
+    # the browser requires the server to select one of the requested subprotocols
+    await websocket.accept(subprotocol="access_token")
     ...
 ```
 
-```
-ws://localhost:8000/api/notifications?token=abc123
+```javascript
+const ws = new WebSocket("wss://example.com/api/notifications", ["access_token", token]);
 ```
 
-Browsers can't set custom headers on a WebSocket, so the token usually goes in the query string or in a cookie.
+Browsers can't set custom headers like `Authorization` on a WebSocket. That leaves three ways to send credentials:
+
+* **A subprotocol** (example above): the token travels in the `Sec-WebSocket-Protocol` header.
+* **A cookie**: the session cookie with `django_auth`, or `APIKeyCookie`.
+* **The query string** (`APIKeyQuery`): simple, but be careful. Servers and proxies write full URLs to their access logs, so the token ends up in those logs. If you use it, prefer short-lived, single-use tickets obtained through an authenticated HTTP endpoint over long-lived API keys.
 
 * Sync auth callbacks run in a thread (`sync_to_async`), so they can use the ORM.
 * `django_auth` / `SessionAuth` work: the handshake request has lazy `session` and `user` attributes, filled from the session cookie. Django middlewares don't run for websockets.
 * **Cookie-based auth is protected against cross-site WebSocket hijacking.** When `APIKeyCookie` (or `django_auth`) has CSRF enabled, the `Origin` header must match the request host or be listed in `CSRF_TRUSTED_ORIGINS`.
+* The `Host` header is validated against `ALLOWED_HOSTS`, as for HTTP requests.
+* Authentication only runs during the handshake. Long-lived connections are not re-checked if the session ends or the token expires. Close them from your own code when that matters.
 
 If authentication or validation fails, the client receives an HTTP error (401, 403, 422) with a JSON body, as long as the server supports the `websocket.http.response` ASGI extension. Otherwise the connection is closed with code `1008` and the server answers the handshake with 403.
 
@@ -253,6 +285,14 @@ application = ProtocolTypeRouter({
     "websocket": NinjaASGI(),
 })
 ```
+
+## Differences from FastAPI
+
+The `WebSocket` API (`accept`, `receive_*`, `send_*`, `iter_*`, `close`), `WebSocketDisconnect` and `WebSocketException` follow FastAPI/Starlette. Some things differ:
+
+* There is no dependency injection (`Depends`). Use `auth=` and Path/Query/Header/Cookie parameters.
+* `websocket.url`, `websocket.state` and `websocket.app` don't exist. Use `websocket.path`, `websocket.query_params` and `websocket.request` instead.
+* `receive_json()`, `iter_json()` and `send_json()` take a `schema=` argument for validation.
 
 ## Limitations
 
