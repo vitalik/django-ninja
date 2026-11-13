@@ -83,11 +83,26 @@ class NinjaASGI:
             )
         await self.app(scope, receive, send)
 
+    def get_urlconf(self, websocket: WebSocket) -> Any:
+        """
+        The URLconf used to resolve this connection (None = ROOT_URLCONF).
+
+        Override it when the URLconf depends on the request, as middlewares
+        like django-hosts or django-tenants do for HTTP (they don't run for
+        websockets)::
+
+            class HostsASGI(NinjaASGI):
+                def get_urlconf(self, websocket):
+                    host = websocket.request.get_host().split(":")[0]
+                    return "myproject.urls_api" if host.startswith("api.") else None
+        """
+        return self.urlconf
+
     def resolve_operation(
         self, websocket: WebSocket
     ) -> Tuple[Optional[WebSocketOperation], Dict[str, Any]]:
         try:
-            match = resolve(websocket.request.path_info, self.urlconf)
+            match = resolve(websocket.request.path_info, self.get_urlconf(websocket))
         except Resolver404:
             return None, {}
         operation = getattr(match.func, "ninja_websocket_operation", None)

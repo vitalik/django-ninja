@@ -1,9 +1,17 @@
 import logging
 
 import pytest
+from django.test import override_settings
 from django.urls import path, reverse
 from django.urls.exceptions import NoReverseMatch
-from ws_util import FakeTransport, api_urlconf, connect, make_scope, unique_namespace
+from ws_util import (
+    CONNECT,
+    FakeTransport,
+    api_urlconf,
+    connect,
+    make_scope,
+    unique_namespace,
+)
 
 from ninja import NinjaAPI, Router, WebSocket, WebSocketDisconnect
 from ninja.asgi import NinjaASGI, _get_script_prefix, get_asgi_application
@@ -287,3 +295,33 @@ async def test_websocket_exception_closes_with_code():
     # raised from an auth callback
     t = await connect(app, "/api/before", query=b"ban=1")
     assert t.sent == [{"type": "websocket.close", "code": 4003, "reason": "banned"}]
+
+
+@pytest.mark.asyncio
+async def test_urlconf_per_connection():
+    api_a = make_api()
+    api_b = NinjaAPI(urls_namespace=unique_namespace())
+
+    @api_b.websocket("/echo")
+    async def other(websocket: WebSocket):
+        await websocket.accept()
+        await websocket.send_text("from b")
+
+    class PerHost(NinjaASGI):
+        def get_urlconf(self, websocket):
+            if websocket.request.get_host() == "b.testserver":
+                return api_urlconf(api_b)
+            return super().get_urlconf(websocket)
+
+    app = PerHost(urlconf=api_urlconf(api_a))
+    with override_settings(ALLOWED_HOSTS=["testserver", "b.testserver"]):
+        t = await connect(
+            app, "/api/echo", host=False, headers=[(b"host", b"b.testserver")]
+        )
+        assert t.sent[1] == {"type": "websocket.send", "text": "from b"}
+        t = await connect(
+            app,
+            "/api/echo",
+            incoming=[CONNECT, {"type": "websocket.receive", "text": "a"}],
+        )
+        assert t.sent[1] == {"type": "websocket.send", "text": "a"}
