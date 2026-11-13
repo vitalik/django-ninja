@@ -72,7 +72,9 @@ def make_app():
     async def session(websocket: WebSocket):
         await websocket.accept()
         username = await sync_to_async(lambda: websocket.request.user.username)()
-        await websocket.send_text(username)
+        user = await websocket.request.auser()
+        assert user is await websocket.request.auser()  # cached
+        await websocket.send_text(f"{username}/{user.username}")
 
     @api.websocket("/params")
     async def params(websocket: WebSocket, n: int):
@@ -194,7 +196,7 @@ async def test_session_auth():
 
     cookie = (b"cookie", f"sessionid={session_key}".encode())
     sent = await handshake(app, "/api/session", headers=[cookie])
-    assert sent[1] == {"type": "websocket.send", "text": "wsuser"}
+    assert sent[1] == {"type": "websocket.send", "text": "wsuser/wsuser"}
 
     sent = await handshake(app, "/api/session")
     assert sent[0]["code"] == 1008
