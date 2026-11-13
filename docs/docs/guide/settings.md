@@ -124,8 +124,9 @@ NINJA_WEBSOCKET_CHECK_ORIGIN = True
 ```
 
 - **`NINJA_WEBSOCKET_CHECK_ORIGIN`** — when `True` (the default), websocket
-  handshakes sent by browsers must come from the request host or from an
-  origin in `CSRF_TRUSTED_ORIGINS`. This protects against cross-site
+  handshakes sent by browsers must come from the site's own origin (same
+  scheme and host, like Django's CSRF check) or from an origin in
+  `CSRF_TRUSTED_ORIGINS`. This protects against cross-site
   WebSocket hijacking. Single routes can override it with
   `@api.websocket(..., check_origin=...)`, and cookie auth with CSRF
   enabled always checks the origin. See

@@ -21,21 +21,29 @@ WebSockets only work with an **ASGI** server such as [uvicorn](https://www.uvico
 
 Django's own ASGI handler only speaks HTTP, so in `asgi.py` replace `django.core.asgi.get_asgi_application` with the one from `ninja.asgi`:
 
-```python title="asgi.py" hl_lines="3 6"
+```python title="asgi.py" hl_lines="5 7"
 import os
 
-from ninja.asgi import get_asgi_application
-
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "mysite.settings")
+
+from ninja.asgi import get_asgi_application  # noqa: E402
+
 application = get_asgi_application()
 ```
 
+!!! warning "Import order"
+    Unlike Django's default `asgi.py`, set `DJANGO_SETTINGS_MODULE` **before** importing `ninja.asgi`: importing Django Ninja reads your settings.
+
 It's a drop-in replacement: it wraps Django's application, so HTTP requests still go to Django as before. If you prefer to make the wrapping explicit (or need to wrap another ASGI application), use `NinjaASGI`:
 
-```python
-from django.core.asgi import get_asgi_application
+```python title="asgi.py"
+import os
 
-from ninja.asgi import NinjaASGI
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "mysite.settings")
+
+from django.core.asgi import get_asgi_application  # noqa: E402
+
+from ninja.asgi import NinjaASGI  # noqa: E402
 
 application = NinjaASGI(get_asgi_application())
 ```
@@ -368,6 +376,7 @@ def test_echo():
         assert ws.receive_text() == "echo: hi"
 
 
+@pytest.mark.django_db(transaction=True)  # the auth callback queries the database
 def test_auth_required():
     client = TestClient(api)
     with pytest.raises(WebSocketDenied) as exc:
@@ -402,11 +411,15 @@ async def test_echo_async():
 
 `NinjaASGI()` without an inner application handles only websockets, so you can plug it into an existing Channels `ProtocolTypeRouter`:
 
-```python
-from channels.routing import ProtocolTypeRouter
-from django.core.asgi import get_asgi_application
+```python title="asgi.py"
+import os
 
-from ninja.asgi import NinjaASGI
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "mysite.settings")
+
+from channels.routing import ProtocolTypeRouter  # noqa: E402
+from django.core.asgi import get_asgi_application  # noqa: E402
+
+from ninja.asgi import NinjaASGI  # noqa: E402
 
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),
