@@ -13,6 +13,7 @@ from ninja.errors import (
     ValidationErrorContext,
 )
 from ninja.operation import authenticate_async, check_throttles
+from ninja.renderers import BaseRenderer
 from ninja.security.apikey import APIKeyCookie
 from ninja.signature import ViewSignature, is_async
 from ninja.throttling import BaseThrottle
@@ -202,6 +203,8 @@ class WebSocketOperation:
         """
         request = websocket.request
         websocket.path_params = path_params
+        if _is_json_renderer(self.api.renderer):
+            websocket.renderer = self.api.renderer
         # Browsers send cookies on cross-site websocket handshakes and Django's
         # CSRF check does not protect GET requests: the Origin check replaces it.
         request._ninja_csrf_exempt = True  # type: ignore[attr-defined]
@@ -232,3 +235,8 @@ class WebSocketOperation:
 
         values[cast(str, self.signature.websocket_arg)] = websocket
         await self.view_func(**values)
+
+
+def _is_json_renderer(renderer: BaseRenderer) -> bool:
+    media_type = (renderer.media_type or "").split(";")[0].strip().lower()
+    return media_type == "application/json" or media_type.endswith("+json")

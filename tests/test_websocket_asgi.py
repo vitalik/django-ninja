@@ -79,7 +79,7 @@ async def test_path_params_converters_and_root_path():
     t = await connect(
         app, "/prefix/api/chat/rooms/5", query=b"name=bob", root_path="/prefix"
     )
-    assert t.sent[1] == {"type": "websocket.send", "text": '{"room":5,"name":"bob"}'}
+    assert t.sent[1] == {"type": "websocket.send", "text": '{"room": 5, "name": "bob"}'}
     # handler closed by itself: no extra close
     assert t.types == ["websocket.accept", "websocket.send", "websocket.close"]
     assert t.sent[2]["code"] == 4000

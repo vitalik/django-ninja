@@ -23,6 +23,7 @@ from typing import (
 
 from django.http import HttpRequest, QueryDict
 
+from ninja.renderers import BaseRenderer
 from ninja.responses import NinjaJSONEncoder
 from ninja.websockets.request import build_handshake_request
 from ninja.websockets.schemas import type_adapter
@@ -63,6 +64,8 @@ class WebSocket:
         self.application_state = WebSocketState.CONNECTING
         self.path_params: Dict[str, Any] = {}
         self.auth: Any = None
+        # set to the API renderer (when it renders JSON) by WebSocketOperation
+        self.renderer: Optional[BaseRenderer] = None
         self._request: Optional[HttpRequest] = None
 
     # Connection details ------------------------------------------------------
@@ -280,6 +283,9 @@ class WebSocket:
         Send data as JSON. Pydantic models are serialized automatically; with
         ``schema`` the data (e.g. a Django model instance) is first validated
         against it, like the ``response=`` argument of HTTP operations.
+
+        The API JSON renderer is used (so a custom one, e.g. based on orjson,
+        applies to websockets too); without it, ``json_encoder`` is used.
         """
         if mode not in {"text", "binary"}:
             raise ValueError('The "mode" argument should be "text" or "binary".')
@@ -288,13 +294,19 @@ class WebSocket:
             data = adapter.dump_python(
                 adapter.validate_python(data, from_attributes=True), mode="json"
             )
-        text = json.dumps(
-            data, cls=self.json_encoder, separators=(",", ":"), ensure_ascii=False
-        )
+        text = self._render_json(data)
         if mode == "text":
             await self.send_text(text)
         else:
             await self.send_bytes(text.encode("utf-8"))
+
+    def _render_json(self, data: Any) -> str:
+        if self.renderer is None:
+            return json.dumps(
+                data, cls=self.json_encoder, separators=(",", ":"), ensure_ascii=False
+            )
+        content = self.renderer.render(self.request, data, response_status=200)
+        return content.decode("utf-8") if isinstance(content, bytes) else str(content)
 
     async def iter_text(self) -> AsyncIterator[str]:
         try:
