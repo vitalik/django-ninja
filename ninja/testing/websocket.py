@@ -17,6 +17,7 @@ import json
 import threading
 from typing import Any, Coroutine, Dict, List, Optional, Tuple, TypeVar
 
+from ninja.asgi import NinjaASGI
 from ninja.responses import NinjaJSONEncoder
 from ninja.websockets.types import (
     Message,
@@ -34,6 +35,14 @@ __all__ = [
 
 T = TypeVar("T")
 _APP_FINISHED = "ninja.testing.app_finished"
+
+
+class TestNinjaASGI(NinjaASGI):
+    """NinjaASGI for tests: handler errors are re-raised, no request signals."""
+
+    __test__ = False  # not a pytest test class
+    _raise_exceptions = True
+    _send_signals = False
 
 
 class WebSocketDenied(Exception):

@@ -13,6 +13,7 @@ from ninja.responses import NinjaJSONEncoder
 from ninja.responses import Response as HttpResponse
 from ninja.testing.websocket import (
     AsyncWebSocketTestSession,
+    TestNinjaASGI,
     WebSocketTestSession,
     build_websocket_scope,
 )
@@ -142,14 +143,10 @@ class NinjaClientBase:
         cookies: Optional[Dict[str, str]],
         subprotocols: Optional[List[str]],
     ) -> Tuple[Any, Scope]:
-        from ninja.asgi import NinjaASGI
-
         if not hasattr(self, "_websocket_app"):
             # a stable urlconf object: django caches one resolver per urlconf
             urlconf = type("TestUrlConf", (), {"urlpatterns": self.urls})()
-            self._websocket_app = NinjaASGI(
-                urlconf=urlconf, raise_exceptions=True, send_signals=False
-            )
+            self._websocket_app = TestNinjaASGI(urlconf=urlconf)
         all_headers = {**self.headers, **(headers or {})}
         all_cookies = {**self.cookies, **(cookies or {})}
         if all_cookies:

@@ -61,24 +61,16 @@ class NinjaASGI:
     Args:
         app: ASGI application for non-websocket scopes (usually Django's).
         urlconf: URLconf used to resolve websocket paths (default ROOT_URLCONF).
-        raise_exceptions: re-raise handler errors after closing with 1011
-            (used by the test client so failures surface in tests).
-        send_signals: send Django's request_started/request_finished signals
-            (they close stale database connections, like for HTTP requests).
     """
 
-    def __init__(
-        self,
-        app: Optional[ASGIApp] = None,
-        *,
-        urlconf: Any = None,
-        raise_exceptions: bool = False,
-        send_signals: bool = True,
-    ):
+    # Overridden by ninja.testing: re-raise handler errors so they surface in
+    # tests, and skip request_started/finished (they close DB connections).
+    _raise_exceptions = False
+    _send_signals = True
+
+    def __init__(self, app: Optional[ASGIApp] = None, *, urlconf: Any = None):
         self.app = app
         self.urlconf = urlconf
-        self.raise_exceptions = raise_exceptions
-        self.send_signals = send_signals
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] == "websocket":
@@ -105,7 +97,7 @@ class NinjaASGI:
         self, scope: Scope, receive: Receive, send: Send
     ) -> None:
         set_script_prefix(_get_script_prefix(scope))
-        if self.send_signals:
+        if self._send_signals:
             await sync_to_async(signals.request_started.send, thread_sensitive=True)(
                 sender=self.__class__, scope=scope
             )
@@ -133,12 +125,12 @@ class NinjaASGI:
                     await reject(websocket, response)
                     return
                 await _close(websocket, WebSocketClose.INTERNAL_ERROR)
-                if self.raise_exceptions:
+                if self._raise_exceptions:
                     raise
             else:
                 await _close(websocket, WebSocketClose.NORMAL_CLOSURE)
         finally:
-            if self.send_signals:
+            if self._send_signals:
                 await sync_to_async(
                     signals.request_finished.send, thread_sensitive=True
                 )(sender=self.__class__)
