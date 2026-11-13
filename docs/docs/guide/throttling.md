@@ -163,3 +163,9 @@ When a request is throttled, Django Ninja returns `429 Too Many Requests` with:
 ```
 
 If a throttle's `wait()` method returns a number of seconds until the next allowed request, it's rounded up and added as a `Retry-After` header. When multiple throttles reject the same request, the longest wait time is used. Like any exception, this is customizable via [exception handlers](errors.md) — register a handler for `ninja.errors.Throttled` to change the response body or status code.
+
+!!! note "WebSockets"
+    `throttle=` also works on `@api.websocket(...)` routes, with the same
+    inheritance rules. It limits new connections (handshakes), not the
+    messages sent over an open connection. See
+    [WebSockets: Throttling](websockets.md#throttling).

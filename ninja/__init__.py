@@ -31,6 +31,7 @@ from ninja.responses import Status
 from ninja.router import Router
 from ninja.schema import Schema
 from ninja.streaming import JSONL, SSE
+from ninja.websockets import WebSocket, WebSocketDisconnect, WebSocketException
 
 __all__ = [
     "Field",
@@ -63,4 +64,7 @@ __all__ = [
     "SSE",
     "JSONL",
     "Status",
+    "WebSocket",
+    "WebSocketDisconnect",
+    "WebSocketException",
 ]

@@ -26,6 +26,7 @@ from ninja.params.models import (
 )
 from ninja.signature.utils import get_path_param_names, get_typed_signature
 from ninja.utils import is_optional_type
+from ninja.websockets import WebSocket
 
 __all__ = [
     "ViewSignature",
@@ -44,6 +45,7 @@ class ViewSignature:
         "\x1e"  # ASCII Record Separator.  IE: not generally used in query names
     )
     response_arg: Optional[str] = None
+    websocket_arg: Optional[str] = None
 
     def __init__(self, path: str, view_func: Callable[..., Any]) -> None:
         self.view_func = view_func
@@ -72,6 +74,12 @@ class ViewSignature:
 
             if arg.annotation is HttpResponse:
                 self.response_arg = name
+                continue
+
+            if isinstance(arg.annotation, type) and issubclass(
+                arg.annotation, WebSocket
+            ):
+                self.websocket_arg = name
                 continue
 
             if (

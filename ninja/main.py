@@ -6,6 +6,7 @@ from typing import (
     List,
     Optional,
     Sequence,
+    Set,
     Tuple,
     Type,
     TypeVar,
@@ -23,6 +24,7 @@ from ninja.errors import (
     ConfigError,
     ValidationError,
     ValidationErrorContext,
+    _clean_pydantic_errors,
     set_default_exc_handlers,
 )
 from ninja.openapi import get_schema
@@ -379,6 +381,33 @@ class NinjaAPI:
             openapi_extra=openapi_extra,
         )
 
+    def websocket(
+        self,
+        path: str,
+        *,
+        auth: Any = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
+        check_origin: Optional[bool] = None,
+        url_name: Optional[str] = None,
+    ) -> Callable[[TCallable], TCallable]:
+        """
+        Register an ``async def`` websocket handler (requires an ASGI server
+        and the ``ninja.asgi`` application wrapper)::
+
+            @api.websocket("/ws")
+            async def echo(websocket: WebSocket):
+                await websocket.accept()
+                async for message in websocket.iter_text():
+                    await websocket.send_text(message)
+        """
+        return self.default_router.websocket(
+            path,
+            auth=auth,
+            throttle=throttle,
+            check_origin=check_origin,
+            url_name=url_name,
+        )
+
     @overload
     def webhook(self, name: TSchemaClass) -> TSchemaClass: ...
 
@@ -592,6 +621,7 @@ class NinjaAPI:
             result.extend(bound_router.urls_paths(bound_router.prefix))
 
         result.append(get_root_url(self))
+        _check_websocket_url_names(result)
         return result
 
     def get_root_path(self, path_params: DictStrAny) -> str:
@@ -681,19 +711,11 @@ class NinjaAPI:
         for context in error_contexts:
             model = context.model
             e = context.pydantic_validation_error
-            for i in e.errors(include_url=False):
+            for i in _clean_pydantic_errors(e):
                 i["loc"] = (
                     model.__ninja_param_source__,
                 ) + model.__ninja_flatten_map_reverse__.get(i["loc"], i["loc"])
-                # removing pydantic hints
-                del i["input"]  # type: ignore
-                if (
-                    "ctx" in i
-                    and "error" in i["ctx"]
-                    and isinstance(i["ctx"]["error"], Exception)
-                ):
-                    i["ctx"]["error"] = str(i["ctx"]["error"])
-                errors.append(dict(i))
+                errors.append(i)
         return ValidationError(errors)
 
     def _lookup_exception_handler(self, exc: Exc[_E]) -> Optional[ExcHandler[_E]]:
@@ -707,3 +729,26 @@ class NinjaAPI:
         # Registry check no longer needed - routers are independent templates
         # and can be reused across multiple APIs without conflicts
         pass
+
+
+def _check_websocket_url_names(patterns: List[Union[URLResolver, URLPattern]]) -> None:
+    """
+    A websocket route sharing its url name with an HTTP route makes reverse()
+    silently return one of them: require an explicit url_name instead.
+    (Reusing a handler on several websocket routes is fine, like for HTTP.)
+    """
+    http_names: Set[Optional[str]] = set()
+    websocket_patterns: List[Any] = []
+    for pattern in patterns:
+        callback = getattr(pattern, "callback", None)
+        if getattr(callback, "ninja_websocket_only", False):
+            websocket_patterns.append(pattern)
+        else:
+            http_names.add(getattr(pattern, "name", None))
+    for ws_pattern in websocket_patterns:
+        if ws_pattern.name in http_names:
+            raise ConfigError(
+                f"WebSocket route '{ws_pattern.pattern}' has the url name "
+                f"'{ws_pattern.name}', which is also used by an HTTP route. "
+                "Pass a different url_name= to the websocket decorator."
+            )

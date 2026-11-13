@@ -12,6 +12,7 @@ from typing import (
     Optional,
     Sequence,
     Type,
+    TypeVar,
     Union,
     cast,
 )
@@ -61,6 +62,63 @@ async def _await_coroutine(coroutine: Coroutine[Any, Any, Any]) -> Any:
     and warn. ``async_to_sync`` needs a real ``async def``, hence this helper.
     """
     return await coroutine
+
+
+_T = TypeVar("_T")
+
+
+async def _authenticate_async(
+    callbacks: Sequence[Callable[..., Any]],
+    request: HttpRequest,
+    on_error: Callable[[Exception], _T],
+) -> Optional[_T]:
+    """
+    Run auth callbacks from async code (sync ones in a thread, as they may hit
+    the database). On success sets ``request.auth`` and returns None, otherwise
+    returns ``on_error(exception)`` (AuthenticationError if none matched).
+
+    ``on_error`` is called inside the ``except`` block, so exception handlers
+    can still use the traceback (``logger.exception``, DEBUG 500 pages).
+    """
+    for callback in callbacks:
+        try:
+            if is_async_callable(callback) or getattr(callback, "is_async", False):
+                result = callback(request)
+                if inspect.isawaitable(result):
+                    result = await result
+            else:
+                result = await sync_to_async(callback)(request)
+        except Exception as exc:
+            return on_error(exc)
+
+        if result:
+            request.auth = result  # type: ignore
+            return None
+    return on_error(AuthenticationError())
+
+
+def _throttled_response(
+    api: "NinjaAPI", throttle_objects: List[BaseThrottle], request: HttpRequest
+) -> Optional[HttpResponse]:
+    """Run throttles; return the 429 response (with Retry-After) if any denies."""
+    throttle_durations = []
+    for throttle in throttle_objects:
+        if not throttle.allow_request(request):
+            throttle_durations.append(throttle.wait())
+
+    if throttle_durations:
+        # Filter out `None` values which may happen in case of config / rate
+        durations = [
+            duration for duration in throttle_durations if duration is not None
+        ]
+
+        duration = max(durations, default=None)
+        response = api.on_exception(request, Throttled(wait=duration))  # type: ignore
+        if duration is not None:
+            # Retry-After must be integer delta-seconds (RFC 9110)
+            response["Retry-After"] = str(math.ceil(duration))
+        return response
+    return None
 
 
 class Operation:
@@ -115,6 +173,11 @@ class Operation:
                 self.throttle_objects.append(th)
 
         self.signature = ViewSignature(self.path, self.view_func)
+        if self.signature.websocket_arg:
+            raise ConfigError(
+                f"'{view_func.__name__}' declares a WebSocket parameter: "
+                "register it with @api.websocket(...) instead of an HTTP method"
+            )
         self.models: TModels = self.signature.models
 
         self.stream_format: Optional[Type[StreamFormat]] = None
@@ -346,24 +409,7 @@ class Operation:
         return self.api.on_exception(request, AuthenticationError())
 
     def _check_throttles(self, request: HttpRequest) -> Optional[HttpResponse]:
-        throttle_durations = []
-        for throttle in self.throttle_objects:
-            if not throttle.allow_request(request):
-                throttle_durations.append(throttle.wait())
-
-        if throttle_durations:
-            # Filter out `None` values which may happen in case of config / rate
-            durations = [
-                duration for duration in throttle_durations if duration is not None
-            ]
-
-            duration = max(durations, default=None)
-            response = self.api.on_exception(request, Throttled(wait=duration))  # type: ignore
-            if duration is not None:
-                # Retry-After must be integer delta-seconds (RFC 9110)
-                response["Retry-After"] = str(math.ceil(duration))
-            return response
-        return None
+        return _throttled_response(self.api, self.throttle_objects, request)
 
     def _model_dump_kwargs(self, request: HttpRequest, status: int) -> Dict[str, Any]:
         kwargs: Dict[str, Any] = {}
@@ -573,23 +619,11 @@ class AsyncOperation(Operation):
         return None
 
     async def _run_authentication(self, request: HttpRequest) -> Optional[HttpResponse]:  # type: ignore
-        for callback in self.auth_callbacks:
-            try:
-                if is_async_callable(callback) or getattr(callback, "is_async", False):
-                    cor: Optional[Coroutine] = callback(request)
-                    if cor is None:
-                        result = None
-                    else:
-                        result = await cor
-                else:
-                    result = await sync_to_async(callback)(request)
-            except Exception as exc:
-                return self.api.on_exception(request, exc)
-
-            if result:
-                request.auth = result  # type: ignore
-                return None
-        return self.api.on_exception(request, AuthenticationError())
+        return await _authenticate_async(
+            self.auth_callbacks,
+            request,
+            lambda exc: self.api.on_exception(request, exc),
+        )
 
 
 class PathView:

@@ -1,4 +1,5 @@
 import re
+import warnings
 from dataclasses import dataclass, field
 from typing import (
     TYPE_CHECKING,
@@ -25,12 +26,22 @@ from ninja.throttling import BaseThrottle
 from ninja.types import TCallable, TSchemaClass
 from ninja.utils import normalize_path, replace_path_param_notation
 from ninja.webhooks import Webhook
+from ninja.websockets.operation import WebSocketOperation
 
 if TYPE_CHECKING:
     from ninja import NinjaAPI  # pragma: no cover
 
 
 __all__ = ["Router", "RouterMount", "BoundRouter"]
+
+
+def _keep_uuid_as_string(path: str) -> str:
+    """
+    Django's ``uuid`` converter turns the value into a UUID object; ninja uses
+    its own ``uuidstr`` converter to keep strings and let pydantic handle the
+    conversion/validation (if the user annotates the param as UUID).
+    """
+    return re.sub(r"\{uuid:(\w+)\}", r"{uuidstr:\1}", path, flags=re.IGNORECASE)
 
 
 @dataclass
@@ -114,6 +125,55 @@ class BoundRouter:
         # Clone operations and apply decorators
         self.path_operations: Dict[str, PathView] = {}
         self._bind_operations()
+        self.websocket_operations: Dict[str, WebSocketOperation] = {}
+        self._bind_websocket_operations()
+
+    def _inherited_throttle_objects(self) -> Optional[List[BaseThrottle]]:
+        """Throttles from this mount/router, falling back to the API ones."""
+        throttle = self.throttle if self.throttle != NOT_SET else self.api.throttle
+        if throttle == NOT_SET:
+            return None
+        if throttle is None:  # explicit "no throttling" (as on master)
+            return []
+        if isinstance(throttle, BaseThrottle):
+            return [throttle]
+        return list(throttle)
+
+    def _bind_websocket_operations(self) -> None:
+        websocket_operations = self.template.websocket_operations
+        decorators = self.mount.inherited_decorators + self.template._decorators
+        if websocket_operations and decorators:
+            names = ", ".join(
+                op.view_func.__name__ for op in websocket_operations.values()
+            )
+            warnings.warn(
+                "Decorators added with add_decorator() are not applied to "
+                f"websocket handlers ({names}): they wrap HTTP views/operations.",
+                UserWarning,
+                stacklevel=2,
+            )
+
+        for path, ws_operation in websocket_operations.items():
+            operation = ws_operation.clone()
+            operation.api = self.api
+            if operation.auth_param == NOT_SET:
+                if self.auth != NOT_SET:
+                    operation._set_auth(self.auth)
+                elif self.api.auth != NOT_SET:
+                    operation._set_auth(self.api.auth)
+            if operation.throttle_param == NOT_SET:
+                inherited = self._inherited_throttle_objects()
+                if inherited is not None:
+                    operation.throttle_objects = inherited
+            self.websocket_operations[path] = operation
+
+    def websocket_routes(self, prefix: str) -> Iterator[Tuple[str, WebSocketOperation]]:
+        """Yield (django route, operation) for every websocket endpoint."""
+        prefix = replace_path_param_notation(prefix)
+        for path, operation in self.websocket_operations.items():
+            path = replace_path_param_notation(path)
+            route = "/".join([i for i in (prefix, path) if i])
+            yield normalize_path(route).lstrip("/"), operation
 
     def _bind_operations(self) -> None:
         """Clone operations from template and apply effective settings."""
@@ -137,20 +197,9 @@ class BoundRouter:
 
                 # Apply throttle inheritance
                 if operation.throttle_param == NOT_SET:
-                    if self.api.throttle != NOT_SET:
-                        throttle = self.api.throttle
-                        operation.throttle_objects = (
-                            isinstance(throttle, BaseThrottle)
-                            and [throttle]
-                            or throttle  # type: ignore
-                        )
-                    if self.throttle != NOT_SET:
-                        throttle = self.throttle
-                        operation.throttle_objects = (
-                            isinstance(throttle, BaseThrottle)
-                            and [throttle]
-                            or throttle  # type: ignore
-                        )
+                    inherited = self._inherited_throttle_objects()
+                    if inherited is not None:
+                        operation.throttle_objects = inherited
 
                 # Apply tags inheritance
                 if operation.tags is None and self.tags is not None:  # type: ignore[has-type]
@@ -170,25 +219,70 @@ class BoundRouter:
             self.path_operations[path] = cloned_view
 
     def urls_paths(self, prefix: str) -> Iterator[URLPattern]:
-        """Generate URL patterns for this bound router."""
+        """
+        Generate URL patterns for this bound router, in declaration order
+        (HTTP and websocket routes alike), since Django uses the first match.
+        """
         prefix = replace_path_param_notation(prefix)
-        for path, path_view in self.path_operations.items():
-            path = replace_path_param_notation(path)
-            route = "/".join([i for i in (prefix, path) if i])
-            route = normalize_path(route)
-            route = route.lstrip("/")
+        for path in self._ordered_paths():
+            route = "/".join([
+                i for i in (prefix, replace_path_param_notation(path)) if i
+            ])
+            route = normalize_path(route).lstrip("/")
+            path_view = self.path_operations.get(path)
+            ws_operation = self.websocket_operations.get(path)
+            if path_view is not None:
+                yield from self._http_patterns(route, path_view, ws_operation)
+            if ws_operation is not None:
+                # An HTTP view answering how to connect: it makes the websocket
+                # resolvable and reversible. For a path shared with HTTP
+                # operations it comes after them, so HTTP requests reach those.
+                yield django_path(
+                    route,
+                    ws_operation.get_http_view(),
+                    name=self._websocket_url_name(ws_operation),
+                )
 
-            for operation in path_view.operations:
-                url_name = getattr(operation, "url_name", "")
-                if not url_name:
-                    url_name = self.api.get_operation_url_name(
-                        operation, router=self.template
-                    )
-                    # Apply url_name_prefix if specified
-                    if self.url_name_prefix and url_name:
-                        url_name = f"{self.url_name_prefix}_{url_name}"
+    def _ordered_paths(self) -> List[str]:
+        paths = list(self.template._route_order)
+        known = set(paths)
+        # paths added without the Router API (e.g. directly to path_operations)
+        for path in [*self.path_operations, *self.websocket_operations]:
+            if path not in known:
+                known.add(path)
+                paths.append(path)
+        return paths
 
-                yield django_path(route, path_view.get_view(), name=url_name)
+    def _http_patterns(
+        self,
+        route: str,
+        path_view: PathView,
+        ws_operation: Optional[WebSocketOperation],
+    ) -> Iterator[URLPattern]:
+        for operation in path_view.operations:
+            url_name = getattr(operation, "url_name", "")
+            if not url_name:
+                url_name = self.api.get_operation_url_name(
+                    operation, router=self.template
+                )
+                # Apply url_name_prefix if specified
+                if self.url_name_prefix and url_name:
+                    url_name = f"{self.url_name_prefix}_{url_name}"
+
+            view = path_view.get_view()
+            if ws_operation is not None:
+                # same path serves HTTP and websocket: the ASGI dispatcher
+                # finds the websocket operation through this attribute
+                view.ninja_websocket_operation = ws_operation  # type: ignore
+            yield django_path(route, view, name=url_name)
+
+    def _websocket_url_name(self, ws_operation: WebSocketOperation) -> str:
+        if ws_operation.url_name:
+            return ws_operation.url_name
+        url_name = ws_operation.view_func.__name__
+        if self.url_name_prefix:
+            url_name = f"{self.url_name_prefix}_{url_name}"
+        return url_name
 
 
 class Router:
@@ -213,6 +307,10 @@ class Router:
         self.exclude_none = exclude_none
 
         self.path_operations: Dict[str, PathView] = {}
+        self.websocket_operations: Dict[str, WebSocketOperation] = {}
+        # first registration order of every path (HTTP and websocket), used
+        # to generate URL patterns in declaration order
+        self._route_order: List[str] = []
         self.webhooks: Dict[str, Webhook] = {}
         self._routers: List[Tuple[str, Router, Optional[List[str]]]] = []
         # (auth, throttle) passed to add_router(), aligned with self._routers
@@ -502,15 +600,13 @@ class Router:
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> None:
         self._check_not_frozen()
-        path = re.sub(r"\{uuid:(\w+)\}", r"{uuidstr:\1}", path, flags=re.IGNORECASE)
-        # django by default convert strings to UUIDs
-        # but we want to keep them as strings to let pydantic handle conversion/validation
-        # if user wants UUID object
-        # uuidstr is custom registered converter
+        path = _keep_uuid_as_string(path)
 
         # No decoration here - will be done in build_routers
 
         if path not in self.path_operations:
+            if path not in self.websocket_operations:
+                self._route_order.append(path)
             path_view = PathView()
             self.path_operations[path] = path_view
         else:
@@ -546,6 +642,68 @@ class Router:
         # Note: API binding is now done via BoundRouter when urls are generated
 
         return None
+
+    def websocket(
+        self,
+        path: str,
+        *,
+        auth: Any = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
+        check_origin: Optional[bool] = None,
+        url_name: Optional[str] = None,
+    ) -> Callable[[TCallable], TCallable]:
+        """
+        Register an ``async def`` websocket handler::
+
+            @router.websocket("/ws/{room}")
+            async def chat(websocket: WebSocket, room: str):
+                await websocket.accept()
+                ...
+
+        ``throttle`` limits new connections (handshakes). ``check_origin``
+        overrides ``settings.NINJA_WEBSOCKET_CHECK_ORIGIN`` for this route.
+        """
+
+        def decorator(view_func: TCallable) -> TCallable:
+            self.add_websocket_operation(
+                path,
+                view_func,
+                auth=auth,
+                throttle=throttle,
+                check_origin=check_origin,
+                url_name=url_name,
+            )
+            return view_func
+
+        return decorator
+
+    def add_websocket_operation(
+        self,
+        path: str,
+        view_func: Callable[..., Any],
+        *,
+        auth: Any = NOT_SET,
+        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
+        check_origin: Optional[bool] = None,
+        url_name: Optional[str] = None,
+    ) -> WebSocketOperation:
+        self._check_not_frozen()
+        path = _keep_uuid_as_string(path)
+        if path in self.websocket_operations:
+            raise ConfigError(f"WebSocket route '{path}' is already registered")
+        if path not in self.path_operations:
+            self._route_order.append(path)
+        operation = WebSocketOperation(
+            path,
+            view_func,
+            auth=auth,
+            throttle=throttle,
+            check_origin=check_origin,
+            url_name=url_name,
+        )
+        self.websocket_operations[path] = operation
+        view_func._ninja_operation = operation  # type: ignore
+        return operation
 
     def urls_paths(
         self, prefix: str, api: Optional["NinjaAPI"] = None
