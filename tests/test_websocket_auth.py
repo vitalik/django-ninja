@@ -181,6 +181,7 @@ async def test_cookie_auth_checks_origin():
 async def test_session_auth():
     from django.contrib.auth import get_user_model
     from django.contrib.sessions.backends.db import SessionStore
+    from django.db import connection
 
     def create_session():
         user = get_user_model().objects.create_user("wsuser", password="x")
@@ -189,6 +190,8 @@ async def test_session_auth():
         store["_auth_user_backend"] = "django.contrib.auth.backends.ModelBackend"
         store["_auth_user_hash"] = user.get_session_auth_hash()
         store.create()
+        # this runs in a worker thread: close its database connection
+        connection.close()
         return store.session_key
 
     session_key = await sync_to_async(create_session)()

@@ -315,3 +315,23 @@ def test_handler_ignoring_disconnect_times_out():
     with pytest.raises(RuntimeError, match="did not finish within 0.2s"):
         with client.websocket_connect("/stuck", timeout=0.2) as ws:
             assert ws.receive_text() == "ready"
+
+
+def test_client_exits_while_handler_finishes_after_closing():
+    import asyncio
+
+    api = NinjaAPI(urls_namespace=unique_namespace())
+    finished = []
+
+    @api.websocket("/ws")
+    async def ws(websocket: WebSocket):
+        await websocket.accept()
+        await websocket.close(code=4005)
+        await asyncio.sleep(0.05)  # still running when the test leaves
+        finished.append(True)
+
+    with TestClient(api).websocket_connect("/ws") as conn:
+        with pytest.raises(WebSocketDisconnect):
+            conn.receive_text()
+    # the session waited for the handler instead of cancelling it
+    assert finished == [True]

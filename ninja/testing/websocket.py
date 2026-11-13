@@ -17,6 +17,9 @@ import json
 import threading
 from typing import Any, Coroutine, Dict, List, Optional, Tuple, TypeVar
 
+from asgiref.sync import sync_to_async
+from django.db import connections
+
 from ninja.asgi import NinjaASGI
 from ninja.responses import NinjaJSONEncoder
 from ninja.websockets.types import (
@@ -43,6 +46,14 @@ class TestNinjaASGI(NinjaASGI):
     __test__ = False  # not a pytest test class
     _raise_exceptions = True
     _send_signals = False
+
+    async def handle_websocket(self, scope: Scope, receive: Any, send: Any) -> None:
+        try:
+            await super().handle_websocket(scope, receive, send)
+        finally:
+            # Without request_finished nothing closes the database connections
+            # opened from the connection's own thread (it ends with it).
+            await sync_to_async(connections.close_all)()
 
 
 class WebSocketDenied(Exception):
@@ -106,6 +117,7 @@ class AsyncWebSocketTestSession:
         self._task: Optional[asyncio.Future[None]] = None
         self._error: Optional[BaseException] = None
         self._client_closed = False
+        self._server_closed = False
 
     # connection lifecycle ----------------------------------------------------
 
@@ -140,11 +152,12 @@ class AsyncWebSocketTestSession:
             # (e.g. a 1011 close): surface it
             self._raise_app_error()
             return
-        if exc_type is not None:
+        if exc_type is not None and not self._server_closed:
             # the test body failed: stop the handler and keep the original error
             await self._cancel_app()
             return
-        await self.close()
+        if not self._server_closed:
+            await self.close()
         try:
             await asyncio.wait_for(asyncio.shield(self._task), self.timeout)
         except asyncio.TimeoutError:
@@ -228,6 +241,9 @@ class AsyncWebSocketTestSession:
     async def receive(self) -> Message:
         message = await self._next_message()
         if message["type"] == "websocket.close":
+            # the application is finishing on its own (maybe with an error
+            # that must surface): __aexit__ waits for it instead of cancelling
+            self._server_closed = True
             raise WebSocketDisconnect(message.get("code", 1000), message.get("reason"))
         return message
 
