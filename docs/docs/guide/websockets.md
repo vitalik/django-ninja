@@ -30,7 +30,17 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "mysite.settings")
 application = get_asgi_application()
 ```
 
-HTTP requests still go to Django as before. WebSocket connections are resolved against your `urls.py`, where websocket routes are added through `api.urls`, like any other operation:
+It's a drop-in replacement: it wraps Django's application, so HTTP requests still go to Django as before. If you prefer to make the wrapping explicit (or need to wrap another ASGI application), use `NinjaASGI`:
+
+```python
+from django.core.asgi import get_asgi_application
+
+from ninja.asgi import NinjaASGI
+
+application = NinjaASGI(get_asgi_application())
+```
+
+WebSocket connections are resolved against your `urls.py`, where websocket routes are added through `api.urls`, like any other operation:
 
 ```python title="urls.py"
 urlpatterns = [
@@ -220,7 +230,7 @@ Browsers can't set custom headers like `Authorization` on a WebSocket. That leav
 Good to know:
 
 * Sync auth callbacks run in a thread (`sync_to_async`), so they can use the ORM.
-* `django_auth` / `SessionAuth` work: the handshake request has lazy `session` and `user` attributes, filled from the session cookie (Django middlewares don't run for websockets).
+* `django_auth` / `SessionAuth` work: the handshake request has lazy `session` and `user` attributes and an `auser()` method, filled from the session cookie (Django middlewares don't run for websockets).
 * Authentication only runs during the handshake. Long-lived connections are not re-checked if the session ends or the token expires. Close them from your own code when that matters.
 
 ## Security
@@ -261,9 +271,8 @@ async def live(websocket: WebSocket):
 Handlers run in the event loop. Use the async ORM API (`aget`, `acreate`, `async for`...) or `sync_to_async`, as described in [Async support](async.md). For example:
 
 ```python
-from asgiref.sync import sync_to_async
-
-username = await sync_to_async(lambda: websocket.request.user.username)()
+user = await websocket.request.auser()  # the logged-in user (session auth)
+rooms = [room async for room in Room.objects.filter(owner=user)]  # Django 4.1+
 ```
 
 By default, `sync_to_async` runs all the sync code in a single shared thread. With many connections making sync database calls at the same time, those calls run one after another; prefer the async ORM methods in busy handlers.
@@ -287,6 +296,54 @@ api.add_router("/events", router)  # ws://.../api/events/live
 * An HTTP operation and a websocket can share the same path.
 * Websocket routes have a url name, like HTTP operations. It defaults to the function name, or you can set it with `url_name=`. So `reverse()` works for them.
 * If a websocket gets the same url name as an HTTP route, `api.urls` raises a `ConfigError`. In that case, pass a different `url_name=`.
+
+### Per-request URLconfs
+
+Websocket paths are resolved against `ROOT_URLCONF`, or against the `urlconf=` given to `NinjaASGI`. Some projects choose the URLconf per request in a middleware, for example with django-hosts or django-tenants. Those middlewares don't run for websockets, so override `get_urlconf()` instead:
+
+```python
+from ninja.asgi import NinjaASGI
+
+
+class HostsASGI(NinjaASGI):
+    def get_urlconf(self, websocket):
+        host = websocket.request.get_host().split(":")[0]
+        if host.startswith("api."):
+            return "myproject.urls_api"
+        return super().get_urlconf(websocket)
+```
+
+## Broadcasting
+
+Each connection runs its own handler. To send a message to several clients, keep track of the open connections. In a single process, a set is enough:
+
+```python
+import asyncio
+from typing import Set
+
+connections: Set[WebSocket] = set()
+
+
+async def broadcast(message: str) -> None:
+    # one slow or broken client must not stop the others
+    await asyncio.gather(
+        *(conn.send_text(message) for conn in list(connections)),
+        return_exceptions=True,
+    )
+
+
+@api.websocket("/chat")
+async def chat(websocket: WebSocket):
+    await websocket.accept()
+    connections.add(websocket)
+    try:
+        async for message in websocket.iter_text():
+            await broadcast(message)
+    finally:
+        connections.discard(websocket)
+```
+
+With several server processes or machines, each process only knows its own connections. In that case you need a pub/sub layer between them, such as Redis or PostgreSQL `LISTEN/NOTIFY`. The handler then publishes messages to it and forwards the messages it receives to its own clients.
 
 ## Testing
 
@@ -366,4 +423,4 @@ The `WebSocket` API (`accept`, `receive_*`, `send_*`, `iter_*`, `close`), `WebSo
 * Django middlewares don't run for websocket connections.
 * Decorators added with `add_decorator()` wrap HTTP views, so they don't apply to websocket handlers. A warning is emitted when an API or router has both.
 * Throttling applies to handshakes. To limit messages, count them in your handler.
-* Broadcasting between connections across several processes needs your own pub/sub layer, for example Redis or PostgreSQL `LISTEN/NOTIFY`.
+* There is no built-in broadcasting or groups. See [Broadcasting](#broadcasting) for a single-process example.
