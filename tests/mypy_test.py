@@ -1,11 +1,21 @@
 # The goal of this file is to test that mypy "likes" all the combinations of parametrization
-from typing import Any
+from typing import Any, List
 
 from django.http import HttpRequest
 from typing_extensions import Annotated
 
-from ninja import Body, BodyEx, NinjaAPI, P, Schema, Status
+from ninja import (
+    Body,
+    BodyEx,
+    NinjaAPI,
+    P,
+    Schema,
+    Status,
+    WebSocket,
+    WebSocketException,
+)
 from ninja.streaming import JSONL, SSE
+from ninja.websockets import WebSocketClose
 
 
 class Payload(Schema):
@@ -61,3 +71,21 @@ def sse_stream(request: HttpRequest) -> Any:
 @api.get("/jsonl_stream", response=JSONL[Payload])
 def jsonl_stream(request: HttpRequest) -> Any:
     yield {"x": 1, "y": 2.0, "s": "test"}
+
+
+# -- WebSockets --
+
+
+@api.websocket("/ws/{room}")
+async def websocket_typing(websocket: WebSocket, room: int) -> None:
+    await websocket.accept()
+    payload = await websocket.receive_json(schema=Payload)
+    payload.s.capitalize()
+    payloads = await websocket.receive_json("binary", schema=List[Payload])
+    payloads[0].s.capitalize()
+    async for item in websocket.iter_json(schema=Payload):
+        item.s.capitalize()
+    raw: Any = await websocket.receive_json()
+    await websocket.send_json(raw, schema=Payload)
+    if room < 0:
+        raise WebSocketException(code=WebSocketClose.POLICY_VIOLATION, reason="bad")

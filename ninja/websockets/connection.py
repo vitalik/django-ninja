@@ -7,7 +7,18 @@ an exchange of dictionaries between the server and the application
 """
 
 import json
-from typing import Any, AsyncIterator, Dict, Iterable, List, Optional, Tuple
+from typing import (
+    Any,
+    AsyncIterator,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+    overload,
+)
 
 from django.http import HttpRequest, QueryDict
 
@@ -25,6 +36,8 @@ from ninja.websockets.types import (
 )
 
 __all__ = ["WebSocket"]
+
+T = TypeVar("T")
 
 
 class WebSocket:
@@ -244,6 +257,15 @@ class WebSocket:
             raise TypeError("Expected a binary frame but received a text frame")
         return bytes(data)
 
+    @overload
+    async def receive_json(self, mode: str = ..., *, schema: None = ...) -> Any: ...
+
+    @overload
+    async def receive_json(self, mode: str = ..., *, schema: Type[T]) -> T: ...
+
+    @overload
+    async def receive_json(self, mode: str = ..., *, schema: Any) -> Any: ...
+
     async def receive_json(self, mode: str = "text", *, schema: Any = None) -> Any:
         """
         Receive a JSON message. With ``schema`` (a pydantic model or any type
@@ -302,6 +324,17 @@ class WebSocket:
                 yield await self.receive_bytes()
         except WebSocketDisconnect:
             pass
+
+    @overload
+    def iter_json(
+        self, mode: str = ..., *, schema: None = ...
+    ) -> AsyncIterator[Any]: ...
+
+    @overload
+    def iter_json(self, mode: str = ..., *, schema: Type[T]) -> AsyncIterator[T]: ...
+
+    @overload
+    def iter_json(self, mode: str = ..., *, schema: Any) -> AsyncIterator[Any]: ...
 
     async def iter_json(
         self, mode: str = "text", *, schema: Any = None
