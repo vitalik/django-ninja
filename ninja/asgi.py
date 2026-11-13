@@ -20,6 +20,7 @@ connections are resolved against the project's URLconf, where every
 plugging it into other ASGI routers (e.g. ``channels.routing.ProtocolTypeRouter``).
 """
 
+import asyncio
 import logging
 from typing import Any, Dict, Optional, Tuple
 
@@ -29,6 +30,7 @@ from django.core import signals
 from django.core.exceptions import DisallowedHost
 from django.urls import Resolver404, resolve, set_script_prefix
 
+from ninja.errors import HttpError
 from ninja.websockets.connection import WebSocket
 from ninja.websockets.handshake import deny, reject, truncate_reason
 from ninja.websockets.operation import WebSocketOperation
@@ -74,7 +76,11 @@ class NinjaASGI:
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] == "websocket":
-            await self.handle_websocket(scope, receive, send)
+            # Like Django's ASGIHandler for each request: sync code called with
+            # sync_to_async (auth, ORM, signals) runs in a thread of its own for
+            # this connection, and request_finished closes only its DB connections.
+            async with _thread_sensitive_context():
+                await self.handle_websocket(scope, receive, send)
             return
         if self.app is None:
             raise RuntimeError(
@@ -130,11 +136,16 @@ class NinjaASGI:
                 pass
             except WebSocketException as e:
                 await _close(websocket, e.code, truncate_reason(e.reason))
+            except asyncio.CancelledError:
+                raise  # server shutdown (an Exception subclass on Python 3.7)
             except Exception as exc:
                 # API exception handlers apply like for HTTP (e.g. HttpError(404)
                 # before accept() becomes a 404 response, after it a 1008 close)
                 response = operation.response_for_exception(websocket.request, exc)
-                if response is None or response.status_code >= 500:
+                # unexpected errors only: not HttpError(503) raised on purpose
+                if response is None or (
+                    response.status_code >= 500 and not isinstance(exc, HttpError)
+                ):
                     await self._report_error(websocket)
                 if response is not None:
                     await reject(websocket, response)
@@ -157,6 +168,22 @@ class NinjaASGI:
         await sync_to_async(signals.got_request_exception.send, thread_sensitive=True)(
             sender=None, request=websocket.request
         )
+
+
+class _NoContext:  # pragma: no cover - asgiref < 3.3 (Django 3.1)
+    async def __aenter__(self) -> None:
+        return None
+
+    async def __aexit__(self, *exc_info: Any) -> None:
+        return None
+
+
+def _thread_sensitive_context() -> Any:
+    try:
+        from asgiref.sync import ThreadSensitiveContext
+    except ImportError:  # pragma: no cover - asgiref < 3.3 (Django 3.1)
+        return _NoContext()
+    return ThreadSensitiveContext()  # type: ignore[no-untyped-call]
 
 
 async def _check_host(websocket: WebSocket) -> bool:

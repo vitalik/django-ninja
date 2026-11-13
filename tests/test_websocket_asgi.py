@@ -458,3 +458,79 @@ async def test_malformed_client_input_is_not_a_server_error(caplog):
     # client mistakes are neither logged as errors nor reported
     assert caplog.records == []
     assert signals == []
+
+
+@pytest.mark.asyncio
+async def test_each_connection_has_its_own_sync_thread():
+    import threading
+
+    from asgiref.sync import sync_to_async
+
+    seen = []
+
+    def auth(request):
+        seen.append(("auth", threading.get_ident()))
+        return True
+
+    api = NinjaAPI(urls_namespace=unique_namespace())
+
+    @api.websocket("/ws", auth=auth)
+    async def ws(websocket: WebSocket):
+        await websocket.accept()
+        seen.append(("handler", await sync_to_async(threading.get_ident)()))
+
+    app = NinjaASGI(urlconf=api_urlconf(api))
+    await connect(app, "/api/ws")
+    outside = await sync_to_async(threading.get_ident)()
+
+    # auth and the handler's sync code share the connection's thread,
+    # which is not the global thread used outside the connection
+    assert seen[0][1] == seen[1][1]
+    assert seen[0][1] != outside
+
+
+@pytest.mark.asyncio
+async def test_cancellation_propagates_and_is_not_reported(caplog):
+    import asyncio
+
+    api = NinjaAPI(urls_namespace=unique_namespace())
+    accepted = asyncio.Event()
+
+    @api.websocket("/ws")
+    async def ws(websocket: WebSocket):
+        await websocket.accept()
+        accepted.set()
+        await asyncio.Event().wait()  # until the server shuts down
+
+    transport = FakeTransport()
+    app = NinjaASGI(urlconf=api_urlconf(api))
+    task = asyncio.ensure_future(
+        app(make_scope("/api/ws"), transport.receive, transport.send)
+    )
+    await accepted.wait()
+    with caplog.at_level(logging.ERROR):
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+    assert caplog.records == []
+
+
+@pytest.mark.asyncio
+async def test_intentional_5xx_is_not_reported(caplog):
+    from ninja.errors import HttpError
+
+    api = NinjaAPI(urls_namespace=unique_namespace())
+
+    @api.websocket("/ws")
+    async def ws(websocket: WebSocket):
+        await websocket.accept()
+        raise HttpError(503, "Maintenance")
+
+    with caplog.at_level(logging.ERROR):
+        t = await connect(NinjaASGI(urlconf=api_urlconf(api)), "/api/ws")
+    assert t.sent[-1] == {
+        "type": "websocket.close",
+        "code": 1011,
+        "reason": "Maintenance",
+    }
+    assert caplog.records == []
