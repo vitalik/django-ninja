@@ -7,6 +7,7 @@ an exchange of dictionaries between the server and the application
 """
 
 import enum
+import functools
 import io
 import json
 from typing import (
@@ -23,6 +24,7 @@ from typing import (
 )
 
 from django.http import HttpRequest, QueryDict
+from pydantic import TypeAdapter
 
 from ninja.responses import NinjaJSONEncoder
 
@@ -299,12 +301,21 @@ class WebSocket:
             raise TypeError("Expected a binary frame but received a text frame")
         return bytes(data)
 
-    async def receive_json(self, mode: str = "text") -> Any:
+    async def receive_json(self, mode: str = "text", *, schema: Any = None) -> Any:
+        """
+        Receive a JSON message. With ``schema`` (a pydantic model or any type
+        such as ``List[Item]``) the data is validated and converted, raising
+        ``pydantic.ValidationError`` when it does not match.
+        """
         if mode not in {"text", "binary"}:
             raise ValueError('The "mode" argument should be "text" or "binary".')
         if mode == "text":
-            return json.loads(await self.receive_text())
-        return json.loads((await self.receive_bytes()).decode("utf-8"))
+            data = json.loads(await self.receive_text())
+        else:
+            data = json.loads((await self.receive_bytes()).decode("utf-8"))
+        if schema is not None:
+            return _type_adapter(schema).validate_python(data)
+        return data
 
     async def send_text(self, data: str) -> None:
         await self.send({"type": "websocket.send", "text": data})
@@ -312,9 +323,21 @@ class WebSocket:
     async def send_bytes(self, data: bytes) -> None:
         await self.send({"type": "websocket.send", "bytes": data})
 
-    async def send_json(self, data: Any, mode: str = "text") -> None:
+    async def send_json(
+        self, data: Any, mode: str = "text", *, schema: Any = None
+    ) -> None:
+        """
+        Send data as JSON. Pydantic models are serialized automatically; with
+        ``schema`` the data (e.g. a Django model instance) is first validated
+        against it, like the ``response=`` argument of HTTP operations.
+        """
         if mode not in {"text", "binary"}:
             raise ValueError('The "mode" argument should be "text" or "binary".')
+        if schema is not None:
+            adapter = _type_adapter(schema)
+            data = adapter.dump_python(
+                adapter.validate_python(data, from_attributes=True), mode="json"
+            )
         text = json.dumps(
             data, cls=self.json_encoder, separators=(",", ":"), ensure_ascii=False
         )
@@ -337,12 +360,26 @@ class WebSocket:
         except WebSocketDisconnect:
             pass
 
-    async def iter_json(self) -> AsyncIterator[Any]:
+    async def iter_json(
+        self, mode: str = "text", *, schema: Any = None
+    ) -> AsyncIterator[Any]:
         try:
             while True:
-                yield await self.receive_json()
+                yield await self.receive_json(mode, schema=schema)
         except WebSocketDisconnect:
             pass
+
+
+def _type_adapter(tp: Any) -> TypeAdapter:
+    try:
+        return _cached_type_adapter(tp)
+    except TypeError:  # unhashable type (e.g. Annotated with unhashable metadata)
+        return TypeAdapter(tp)
+
+
+@functools.lru_cache(maxsize=None)
+def _cached_type_adapter(tp: Any) -> TypeAdapter:
+    return TypeAdapter(tp)
 
 
 def _attach_session_and_user(request: HttpRequest) -> None:
