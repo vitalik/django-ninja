@@ -35,6 +35,15 @@ if TYPE_CHECKING:
 __all__ = ["Router", "RouterMount", "BoundRouter"]
 
 
+def _keep_uuid_as_string(path: str) -> str:
+    """
+    Django's ``uuid`` converter turns the value into a UUID object; ninja uses
+    its own ``uuidstr`` converter to keep strings and let pydantic handle the
+    conversion/validation (if the user annotates the param as UUID).
+    """
+    return re.sub(r"\{uuid:(\w+)\}", r"{uuidstr:\1}", path, flags=re.IGNORECASE)
+
+
 @dataclass
 class RouterMount:
     """
@@ -562,11 +571,7 @@ class Router:
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> None:
         self._check_not_frozen()
-        path = re.sub(r"\{uuid:(\w+)\}", r"{uuidstr:\1}", path, flags=re.IGNORECASE)
-        # django by default convert strings to UUIDs
-        # but we want to keep them as strings to let pydantic handle conversion/validation
-        # if user wants UUID object
-        # uuidstr is custom registered converter
+        path = _keep_uuid_as_string(path)
 
         # No decoration here - will be done in build_routers
 
@@ -652,7 +657,7 @@ class Router:
         url_name: Optional[str] = None,
     ) -> WebSocketOperation:
         self._check_not_frozen()
-        path = re.sub(r"\{uuid:(\w+)\}", r"{uuidstr:\1}", path, flags=re.IGNORECASE)
+        path = _keep_uuid_as_string(path)
         if path in self.websocket_operations:
             raise ConfigError(f"WebSocket route '{path}' is already registered")
         operation = WebSocketOperation(
