@@ -153,7 +153,9 @@ async def bulk(websocket: WebSocket):
     await websocket.send_json(users, schema=List[UserOut])
 ```
 
-* Invalid messages raise `ninja.errors.ValidationError`. Its `errors` list has the same JSON-safe format as the body of HTTP 422 responses, so you can send it back to the client. If you don't catch it, the connection is closed with code `1008`.
+* Invalid messages raise `ninja.errors.ValidationError`. This covers both data that doesn't match the schema and text that isn't valid JSON (error type `json_invalid`, also without `schema=`). Its `errors` list has the same JSON-safe format as the body of HTTP 422 responses, so you can send it back to the client. If you don't catch it, the connection is closed with code `1008`.
+* A binary frame where text is expected (or the other way round) raises `WebSocketException` with code `1003` ("unsupported data"). If you don't catch it, the connection is closed with that code.
+* These are client mistakes, so they are not logged as server errors.
 * With `schema=`, type checkers know the result type: `receive_json(schema=Message)` is a `Message`, and `receive_json(schema=List[Message])` is a `List[Message]`.
 
 ## Errors
@@ -161,7 +163,7 @@ async def bulk(websocket: WebSocket):
 Exceptions go through the API [exception handlers](errors.md), just like in HTTP operations:
 
 * **Before `accept()`**, the handler's response is sent as the answer to the handshake. For example, `raise HttpError(404, "Room not found")` returns a 404 with the usual JSON body.
-* **After `accept()`**, an HTTP response can no longer be sent. The connection is closed with code `1008` and the error `detail` as the reason, or with code `1011` when the status is 5xx.
+* **After `accept()`**, an HTTP response can no longer be sent. The connection is closed with code `1008` and the error `detail` as the reason, or with code `1011` when the status is 5xx. An `HttpError` with a 5xx status raised on purpose (e.g. `HttpError(503, "Maintenance")`) is not reported as an unexpected error.
 * **Exceptions that no handler deals with**:
     * the error is logged (logger `ninja.websockets`);
     * Django's `got_request_exception` signal is sent, so error reporting tools such as Sentry see it;
@@ -237,7 +239,7 @@ Good to know:
 
 ### Origin check
 
-Browsers send cookies on cross-site WebSocket handshakes, and the same-origin policy doesn't apply to WebSockets. Without a check, any website could open a connection on behalf of a logged-in user ("cross-site WebSocket hijacking"). So by default **every handshake with an `Origin` header** must come from the request host or from an origin listed in `CSRF_TRUSTED_ORIGINS`; otherwise it is rejected with a 403. Non-browser clients usually don't send `Origin`, and they are not affected.
+Browsers send cookies on cross-site WebSocket handshakes, and the same-origin policy doesn't apply to WebSockets. Without a check, any website could open a connection on behalf of a logged-in user ("cross-site WebSocket hijacking"). So by default **every handshake with an `Origin` header** must be the site's own origin (same scheme and host, like Django's CSRF check) or an origin listed in `CSRF_TRUSTED_ORIGINS`; otherwise it is rejected with a 403. Behind a proxy that terminates TLS, configure `SECURE_PROXY_SSL_HEADER` so the scheme is detected as `https`. Non-browser clients usually don't send `Origin`, and they are not affected.
 
 To accept connections from any website (for example a public widget):
 
@@ -275,7 +277,10 @@ user = await websocket.request.auser()  # the logged-in user (session auth)
 rooms = [room async for room in Room.objects.filter(owner=user)]  # Django 4.1+
 ```
 
-By default, `sync_to_async` runs all the sync code in a single shared thread. With many connections making sync database calls at the same time, those calls run one after another; prefer the async ORM methods in busy handlers.
+Like Django does for each HTTP request, each websocket connection runs its sync code (sync auth callbacks, throttles, `sync_to_async` calls) in a thread of its own. Database connections opened there are closed when the websocket closes. Keep in mind:
+
+* A connection can stay open for hours, and so does its thread when it uses sync code. Prefer the async ORM methods in handlers that serve many clients.
+* Like any Django project served with ASGI, use `CONN_MAX_AGE = 0` (the default). Persistent database connections are not reused across threads.
 
 ## Routers and URLs
 
@@ -293,6 +298,7 @@ async def live(websocket: WebSocket):
 api.add_router("/events", router)  # ws://.../api/events/live
 ```
 
+* Routes are matched in the order they are declared, HTTP and websocket alike (Django uses the first pattern that matches). Declare specific paths such as `/live` before catch-all ones such as `/{slug}`.
 * An HTTP operation and a websocket can share the same path.
 * Websocket routes have a url name, like HTTP operations. It defaults to the function name, or you can set it with `url_name=`. So `reverse()` works for them.
 * If a websocket gets the same url name as an HTTP route, `api.urls` raises a `ConfigError`. In that case, pass a different `url_name=`.
