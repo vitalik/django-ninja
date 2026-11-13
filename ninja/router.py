@@ -219,46 +219,70 @@ class BoundRouter:
             self.path_operations[path] = cloned_view
 
     def urls_paths(self, prefix: str) -> Iterator[URLPattern]:
-        """Generate URL patterns for this bound router."""
+        """
+        Generate URL patterns for this bound router, in declaration order
+        (HTTP and websocket routes alike), since Django uses the first match.
+        """
         prefix = replace_path_param_notation(prefix)
-        for path, path_view in self.path_operations.items():
-            ws_operation = self.websocket_operations.get(path)
-            path = replace_path_param_notation(path)
-            route = "/".join([i for i in (prefix, path) if i])
-            route = normalize_path(route)
-            route = route.lstrip("/")
-
-            for operation in path_view.operations:
-                url_name = getattr(operation, "url_name", "")
-                if not url_name:
-                    url_name = self.api.get_operation_url_name(
-                        operation, router=self.template
-                    )
-                    # Apply url_name_prefix if specified
-                    if self.url_name_prefix and url_name:
-                        url_name = f"{self.url_name_prefix}_{url_name}"
-
-                view = path_view.get_view()
-                if ws_operation is not None:
-                    # same path serves HTTP and websocket: the ASGI dispatcher
-                    # finds the websocket operation through this attribute
-                    view.ninja_websocket_operation = ws_operation  # type: ignore
-                yield django_path(route, view, name=url_name)
-
-        # websocket-only paths get an HTTP view that explains how to connect
-        # (it is also what makes them resolvable and reversible)
-        for path, ws_operation in self.websocket_operations.items():
-            if path in self.path_operations:
-                continue
-            route = replace_path_param_notation(path)
-            route = "/".join([i for i in (prefix, route) if i])
+        for path in self._ordered_paths():
+            route = "/".join([
+                i for i in (prefix, replace_path_param_notation(path)) if i
+            ])
             route = normalize_path(route).lstrip("/")
-            url_name = ws_operation.url_name or ""
+            path_view = self.path_operations.get(path)
+            ws_operation = self.websocket_operations.get(path)
+            if path_view is not None:
+                yield from self._http_patterns(route, path_view, ws_operation)
+            if ws_operation is not None:
+                # An HTTP view answering how to connect: it makes the websocket
+                # resolvable and reversible. For a path shared with HTTP
+                # operations it comes after them, so HTTP requests reach those.
+                yield django_path(
+                    route,
+                    ws_operation.get_http_view(),
+                    name=self._websocket_url_name(ws_operation),
+                )
+
+    def _ordered_paths(self) -> List[str]:
+        paths = list(self.template._route_order)
+        known = set(paths)
+        # paths added without the Router API (e.g. directly to path_operations)
+        for path in [*self.path_operations, *self.websocket_operations]:
+            if path not in known:
+                known.add(path)
+                paths.append(path)
+        return paths
+
+    def _http_patterns(
+        self,
+        route: str,
+        path_view: PathView,
+        ws_operation: Optional[WebSocketOperation],
+    ) -> Iterator[URLPattern]:
+        for operation in path_view.operations:
+            url_name = getattr(operation, "url_name", "")
             if not url_name:
-                url_name = ws_operation.view_func.__name__
-                if self.url_name_prefix:
+                url_name = self.api.get_operation_url_name(
+                    operation, router=self.template
+                )
+                # Apply url_name_prefix if specified
+                if self.url_name_prefix and url_name:
                     url_name = f"{self.url_name_prefix}_{url_name}"
-            yield django_path(route, ws_operation.get_http_view(), name=url_name)
+
+            view = path_view.get_view()
+            if ws_operation is not None:
+                # same path serves HTTP and websocket: the ASGI dispatcher
+                # finds the websocket operation through this attribute
+                view.ninja_websocket_operation = ws_operation  # type: ignore
+            yield django_path(route, view, name=url_name)
+
+    def _websocket_url_name(self, ws_operation: WebSocketOperation) -> str:
+        if ws_operation.url_name:
+            return ws_operation.url_name
+        url_name = ws_operation.view_func.__name__
+        if self.url_name_prefix:
+            url_name = f"{self.url_name_prefix}_{url_name}"
+        return url_name
 
 
 class Router:
@@ -284,6 +308,9 @@ class Router:
 
         self.path_operations: Dict[str, PathView] = {}
         self.websocket_operations: Dict[str, WebSocketOperation] = {}
+        # first registration order of every path (HTTP and websocket), used
+        # to generate URL patterns in declaration order
+        self._route_order: List[str] = []
         self.webhooks: Dict[str, Webhook] = {}
         self._routers: List[Tuple[str, Router, Optional[List[str]]]] = []
         # (auth, throttle) passed to add_router(), aligned with self._routers
@@ -578,6 +605,8 @@ class Router:
         # No decoration here - will be done in build_routers
 
         if path not in self.path_operations:
+            if path not in self.websocket_operations:
+                self._route_order.append(path)
             path_view = PathView()
             self.path_operations[path] = path_view
         else:
@@ -662,6 +691,8 @@ class Router:
         path = _keep_uuid_as_string(path)
         if path in self.websocket_operations:
             raise ConfigError(f"WebSocket route '{path}' is already registered")
+        if path not in self.path_operations:
+            self._route_order.append(path)
         operation = WebSocketOperation(
             path,
             view_func,

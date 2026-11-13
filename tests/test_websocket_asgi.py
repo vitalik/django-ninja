@@ -325,3 +325,71 @@ async def test_urlconf_per_connection():
             incoming=[CONNECT, {"type": "websocket.receive", "text": "a"}],
         )
         assert t.sent[1] == {"type": "websocket.send", "text": "a"}
+
+
+@pytest.mark.asyncio
+async def test_routes_match_in_declaration_order():
+    api = NinjaAPI(urls_namespace=unique_namespace())
+    router = Router()
+
+    @router.websocket("/live")
+    async def live(websocket: WebSocket):
+        await websocket.accept()
+        await websocket.send_text("live")
+
+    @router.get("/{slug}")
+    def detail(request, slug: str):
+        return {"slug": slug}
+
+    @router.websocket("/{slug}/feed")
+    async def feed(websocket: WebSocket, slug: str):
+        await websocket.accept()
+        await websocket.send_text(slug)
+
+    api.add_router("/ev", router)
+    app = NinjaASGI(urlconf=api_urlconf(api))
+
+    # the websocket declared before the HTTP catch-all is not shadowed by it
+    t = await connect(app, "/api/ev/live")
+    assert t.sent[1] == {"type": "websocket.send", "text": "live"}
+    t = await connect(app, "/api/ev/x/feed")
+    assert t.sent[1] == {"type": "websocket.send", "text": "x"}
+    assert TestClient(api).get("/ev/other").json() == {"slug": "other"}
+
+
+def test_reverse_websocket_sharing_path_with_http():
+    api = NinjaAPI(urls_namespace=unique_namespace())
+
+    # websocket declared first: HTTP requests must still reach the HTTP view
+    @api.websocket("/room", url_name="room_ws")
+    async def room_ws(websocket: WebSocket):
+        pass  # pragma: no cover
+
+    @api.get("/room", url_name="room_http")
+    def room_http(request):
+        return 1
+
+    assert TestClient(api).get("/room").json() == 1
+
+    urlconf = api_urlconf(api)
+    ns = api.urls_namespace
+    assert reverse(f"{ns}:room_http", urlconf=urlconf) == "/api/room"
+    assert reverse(f"{ns}:room_ws", urlconf=urlconf) == "/api/room"
+
+
+def test_paths_added_without_router_api_are_kept():
+    router = Router()
+
+    @router.get("/a")
+    def a(request):
+        return "a"
+
+    @router.websocket("/b")
+    async def b(websocket: WebSocket):
+        pass  # pragma: no cover
+
+    router._route_order.clear()  # as if added directly to the dicts
+    api = NinjaAPI(urls_namespace=unique_namespace())
+    api.add_router("", router)
+    names = [p.name for p in api.urls[0]]
+    assert names.index("a") < names.index("b")
