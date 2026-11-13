@@ -235,3 +235,31 @@ async def test_chunked_denial_body():
         b"ab",
         [],
     )
+
+
+def test_token_in_subprotocol_header():
+    from ninja.security import APIKeyHeader
+
+    class SubprotocolToken(APIKeyHeader):
+        param_name = "Sec-WebSocket-Protocol"
+
+        def authenticate(self, request, key):
+            name, _, token = (key or "").partition(",")
+            if name.strip() == "access_token" and token.strip() == "s3cret":
+                return token.strip()
+
+    api = NinjaAPI(urls_namespace=unique_namespace())
+
+    @api.websocket("/ws", auth=SubprotocolToken())
+    async def protected(websocket: WebSocket):
+        await websocket.accept(subprotocol="access_token")
+        await websocket.send_text(websocket.auth)
+
+    client = TestClient(api)
+    with client.websocket_connect("/ws", subprotocols=["access_token", "s3cret"]) as ws:
+        assert ws.accepted_subprotocol == "access_token"
+        assert ws.receive_text() == "s3cret"
+
+    with pytest.raises(WebSocketDenied):
+        with client.websocket_connect("/ws", subprotocols=["access_token", "bad"]):
+            pass  # pragma: no cover

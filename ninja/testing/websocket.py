@@ -60,6 +60,12 @@ def build_websocket_scope(
     raw_headers = [(b"host", b"testserver")]
     for name, value in (headers or {}).items():
         raw_headers.append((name.lower().encode("latin-1"), value.encode("latin-1")))
+    if subprotocols:
+        # real servers expose the requested subprotocols both ways
+        raw_headers.append((
+            b"sec-websocket-protocol",
+            ", ".join(subprotocols).encode(),
+        ))
     return {
         "type": "websocket",
         "asgi": {"version": "3.0"},
