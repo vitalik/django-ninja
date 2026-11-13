@@ -71,6 +71,8 @@ test = [
     "mypy==1.7.1",
     "ruff==0.17.3",
     "django-stubs",
+    "uvicorn>=0.39.0",
+    "websockets>=15.0.1",
 ]
 doc = ["mkdocs", "mkdocs-material"]
 dev = [
