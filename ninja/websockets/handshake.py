@@ -26,32 +26,40 @@ WEBSOCKET_ONLY_DETAIL = "This endpoint only accepts WebSocket connections."
 
 def origin_is_allowed(request: HttpRequest) -> bool:
     """
-    Same-origin check for websocket handshakes.
+    Same-origin check for websocket handshakes, following Django's CSRF
+    Origin verification.
 
     Requests without an Origin header (non-browser clients) are allowed.
-    Otherwise the origin host must match the request host (which is validated
-    against ALLOWED_HOSTS) or be listed in settings.CSRF_TRUSTED_ORIGINS.
+    Otherwise the origin must be the request's own origin (scheme from
+    ``request.is_secure()``, which honors SECURE_PROXY_SSL_HEADER, and host
+    validated against ALLOWED_HOSTS) or match settings.CSRF_TRUSTED_ORIGINS
+    ("https://example.com", "https://*.example.com", or the scheme-less
+    Django < 4.0 forms "example.com" / ".example.com").
     """
     origin = request.headers.get("origin")
     if origin is None:
         return True
-    parsed = urlsplit(origin)
-    if not parsed.netloc:
+    parsed = urlsplit(origin.lower())
+    if not parsed.scheme or not parsed.netloc:
         return False  # e.g. "null"
     try:
-        if parsed.netloc == request.get_host():
+        scheme = "https" if request.is_secure() else "http"
+        if (parsed.scheme, parsed.netloc) == (scheme, request.get_host().lower()):
             return True
     except DisallowedHost:
         return False
     for trusted in getattr(settings, "CSRF_TRUSTED_ORIGINS", []):
-        if trusted in (origin, parsed.netloc):
+        trusted = trusted.lower()
+        if "://" in trusted:
+            trusted_scheme, _, host = trusted.partition("://")
+            if trusted_scheme != parsed.scheme:
+                continue
+        else:
+            host = trusted
+        if host.startswith("*"):
+            host = host[1:]  # "*.example.com" -> ".example.com" (subdomains)
+        if is_same_domain(parsed.netloc, host):
             return True
-        if "*" in trusted:
-            scheme, _, pattern = trusted.rpartition("://")
-            if (not scheme or scheme == parsed.scheme) and is_same_domain(
-                parsed.netloc, pattern.replace("*", "", 1)
-            ):
-                return True
     return False
 
 

@@ -203,10 +203,14 @@ async def test_session_auth():
 
 
 class FakeRequest:
-    def __init__(self, origin, host="testserver", disallowed=False):
+    def __init__(self, origin, host="testserver", disallowed=False, secure=False):
         self.headers = {} if origin is None else {"origin": origin}
         self._host = host
         self._disallowed = disallowed
+        self._secure = secure
+
+    def is_secure(self):
+        return self._secure
 
     def get_host(self):
         if self._disallowed:
@@ -222,6 +226,7 @@ def test_origin_is_allowed(settings):
         "legacy.example",
         "https://*.wild.example",
         "*.any-scheme.example",
+        ".old-style.example",
     ]
     assert origin_is_allowed(FakeRequest(None))
     assert origin_is_allowed(FakeRequest("http://testserver"))
@@ -233,6 +238,21 @@ def test_origin_is_allowed(settings):
     assert not origin_is_allowed(FakeRequest("https://other.example"))
     assert not origin_is_allowed(FakeRequest("null"))
     assert not origin_is_allowed(FakeRequest("http://testserver", disallowed=True))
+
+    # the scheme must match the request's (like Django's CSRF Origin check)
+    assert not origin_is_allowed(FakeRequest("https://testserver"))
+    assert origin_is_allowed(FakeRequest("https://testserver", secure=True))
+    assert not origin_is_allowed(FakeRequest("http://testserver", secure=True))
+    # case-insensitive, ports are part of the host
+    assert origin_is_allowed(FakeRequest("HTTP://TestServer"))
+    assert not origin_is_allowed(FakeRequest("http://testserver:8000"))
+    assert origin_is_allowed(
+        FakeRequest("http://testserver:8000", host="testserver:8000")
+    )
+    # Django < 4.0 style entries: ".domain" also matches subdomains
+    assert origin_is_allowed(FakeRequest("https://old-style.example"))
+    assert origin_is_allowed(FakeRequest("https://a.old-style.example"))
+    assert not origin_is_allowed(FakeRequest("https://old-style.example.evil"))
 
 
 def test_request_without_sessions_or_auth_apps(monkeypatch):
