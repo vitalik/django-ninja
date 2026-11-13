@@ -256,6 +256,7 @@ def test_connection_details_match_django_request():
     assert ws.query_params["q"] == "ñandú"
     assert ws.query_params["raw"] == "ñ"
     assert ws.headers["X-Token"] == ws.headers["x-token"] == "abc"
-    # like Django, underscores are dropped to prevent header spoofing
-    assert "x_spoofed" not in ws.headers
+    # exactly Django's view of the headers (e.g. Django 5.2+ drops names with
+    # underscores to prevent spoofing, older versions keep them)
+    assert dict(ws.headers) == dict(ws.request.headers)
     assert ws.query_params is ws.request.GET
