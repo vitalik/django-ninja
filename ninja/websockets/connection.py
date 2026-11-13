@@ -1,80 +1,30 @@
 """
-WebSocket support implemented directly on top of the ASGI protocol.
+The WebSocket connection, implemented directly on top of the ASGI protocol.
 
 No third-party dependencies are required: the ASGI websocket protocol is just
 an exchange of dictionaries between the server and the application
 (see https://asgi.readthedocs.io/en/latest/specs/www.html#websocket).
 """
 
-import enum
-import functools
-import io
 import json
-from typing import (
-    Any,
-    AsyncIterator,
-    Awaitable,
-    Callable,
-    Dict,
-    Iterable,
-    List,
-    MutableMapping,
-    Optional,
-    Tuple,
-)
+from typing import Any, AsyncIterator, Dict, Iterable, List, Optional, Tuple
 
 from django.http import HttpRequest, QueryDict
-from pydantic import TypeAdapter
 
 from ninja.responses import NinjaJSONEncoder
+from ninja.websockets.request import build_handshake_request
+from ninja.websockets.schemas import type_adapter
+from ninja.websockets.types import (
+    Message,
+    Receive,
+    Scope,
+    Send,
+    WebSocketClose,
+    WebSocketDisconnect,
+    WebSocketState,
+)
 
-__all__ = [
-    "WebSocket",
-    "WebSocketDisconnect",
-    "WebSocketState",
-    "WebSocketClose",
-]
-
-Scope = MutableMapping[str, Any]
-Message = MutableMapping[str, Any]
-Receive = Callable[[], Awaitable[Message]]
-Send = Callable[[Message], Awaitable[None]]
-
-_HTTP_SCHEMES = {"ws": "http", "wss": "https", "http": "http", "https": "https"}
-
-
-class WebSocketClose(enum.IntEnum):
-    """Common close codes (RFC 6455, section 7.4.1)."""
-
-    NORMAL_CLOSURE = 1000
-    GOING_AWAY = 1001
-    PROTOCOL_ERROR = 1002
-    UNSUPPORTED_DATA = 1003
-    NO_STATUS_RECEIVED = 1005
-    ABNORMAL_CLOSURE = 1006
-    INVALID_PAYLOAD = 1007
-    POLICY_VIOLATION = 1008
-    MESSAGE_TOO_BIG = 1009
-    MANDATORY_EXTENSION = 1010
-    INTERNAL_ERROR = 1011
-
-
-class WebSocketState(enum.Enum):
-    CONNECTING = 0
-    CONNECTED = 1
-    DISCONNECTED = 2
-    RESPONSE = 3
-
-
-class WebSocketDisconnect(Exception):
-    """Raised when the client disconnects (or the connection is lost)."""
-
-    def __init__(
-        self, code: int = WebSocketClose.NORMAL_CLOSURE, reason: Optional[str] = None
-    ) -> None:
-        self.code = code
-        self.reason = reason or ""
-        super().__init__(code, self.reason)
+__all__ = ["WebSocket"]
 
 
 class WebSocket:
@@ -156,14 +106,7 @@ class WebSocket:
         so existing ninja security classes work unchanged for websockets.
         """
         if self._request is None:
-            from django.core.handlers.asgi import ASGIRequest
-
-            scope = dict(self.scope)
-            scope["method"] = "GET"
-            scope["scheme"] = _HTTP_SCHEMES.get(str(scope.get("scheme")), "http")
-            request = ASGIRequest(scope, io.BytesIO(b""))
-            _attach_session_and_user(request)
-            self._request = request
+            self._request = build_handshake_request(self.scope)
         return self._request
 
     # Low level ASGI messages -------------------------------------------------
@@ -314,7 +257,7 @@ class WebSocket:
         else:
             data = json.loads((await self.receive_bytes()).decode("utf-8"))
         if schema is not None:
-            return _type_adapter(schema).validate_python(data)
+            return type_adapter(schema).validate_python(data)
         return data
 
     async def send_text(self, data: str) -> None:
@@ -334,7 +277,7 @@ class WebSocket:
         if mode not in {"text", "binary"}:
             raise ValueError('The "mode" argument should be "text" or "binary".')
         if schema is not None:
-            adapter = _type_adapter(schema)
+            adapter = type_adapter(schema)
             data = adapter.dump_python(
                 adapter.validate_python(data, from_attributes=True), mode="json"
             )
@@ -368,41 +311,3 @@ class WebSocket:
                 yield await self.receive_json(mode, schema=schema)
         except WebSocketDisconnect:
             pass
-
-
-def _type_adapter(tp: Any) -> TypeAdapter:
-    try:
-        return _cached_type_adapter(tp)
-    except TypeError:  # unhashable type (e.g. Annotated with unhashable metadata)
-        return TypeAdapter(tp)
-
-
-@functools.lru_cache(maxsize=None)
-def _cached_type_adapter(tp: Any) -> TypeAdapter:
-    return TypeAdapter(tp)
-
-
-def _attach_session_and_user(request: HttpRequest) -> None:
-    """
-    Django middlewares do not run for websockets: emulate what
-    SessionMiddleware/AuthenticationMiddleware add to the request so that
-    session based auth (e.g. ninja.security.django_auth) keeps working.
-    Both are lazy, the database is only hit when they are used.
-    """
-    from django.apps import apps
-
-    if not apps.is_installed("django.contrib.sessions"):
-        return
-    from importlib import import_module
-
-    from django.conf import settings
-
-    engine = import_module(settings.SESSION_ENGINE)
-    session_key = request.COOKIES.get(settings.SESSION_COOKIE_NAME)
-    request.session = engine.SessionStore(session_key)
-
-    if apps.is_installed("django.contrib.auth"):
-        from django.contrib.auth import get_user
-        from django.utils.functional import SimpleLazyObject
-
-        request.user = SimpleLazyObject(lambda: get_user(request))  # type: ignore

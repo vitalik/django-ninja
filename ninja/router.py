@@ -25,7 +25,7 @@ from ninja.throttling import BaseThrottle
 from ninja.types import TCallable, TSchemaClass
 from ninja.utils import normalize_path, replace_path_param_notation
 from ninja.webhooks import Webhook
-from ninja.websocket_operation import WebSocketOperation
+from ninja.websockets.operation import WebSocketOperation
 
 if TYPE_CHECKING:
     from ninja import NinjaAPI  # pragma: no cover

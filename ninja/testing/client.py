@@ -16,7 +16,7 @@ from ninja.testing.websocket import (
     WebSocketTestSession,
     build_websocket_scope,
 )
-from ninja.websockets import Scope
+from ninja.websockets.types import Scope
 
 
 def build_absolute_uri(location: Optional[str] = None) -> str:

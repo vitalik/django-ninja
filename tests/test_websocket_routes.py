@@ -5,7 +5,8 @@ import pytest
 
 from ninja import Header, NinjaAPI, Query, Router, Schema, WebSocket
 from ninja.errors import ConfigError
-from ninja.websocket_operation import WebSocketOperation, _truncate_reason
+from ninja.websockets.handshake import truncate_reason
+from ninja.websockets.operation import WebSocketOperation
 
 
 class FakeTransport:
@@ -239,10 +240,10 @@ async def test_run_invalid_params_closes_connection():
     assert len(message["reason"].encode()) <= 123
 
 
-def test_truncate_reason():
-    assert _truncate_reason("short") == "short"
+def testtruncate_reason():
+    assert truncate_reason("short") == "short"
     long_reason = "ñ" * 100
-    truncated = _truncate_reason(long_reason)
+    truncated = truncate_reason(long_reason)
     assert truncated.endswith("...")
     assert len(truncated.encode()) <= 123
 

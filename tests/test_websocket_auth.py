@@ -9,7 +9,7 @@ from ninja import NinjaAPI, WebSocket
 from ninja.asgi import NinjaASGI
 from ninja.errors import AuthorizationError
 from ninja.security import APIKeyCookie, APIKeyQuery, django_auth
-from ninja.websocket_operation import origin_is_allowed
+from ninja.websockets.handshake import origin_is_allowed
 
 pytestmark = pytest.mark.django_db(transaction=True)
 

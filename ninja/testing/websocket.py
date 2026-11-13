@@ -18,7 +18,7 @@ import threading
 from typing import Any, Coroutine, Dict, List, Optional, Tuple, TypeVar
 
 from ninja.responses import NinjaJSONEncoder
-from ninja.websockets import (
+from ninja.websockets.types import (
     Message,
     Scope,
     WebSocketClose,

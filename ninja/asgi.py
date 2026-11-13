@@ -28,12 +28,12 @@ from django.conf import settings
 from django.core import signals
 from django.urls import Resolver404, resolve, set_script_prefix
 
-from ninja.websocket_operation import WebSocketOperation
-from ninja.websockets import (
+from ninja.websockets.connection import WebSocket
+from ninja.websockets.operation import WebSocketOperation
+from ninja.websockets.types import (
     Receive,
     Scope,
     Send,
-    WebSocket,
     WebSocketClose,
     WebSocketDisconnect,
     WebSocketState,
