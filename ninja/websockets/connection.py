@@ -26,7 +26,7 @@ from django.http import HttpRequest, QueryDict
 from ninja.renderers import BaseRenderer
 from ninja.responses import NinjaJSONEncoder
 from ninja.websockets.request import build_handshake_request
-from ninja.websockets.schemas import type_adapter
+from ninja.websockets.schemas import type_adapter, validate_message
 from ninja.websockets.types import (
     Message,
     Receive,
@@ -258,7 +258,8 @@ class WebSocket:
         """
         Receive a JSON message. With ``schema`` (a pydantic model or any type
         such as ``List[Item]``) the data is validated and converted, raising
-        ``pydantic.ValidationError`` when it does not match.
+        ``ninja.errors.ValidationError`` (like HTTP 422 errors) when it does
+        not match.
         """
         if mode not in {"text", "binary"}:
             raise ValueError('The "mode" argument should be "text" or "binary".')
@@ -267,7 +268,7 @@ class WebSocket:
         else:
             data = json.loads((await self.receive_bytes()).decode("utf-8"))
         if schema is not None:
-            return type_adapter(schema).validate_python(data)
+            return validate_message(schema, data)
         return data
 
     async def send_text(self, data: str) -> None:

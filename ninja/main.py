@@ -24,6 +24,7 @@ from ninja.errors import (
     ConfigError,
     ValidationError,
     ValidationErrorContext,
+    clean_pydantic_errors,
     set_default_exc_handlers,
 )
 from ninja.openapi import get_schema
@@ -710,19 +711,11 @@ class NinjaAPI:
         for context in error_contexts:
             model = context.model
             e = context.pydantic_validation_error
-            for i in e.errors(include_url=False):
+            for i in clean_pydantic_errors(e):
                 i["loc"] = (
                     model.__ninja_param_source__,
                 ) + model.__ninja_flatten_map_reverse__.get(i["loc"], i["loc"])
-                # removing pydantic hints
-                del i["input"]  # type: ignore
-                if (
-                    "ctx" in i
-                    and "error" in i["ctx"]
-                    and isinstance(i["ctx"]["error"], Exception)
-                ):
-                    i["ctx"]["error"] = str(i["ctx"]["error"])
-                errors.append(dict(i))
+                errors.append(i)
         return ValidationError(errors)
 
     def _lookup_exception_handler(self, exc: Exc[_E]) -> Optional[ExcHandler[_E]]:

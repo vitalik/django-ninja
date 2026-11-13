@@ -58,6 +58,24 @@ class ValidationError(Exception):
         super().__init__(errors)
 
 
+def clean_pydantic_errors(error: pydantic.ValidationError) -> List[DictStrAny]:
+    """
+    ``error.errors()`` without pydantic hints, safe to render as JSON: the
+    ``input`` is removed and exceptions in ``ctx`` are turned into strings.
+    """
+    errors: List[DictStrAny] = []
+    for i in error.errors(include_url=False):
+        del i["input"]  # type: ignore
+        if (
+            "ctx" in i
+            and "error" in i["ctx"]
+            and isinstance(i["ctx"]["error"], Exception)
+        ):
+            i["ctx"]["error"] = str(i["ctx"]["error"])
+        errors.append(dict(i))
+    return errors
+
+
 class HttpError(Exception):
     def __init__(self, status_code: int, message: str) -> None:
         self.status_code = status_code

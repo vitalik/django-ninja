@@ -1,9 +1,12 @@
 import functools
 from typing import Any
 
+import pydantic
 from pydantic import TypeAdapter
 
-__all__ = ["type_adapter"]
+from ninja.errors import ValidationError, clean_pydantic_errors
+
+__all__ = ["type_adapter", "validate_message"]
 
 
 def type_adapter(tp: Any) -> TypeAdapter:
@@ -17,3 +20,14 @@ def type_adapter(tp: Any) -> TypeAdapter:
 @functools.lru_cache(maxsize=None)
 def _cached_type_adapter(tp: Any) -> TypeAdapter:
     return TypeAdapter(tp)
+
+
+def validate_message(schema: Any, data: Any) -> Any:
+    """
+    Validate an incoming message. Failures raise ``ninja.errors.ValidationError``
+    (JSON-safe errors, like HTTP 422 responses).
+    """
+    try:
+        return type_adapter(schema).validate_python(data)
+    except pydantic.ValidationError as e:
+        raise ValidationError(clean_pydantic_errors(e)) from e
