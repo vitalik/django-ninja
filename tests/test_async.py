@@ -1,10 +1,13 @@
 import asyncio
+from unittest import mock
 
 import pytest
+from asgiref.sync import sync_to_async
 
 from ninja import NinjaAPI
 from ninja.security import APIKeyQuery
 from ninja.testing import TestAsyncClient
+from ninja.throttling import BaseThrottle
 
 
 @pytest.mark.asyncio
@@ -48,3 +51,51 @@ async def test_asyncio_operations():
     # invalid method
     res = await client.put("/async")
     assert res.status_code == 405
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "path,thread_hops",
+    [
+        ("/no-checks", 0),
+        ("/sync-auth?key=k", 1),
+        ("/throttle", 1),
+        # sync auth and throttles run together in one thread hop
+        ("/sync-auth-throttle?key=k", 1),
+        # async auth runs on the event loop, only throttles need a thread
+        ("/async-auth?key=k", 0),
+        ("/async-auth-throttle?key=k", 1),
+    ],
+)
+async def test_async_view_checks_thread_hops(path, thread_hops):
+    class SyncAuth(APIKeyQuery):
+        def authenticate(self, request, key):
+            return key
+
+    class AsyncAuth(APIKeyQuery):
+        async def authenticate(self, request, key):
+            return key
+
+    class Throttle(BaseThrottle):
+        def allow_request(self, request):
+            return True
+
+    api = NinjaAPI()
+
+    @api.get("/no-checks")
+    @api.get("/sync-auth", auth=SyncAuth())
+    @api.get("/throttle", throttle=Throttle())
+    @api.get("/sync-auth-throttle", auth=SyncAuth(), throttle=Throttle())
+    @api.get("/async-auth", auth=AsyncAuth())
+    @api.get("/async-auth-throttle", auth=AsyncAuth(), throttle=Throttle())
+    async def view(request):
+        return {"auth": getattr(request, "auth", None)}
+
+    client = TestAsyncClient(api)
+
+    with mock.patch("ninja.operation.sync_to_async", wraps=sync_to_async) as hop:
+        res = await client.get(path)
+
+    assert res.status_code == 200
+    assert res.json() == {"auth": "k" if "auth" in path else None}
+    assert hop.call_count == thread_hops

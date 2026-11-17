@@ -87,3 +87,32 @@ async def test_csrf_exempt_async():
     # This should succeed even without CSRF token because of csrf_exempt attribute
     response = await client.post("/post/csrf_exempt", COOKIES=COOKIES)
     assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_csrf_exempt_async_auth():
+    """csrf_exempt is also honored when the auth callback itself is async"""
+
+    class AsyncCookieAuth(APIKeyCookie):
+        async def authenticate(self, request, key):
+            return True
+
+    api = NinjaAPI(urls_namespace="csrf_exempt_async_auth", auth=AsyncCookieAuth())
+
+    @api.post("/post")
+    async def post_on(request):
+        return {"success": True}
+
+    async def post_exempt(request):
+        return {"success": True}
+
+    post_exempt.csrf_exempt = True
+    api.post("/post/csrf_exempt")(post_exempt)
+
+    client = TestAsyncClient(api)
+
+    response = await client.post("/post", COOKIES=COOKIES)
+    assert response.status_code == 403
+
+    response = await client.post("/post/csrf_exempt", COOKIES=COOKIES)
+    assert response.status_code == 200
