@@ -1,7 +1,7 @@
 import inspect
 from json import dumps as json_dumps
 from json import loads as json_loads
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Callable, Optional, Union, cast
 from unittest.mock import Mock
 from urllib.parse import urljoin
 
@@ -30,22 +30,22 @@ class NinjaClientBase:
     def __init__(
         self,
         router_or_app: Union[NinjaAPI, Router],
-        headers: Optional[Dict[str, str]] = None,
-        COOKIES: Optional[Dict[str, str]] = None,
+        headers: Optional[dict[str, str]] = None,
+        COOKIES: Optional[dict[str, str]] = None,
     ) -> None:
         self.headers = headers or {}
         self.cookies = COOKIES or {}
         self.router_or_app = router_or_app
 
     def get(
-        self, path: str, data: Optional[Dict[str, Any]] = None, **request_params: Any
+        self, path: str, data: Optional[dict[str, Any]] = None, **request_params: Any
     ) -> "NinjaResponse":
         return self.request("GET", path, data, **request_params)
 
     def post(
         self,
         path: str,
-        data: Optional[Dict[str, Any]] = None,
+        data: Optional[dict[str, Any]] = None,
         json: Any = None,
         **request_params: Any,
     ) -> "NinjaResponse":
@@ -54,7 +54,7 @@ class NinjaClientBase:
     def patch(
         self,
         path: str,
-        data: Optional[Dict[str, Any]] = None,
+        data: Optional[dict[str, Any]] = None,
         json: Any = None,
         **request_params: Any,
     ) -> "NinjaResponse":
@@ -63,7 +63,7 @@ class NinjaClientBase:
     def put(
         self,
         path: str,
-        data: Optional[Dict[str, Any]] = None,
+        data: Optional[dict[str, Any]] = None,
         json: Any = None,
         **request_params: Any,
     ) -> "NinjaResponse":
@@ -72,7 +72,7 @@ class NinjaClientBase:
     def delete(
         self,
         path: str,
-        data: Optional[Dict[str, Any]] = None,
+        data: Optional[dict[str, Any]] = None,
         json: Any = None,
         **request_params: Any,
     ) -> "NinjaResponse":
@@ -82,10 +82,10 @@ class NinjaClientBase:
         self,
         method: str,
         path: str,
-        data: Optional[Dict[str, Any]] = None,
+        data: Optional[dict[str, Any]] = None,
         json: Any = None,
         **request_params: Any,
-    ) -> Tuple[Callable, HttpRequest, Dict]:
+    ) -> tuple[Callable, HttpRequest, dict]:
         if json is not None:
             request_params["body"] = json_dumps(json, cls=NinjaJSONEncoder)
         if data is None:
@@ -106,7 +106,7 @@ class NinjaClientBase:
         self,
         method: str,
         path: str,
-        data: Optional[Dict[str, Any]] = None,
+        data: Optional[dict[str, Any]] = None,
         json: Any = None,
         **request_params: Any,
     ) -> "NinjaResponse":
@@ -116,9 +116,9 @@ class NinjaClientBase:
         return self._call(func, request, kwargs)  # type: ignore
 
     @property
-    def urls(self) -> List:
+    def urls(self) -> list:
         if not hasattr(self, "_urls_cache"):
-            self._urls_cache: List
+            self._urls_cache: list
             if isinstance(self.router_or_app, NinjaAPI):
                 self._urls_cache = self.router_or_app.urls[0]
             else:
@@ -130,8 +130,8 @@ class NinjaClientBase:
         return self._urls_cache
 
     def _resolve(
-        self, method: str, path: str, data: Dict[str, Any], request_params: Any
-    ) -> Tuple[Callable, HttpRequest, Dict]:
+        self, method: str, path: str, data: dict[str, Any], request_params: Any
+    ) -> tuple[Callable, HttpRequest, dict]:
         url_path = path.split("?")[0].lstrip("/")
         for url in self.urls:
             match = url.resolve(url_path)
@@ -142,7 +142,7 @@ class NinjaClientBase:
         raise Exception(f'Cannot resolve "{path}"')
 
     def _build_request(
-        self, method: str, path: str, data: Dict[str, Any], request_params: Any
+        self, method: str, path: str, data: dict[str, Any], request_params: Any
     ) -> HttpRequest:
         request: Any = HttpRequest()
         request.method = method
@@ -213,7 +213,7 @@ class NinjaClientBase:
 
 class TestClient(NinjaClientBase):
     def _call(
-        self, func: Callable, request: HttpRequest, kwargs: Dict
+        self, func: Callable, request: HttpRequest, kwargs: dict
     ) -> "NinjaResponse":
         return NinjaResponse(func(request, **kwargs))
 
@@ -223,7 +223,7 @@ class TestAsyncClient(NinjaClientBase):
         self,
         method: str,
         path: str,
-        data: Optional[Dict[str, Any]] = None,
+        data: Optional[dict[str, Any]] = None,
         json: Any = None,
         **request_params: Any,
     ) -> "NinjaResponse":
@@ -233,14 +233,14 @@ class TestAsyncClient(NinjaClientBase):
         return await self._call(func, request, kwargs)
 
     async def get(  # type: ignore[override]
-        self, path: str, data: Optional[Dict[str, Any]] = None, **request_params: Any
+        self, path: str, data: Optional[dict[str, Any]] = None, **request_params: Any
     ) -> "NinjaResponse":
         return await self.request("GET", path, data, **request_params)
 
     async def post(  # type: ignore[override]
         self,
         path: str,
-        data: Optional[Dict[str, Any]] = None,
+        data: Optional[dict[str, Any]] = None,
         json: Any = None,
         **request_params: Any,
     ) -> "NinjaResponse":
@@ -249,7 +249,7 @@ class TestAsyncClient(NinjaClientBase):
     async def patch(  # type: ignore[override]
         self,
         path: str,
-        data: Optional[Dict[str, Any]] = None,
+        data: Optional[dict[str, Any]] = None,
         json: Any = None,
         **request_params: Any,
     ) -> "NinjaResponse":
@@ -258,7 +258,7 @@ class TestAsyncClient(NinjaClientBase):
     async def put(  # type: ignore[override]
         self,
         path: str,
-        data: Optional[Dict[str, Any]] = None,
+        data: Optional[dict[str, Any]] = None,
         json: Any = None,
         **request_params: Any,
     ) -> "NinjaResponse":
@@ -267,14 +267,14 @@ class TestAsyncClient(NinjaClientBase):
     async def delete(  # type: ignore[override]
         self,
         path: str,
-        data: Optional[Dict[str, Any]] = None,
+        data: Optional[dict[str, Any]] = None,
         json: Any = None,
         **request_params: Any,
     ) -> "NinjaResponse":
         return await self.request("DELETE", path, data, json, **request_params)
 
     async def _call(
-        self, func: Callable, request: HttpRequest, kwargs: Dict
+        self, func: Callable, request: HttpRequest, kwargs: dict
     ) -> "NinjaResponse":
         http_response = await func(request, **kwargs)
         if http_response.streaming and inspect.isasyncgen(

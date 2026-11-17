@@ -1,8 +1,7 @@
 # The goal of this file is to test that mypy "likes" all the combinations of parametrization
-from typing import Any
+from typing import Annotated, Any
 
 from django.http import HttpRequest
-from typing_extensions import Annotated
 
 from ninja import Body, BodyEx, NinjaAPI, P, Schema, Status
 from ninja.streaming import JSONL, SSE

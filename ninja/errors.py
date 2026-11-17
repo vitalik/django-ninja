@@ -1,7 +1,7 @@
 import logging
 import traceback
 from functools import partial
-from typing import TYPE_CHECKING, Generic, List, Optional, TypeVar
+from typing import TYPE_CHECKING, Generic, Optional, TypeVar
 
 import pydantic
 from django.conf import settings
@@ -53,7 +53,7 @@ class ValidationError(Exception):
     the errors attribute as well holds the location of the error(body, form, query, etc.)
     """
 
-    def __init__(self, errors: List[DictStrAny]) -> None:
+    def __init__(self, errors: list[DictStrAny]) -> None:
         self.errors = errors
         super().__init__(errors)
 

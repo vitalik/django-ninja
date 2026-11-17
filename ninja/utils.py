@@ -1,5 +1,5 @@
 import inspect
-from typing import Any, Callable, Optional, Type
+from typing import Any, Callable, Optional
 
 from django.http import HttpRequest, HttpResponseForbidden
 from django.middleware.csrf import CsrfViewMiddleware
@@ -40,7 +40,7 @@ def is_async_callable(f: Callable[..., Any]) -> bool:
     )
 
 
-def is_optional_type(t: Type[Any]) -> bool:
+def is_optional_type(t: type[Any]) -> bool:
     try:
         return type(None) in t.__args__
     except AttributeError:
@@ -56,7 +56,7 @@ def contribute_operation_callback(
 
 
 def contribute_operation_args(
-    func: Callable[..., Any], arg_name: str, arg_type: Type, arg_source: Any
+    func: Callable[..., Any], arg_name: str, arg_type: type, arg_source: Any
 ) -> None:
     if not hasattr(func, "_ninja_contribute_args"):
         func._ninja_contribute_args = []  # type: ignore

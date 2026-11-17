@@ -1,6 +1,6 @@
 import hashlib
 import time
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 from django.core.cache import cache as default_cache
 from django.core.exceptions import ImproperlyConfigured
@@ -33,7 +33,7 @@ class BaseThrottle:
         if num_proxies is not None:
             if num_proxies == 0 or xff is None:
                 return remote_addr
-            addrs: List[str] = xff.split(",")
+            addrs: list[str] = xff.split(",")
             client_addr = addrs[-min(num_proxies, len(addrs))]
             return client_addr.strip()
 
@@ -66,7 +66,7 @@ class SimpleRateThrottle(BaseThrottle):
     timer = time.time
     cache_format = "throttle_%(scope)s_%(ident)s"
     scope: Optional[str] = None
-    THROTTLE_RATES: Dict[str, Optional[str]] = settings.DEFAULT_THROTTLE_RATES
+    THROTTLE_RATES: dict[str, Optional[str]] = settings.DEFAULT_THROTTLE_RATES
     _PERIODS = {
         "s": 1,
         "m": 60,
@@ -109,7 +109,7 @@ class SimpleRateThrottle(BaseThrottle):
             msg = f"No default throttle rate set for '{self.scope}' scope"
             raise ImproperlyConfigured(msg) from None
 
-    def parse_rate(self, rate: Optional[str]) -> Tuple[Optional[int], Optional[int]]:
+    def parse_rate(self, rate: Optional[str]) -> tuple[Optional[int], Optional[int]]:
         """
         Given the request rate string, return a two tuple of:
         <allowed number of requests>, <period of time in seconds>

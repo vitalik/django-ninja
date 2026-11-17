@@ -1,16 +1,11 @@
 import itertools
 import re
+from collections.abc import Generator
 from http.client import responses
 from typing import (
     TYPE_CHECKING,
     Any,
-    Dict,
-    Generator,
-    List,
     Optional,
-    Set,
-    Tuple,
-    Type,
 )
 
 from django.utils.termcolors import make_style
@@ -30,7 +25,7 @@ if TYPE_CHECKING:
 
 REF_TEMPLATE: str = "#/components/schemas/{model}"
 
-BODY_CONTENT_TYPES: Dict[str, str] = {
+BODY_CONTENT_TYPES: dict[str, str] = {
     "body": "application/json",
     "form": "application/x-www-form-urlencoded",
     "file": "multipart/form-data",
@@ -51,7 +46,7 @@ class OpenAPISchema(dict):
         self.path_prefix = path_prefix
         self.schemas: DictStrAny = {}
         self.securitySchemes: DictStrAny = {}
-        self.all_operation_ids: Set = set()
+        self.all_operation_ids: set = set()
         extra_info = api.openapi_extra.get("info", {})
         super().__init__([
             ("openapi", "3.1.0"),
@@ -132,7 +127,7 @@ class OpenAPISchema(dict):
         return result
 
     def _create_ref_schema(
-        self, model: Type[BaseModel], mode: JsonSchemaMode = "validation"
+        self, model: type[BaseModel], mode: JsonSchemaMode = "validation"
     ) -> DictStrAny:
         "Adds model to components/schemas and returns a $ref to it"
         refs, top_level = models_json_schema(
@@ -153,7 +148,7 @@ class OpenAPISchema(dict):
         return result
 
     def deep_dict_update(
-        self, main_dict: Dict[Any, Any], update_dict: Dict[Any, Any]
+        self, main_dict: dict[Any, Any], update_dict: dict[Any, Any]
     ) -> None:
         for key in update_dict:
             if (
@@ -211,14 +206,14 @@ class OpenAPISchema(dict):
 
         return result
 
-    def operation_parameters(self, operation: Operation) -> List[DictStrAny]:
+    def operation_parameters(self, operation: Operation) -> list[DictStrAny]:
         result = []
         for model in operation.models:
             if model.__ninja_param_source__ not in BODY_CONTENT_TYPES:
                 result.extend(self._extract_parameters(model))
         return result
 
-    def _extract_parameters(self, model: TModel) -> List[DictStrAny]:
+    def _extract_parameters(self, model: TModel) -> list[DictStrAny]:
         result = []
 
         schema = model.model_json_schema(
@@ -297,7 +292,7 @@ class OpenAPISchema(dict):
         by_alias: bool = True,
         remove_level: bool = True,
         mode: JsonSchemaMode = "validation",
-    ) -> Tuple[DictStrAny, bool]:
+    ) -> tuple[DictStrAny, bool]:
         if hasattr(model, "__ninja_flatten_map__"):
             schema = self._flatten_schema(model)
         else:
@@ -325,7 +320,7 @@ class OpenAPISchema(dict):
         self,
         models: TModels,
         mode: JsonSchemaMode = "validation",
-    ) -> Tuple[DictStrAny, str]:
+    ) -> tuple[DictStrAny, str]:
         # We have File and Form or Body, so we need to use multipart (File)
         content_type = BODY_CONTENT_TYPES["file"]
 
@@ -366,7 +361,7 @@ class OpenAPISchema(dict):
             "required": required,
         }
 
-    def responses(self, operation: Operation) -> Dict[int, DictStrAny]:
+    def responses(self, operation: Operation) -> dict[int, DictStrAny]:
         assert bool(operation.response_models), f"{operation.response_models} empty"
 
         result = {}
@@ -375,7 +370,7 @@ class OpenAPISchema(dict):
                 continue  # it's not yet clear what it means if user wants to output any other code
 
             description = responses.get(status, "Unknown Status Code")
-            details: Dict[int, Any] = {status: {"description": description}}
+            details: dict[int, Any] = {status: {"description": description}}
             if model not in [None, NOT_SET]:
                 # ::TODO:: test this: by_alias == True
                 schema = self._create_schema_from_model(
@@ -393,13 +388,13 @@ class OpenAPISchema(dict):
 
         return result
 
-    def operation_security(self, operation: Operation) -> Optional[List[DictStrAny]]:
+    def operation_security(self, operation: Operation) -> Optional[list[DictStrAny]]:
         if not operation.auth_callbacks:
             return None
         result = []
         for auth in operation.auth_callbacks:
             if hasattr(auth, "openapi_security_schema"):
-                scopes: List[DictStrAny] = []  # TODO: scopes
+                scopes: list[DictStrAny] = []  # TODO: scopes
                 name = auth.__class__.__name__
                 result.append({name: scopes})  # TODO: check if unique
                 self.securitySchemes[name] = auth.openapi_security_schema
@@ -425,7 +420,7 @@ def flatten_properties(
     prop_details: DictStrAny,
     prop_required: bool,
     definitions: DictStrAny,
-) -> Generator[Tuple[str, DictStrAny, bool], None, None]:
+) -> Generator[tuple[str, DictStrAny, bool], None, None]:
     """
     extracts all nested model's properties into flat properties
     (used f.e. in GET params with multiple arguments and models)
@@ -491,7 +486,7 @@ def resolve_allOf(details: DictStrAny, definitions: DictStrAny) -> None:
             del item["$ref"]
 
 
-def merge_schemas(schemas: List[DictStrAny]) -> DictStrAny:
+def merge_schemas(schemas: list[DictStrAny]) -> DictStrAny:
     result = schemas[0]
     for scm in schemas[1:]:
         result["properties"].update(scm["properties"])

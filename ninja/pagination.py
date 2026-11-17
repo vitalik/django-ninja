@@ -2,17 +2,17 @@ import binascii
 import inspect
 from abc import ABC, abstractmethod
 from base64 import b64decode, b64encode
+from collections.abc import AsyncGenerator
 from functools import partial, wraps
 from math import inf
 from typing import (
+    Annotated,
     Any,
-    AsyncGenerator,
     Callable,
-    List,
     Optional,
-    Tuple,
-    Type,
     Union,
+    get_args,
+    get_origin,
 )
 from urllib import parse
 
@@ -22,8 +22,6 @@ from django.http import HttpRequest
 from django.utils.module_loading import import_string
 from pydantic import BaseModel, field_validator
 from pydantic import ValidationError as PydanticValidationError
-from typing_extensions import Annotated, get_args, get_origin
-from typing_extensions import get_args as get_collection_args
 
 from ninja import Field, Query, Router, Schema
 from ninja.compatibility.util import UNION_TYPES
@@ -47,7 +45,7 @@ class PaginationBase(ABC):
     InputSource = Query(...)
 
     class Output(Schema):
-        items: List[Any]
+        items: list[Any]
         count: int
 
     items_attribute: str = "items"
@@ -214,7 +212,7 @@ class CursorPagination(AsyncPaginationBase):
     def __init__(
         self,
         *,
-        ordering: Tuple[str, ...] = settings.PAGINATION_DEFAULT_ORDERING,
+        ordering: tuple[str, ...] = settings.PAGINATION_DEFAULT_ORDERING,
         page_size: int = settings.PAGINATION_PER_PAGE,
         max_page_size: int = settings.PAGINATION_MAX_PER_PAGE_SIZE,
         **kwargs: Any,
@@ -222,9 +220,7 @@ class CursorPagination(AsyncPaginationBase):
         self.ordering = ordering
         # take the first ordering parameter as the attribute for establishing
         # position
-        self._order_attribute = (
-            ordering[0][1:] if ordering[0].startswith("-") else ordering[0]
-        )
+        self._order_attribute = ordering[0].removeprefix("-")
         self._order_attribute_reversed = ordering[0].startswith("-")
 
         self.page_size = page_size
@@ -239,7 +235,7 @@ class CursorPagination(AsyncPaginationBase):
     class Output(Schema):
         previous: Optional[str]
         next: Optional[str]
-        results: List[Any]
+        results: list[Any]
 
     class Cursor(BaseModel):
         """
@@ -319,7 +315,7 @@ class CursorPagination(AsyncPaginationBase):
             return b64encode(query_string.encode("ascii")).decode("ascii")
 
     @staticmethod
-    def _reverse_order(order: Tuple[str, ...]) -> Tuple[str, ...]:
+    def _reverse_order(order: tuple[str, ...]) -> tuple[str, ...]:
         """
         Flip ordering direction for backward pagination.
 
@@ -354,7 +350,7 @@ class CursorPagination(AsyncPaginationBase):
     def _build_next_cursor(
         self,
         current_cursor: Cursor,
-        results: List[Any],
+        results: list[Any],
         additional_position: Optional[str] = None,
     ) -> Optional[Cursor]:
         """
@@ -389,7 +385,7 @@ class CursorPagination(AsyncPaginationBase):
     def _build_previous_cursor(
         self,
         current_cursor: Cursor,
-        results: List[Any],
+        results: list[Any],
         additional_position: Optional[str] = None,
     ) -> Optional[Cursor]:
         """
@@ -601,7 +597,7 @@ def paginate(
     isfunction = inspect.isfunction(func_or_pgn_class)
     isnotset = func_or_pgn_class == NOT_SET
 
-    pagination_class: Type[Union[PaginationBase, AsyncPaginationBase]] = import_string(
+    pagination_class: type[Union[PaginationBase, AsyncPaginationBase]] = import_string(
         settings.PAGINATION_CLASS
     )
 
@@ -619,7 +615,7 @@ def paginate(
 
 def _inject_pagination(
     func: Callable[..., Any],
-    paginator_class: Type[Union[PaginationBase, AsyncPaginationBase]],
+    paginator_class: type[Union[PaginationBase, AsyncPaginationBase]],
     **paginator_params: Any,
 ) -> Callable[..., Any]:
     if getattr(func, "_ninja_is_paginated", False):
@@ -654,7 +650,7 @@ def _inject_pagination(
                 items, pagination=pagination_params, request=request, **kwargs
             )
 
-            async def evaluate(results: Union[List, QuerySet]) -> AsyncGenerator:
+            async def evaluate(results: Union[list, QuerySet]) -> AsyncGenerator:
                 for result in results:
                     yield result
 
@@ -726,7 +722,7 @@ class RouterPaginated(Router):
     def add_api_operation(
         self,
         path: str,
-        methods: List[str],
+        methods: list[str],
         view_func: Callable[..., Any],
         **kwargs: Any,
     ) -> None:
@@ -740,12 +736,12 @@ def make_response_paginated(paginator: PaginationBase, op: Operation) -> None:
     """
     Takes operation response and changes it to the paginated response
     for example:
-        response=List[Some]
+        response=list[Some]
     will be changed to:
         response=PagedSome
     where Paged some will be a subclass of paginator.Output:
         class PagedSome:
-            items: List[Some]
+            items: list[Some]
             count: int
     """
     status_code, item_schema = _find_collection_response(op)
@@ -756,7 +752,7 @@ def make_response_paginated(paginator: PaginationBase, op: Operation) -> None:
         new_name,
         (paginator.Output,),
         {
-            "__annotations__": {paginator.items_attribute: List[item_schema]},  # type: ignore
+            "__annotations__": {paginator.items_attribute: list[item_schema]},  # type: ignore
         },
     )  # typing: ignore
 
@@ -770,7 +766,7 @@ def _get_item_schema_name(item_schema: Any) -> str:
     """
     Name of the item type used to build the paginated schema name.
     Annotated types and unions are named after their members, so that
-    e.g. List[Union[A, B]] and List[Union[C, D]] do not both become "PagedUnion":
+    e.g. list[Union[A, B]] and list[Union[C, D]] do not both become "PagedUnion":
         Annotated[Union[A, B], ...] -> "AOrB"
         Optional[A]                 -> "AOrNone"
     """
@@ -788,10 +784,10 @@ def _get_item_schema_name(item_schema: Any) -> str:
         return str(item_schema).replace(".", "_")  # pragma: no cover
 
 
-def _find_collection_response(op: Operation) -> Tuple[int, Any]:
+def _find_collection_response(op: Operation) -> tuple[int, Any]:
     """
     Walks through defined operation responses and finds the first
-    that is of a collection type (e.g. List[SomeSchema])
+    that is of a collection type (e.g. list[SomeSchema])
     """
     for code, resp_model in op.response_models.items():
         if resp_model is None or resp_model is NOT_SET:
@@ -799,9 +795,9 @@ def _find_collection_response(op: Operation) -> Tuple[int, Any]:
 
         model = resp_model.__annotations__["response"]
         if is_collection_type(model):
-            item_schema = get_collection_args(model)[0]
+            item_schema = get_args(model)[0]
             return code, item_schema
 
     raise ConfigError(
-        f'"{op.view_func}" has no collection response (e.g. response=List[SomeSchema])'
+        f'"{op.view_func}" has no collection response (e.g. response=list[SomeSchema])'
     )

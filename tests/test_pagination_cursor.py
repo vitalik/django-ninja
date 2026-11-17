@@ -1,7 +1,6 @@
 from base64 import b64encode
 from datetime import date, timedelta
 from http import HTTPStatus
-from typing import List
 
 import django
 import pytest
@@ -16,37 +15,37 @@ from ninja.testing import TestAsyncClient, TestClient
 api = NinjaAPI()
 
 
-@api.get("/cursor_events", response=List[EventSchema])
+@api.get("/cursor_events", response=list[EventSchema])
 @paginate(CursorPagination, ordering=("start_date",), page_size=10)
 def cursor_events(request, **kwargs):
     return Event.objects.all()
 
 
-@api.get("/cursor_events_reverse", response=List[EventSchema])
+@api.get("/cursor_events_reverse", response=list[EventSchema])
 @paginate(CursorPagination, ordering=("-start_date",), page_size=10)
 def cursor_events_reverse(request, **kwargs):
     return Event.objects.all()
 
 
-@api.get("/cursor_events_end_date_offset", response=List[EventSchema])
+@api.get("/cursor_events_end_date_offset", response=list[EventSchema])
 @paginate(CursorPagination, ordering=("end_date", "start_date"), page_size=2)
 def cursor_events_end_date_offset(request, **kwargs):
     return Event.objects.all()
 
 
-@api.get("/cursor_events_default_size", response=List[EventSchema])
+@api.get("/cursor_events_default_size", response=list[EventSchema])
 @paginate(CursorPagination, ordering=("start_date",))
 def cursor_events_default_size(request, **kwargs):
     return Event.objects.all()
 
 
-@api.get("/cursor_events_tied_dates", response=List[EventSchema])
+@api.get("/cursor_events_tied_dates", response=list[EventSchema])
 @paginate(CursorPagination, ordering=("start_date",), page_size=100)
 def cursor_events_tied_dates(request, **kwargs):
     return Event.objects.all()
 
 
-@api.get("/cursor_events_with_params", response=List[EventSchema])
+@api.get("/cursor_events_with_params", response=list[EventSchema])
 @paginate(CursorPagination, ordering=("start_date",), page_size=10)
 def cursor_events_with_params(request, title_filter: str = "", **kwargs):
     # API method with a filter in query parameter
@@ -56,31 +55,31 @@ def cursor_events_with_params(request, title_filter: str = "", **kwargs):
 
 
 # Async versions of all endpoints
-@api.get("/async_cursor_events", response=List[EventSchema])
+@api.get("/async_cursor_events", response=list[EventSchema])
 @paginate(CursorPagination, ordering=("start_date",), page_size=10)
 async def async_cursor_events(request, **kwargs):
     return Event.objects.all()
 
 
-@api.get("/async_cursor_events_reverse", response=List[EventSchema])
+@api.get("/async_cursor_events_reverse", response=list[EventSchema])
 @paginate(CursorPagination, ordering=("-start_date",), page_size=10)
 async def async_cursor_events_reverse(request, **kwargs):
     return Event.objects.all()
 
 
-@api.get("/async_cursor_events_end_date_offset", response=List[EventSchema])
+@api.get("/async_cursor_events_end_date_offset", response=list[EventSchema])
 @paginate(CursorPagination, ordering=("end_date", "start_date"), page_size=2)
 async def async_cursor_events_end_date_offset(request, **kwargs):
     return Event.objects.all()
 
 
-@api.get("/async_cursor_events_default_size", response=List[EventSchema])
+@api.get("/async_cursor_events_default_size", response=list[EventSchema])
 @paginate(CursorPagination, ordering=("start_date",))
 async def async_cursor_events_default_size(request, **kwargs):
     return Event.objects.all()
 
 
-@api.get("/async_cursor_events_with_params", response=List[EventSchema])
+@api.get("/async_cursor_events_with_params", response=list[EventSchema])
 @paginate(CursorPagination, ordering=("start_date",), page_size=10)
 async def async_cursor_events_with_params(request, title_filter: str = "", **kwargs):
     # API method with a filter in query parameter

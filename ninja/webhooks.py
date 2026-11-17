@@ -1,5 +1,5 @@
 import copy
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
+from typing import TYPE_CHECKING, Any, Optional
 
 from pydantic import BaseModel
 
@@ -21,17 +21,17 @@ class Webhook:
 
     def __init__(
         self,
-        schema: Type[BaseModel],
+        schema: type[BaseModel],
         name: Optional[str] = None,
         *,
         method: str = "POST",
         summary: Optional[str] = None,
         description: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        tags: Optional[list[str]] = None,
         operation_id: Optional[str] = None,
         deprecated: Optional[bool] = None,
         include_in_schema: bool = True,
-        openapi_extra: Optional[Dict[str, Any]] = None,
+        openapi_extra: Optional[dict[str, Any]] = None,
     ) -> None:
         if not (isinstance(schema, type) and issubclass(schema, BaseModel)):
             raise ConfigError(
@@ -54,13 +54,13 @@ class Webhook:
         return cloned
 
 
-def get_webhooks(api: "NinjaAPI") -> List[Webhook]:
+def get_webhooks(api: "NinjaAPI") -> list[Webhook]:
     """
     All webhooks registered on the api and its mounted routers.
     Router tags are applied to webhooks that don't define their own.
     """
-    registered: Dict[str, Webhook] = {}
-    result: List[Webhook] = []
+    registered: dict[str, Webhook] = {}
+    result: list[Webhook] = []
     for bound_router in api._get_bound_routers():
         for name, webhook in bound_router.template.webhooks.items():
             if name in registered:
@@ -76,7 +76,7 @@ def get_webhooks(api: "NinjaAPI") -> List[Webhook]:
 
 def _title_from_class_name(name: str) -> str:
     # "OrderPaid" -> "Order Paid"
-    words: List[str] = []
+    words: list[str] = []
     for i, char in enumerate(name):
         if (
             char.isupper()

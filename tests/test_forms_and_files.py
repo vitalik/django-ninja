@@ -2,13 +2,13 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Annotated, Any, Literal, Optional, Union
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from pydantic import Field, HttpUrl, Json, RootModel
 from pydantic_core import core_schema, to_jsonable_python
-from typing_extensions import Annotated, Literal, TypedDict
+from typing_extensions import TypedDict  # pydantic needs it on Python < 3.12
 
 from ninja import Body, File, Form, NinjaAPI, Schema, UploadedFile
 from ninja.testing import TestClient
@@ -135,8 +135,8 @@ def test_multipart_json_body_parts():
     def json_parts(
         request,
         details: Details,
-        tags: List[str] = Body(...),
-        meta: Dict[str, int] = Body(...),
+        tags: list[str] = Body(...),
+        meta: dict[str, int] = Body(...),
         file: UploadedFile = File(...),
     ):
         return {"title": details.title, "tags": tags, "meta": meta}
@@ -193,24 +193,24 @@ class _Opaque:
     [
         # read as JSON
         (dict, '{"a": 1}', {"a": 1}),
-        (Optional[Dict[str, int]], '{"a": 1}', {"a": 1}),
+        (Optional[dict[str, int]], '{"a": 1}', {"a": 1}),
         (_Point, '{"x": 1}', {"x": 1}),
         (_DataPoint, '{"x": 1}', {"x": 1}),
-        (Annotated[List[int], Field(min_length=1)], "[1, 2]", [1, 2]),
+        (Annotated[list[int], Field(min_length=1)], "[1, 2]", [1, 2]),
         (Any, '{"a": 1}', {"a": 1}),
         (Optional[_Item], '{"name": "sent"}', {"name": "sent"}),
         (Union[Literal["none"], _Item], '{"name": "sent"}', {"name": "sent"}),
         (_Opaque, '{"a": 1}', {"a": 1}),
         # a union with a structured branch is JSON as a whole
-        (Union[str, Dict[str, int]], '{"a": 1}', {"a": 1}),
-        (Union[str, Dict[str, int]], '"hello"', "hello"),
+        (Union[str, dict[str, int]], '{"a": 1}', {"a": 1}),
+        (Union[str, dict[str, int]], '"hello"', "hello"),
         # read as plain text
         (Optional[_Color], "red", "red"),
         (Literal[1, "a"], "a", "a"),
         (Decimal, "1.50", "1.50"),
         (HttpUrl, "https://example.com/", "https://example.com/"),
         (_Name, "bob", "bob"),
-        (Json[Dict[str, int]], '{"a": 1}', {"a": 1}),
+        (Json[dict[str, int]], '{"a": 1}', {"a": 1}),
     ],
 )
 def test_multipart_body_part_type(annotation, value, expected):

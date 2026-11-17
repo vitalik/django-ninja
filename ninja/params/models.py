@@ -1,22 +1,18 @@
 from abc import ABC, abstractmethod
+from re import Pattern
 from typing import (
     TYPE_CHECKING,
     Any,
-    Dict,
-    List,
     Optional,
-    Pattern,
-    Tuple,
-    Type,
     TypeVar,
     Union,
+    get_args,
 )
 
 from django.conf import settings
 from django.http import HttpRequest
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
-from typing_extensions import get_args
 
 from ninja.errors import HttpError
 from ninja.types import DictStrAny
@@ -36,7 +32,7 @@ __all__ = [
 ]
 
 TModel = TypeVar("TModel", bound="ParamModel")
-TModels = List[TModel]
+TModels = list[TModel]
 
 
 class ParamModel(BaseModel, ABC):
@@ -51,7 +47,7 @@ class ParamModel(BaseModel, ABC):
 
     @classmethod
     def resolve(
-        cls: Type[TModel],
+        cls: type[TModel],
         request: HttpRequest,
         api: "NinjaAPI",
         path_params: DictStrAny,
@@ -85,7 +81,7 @@ class ParamModel(BaseModel, ABC):
 
     @classmethod
     def _map_data_path(
-        cls, data: DictStrAny, value: Any, path: Tuple[str, ...]
+        cls, data: DictStrAny, value: Any, path: tuple[str, ...]
     ) -> None:
         current = data
         for key in path[:-1]:
@@ -217,7 +213,7 @@ class Param(FieldInfo):  # type: ignore[misc]
         min_length: Optional[int] = None,
         max_length: Optional[int] = None,
         example: Optional[Any] = None,
-        examples: Optional[Dict[str, Any]] = None,
+        examples: Optional[dict[str, Any]] = None,
         deprecated: Optional[bool] = None,
         include_in_schema: Optional[bool] = True,
         pattern: Union[str, Pattern[str], None] = None,

@@ -1,5 +1,5 @@
 from math import inf
-from typing import Any, Dict, Optional, Set, Tuple
+from typing import Any, Optional
 
 from django.conf import settings as django_settings
 from django.dispatch import receiver
@@ -13,7 +13,7 @@ class Settings(BaseModel):
     PAGINATION_CLASS: str = Field(
         "ninja.pagination.LimitOffsetPagination", alias="NINJA_PAGINATION_CLASS"
     )
-    PAGINATION_DEFAULT_ORDERING: Tuple[str, ...] = Field(
+    PAGINATION_DEFAULT_ORDERING: tuple[str, ...] = Field(
         ("-pk",), alias="NINJA_PAGINATION_DEFAULT_ORDERING"
     )
     PAGINATION_PER_PAGE: int = Field(100, alias="NINJA_PAGINATION_PER_PAGE")
@@ -22,7 +22,7 @@ class Settings(BaseModel):
 
     # Throttling
     NUM_PROXIES: Optional[int] = Field(None, alias="NINJA_NUM_PROXIES")
-    DEFAULT_THROTTLE_RATES: Dict[str, Optional[str]] = Field(
+    DEFAULT_THROTTLE_RATES: dict[str, Optional[str]] = Field(
         {
             "auth": "10000/day",
             "user": "10000/day",
@@ -31,7 +31,7 @@ class Settings(BaseModel):
         alias="NINJA_DEFAULT_THROTTLE_RATES",
     )
 
-    FIX_REQUEST_FILES_METHODS: Set[str] = Field(
+    FIX_REQUEST_FILES_METHODS: set[str] = Field(
         {"PUT", "PATCH", "DELETE"}, alias="NINJA_FIX_REQUEST_FILES_METHODS"
     )
 
