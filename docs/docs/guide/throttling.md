@@ -154,6 +154,33 @@ class BurstRateThrottle(SimpleRateThrottle):
 
 `SimpleRateThrottle` also exposes a few class attributes you can override: `cache` (defaults to Django's default cache), `cache_format` (defaults to `"throttle_%(scope)s_%(ident)s"`), and `THROTTLE_RATES` (defaults to `NINJA_DEFAULT_THROTTLE_RATES`).
 
+### Using `self` in a custom throttle
+
+A throttle instance is created once and then serves every request, so each request is checked on its own shallow copy of it. For attributes on `self` this means:
+
+- Values assigned to `self` inside `allow_request()` last for that request only. `wait()` is called on the same copy, so it can still read them.
+- State that has to carry over between requests, such as a counter, must live in the cache (or other shared storage). A change to `self` is gone by the next request.
+- Attributes set in `__init__()` are available on every copy. The copy is shallow, so objects they point to are shared, not duplicated.
+
+```python
+from django.core.cache import cache
+from ninja.throttling import BaseThrottle
+
+
+class HourlyQuotaThrottle(BaseThrottle):
+    def __init__(self, quota):
+        self.quota = quota  # configuration: available on every request
+
+    def allow_request(self, request):
+        key = f"quota_{self.get_ident(request)}"
+        cache.add(key, 0, timeout=3600)
+        self.used = cache.incr(key)  # counter lives in the cache
+        return self.used <= self.quota
+
+        # Don't count on the instance: `self.used += 1` would
+        # start from the same value on every request.
+```
+
 ## Response format
 
 When a request is throttled, Django Ninja returns `429 Too Many Requests` with:
