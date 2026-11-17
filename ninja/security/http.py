@@ -1,7 +1,7 @@
 import logging
 from abc import ABC, abstractmethod
 from base64 import b64decode
-from typing import Any, Optional, Tuple
+from typing import Any, Optional
 
 from django.conf import settings
 from django.http import HttpRequest
@@ -73,7 +73,7 @@ class HttpBasicAuth(HttpAuthBase, ABC):  # TODO: maybe HttpBasicAuthBase
     ) -> Optional[Any]:
         pass  # pragma: no cover
 
-    def decode_authorization(self, value: str) -> Tuple[str, str]:
+    def decode_authorization(self, value: str) -> tuple[str, str]:
         parts = value.split(" ")
         if len(parts) == 1:
             user_pass_encoded = parts[0]

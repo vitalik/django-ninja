@@ -5,7 +5,7 @@ context and values that never went through validation are filtered out.
 """
 
 import warnings
-from typing import Dict, List, Optional
+from typing import Optional
 
 import pytest
 
@@ -54,12 +54,12 @@ def constructed_user() -> UserOut:
 api = NinjaAPI()
 
 
-@api.get("/contacts", response=List[Contact])
+@api.get("/contacts", response=list[Contact])
 def contacts(request):
     return [Contact(email="private@example.com")]
 
 
-@api.get("/list", response=List[UserOut])
+@api.get("/list", response=list[UserOut])
 def users_list(request):
     return [unvalidated_user(), constructed_user()]
 
@@ -69,7 +69,7 @@ def users_optional(request):
     return constructed_user()
 
 
-@api.get("/dict", response=Dict[str, UserOut])
+@api.get("/dict", response=dict[str, UserOut])
 def users_dict(request):
     return {"u": constructed_user()}
 
@@ -79,7 +79,7 @@ def users_nested(request):
     return {"user": constructed_user()}
 
 
-@api.get("/paginated", response=List[UserOut])
+@api.get("/paginated", response=list[UserOut])
 @paginate
 def users_paginated(request):
     return [unvalidated_user(), constructed_user()]
@@ -91,7 +91,7 @@ def users_stream(request):
     yield constructed_user()
 
 
-@api.get("/async-list", response=List[UserOut])
+@api.get("/async-list", response=list[UserOut])
 async def users_async_list(request):
     return [constructed_user()]
 

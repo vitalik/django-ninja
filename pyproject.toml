@@ -8,7 +8,7 @@ authors = [
     {name = "Vitaliy Kucheryaviy", email = "ppr.vitaly@gmail.com"},
 ]
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 dynamic = ["version", "description"]
 classifiers = [
     "Intended Audience :: Information Technology",
@@ -25,8 +25,6 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -79,19 +77,12 @@ dev = [
     "pre-commit",
 ]
 
-[tool.uv.dependency-groups]
-# The library itself supports Python >=3.7, but the dev tooling does not
-# have to — resolve dev/test/doc dependencies for modern Pythons only.
-test = { requires-python = ">=3.9" }
-doc = { requires-python = ">=3.9" }
-dev = { requires-python = ">=3.9" }
-
 [tool.flit.module]
 name = "ninja"
 
 
 [tool.ruff]
-target-version = "py37"
+target-version = "py39"
 
 [tool.ruff.format]
 preview = true
@@ -119,7 +110,6 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"ninja/compatibility/datastructures.py" = ["C416"]
 "ninja/utils.py" = ["B004"]
 "tests/*" = ["C408"]
 

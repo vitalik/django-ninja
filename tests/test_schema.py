@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import Optional, Union
 from unittest.mock import Mock
 
 import pytest
@@ -63,8 +63,8 @@ class TagSchema(Schema):
 
 class UserSchema(Schema):
     name: str
-    groups: List[int] = Field(..., alias="group_set")
-    tags: List[TagSchema]
+    groups: list[int] = Field(..., alias="group_set")
+    tags: list[TagSchema]
     avatar: Optional[str] = None
 
 
@@ -283,7 +283,7 @@ def test_schema_nested_instance_is_revalidated():
         profile: Profile
 
     class Users(Schema):
-        items: List[User]
+        items: list[User]
 
     constructed = User.model_construct(profile={"bio": "hi", "password": "secret"})
     assigned = User(profile=Profile(bio="x"))

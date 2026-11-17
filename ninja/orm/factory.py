@@ -1,5 +1,6 @@
 import itertools
-from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Type, Union
+from collections.abc import Iterator
+from typing import Any, Optional, Union
 
 from django.db.models import Field as DjangoField
 from django.db.models import ForeignObjectRel, Model
@@ -25,26 +26,26 @@ from ninja.schema import Schema
 
 __all__ = ["SchemaFactory", "factory", "create_schema"]
 
-SchemaKey = Tuple[Type[Model], str, int, str, str, str, str, Type[Schema]]
+SchemaKey = tuple[type[Model], str, int, str, str, str, str, type[Schema]]
 
 
 class SchemaFactory:
     def __init__(self) -> None:
-        self.schemas: Dict[SchemaKey, Type[Schema]] = {}
-        self.schema_names: Set[str] = set()
+        self.schemas: dict[SchemaKey, type[Schema]] = {}
+        self.schema_names: set[str] = set()
 
     def create_schema(
         self,
-        model: Type[Model],
+        model: type[Model],
         *,
         name: str = "",
         depth: int = 0,
-        fields: Optional[List[str]] = None,
-        exclude: Optional[List[str]] = None,
-        optional_fields: Optional[List[str]] = None,
-        custom_fields: Optional[List[Tuple[str, Any, Any]]] = None,
-        base_class: Type[Schema] = Schema,
-    ) -> Type[Schema]:
+        fields: Optional[list[str]] = None,
+        exclude: Optional[list[str]] = None,
+        optional_fields: Optional[list[str]] = None,
+        custom_fields: Optional[list[tuple[str, Any, Any]]] = None,
+        base_class: type[Schema] = Schema,
+    ) -> type[Schema]:
         name = name or model.__name__
 
         if fields and exclude:
@@ -88,7 +89,7 @@ class SchemaFactory:
         if name in self.schema_names:
             name = self._get_unique_name(name)
 
-        schema: Type[Schema] = create_pydantic_model(
+        schema: type[Schema] = create_pydantic_model(
             name,
             __config__=None,
             __base__=base_class,
@@ -120,14 +121,14 @@ class SchemaFactory:
 
     def get_key(
         self,
-        model: Type[Model],
+        model: type[Model],
         name: str,
         depth: int,
-        fields: Union[str, List[str], None],
-        exclude: Optional[List[str]],
-        optional_fields: Optional[Union[List[str], str]],
-        custom_fields: Optional[List[Tuple[str, str, Any]]],
-        base_class: Type[Schema],
+        fields: Union[str, list[str], None],
+        exclude: Optional[list[str]],
+        optional_fields: Optional[Union[list[str], str]],
+        custom_fields: Optional[list[tuple[str, str, Any]]],
+        base_class: type[Schema],
     ) -> SchemaKey:
         "returns a hashable value for all given parameters"
         # TODO: must be a test that compares all kwargs from init to get_key
@@ -152,9 +153,9 @@ class SchemaFactory:
 
     def _selected_model_fields(
         self,
-        model: Type[Model],
-        fields: Optional[List[str]] = None,
-        exclude: Optional[List[str]] = None,
+        model: type[Model],
+        fields: Optional[list[str]] = None,
+        exclude: Optional[list[str]] = None,
     ) -> Iterator[DjangoField]:
         "Returns iterator for model fields based on `exclude` or `fields` arguments"
         all_fields = {f.name: f for f in self._model_fields(model)}
@@ -186,7 +187,7 @@ class SchemaFactory:
                 if f.name not in exclude:
                     yield f
 
-    def _model_fields(self, model: Type[Model]) -> Iterator[DjangoField]:
+    def _model_fields(self, model: type[Model]) -> Iterator[DjangoField]:
         "returns iterator with all the fields that can be part of schema"
         for fld in model._meta.get_fields():
             if isinstance(fld, ForeignObjectRel):

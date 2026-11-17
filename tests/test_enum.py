@@ -1,6 +1,6 @@
 from datetime import date
 from enum import Enum
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel
 
@@ -51,7 +51,7 @@ def enum_optional2(request, extra: Optional[ExtraEnum] = None):
 
 
 @api.get("/list")
-def enum_list(request, rooms: List[RoomEnum] = Query(None, description="description")):
+def enum_list(request, rooms: list[RoomEnum] = Query(None, description="description")):
     return {"rooms": rooms}
 
 
@@ -62,7 +62,7 @@ class QueryOnlyEnum(str, Enum):
 
 @api.get("/new-list")
 def new_enum_list(
-    request, q: List[QueryOnlyEnum] = Query(None, description="description")
+    request, q: list[QueryOnlyEnum] = Query(None, description="description")
 ):
     return {"q": q}
 

@@ -2,7 +2,7 @@ import asyncio
 import inspect
 import re
 from sys import version_info
-from typing import Any, Callable, Dict, ForwardRef, List, Set
+from typing import Any, Callable, ForwardRef
 
 from django.urls import register_converter
 from django.urls.converters import UUIDConverter
@@ -18,8 +18,8 @@ __all__ = [
     "is_async",
 ]
 
-_FORWARDREF_KWARGS: Dict[str, Any]
-_STRING_KWARGS: Dict[str, Any]
+_FORWARDREF_KWARGS: dict[str, Any]
+_STRING_KWARGS: dict[str, Any]
 
 if version_info >= (3, 14):  # pragma: no cover
     import annotationlib
@@ -68,7 +68,7 @@ def make_forwardref(annotation: str, globalns: DictStrAny) -> Any:
     return evaluate_forwardref(forward_ref, globalns, globalns)
 
 
-def get_path_param_names(path: str) -> Set[str]:
+def get_path_param_names(path: str) -> set[str]:
     """turns path string like /foo/{var}/path/{int:another}/end to set {'var', 'another'}"""
     return {item.strip("{}").split(":")[-1] for item in re.findall("{[^}]*}", path)}
 
@@ -88,7 +88,7 @@ def has_kwargs(func: Callable[..., Any]) -> bool:
     return False
 
 
-def get_args_names(func: Callable[..., Any]) -> List[str]:
+def get_args_names(func: Callable[..., Any]) -> list[str]:
     "returns list of function argument names"
     return list(inspect.signature(func, **_STRING_KWARGS).parameters.keys())
 

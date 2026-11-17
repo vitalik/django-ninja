@@ -1,6 +1,13 @@
 import datetime
 from decimal import Decimal
-from typing import Any, Callable, Dict, List, Tuple, Type, TypeVar, Union, no_type_check
+from typing import (
+    Annotated,
+    Any,
+    Callable,
+    TypeVar,
+    Union,
+    no_type_check,
+)
 from uuid import UUID
 
 from django.db.models import ManyToManyField
@@ -8,7 +15,6 @@ from django.db.models.fields import Field as DjangoField
 from pydantic import AfterValidator, IPvAnyAddress
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticKnownError, PydanticUndefined, core_schema
-from typing_extensions import Annotated
 
 from ninja.errors import ConfigError
 from ninja.openapi.schema import OpenAPISchema
@@ -44,7 +50,7 @@ class AnyObject:
         return value
 
 
-TYPES: Dict[str, Any] = {
+TYPES: dict[str, Any] = {
     "AutoField": int,
     "BigAutoField": int,
     "BigIntegerField": int,
@@ -73,11 +79,11 @@ TYPES: Dict[str, Any] = {
     "TimeField": datetime.time,
     "UUIDField": UUID,
     # postgres fields:
-    "ArrayField": List,
+    "ArrayField": list,
     "CICharField": str,
     "CIEmailField": str,
     "CITextField": str,
-    "HStoreField": Dict,
+    "HStoreField": dict,
 }
 
 TModel = TypeVar("TModel")
@@ -85,11 +91,11 @@ TModel = TypeVar("TModel")
 
 # Registrations by field class (see register_field). Kept apart from TYPES so
 # TYPES keeps its historical meaning: internal type name -> python type.
-FIELD_CLASS_TYPES: Dict[Type[DjangoField], Any] = {}
+FIELD_CLASS_TYPES: dict[type[DjangoField], Any] = {}
 
 
 def register_field(
-    django_field: Union[str, Type[DjangoField]], python_type: Any
+    django_field: Union[str, type[DjangoField]], python_type: Any
 ) -> None:
     """
     Tells ModelSchema which python type to use for a django model field.
@@ -128,7 +134,7 @@ def _relation_target_field(field: DjangoField) -> DjangoField:
 
 
 @no_type_check
-def create_m2m_link_type(type_: Type[TModel]) -> Type[TModel]:
+def create_m2m_link_type(type_: type[TModel]) -> type[TModel]:
     class M2MLink(type_):  # type: ignore
         @classmethod
         def __get_pydantic_core_schema__(cls, source, handler):
@@ -180,7 +186,7 @@ def _request_max_length(limit: int) -> AfterValidator:
 @no_type_check
 def get_schema_field(
     field: DjangoField, *, depth: int = 0, optional: bool = False
-) -> Tuple:
+) -> tuple:
     "Returns pydantic field from django's model field"
     alias = None
     default = ...
@@ -210,7 +216,7 @@ def get_schema_field(
             pk_type = int
         if field.one_to_many or field.many_to_many:
             m2m_type = create_m2m_link_type(pk_type)
-            python_type = List[m2m_type]  # type: ignore
+            python_type = list[m2m_type]  # type: ignore
         else:
             python_type = pk_type
 
@@ -254,7 +260,7 @@ def get_schema_field(
         max_length = None
 
     if nullable:
-        python_type = Union[python_type, None]  # aka Optional in 3.7+
+        python_type = Union[python_type, None]
 
     description = field.help_text or None
     title = title_if_lower(field.verbose_name)
@@ -278,7 +284,7 @@ def get_schema_field(
 @no_type_check
 def get_related_field_schema(
     field: DjangoField, *, depth: int, optional: bool = False
-) -> Tuple[OpenAPISchema]:
+) -> tuple[OpenAPISchema]:
     from ninja.orm import create_schema
 
     model = field.related_model
@@ -287,7 +293,7 @@ def get_related_field_schema(
     if not field.concrete and field.auto_created or field.null or optional:
         default = None
     if isinstance(field, ManyToManyField):
-        schema = List[schema]  # type: ignore
+        schema = list[schema]  # type: ignore
     elif default is None:
         schema = Union[schema, None]
 

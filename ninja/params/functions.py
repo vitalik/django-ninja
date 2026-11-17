@@ -3,7 +3,8 @@
 # what it basically does makes function XXX that create instance of models.XXX
 # and annotates function with result = Any
 # idea from https://github.com/tiangolo/fastapi/blob/master/fastapi/param_functions.py
-from typing import Any, Dict, Optional, Pattern, Union
+from re import Pattern
+from typing import Any, Optional, Union
 
 from ninja.params import models
 
@@ -22,7 +23,7 @@ def Path(  # noqa: N802
     max_length: Optional[int] = None,
     pattern: Union[str, Pattern[str], None] = None,
     example: Any = None,
-    examples: Optional[Dict[str, Any]] = None,
+    examples: Optional[dict[str, Any]] = None,
     deprecated: Optional[bool] = None,
     include_in_schema: bool = True,
     **extra: Any,
@@ -61,7 +62,7 @@ def Query(  # noqa: N802
     max_length: Optional[int] = None,
     pattern: Union[str, Pattern[str], None] = None,
     example: Any = None,
-    examples: Optional[Dict[str, Any]] = None,
+    examples: Optional[dict[str, Any]] = None,
     deprecated: Optional[bool] = None,
     include_in_schema: bool = True,
     **extra: Any,
@@ -100,7 +101,7 @@ def Header(  # noqa: N802
     max_length: Optional[int] = None,
     pattern: Union[str, Pattern[str], None] = None,
     example: Any = None,
-    examples: Optional[Dict[str, Any]] = None,
+    examples: Optional[dict[str, Any]] = None,
     deprecated: Optional[bool] = None,
     include_in_schema: bool = True,
     **extra: Any,
@@ -139,7 +140,7 @@ def Cookie(  # noqa: N802
     max_length: Optional[int] = None,
     pattern: Union[str, Pattern[str], None] = None,
     example: Any = None,
-    examples: Optional[Dict[str, Any]] = None,
+    examples: Optional[dict[str, Any]] = None,
     deprecated: Optional[bool] = None,
     include_in_schema: bool = True,
     **extra: Any,
@@ -178,7 +179,7 @@ def Body(  # noqa: N802
     max_length: Optional[int] = None,
     pattern: Union[str, Pattern[str], None] = None,
     example: Any = None,
-    examples: Optional[Dict[str, Any]] = None,
+    examples: Optional[dict[str, Any]] = None,
     deprecated: Optional[bool] = None,
     include_in_schema: bool = True,
     **extra: Any,
@@ -217,7 +218,7 @@ def Form(  # noqa: N802
     max_length: Optional[int] = None,
     pattern: Union[str, Pattern[str], None] = None,
     example: Any = None,
-    examples: Optional[Dict[str, Any]] = None,
+    examples: Optional[dict[str, Any]] = None,
     deprecated: Optional[bool] = None,
     include_in_schema: bool = True,
     **extra: Any,
@@ -256,7 +257,7 @@ def File(  # noqa: N802
     max_length: Optional[int] = None,
     pattern: Union[str, Pattern[str], None] = None,
     example: Any = None,
-    examples: Optional[Dict[str, Any]] = None,
+    examples: Optional[dict[str, Any]] = None,
     deprecated: Optional[bool] = None,
     include_in_schema: bool = True,
     **extra: Any,

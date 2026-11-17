@@ -1,5 +1,3 @@
-from typing import List
-
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils.datastructures import MultiValueDict
@@ -27,7 +25,7 @@ def file_no_marker2(request, file: UploadedFile = None):
 
 
 @api.post("/file4")
-def file_no_marker4(request, files: List[UploadedFile]):
+def file_no_marker4(request, files: list[UploadedFile]):
     return {"result": [f.read().decode() for f in files]}
 
 
@@ -37,7 +35,7 @@ def file_no_marker5(request, file1: UploadedFile, file2: UploadedFile):
 
 
 @api.post("/file6")
-def file_no_marker6(request, file: UploadedFile, files: List[UploadedFile]):
+def file_no_marker6(request, file: UploadedFile, files: list[UploadedFile]):
     return {"result": [f.read().decode() for f in [file] + files]}
 
 

@@ -1,5 +1,3 @@
-from sys import version_info
-
 import pytest
 from main import router
 
@@ -287,10 +285,6 @@ def test_get_path(path, expected_status, expected_response):
     assert response.json() == expected_response
 
 
-@pytest.mark.skipif(
-    version_info < (3, 9),
-    reason="requires py3.9+ for Annotated[] at the route definition site",
-)
 @pytest.mark.parametrize(
     "path,expected_status,expected_response",
     [

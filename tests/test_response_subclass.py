@@ -1,8 +1,7 @@
-from typing import Optional
+from typing import Annotated, Optional
 
 import pytest
 from pydantic import PlainSerializer, computed_field, field_serializer
-from typing_extensions import Annotated
 
 from ninja import Field, NinjaAPI, Schema, Status
 from ninja.testing import TestAsyncClient, TestClient

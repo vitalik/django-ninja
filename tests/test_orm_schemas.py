@@ -1,4 +1,3 @@
-from typing import List
 from unittest.mock import Mock
 
 import pydantic
@@ -589,7 +588,7 @@ def test_shortcuts():
 
     schema = S(MyModel3)
     schema_list = L(MyModel3)
-    assert List[schema] == schema_list
+    assert list[schema] == schema_list
 
 
 @pytest.mark.django_db

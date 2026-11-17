@@ -1,5 +1,6 @@
 import json
-from typing import Any, Mapping, Optional, Type
+from collections.abc import Mapping
+from typing import Any, Optional
 
 from django.http import HttpRequest
 
@@ -18,7 +19,7 @@ class BaseRenderer:
 
 class JSONRenderer(BaseRenderer):
     media_type = "application/json"
-    encoder_class: Type[json.JSONEncoder] = NinjaJSONEncoder
+    encoder_class: type[json.JSONEncoder] = NinjaJSONEncoder
     json_dumps_params: Mapping[str, Any] = {}
 
     def render(self, request: HttpRequest, data: Any, *, response_status: int) -> Any:
