@@ -58,6 +58,10 @@ async def _await_coroutine(coroutine: Coroutine[Any, Any, Any]) -> Any:
     return await coroutine
 
 
+def _is_async_auth(callback: Callable[..., Any]) -> bool:
+    return is_async_callable(callback) or getattr(callback, "is_async", False)
+
+
 class Operation:
     def __init__(
         self,
@@ -302,8 +306,6 @@ class Operation:
 
     def _run_checks(self, request: HttpRequest) -> Optional[HttpResponse]:
         "Runs security/throttle checks for each operation"
-        # NOTE: if you change anything in this function - do this also in AsyncOperation
-
         # Set CSRF exempt status on request so auth handlers can check it
         if self.csrf_exempt:
             # _ninja_csrf_exempt is a special flag that tells auth handler to skip CSRF checks
@@ -326,7 +328,7 @@ class Operation:
     def _run_authentication(self, request: HttpRequest) -> Optional[HttpResponse]:
         for callback in self.auth_callbacks:
             try:
-                if is_async_callable(callback) or getattr(callback, "is_async", False):
+                if _is_async_auth(callback):
                     result = callback(request)
                     if inspect.iscoroutine(result):
                         result = async_to_sync(_await_coroutine)(result)
@@ -547,31 +549,33 @@ class AsyncOperation(Operation):
 
     async def _run_checks(self, request: HttpRequest) -> Optional[HttpResponse]:  # type: ignore
         "Runs security/throttle checks for each operation"
-        # NOTE: if you change anything in this function - do this also in Sync Operation
+        if not any(map(_is_async_auth, self.auth_callbacks)):
+            # All checks are sync - reuse the sync implementation
+            if self.auth_callbacks or self.throttle_objects:
+                # auth and throttles (ORM, cache) share a single thread hop
+                return await sync_to_async(super()._run_checks)(request)
+            return super()._run_checks(request)  # nothing that can block
 
         # Set CSRF exempt status on request so auth handlers can check it
         if self.csrf_exempt:
             request._ninja_csrf_exempt = True  # type: ignore
 
-        # auth:
-        if self.auth_callbacks:
-            error = await self._run_authentication(request)
-            if error:
-                return error
+        error = await self._arun_authentication(request)
+        if error:
+            return error
 
-        # Throttling:
         if self.throttle_objects:
             # cache backends are sync only (DatabaseCache raises here)
-            error = await sync_to_async(self._check_throttles)(request)
-            if error:
-                return error
+            return await sync_to_async(self._check_throttles)(request)
 
         return None
 
-    async def _run_authentication(self, request: HttpRequest) -> Optional[HttpResponse]:  # type: ignore
+    async def _arun_authentication(
+        self, request: HttpRequest
+    ) -> Optional[HttpResponse]:
         for callback in self.auth_callbacks:
             try:
-                if is_async_callable(callback) or getattr(callback, "is_async", False):
+                if _is_async_auth(callback):
                     cor: Optional[Coroutine] = callback(request)
                     if cor is None:
                         result = None
