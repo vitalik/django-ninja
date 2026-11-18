@@ -1,15 +1,13 @@
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Dict,
-    Iterator,
-    List,
     Optional,
-    Tuple,
     Union,
+    overload,
 )
 
 from django.urls import URLPattern
@@ -21,8 +19,9 @@ from ninja.decorators import DecoratorMode
 from ninja.errors import ConfigError
 from ninja.operation import PathView
 from ninja.throttling import BaseThrottle
-from ninja.types import TCallable
+from ninja.types import TCallable, TSchemaClass
 from ninja.utils import normalize_path, replace_path_param_notation
+from ninja.webhooks import Webhook
 
 if TYPE_CHECKING:
     from ninja import NinjaAPI  # pragma: no cover
@@ -46,14 +45,14 @@ class RouterMount:
     url_name_prefix: Optional[str] = None
     auth: Any = NOT_SET
     throttle: Any = NOT_SET
-    tags: Optional[List[str]] = None
-    inherited_decorators: List[Tuple[Callable, DecoratorMode]] = field(
+    tags: Optional[list[str]] = None
+    inherited_decorators: list[tuple[Callable, DecoratorMode]] = field(
         default_factory=list
     )
     # Inherited auth/throttle/tags from parent routers (for nested router inheritance)
     inherited_auth: Any = NOT_SET
     inherited_throttle: Any = NOT_SET
-    inherited_tags: Optional[List[str]] = None
+    inherited_tags: Optional[list[str]] = None
 
 
 class BoundRouter:
@@ -96,13 +95,13 @@ class BoundRouter:
         # Tags handling (issue #794):
         # - mount.tags (from add_router call) = explicit override, use as-is
         # - Otherwise, accumulate: inherited tags + template's own tags
-        self.tags: Optional[List[str]]
+        self.tags: Optional[list[str]]
         if mount.tags is not None:
             # Explicit tags from add_router() call - use as override
             self.tags = mount.tags
         else:
             # Accumulate inherited tags with template's own tags
-            accumulated_tags: List[str] = []
+            accumulated_tags: list[str] = []
             if mount.inherited_tags is not None:
                 accumulated_tags.extend(mount.inherited_tags)
             if mount.template.tags is not None:
@@ -110,7 +109,7 @@ class BoundRouter:
             self.tags = accumulated_tags or None
 
         # Clone operations and apply decorators
-        self.path_operations: Dict[str, PathView] = {}
+        self.path_operations: dict[str, PathView] = {}
         self._bind_operations()
 
     def _bind_operations(self) -> None:
@@ -194,8 +193,8 @@ class Router:
         self,
         *,
         auth: Any = NOT_SET,
-        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
-        tags: Optional[List[str]] = None,
+        throttle: Union[BaseThrottle, list[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
+        tags: Optional[list[str]] = None,
         by_alias: Optional[bool] = None,
         exclude_unset: Optional[bool] = None,
         exclude_defaults: Optional[bool] = None,
@@ -210,9 +209,12 @@ class Router:
         self.exclude_defaults = exclude_defaults
         self.exclude_none = exclude_none
 
-        self.path_operations: Dict[str, PathView] = {}
-        self._routers: List[Tuple[str, Router, Optional[List[str]]]] = []
-        self._decorators: List[Tuple[Callable, DecoratorMode]] = []
+        self.path_operations: dict[str, PathView] = {}
+        self.webhooks: dict[str, Webhook] = {}
+        self._routers: list[tuple[str, Router, Optional[list[str]]]] = []
+        # (auth, throttle) passed to add_router(), aligned with self._routers
+        self._router_overrides: list[tuple[Any, Any]] = []
+        self._decorators: list[tuple[Callable, DecoratorMode]] = []
 
     def _freeze(self) -> None:
         """Mark router as frozen - no more modifications allowed."""
@@ -233,12 +235,12 @@ class Router:
         path: str,
         *,
         auth: Any = NOT_SET,
-        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
+        throttle: Union[BaseThrottle, list[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        tags: Optional[list[str]] = None,
         deprecated: Optional[bool] = None,
         by_alias: Optional[bool] = None,
         exclude_unset: Optional[bool] = None,
@@ -246,7 +248,7 @@ class Router:
         exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
-        openapi_extra: Optional[Dict[str, Any]] = None,
+        openapi_extra: Optional[dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         return self.api_operation(
             ["GET"],
@@ -273,12 +275,12 @@ class Router:
         path: str,
         *,
         auth: Any = NOT_SET,
-        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
+        throttle: Union[BaseThrottle, list[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        tags: Optional[list[str]] = None,
         deprecated: Optional[bool] = None,
         by_alias: Optional[bool] = None,
         exclude_unset: Optional[bool] = None,
@@ -286,7 +288,7 @@ class Router:
         exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
-        openapi_extra: Optional[Dict[str, Any]] = None,
+        openapi_extra: Optional[dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         return self.api_operation(
             ["POST"],
@@ -313,12 +315,12 @@ class Router:
         path: str,
         *,
         auth: Any = NOT_SET,
-        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
+        throttle: Union[BaseThrottle, list[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        tags: Optional[list[str]] = None,
         deprecated: Optional[bool] = None,
         by_alias: Optional[bool] = None,
         exclude_unset: Optional[bool] = None,
@@ -326,7 +328,7 @@ class Router:
         exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
-        openapi_extra: Optional[Dict[str, Any]] = None,
+        openapi_extra: Optional[dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         return self.api_operation(
             ["DELETE"],
@@ -353,12 +355,12 @@ class Router:
         path: str,
         *,
         auth: Any = NOT_SET,
-        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
+        throttle: Union[BaseThrottle, list[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        tags: Optional[list[str]] = None,
         deprecated: Optional[bool] = None,
         by_alias: Optional[bool] = None,
         exclude_unset: Optional[bool] = None,
@@ -366,7 +368,7 @@ class Router:
         exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
-        openapi_extra: Optional[Dict[str, Any]] = None,
+        openapi_extra: Optional[dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         return self.api_operation(
             ["PATCH"],
@@ -393,12 +395,12 @@ class Router:
         path: str,
         *,
         auth: Any = NOT_SET,
-        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
+        throttle: Union[BaseThrottle, list[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        tags: Optional[list[str]] = None,
         deprecated: Optional[bool] = None,
         by_alias: Optional[bool] = None,
         exclude_unset: Optional[bool] = None,
@@ -406,7 +408,7 @@ class Router:
         exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
-        openapi_extra: Optional[Dict[str, Any]] = None,
+        openapi_extra: Optional[dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         return self.api_operation(
             ["QUERY"],
@@ -433,12 +435,12 @@ class Router:
         path: str,
         *,
         auth: Any = NOT_SET,
-        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
+        throttle: Union[BaseThrottle, list[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        tags: Optional[list[str]] = None,
         deprecated: Optional[bool] = None,
         by_alias: Optional[bool] = None,
         exclude_unset: Optional[bool] = None,
@@ -446,7 +448,7 @@ class Router:
         exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
-        openapi_extra: Optional[Dict[str, Any]] = None,
+        openapi_extra: Optional[dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         return self.api_operation(
             ["PUT"],
@@ -470,16 +472,16 @@ class Router:
 
     def api_operation(
         self,
-        methods: List[str],
+        methods: list[str],
         path: str,
         *,
         auth: Any = NOT_SET,
-        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
+        throttle: Union[BaseThrottle, list[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        tags: Optional[list[str]] = None,
         deprecated: Optional[bool] = None,
         by_alias: Optional[bool] = None,
         exclude_unset: Optional[bool] = None,
@@ -487,7 +489,7 @@ class Router:
         exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
-        openapi_extra: Optional[Dict[str, Any]] = None,
+        openapi_extra: Optional[dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         def decorator(view_func: TCallable) -> TCallable:
             self.add_api_operation(
@@ -517,16 +519,16 @@ class Router:
     def add_api_operation(
         self,
         path: str,
-        methods: List[str],
-        view_func: Callable,
+        methods: list[str],
+        view_func: Callable[..., Any],
         *,
         auth: Any = NOT_SET,
-        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
+        throttle: Union[BaseThrottle, list[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        tags: Optional[list[str]] = None,
         deprecated: Optional[bool] = None,
         by_alias: Optional[bool] = None,
         exclude_unset: Optional[bool] = None,
@@ -534,13 +536,13 @@ class Router:
         exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
-        openapi_extra: Optional[Dict[str, Any]] = None,
+        openapi_extra: Optional[dict[str, Any]] = None,
     ) -> None:
         self._check_not_frozen()
         path = re.sub(r"\{uuid:(\w+)\}", r"{uuidstr:\1}", path, flags=re.IGNORECASE)
         # django by default convert strings to UUIDs
         # but we want to keep them as strings to let pydantic handle conversion/validation
-        # if user whants UUID object
+        # if user wants UUID object
         # uuidstr is custom registered converter
 
         # No decoration here - will be done in build_routers
@@ -613,14 +615,80 @@ class Router:
 
                 yield django_path(route, path_view.get_view(), name=url_name)
 
+    @overload
+    def webhook(self, name: TSchemaClass) -> TSchemaClass: ...
+
+    @overload
+    def webhook(
+        self,
+        name: Optional[str] = None,
+        *,
+        method: str = "POST",
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[list[str]] = None,
+        operation_id: Optional[str] = None,
+        deprecated: Optional[bool] = None,
+        include_in_schema: bool = True,
+        openapi_extra: Optional[dict[str, Any]] = None,
+    ) -> Callable[[TSchemaClass], TSchemaClass]: ...
+
+    def webhook(
+        self,
+        name: Union[str, TSchemaClass, None] = None,
+        *,
+        method: str = "POST",
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[list[str]] = None,
+        operation_id: Optional[str] = None,
+        deprecated: Optional[bool] = None,
+        include_in_schema: bool = True,
+        openapi_extra: Optional[dict[str, Any]] = None,
+    ) -> Union[TSchemaClass, Callable[[TSchemaClass], TSchemaClass]]:
+        """
+        Register a Schema class as the payload of a webhook your API sends.
+        Can be used as ``@router.webhook``, ``@router.webhook()`` or
+        ``@router.webhook("order.paid")`` - name defaults to the class name.
+
+        Webhooks are only documented (in the OpenAPI ``webhooks`` section),
+        Django Ninja does not send them.
+        """
+        if isinstance(name, type):  # used without parentheses: @router.webhook
+            return self.webhook()(name)
+
+        def decorator(schema: TSchemaClass) -> TSchemaClass:
+            self.add_webhook(
+                Webhook(
+                    schema,
+                    name,
+                    method=method,
+                    summary=summary,
+                    description=description,
+                    tags=tags,
+                    operation_id=operation_id,
+                    deprecated=deprecated,
+                    include_in_schema=include_in_schema,
+                    openapi_extra=openapi_extra,
+                )
+            )
+            return schema
+
+        return decorator
+
+    def add_webhook(self, webhook: Webhook) -> None:
+        if webhook.name in self.webhooks:
+            raise ConfigError(f'Webhook "{webhook.name}" is already registered')
+        self.webhooks[webhook.name] = webhook
+
     def add_router(
         self,
         prefix: str,
         router: Union["Router", str],
         *,
         auth: Any = NOT_SET,
-        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
-        tags: Optional[List[str]] = None,
+        throttle: Union[BaseThrottle, list[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
+        tags: Optional[list[str]] = None,
     ) -> None:
         self._check_not_frozen()
 
@@ -628,15 +696,11 @@ class Router:
             router = import_string(router)
             assert isinstance(router, Router)
 
-        # Store child router with its mount-time configuration
-        # Auth/throttle are stored on the child router template,
-        # but tags from add_router are stored separately to distinguish from Router(tags=...)
-        if auth != NOT_SET:
-            router.auth = auth
-        if throttle != NOT_SET:
-            router.throttle = throttle
-        # Store as (prefix, router, tags) - tags here are mount-level overrides
+        # Store child router with its mount-time configuration.
+        # Auth/throttle/tags overrides are kept per mount (not written to the child
+        # template), so a child reused under several parents stays isolated.
         self._routers.append((prefix, router, tags))
+        self._router_overrides.append((auth, throttle))
 
     def add_decorator(
         self,
@@ -659,11 +723,13 @@ class Router:
     def build_routers(
         self,
         prefix: str,
-        inherited_decorators: Optional[List[Tuple[Callable, DecoratorMode]]] = None,
+        inherited_decorators: Optional[list[tuple[Callable, DecoratorMode]]] = None,
         inherited_auth: Any = NOT_SET,
         inherited_throttle: Any = NOT_SET,
-        inherited_tags: Optional[List[str]] = None,
-    ) -> List[RouterMount]:
+        inherited_tags: Optional[list[str]] = None,
+        mount_auth: Any = NOT_SET,
+        mount_throttle: Any = NOT_SET,
+    ) -> list[RouterMount]:
         """
         Build mount configurations for this router and all child routers.
 
@@ -676,6 +742,8 @@ class Router:
             inherited_auth: Auth inherited from parent routers
             inherited_throttle: Throttle inherited from parent routers
             inherited_tags: Tags inherited from parent routers
+            mount_auth: Auth override from add_router() for this mount; beats self.auth
+            mount_throttle: Throttle override from add_router() for this mount
 
         Returns:
             List of RouterMount configurations for this router and all descendants
@@ -697,16 +765,22 @@ class Router:
         child_decorators = inherited_decorators + self._decorators
 
         # For auth/throttle/tags, effective value is used for children:
-        # priority: this router's own setting > inherited
-        child_auth = self.auth if self.auth is not NOT_SET else inherited_auth
-        child_throttle = (
-            self.throttle if self.throttle is not NOT_SET else inherited_throttle
+        # priority: mount override > this router's own setting > inherited
+        child_auth = next(
+            (a for a in (mount_auth, self.auth) if a is not NOT_SET), inherited_auth
+        )
+        child_throttle = next(
+            (t for t in (mount_throttle, self.throttle) if t is not NOT_SET),
+            inherited_throttle,
         )
         child_tags = self.tags if self.tags is not None else inherited_tags
 
         # Build mounts for child routers
-        child_mounts: List[RouterMount] = []
-        for child_prefix, child_router, child_mount_tags in self._routers:
+        child_mounts: list[RouterMount] = []
+        for (child_prefix, child_router, child_mount_tags), (
+            child_mount_auth,
+            child_mount_throttle,
+        ) in zip(self._routers, self._router_overrides):
             child_path = normalize_path("/".join((prefix, child_prefix))).lstrip("/")
             mounts = child_router.build_routers(
                 child_path,
@@ -714,9 +788,15 @@ class Router:
                 child_auth,
                 child_throttle,
                 child_tags,
+                mount_auth=child_mount_auth,
+                mount_throttle=child_mount_throttle,
             )
-            # Apply mount-level tags override to the first mount (the child router itself)
-            if mounts and child_mount_tags is not None:
+            # Apply mount-level overrides to the first mount (the child router itself)
+            if child_mount_auth is not NOT_SET:
+                mounts[0].auth = child_mount_auth
+            if child_mount_throttle is not NOT_SET:
+                mounts[0].throttle = child_mount_throttle
+            if child_mount_tags is not None:
                 mounts[0].tags = child_mount_tags
             child_mounts.extend(mounts)
 

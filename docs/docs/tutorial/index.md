@@ -1,74 +1,59 @@
-# Tutorial - First Steps
+# Tutorial
 
-This tutorial shows you how to use **Django Ninja** with most of its features.
+This tutorial builds one realistic API from start to finish: **TaskFlow**, a task tracker for teams. Users sign up, create projects, invite members with roles, and track tasks with assignees, labels, statuses, due dates, comments and file attachments. Each part adds a feature to the same codebase and shows the Django Ninja tools that make it work.
 
-This tutorial assumes that you know at least some basics of the <a href="https://www.djangoproject.com/" target="_blank">Django Framework</a>, like how to create a project and run it.
+## What you'll build
 
-## Installation
+By the end of Part 8, TaskFlow has these endpoints:
+
+| Method | URL | What it does |
+| --- | --- | --- |
+| `POST` | `/api/auth/signup` | Create an account |
+| `POST` | `/api/auth/token`, `/api/auth/refresh` | Get and refresh JWT access tokens |
+| `GET`, `POST` | `/api/projects/` | List your projects, create one |
+| `GET`, `PUT`, `DELETE` | `/api/projects/{project_id}` | Read, update and delete a project |
+| `POST` | `/api/projects/{project_id}/labels` | Add a label to a project |
+| `GET`, `POST` | `/api/projects/{project_id}/members` | List and add members |
+| `GET`, `POST` | `/api/projects/{project_id}/tasks/` | Filter, search, sort and paginate tasks, create one |
+| `GET`, `PATCH` | `/api/projects/{project_id}/tasks/{task_id}` | Read a task, update part of it |
+| `POST` | `/api/projects/{project_id}/tasks/{task_id}/status` | Move a task through its workflow |
+| `GET`, `POST` | `/api/projects/{project_id}/tasks/{task_id}/comments` | List comments with a cursor, add one |
+| `PUT`, `DELETE` | `/api/projects/{project_id}/tasks/{task_id}/comments/{comment_id}` | Edit or delete a comment |
+| `GET`, `POST` | `/api/projects/{project_id}/tasks/{task_id}/attachments` | List attachments, upload a file |
+| `DELETE` | `/api/projects/{project_id}/tasks/{task_id}/attachments/{attachment_id}` | Delete an attachment |
+
+Every endpoint except the auth ones needs a token, and users only ever see the projects they're members of. A second version of the API runs next to the first at `/api/v2/`, and a pytest suite covers the rules that matter.
+
+## Before you start
+
+- You know Django: projects, apps, models, migrations and settings. The tutorial doesn't explain those. It focuses on the Django Ninja parts.
+- You've done the [Quick Start](../quickstart/index.md), so `NinjaAPI`, schemas and the interactive docs are familiar.
+- You have Python 3.12 or newer. The code uses modern type hints such as `int | None` and `list[int]`.
+
+The only packages TaskFlow needs are Django and Django Ninja:
 
 ```console
-pip install django-ninja
+pip install django django-ninja
 ```
 
-!!! note
+Everything else, including JSON Web Tokens, is written with the standard library. Part 7 adds pytest and pytest-django as development tools. The database is SQLite, and all views are synchronous.
 
-    It is not required, but you can also put `ninja` to `INSTALLED_APPS`.
-    In that case the OpenAPI/Swagger UI (or Redoc) will be loaded (faster) from the included JavaScript bundle (otherwise the JavaScript bundle comes from a CDN).
+## How the parts work
 
-## Create a Django project
+- Each part starts with a **What you'll learn** box and takes about 15 minutes to read and type.
+- Each part builds on the code of the one before, so work through them in order. Changed files are shown in full, or as excerpts with `...` where the rest of the file stays the same.
+- The example requests and responses are real output. If you start from an empty database, as Part 2 suggests, your ids will match the ones on the pages.
+- **Go deeper** links at the end of each section point to the [Guide](../guide/index.md) page that covers the feature in full.
 
-Start a new Django project (or if you already have an existing Django project, skip to the next step).
+## The parts
 
-```
-django-admin startproject myproject
-```
+1. [Project setup & layout](part-1.md): one router per app, schemas from models, and task URLs nested under projects.
+2. [Relations & computed fields](part-2.md): assignees and labels as nested output, computed and annotated fields, and fewer queries.
+3. [Validation & workflows](part-3.md): status and priority choices, field and model validators, `PATCH` updates and status transitions.
+4. [Auth & permissions](part-4.md): JWT tokens from scratch, project memberships with roles, and object-level rules for comments.
+5. [Filtering, search, ordering & pagination](part-5.md): a `FilterSchema` for tasks, safe sort orders, and page-number and cursor pagination.
+6. [File uploads & forms](part-6.md): multipart uploads with form fields, file validation, media files and absolute URLs.
+7. [Testing](part-7.md): a pytest suite with fixtures and `TestClient`, covering validation, permissions, filters and uploads.
+8. [OpenAPI polish & versioning](part-8.md): descriptions, examples and deprecations in the docs, and a version 2 next to version 1.
 
-## Create the API
-
-Let's create a module for our API. Create an `api.py` file in the same directory location as your Django project's root `urls.py`:
-
-```python
-from ninja import NinjaAPI
-
-api = NinjaAPI()
-```
-
-Now go to `urls.py` and add the following:
-
-```python hl_lines="3 7"
-from django.contrib import admin
-from django.urls import path
-from .api import api
-
-urlpatterns = [
-    path("admin/", admin.site.urls),
-    path("api/", api.urls),
-]
-```
-
-## Our first operation
-
-**Django Ninja** comes with a decorator for each HTTP method (`GET`, `POST`,
-`PUT`, etc). In our `api.py` file, let's add in a simple "hello world"
-operation.
-
-```python hl_lines="5-7"
-from ninja import NinjaAPI
-
-api = NinjaAPI()
-
-@api.get("/hello")
-def hello(request):
-    return "Hello world"
-```
-
-Now browsing to <a href="http://localhost:8000/api/hello"
-target="_blank">localhost:8000/api/hello</a> will return a simple JSON
-response:
-```json
-"Hello world"
-```
-
-!!! success
-
-    Continue on to **[Parsing input](step2.md)**.
+Ready? Start with [Part 1: Project setup & layout](part-1.md).

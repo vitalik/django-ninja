@@ -1,6 +1,6 @@
 from enum import Enum
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
-from typing import Any, FrozenSet, Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
 from django.core.serializers.json import DjangoJSONEncoder
 from django.http import JsonResponse
@@ -55,7 +55,7 @@ class Response(JsonResponse):
         super().__init__(data, encoder=NinjaJSONEncoder, safe=False, **kwargs)
 
 
-def resp_codes(from_code: int, to_code: int) -> FrozenSet[int]:
+def resp_codes(from_code: int, to_code: int) -> frozenset[int]:
     return frozenset(range(from_code, to_code + 1))
 
 

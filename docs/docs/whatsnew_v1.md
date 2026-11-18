@@ -143,7 +143,7 @@ api = NinjaAPI(auth=[django_auth, Auth()])
 
 ## Docs
 
-Doc viewer are now configurable and plugable. By default django ninja comes with Swagger and Redoc:
+Doc viewer are now configurable and pluggable. By default django ninja comes with Swagger and Redoc:
 
 ```Python
 from ninja import NinjaAPI, Redoc, Swagger
@@ -209,7 +209,7 @@ def test_view(request):
 
 
 #### Backwards incompatible stuff
- - resolve_xxx(self, ...) - support resolve with (self) is dropped in favor of pydantic build-in functionality
+ - resolve_xxx(self, ...) - support resolve with (self) is dropped in favor of pydantic built-in functionality
  - pydantic v1 is no longer supported
  - python 3.6 is no longer supported
 

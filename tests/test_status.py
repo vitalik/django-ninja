@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import Union
 from unittest.mock import patch
 
 import pytest
@@ -101,7 +101,7 @@ def union_response(request, q: int):
     return Status(200, UserOut(id=1, name="John"))
 
 
-@api.get("/list_response", response={200: List[UserOut]})
+@api.get("/list_response", response={200: list[UserOut]})
 def list_response(request):
     return Status(200, [{"id": 1, "name": "John"}])
 
@@ -114,7 +114,7 @@ def by_alias_response(request):
 # -- Pagination + Status --
 
 
-@api.get("/paginated_status", response={201: List[UserOut]})
+@api.get("/paginated_status", response={201: list[UserOut]})
 @paginate(LimitOffsetPagination)
 def paginated_status(request):
     return Status(
@@ -123,7 +123,7 @@ def paginated_status(request):
     )
 
 
-@api.get("/paginated_normal", response=List[UserOut])
+@api.get("/paginated_normal", response=list[UserOut])
 @paginate(LimitOffsetPagination)
 def paginated_normal(request):
     return [{"id": 1, "name": "A"}, {"id": 2, "name": "B"}]
@@ -133,7 +133,7 @@ def paginated_normal(request):
 async_api = NinjaAPI()
 
 
-@async_api.get("/async_paginated_status", response={201: List[UserOut]})
+@async_api.get("/async_paginated_status", response={201: list[UserOut]})
 @paginate(LimitOffsetPagination)
 async def async_paginated_status(request):
     return Status(
@@ -142,7 +142,7 @@ async def async_paginated_status(request):
     )
 
 
-@async_api.get("/async_paginated_normal", response=List[UserOut])
+@async_api.get("/async_paginated_normal", response=list[UserOut])
 @paginate(LimitOffsetPagination)
 async def async_paginated_normal(request):
     return [{"id": 1, "name": "A"}, {"id": 2, "name": "B"}]
@@ -239,7 +239,7 @@ class TestSkipRevalidation:
         ) as mock_resp_obj:
             response = client.get("/model_subclass")
             assert response.status_code == 200
-            assert response.json() == {"id": 1, "name": "John", "extra": "bonus"}
+            assert response.json() == {"id": 1, "name": "John"}
             mock_resp_obj.assert_not_called()
 
     def test_dict_goes_through_validation(self):

@@ -1,8 +1,7 @@
 import logging
 from abc import ABC, abstractmethod
 from base64 import b64decode
-from typing import Any, Optional, Tuple
-from urllib.parse import unquote
+from typing import Any, Optional
 
 from django.conf import settings
 from django.http import HttpRequest
@@ -32,7 +31,11 @@ class HttpBearer(HttpAuthBase, ABC):
 
         if parts[0].lower() != self.openapi_scheme:
             if settings.DEBUG:
-                logger.error(f"Unexpected auth - '{auth_value}'")
+                # Log only the scheme: the rest of the header is a credential
+                logger.error(
+                    f"Unexpected auth scheme - '{parts[0]}' "
+                    f"(expected '{self.openapi_scheme}')"
+                )
             return None
         token = " ".join(parts[1:])
         return self.authenticate(request, token)
@@ -70,7 +73,7 @@ class HttpBasicAuth(HttpAuthBase, ABC):  # TODO: maybe HttpBasicAuthBase
     ) -> Optional[Any]:
         pass  # pragma: no cover
 
-    def decode_authorization(self, value: str) -> Tuple[str, str]:
+    def decode_authorization(self, value: str) -> tuple[str, str]:
         parts = value.split(" ")
         if len(parts) == 1:
             user_pass_encoded = parts[0]
@@ -81,6 +84,6 @@ class HttpBasicAuth(HttpAuthBase, ABC):  # TODO: maybe HttpBasicAuthBase
 
         try:
             username, password = b64decode(user_pass_encoded).decode().split(":", 1)
-            return unquote(username), unquote(password)
+            return username, password
         except Exception as e:  # dear contributors please do not change to valueerror - here can be multiple exceptions
             raise DecodeError("Invalid Authorization header") from e

@@ -1,16 +1,12 @@
 import inspect
+import math
 import warnings
+from collections.abc import Coroutine, Iterable, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Coroutine,
-    Dict,
-    Iterable,
-    List,
     Optional,
-    Sequence,
-    Type,
     Union,
     cast,
 )
@@ -50,20 +46,34 @@ if TYPE_CHECKING:
 __all__ = ["Operation", "PathView", "ResponseObject"]
 
 
+async def _await_coroutine(coroutine: Coroutine[Any, Any, Any]) -> Any:
+    """Await a coroutine from the sync auth path (see issue #1751).
+
+    ``HttpBearer.__call__`` is a plain ``def`` that returns the result of
+    ``authenticate``, so with an ``async def authenticate`` the sync path gets a
+    not-yet-run coroutine. We must await *that* object rather than re-run the
+    callback via ``async_to_sync(callback)``, which would call ``__call__`` twice
+    and warn. ``async_to_sync`` needs a real ``async def``, hence this helper.
+    """
+    return await coroutine
+
+
 class Operation:
     def __init__(
         self,
         path: str,
-        methods: List[str],
-        view_func: Callable,
+        methods: list[str],
+        view_func: Callable[..., Any],
         *,
-        auth: Optional[Union[Sequence[Callable], Callable, NOT_SET_TYPE]] = NOT_SET,
-        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
+        auth: Optional[
+            Union[Sequence[Callable[..., Any]], Callable[..., Any], NOT_SET_TYPE]
+        ] = NOT_SET,
+        throttle: Union[BaseThrottle, list[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        tags: Optional[list[str]] = None,
         deprecated: Optional[bool] = None,
         by_alias: Optional[bool] = None,
         exclude_unset: Optional[bool] = None,
@@ -71,40 +81,40 @@ class Operation:
         exclude_none: Optional[bool] = None,
         include_in_schema: bool = True,
         url_name: Optional[str] = None,
-        openapi_extra: Optional[Dict[str, Any]] = None,
+        openapi_extra: Optional[dict[str, Any]] = None,
     ) -> None:
         self.is_async = False
         self.path: str = path
-        self.methods: List[str] = methods
-        self.view_func: Callable = view_func
+        self.methods: list[str] = methods
+        self.view_func: Callable[..., Any] = view_func
         self.api: NinjaAPI = cast("NinjaAPI", None)
-        self.csrf_exempt: bool = (
-            getattr(view_func, "csrf_exempt", False) or "QUERY" in methods
-        )
+        self.csrf_exempt: bool = getattr(view_func, "csrf_exempt", False)
         if url_name is not None:
             self.url_name = url_name
 
-        self.auth_param: Optional[Union[Sequence[Callable], Callable, object]] = auth
-        self.auth_callbacks: Sequence[Callable] = []
+        self.auth_param: Optional[
+            Union[Sequence[Callable[..., Any]], Callable[..., Any], object]
+        ] = auth
+        self.auth_callbacks: Sequence[Callable[..., Any]] = []
         self._set_auth(auth)
 
         if isinstance(throttle, BaseThrottle):
             throttle = [throttle]
         self.throttle_param = throttle
-        self.throttle_objects: List[BaseThrottle] = []
+        self.throttle_objects: list[BaseThrottle] = []
         if throttle is not NOT_SET:
             for th in throttle:  # type: ignore
-                assert isinstance(
-                    th, BaseThrottle
-                ), "Throttle should be an instance of BaseThrottle"
+                assert isinstance(th, BaseThrottle), (
+                    "Throttle should be an instance of BaseThrottle"
+                )
                 self.throttle_objects.append(th)
 
         self.signature = ViewSignature(self.path, self.view_func)
         self.models: TModels = self.signature.models
 
-        self.stream_format: Optional[Type[StreamFormat]] = None
-        self.stream_item_model: Optional[Type[Schema]] = None
-        self.response_models: Dict[Any, Any]
+        self.stream_format: Optional[type[StreamFormat]] = None
+        self.stream_item_model: Optional[type[Schema]] = None
+        self.response_models: dict[Any, Any]
         if isinstance(response, _StreamAlias):
             self.stream_format = response.format_cls
             self.stream_item_model = self._create_response_model(response.item_type)
@@ -138,7 +148,9 @@ class Operation:
 
         if hasattr(view_func, "_ninja_contribute_to_operation"):
             # Allow 3rd party code to contribute to the operation behavior
-            callbacks: List[Callable] = view_func._ninja_contribute_to_operation
+            callbacks: list[Callable[..., Any]] = (
+                view_func._ninja_contribute_to_operation
+            )
             for callback in callbacks:
                 callback(self)
 
@@ -234,7 +246,7 @@ class Operation:
             resp_object, context={"request": request, "response_status": 200}
         )
 
-        model_dump_kwargs: Dict[str, Any] = {}
+        model_dump_kwargs: dict[str, Any] = {}
         if pydantic_version >= [2, 7]:  # pragma: no branch
             # pydantic added support for serialization context at 2.7
             model_dump_kwargs.update(
@@ -282,7 +294,8 @@ class Operation:
         return response
 
     def _set_auth(
-        self, auth: Optional[Union[Sequence[Callable], Callable, object]]
+        self,
+        auth: Optional[Union[Sequence[Callable[..., Any]], Callable[..., Any], object]],
     ) -> None:
         if auth is not None and auth is not NOT_SET:
             self.auth_callbacks = isinstance(auth, Sequence) and auth or [auth]
@@ -316,7 +329,7 @@ class Operation:
                 if is_async_callable(callback) or getattr(callback, "is_async", False):
                     result = callback(request)
                     if inspect.iscoroutine(result):
-                        result = async_to_sync(callback)(request)
+                        result = async_to_sync(_await_coroutine)(result)
                 else:
                     result = callback(request)
             except Exception as exc:
@@ -340,11 +353,15 @@ class Operation:
             ]
 
             duration = max(durations, default=None)
-            return self.api.on_exception(request, Throttled(wait=duration))  # type: ignore
+            response = self.api.on_exception(request, Throttled(wait=duration))  # type: ignore
+            if duration is not None:
+                # Retry-After must be integer delta-seconds (RFC 9110)
+                response["Retry-After"] = str(math.ceil(duration))
+            return response
         return None
 
-    def _model_dump_kwargs(self, request: HttpRequest, status: int) -> Dict[str, Any]:
-        kwargs: Dict[str, Any] = {}
+    def _model_dump_kwargs(self, request: HttpRequest, status: int) -> dict[str, Any]:
+        kwargs: dict[str, Any] = {}
         if pydantic_version >= [2, 7]:
             kwargs["context"] = {"request": request, "response_status": status}
         return kwargs
@@ -402,13 +419,21 @@ class Operation:
         model_dump_kwargs = self._model_dump_kwargs(request, status)
 
         # Skip re-validation for pydantic model instances matching the response type
-        resp_annotation = response_model.model_fields["response"].annotation
+        resp_field = response_model.model_fields["response"]
+        resp_annotation = resp_field.annotation
         if (
-            isinstance(resp_annotation, type)
+            not resp_field.metadata  # Annotated[...] serializers/validators
+            and isinstance(resp_annotation, type)
             and isinstance(result, BaseModel)
             and isinstance(result, resp_annotation)
         ):
-            result = cast(BaseModel, result).model_dump(
+            # Serialize with the declared schema, not the instance's own class,
+            # so subclass-only fields are not leaked into the response.
+            # (model_dump() is the same call on type(self); calling the
+            # serializer directly is also faster than model_dump())
+            serializer = cast(type[BaseModel], resp_annotation).__pydantic_serializer__
+            result = serializer.to_python(
+                result,
                 by_alias=self.by_alias,
                 exclude_unset=self.exclude_unset,
                 exclude_defaults=self.exclude_defaults,
@@ -440,7 +465,7 @@ class Operation:
         self, request: HttpRequest, path_params: Any, temporal_response: HttpResponse
     ) -> DictStrAny:
         values = {}
-        error_contexts: List[ValidationErrorContext] = []
+        error_contexts: list[ValidationErrorContext] = []
         for model in self.models:
             try:
                 data = model.resolve(request, self.api, path_params)
@@ -460,7 +485,7 @@ class Operation:
 
     def _create_response_model_multiple(
         self, response_param: DictStrAny
-    ) -> Dict[str, Optional[Type[Schema]]]:
+    ) -> dict[str, Optional[type[Schema]]]:
         result = {}
         for key, model in response_param.items():
             status_codes = isinstance(key, Iterable) and key or [key]
@@ -468,7 +493,7 @@ class Operation:
                 result[code] = self._create_response_model(model)
         return result
 
-    def _create_response_model(self, response_param: Any) -> Optional[Type[Schema]]:
+    def _create_response_model(self, response_param: Any) -> Optional[type[Schema]]:
         if response_param is None:
             return None
         attrs = {"__annotations__": {"response": response_param}}
@@ -536,7 +561,8 @@ class AsyncOperation(Operation):
 
         # Throttling:
         if self.throttle_objects:
-            error = self._check_throttles(request)
+            # cache backends are sync only (DatabaseCache raises here)
+            error = await sync_to_async(self._check_throttles)(request)
             if error:
                 return error
 
@@ -564,23 +590,25 @@ class AsyncOperation(Operation):
 
 class PathView:
     def __init__(self) -> None:
-        self.operations: List[Operation] = []
+        self.operations: list[Operation] = []
         self.is_async = False  # if at least one operation is async - will become True
         self.url_name: Optional[str] = None
 
     def add_operation(
         self,
         path: str,
-        methods: List[str],
-        view_func: Callable,
+        methods: list[str],
+        view_func: Callable[..., Any],
         *,
-        auth: Optional[Union[Sequence[Callable], Callable, NOT_SET_TYPE]] = NOT_SET,
-        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
+        auth: Optional[
+            Union[Sequence[Callable[..., Any]], Callable[..., Any], NOT_SET_TYPE]
+        ] = NOT_SET,
+        throttle: Union[BaseThrottle, list[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        tags: Optional[list[str]] = None,
         deprecated: Optional[bool] = None,
         by_alias: Optional[bool] = None,
         exclude_unset: Optional[bool] = None,
@@ -588,7 +616,7 @@ class PathView:
         exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
-        openapi_extra: Optional[Dict[str, Any]] = None,
+        openapi_extra: Optional[dict[str, Any]] = None,
     ) -> Operation:
         if url_name:
             self.url_name = url_name
@@ -640,7 +668,7 @@ class PathView:
         cloned.operations = [op.clone() for op in self.operations]
         return cloned
 
-    def get_view(self) -> Callable:
+    def get_view(self) -> Callable[..., Any]:
         # Create a unique view function for this PathView
 
         if self.is_async:
@@ -697,7 +725,7 @@ class PathView:
         return HttpResponseNotAllowed(allowed_methods, content=b"Method not allowed")
 
 
-class ResponseObject:
+class ResponseObject:  # noqa: B903 - Keep this attribute wrapper's existing semantics.
     "Basically this is just a helper to be able to pass response to pydantic's model_validate"
 
     def __init__(self, response: HttpResponse) -> None:

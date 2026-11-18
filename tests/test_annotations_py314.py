@@ -1,5 +1,4 @@
 from sys import version_info
-from typing import List
 
 import pytest
 from django.http import HttpRequest
@@ -38,7 +37,7 @@ else:
 def test_paginated_route_with_deferred_annotations():
     api = NinjaAPI(urls_namespace="annotations_py314")
 
-    @api.get("/endpoint", response=List[int])
+    @api.get("/endpoint", response=list[int])
     @paginate(PageNumberPagination)
     def endpoint(
         request: AuthenticatedNinjaRequest,

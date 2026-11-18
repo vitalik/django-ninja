@@ -1,4 +1,3 @@
-from typing import List
 from unittest.mock import Mock
 
 import pydantic
@@ -6,11 +5,14 @@ import pytest
 from django.contrib.postgres import fields as ps_fields
 from django.db import models
 from django.db.models import Manager
+from django.test.utils import isolate_apps
 from util import pydantic_ref_fix
 
+from ninja import ModelSchema, Router, Schema
 from ninja.errors import ConfigError
 from ninja.orm import create_schema, register_field
 from ninja.orm.shortcuts import L, S
+from ninja.testing import TestClient
 
 
 def test_inheritance():
@@ -202,8 +204,8 @@ def test_all_fields():
     pydantic_version = tuple(map(int, pydantic.VERSION.split(".")[:2]))
     if pydantic_version >= (2, 11):
         expected_schema["properties"]["hstorefield"]["additionalProperties"] = True
-    if pydantic_version >= (2, 12):
-        # Pydantic 2.12 added pattern validation for decimal strings
+    if (2, 12) <= pydantic_version < (2, 14):
+        # Pydantic 2.12 added pattern validation for decimal strings, 2.14 dropped it
         expected_schema["properties"]["decimalfield"]["anyOf"][1]["pattern"] = (
             r"^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$"
         )
@@ -317,7 +319,7 @@ def test_relational():
             }),
             "foreignkey": {
                 "title": "Foreignkey",
-                "allOf": [{"$ref": "#/$defs/Related"}],
+                "anyOf": [{"$ref": "#/$defs/Related"}, {"type": "null"}],
                 "description": "",
             },
             "manytomanyfield": {
@@ -346,6 +348,47 @@ def test_relational():
     }
 
 
+def test_nullable_relation_with_depth():
+    class Pub(models.Model):
+        name = models.CharField(max_length=5)
+
+        class Meta:
+            app_label = "tests"
+
+    class Book(models.Model):
+        title = models.CharField(max_length=5)
+        pub = models.ForeignKey(Pub, null=True, on_delete=models.CASCADE)
+
+        class Meta:
+            app_label = "tests"
+
+    Schema = create_schema(Book, fields=["id", "pub"], depth=1)
+    assert Schema.model_validate(Book(id=1, pub=None)).pub is None
+    assert Schema.model_validate(Book(id=1, pub=Pub(id=2, name="a"))).pub.name == "a"
+    assert {"type": "null"} in Schema.json_schema()["properties"]["pub"]["anyOf"]
+
+
+def test_optional_relation_with_depth():
+    class Owner(models.Model):
+        name = models.CharField(max_length=5)
+
+        class Meta:
+            app_label = "tests"
+
+    class Pet(models.Model):
+        owner = models.OneToOneField(Owner, on_delete=models.CASCADE)
+
+        class Meta:
+            app_label = "tests"
+
+    Schema = create_schema(
+        Pet, fields=["id", "owner"], depth=1, optional_fields="__all__"
+    )
+    assert Schema.model_validate({}).owner is None
+    assert Schema.model_validate({"owner": None}).owner is None
+    assert "required" not in Schema.json_schema()
+
+
 def test_default():
     class MyModel(models.Model):
         default_static = models.CharField(default="hello")
@@ -369,6 +412,68 @@ def test_default():
             "default_dynamic": {"title": "Default Dynamic", "type": "string"},
         },
     }
+
+
+def test_textfield_max_length_validates_input_only():
+    # Django does not enforce TextField.max_length at the model or database
+    # level, so stored values may exceed it - serializing them in a response
+    # must not fail (#1692), while incoming payloads are still validated
+    class ModelWithLimitedText(models.Model):
+        text = models.TextField(max_length=5)
+
+        class Meta:
+            app_label = "tests"
+
+    Schema = create_schema(ModelWithLimitedText)
+
+    assert Schema.json_schema()["properties"]["text"] == {
+        "maxLength": 5,
+        "title": "Text",
+        "type": "string",
+    }
+
+    with pytest.raises(pydantic.ValidationError) as exc_info:
+        Schema(id=1, text="123456")
+    assert exc_info.value.errors()[0]["type"] == "string_too_long"
+
+    obj = Mock(id=1, text="123456")
+    assert Schema.from_orm(obj, context={"response_status": 200}).dict() == {
+        "id": 1,
+        "text": "123456",
+    }
+
+
+def test_textfield_max_length_api_flow():
+    class ModelWithLimitedDescription(models.Model):
+        description = models.TextField(max_length=5)
+
+        class Meta:
+            app_label = "tests"
+
+    Schema = create_schema(ModelWithLimitedDescription)
+
+    router = Router()
+
+    @router.post("/things")
+    def create_thing(request, payload: Schema):
+        return {"ok": True}
+
+    @router.get("/things", response=Schema)
+    def get_thing(request):
+        return type("Obj", (), {"id": 1, "description": "123456"})()
+
+    client = TestClient(router)
+
+    response = client.post("/things", json={"description": "123456"})
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["type"] == "string_too_long"
+
+    response = client.post("/things", json={"description": "12345"})
+    assert response.status_code == 200
+
+    response = client.get("/things")
+    assert response.status_code == 200
+    assert response.json() == {"id": 1, "description": "123456"}
 
 
 def test_fields_exclude():
@@ -435,6 +540,45 @@ def test_exceptions():
         create_schema(MyModel2, fields=["f_invalid"])
 
 
+def test_fk_attname_hint():
+    class AttnameParent(models.Model):
+        class Meta:
+            app_label = "tests"
+
+    class AttnameChild(models.Model):
+        parent = models.ForeignKey(AttnameParent, on_delete=models.CASCADE)
+
+        class Meta:
+            app_label = "tests"
+
+    msg = (
+        "DjangoField\\(s\\) {'parent_id'} are not in model .*AttnameChild.*"
+        "Use 'parent' instead of 'parent_id', or declare 'parent_id: int' on the schema."
+    )
+    with pytest.raises(ConfigError, match=msg):
+        create_schema(AttnameChild, fields=["id", "parent_id"])
+
+    with pytest.raises(ConfigError, match=msg):
+        create_schema(AttnameChild, exclude=["parent_id"])
+
+    # plain unknown names get no hint
+    with pytest.raises(ConfigError, match=r"not in model .*AttnameChild.*>\.$"):
+        create_schema(AttnameChild, fields=["nope"])
+
+    # the documented way: declare the attname as a schema field
+    class ChildSchema(ModelSchema):
+        parent_id: int
+
+        class Meta:
+            model = AttnameChild
+            fields = ["id"]
+
+    assert ChildSchema.from_orm(AttnameChild(id=1, parent_id=7)).dict() == {
+        "id": 1,
+        "parent_id": 7,
+    }
+
+
 def test_shortcuts():
     class MyModel3(models.Model):
         f1 = models.CharField()
@@ -444,7 +588,7 @@ def test_shortcuts():
 
     schema = S(MyModel3)
     schema_list = L(MyModel3)
-    assert List[schema] == schema_list
+    assert list[schema] == schema_list
 
 
 @pytest.mark.django_db
@@ -536,6 +680,40 @@ def test_custom_fields():
     }
 
 
+@pytest.mark.parametrize(
+    "selection", [{}, {"fields": ["value", "name"]}, {"exclude": ["id"]}]
+)
+@pytest.mark.parametrize("optional_fields", [None, "__all__"])
+@isolate_apps()
+def test_declared_field_is_not_converted(selection, optional_fields):
+    """#1482: a declared field is used as-is, its model field is never converted"""
+
+    class UnknownField(models.Field):
+        pass  # not registered with ninja
+
+    class DeclaredModel(models.Model):
+        value = UnknownField()
+        name = models.CharField()
+
+        class Meta:
+            app_label = "tests"
+
+    with pytest.raises(ConfigError, match="Do not know how to convert"):
+        create_schema(DeclaredModel, **selection)
+
+    schema = create_schema(
+        DeclaredModel,
+        **selection,
+        optional_fields=optional_fields,
+        custom_fields=[("extra", int, 1), ("value", str, ...)],
+    )
+    # the declaration keeps the model field's position, other declared fields go last
+    expected = (["id"] if not selection else []) + ["value", "name", "extra"]
+    assert list(schema.model_fields) == expected
+    assert schema.model_fields["value"].annotation is str
+    assert schema.model_fields["value"].is_required()
+
+
 def test_duplicate_schema_names():
     from django.db import models
 
@@ -618,3 +796,24 @@ def test_register_custom_field():
     Schema = create_schema(ModelWithCustomField)
     print(Schema.json_schema())
     assert Schema.json_schema()["properties"]["some_field"]["type"] == "integer"
+
+
+def test_create_schema_cache_respects_base_class():
+    class BaseClassModel(models.Model):
+        name = models.CharField(max_length=5)
+
+        class Meta:
+            app_label = "tests"
+
+    class BaseA(Schema):
+        pass
+
+    class BaseB(Schema):
+        pass
+
+    a = create_schema(BaseClassModel, base_class=BaseA)
+    b = create_schema(BaseClassModel, base_class=BaseB)
+
+    assert a is not b
+    assert issubclass(a, BaseA) and issubclass(b, BaseB)
+    assert create_schema(BaseClassModel, base_class=BaseA) is a

@@ -46,7 +46,7 @@ It can be something like this:
 ```python
 router = Router()
 
-@router.get('/project/{project_id}/tasks/', response=List[TaskOut])
+@router.get('/project/{project_id}/tasks/', response=list[TaskOut])
 def task_list(request):
     user_projects = request.user.project_set
     project = get_object_or_404(user_projects, id=project_id))
@@ -101,7 +101,7 @@ class Tasks:
         self.project = get_object_or_404(user_projects, id=project_id))
         self.tasks = self.project.task_set.all()
     
-    @router.get('/', response=List[TaskOut])
+    @router.get('/', response=list[TaskOut])
     def task_list(self, request):
         return self.tasks
 

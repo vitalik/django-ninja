@@ -1,5 +1,3 @@
-from typing import List
-
 from django.http import HttpRequest, QueryDict
 
 from ninja import NinjaAPI
@@ -15,7 +13,7 @@ class MyParser(Parser):
         return request.body.decode().splitlines()
 
     def parse_querydict(
-        self, data: QueryDict, list_fields: List[str], request: HttpRequest
+        self, data: QueryDict, list_fields: list[str], request: HttpRequest
     ):
         "Turning empty Query params to None instead of empty string"
         result = super().parse_querydict(data, list_fields, request)
@@ -29,7 +27,7 @@ api = NinjaAPI(parser=MyParser())
 
 
 @api.post("/test")
-def operation(request, body: List[str], emptyparam: str = None):
+def operation(request, body: list[str], emptyparam: str = None):
     return {"emptyparam": emptyparam, "body": body}
 
 

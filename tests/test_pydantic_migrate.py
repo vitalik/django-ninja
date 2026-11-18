@@ -66,5 +66,5 @@ def test_orm_config():
             "f3": {"title": "F3", "type": "integer"},
             "f4": {"title": "F4", "default": 1, "type": "integer"},
         },
-        "required": ["f3", "f1"],
+        "required": ["f1", "f3"],
     }

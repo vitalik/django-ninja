@@ -1,3 +1,5 @@
+import warnings
+
 import pytest
 from django.db import models
 
@@ -79,8 +81,63 @@ def test_custom():
             "f3": {"title": "F3", "type": "integer"},
             "f4": {"title": "F4", "default": 1, "type": "integer"},
         },
-        "required": ["f3", "f1"],
+        "required": ["f1", "f3"],
     }
+
+
+def test_custom_fields_come_after_model_fields():
+    class OrderModel(models.Model):
+        name = models.CharField()
+        created = models.DateTimeField(null=True)
+
+        class Meta:
+            app_label = "tests"
+
+    class OrderSchema(ModelSchema):
+        extra_a: int
+        extra_b: str = "b"
+
+        class Meta:
+            model = OrderModel
+            fields = ["name", "id"]
+
+    # model fields keep the order given in Meta.fields,
+    # custom fields follow in declaration order
+    assert list(OrderSchema.model_fields) == ["name", "id", "extra_a", "extra_b"]
+    assert list(OrderSchema.json_schema()["properties"]) == [
+        "name",
+        "id",
+        "extra_a",
+        "extra_b",
+    ]
+
+    instance = OrderSchema(name="n", id=7, extra_a=1)
+    assert list(instance.model_dump()) == ["name", "id", "extra_a", "extra_b"]
+    assert instance.model_dump_json() == (
+        '{"name":"n","id":7,"extra_a":1,"extra_b":"b"}'
+    )
+
+
+def test_custom_field_overriding_model_field():
+    class OverrideModel(models.Model):
+        name = models.CharField()
+        rating = models.IntegerField()
+
+        class Meta:
+            app_label = "tests"
+
+    class OverrideSchema(ModelSchema):
+        # redefines the model field with a different type/default
+        rating: float = 0.5
+        extra: int = 0
+
+        class Meta:
+            model = OverrideModel
+            fields = ["name"]
+
+    assert list(OverrideSchema.model_fields) == ["name", "rating", "extra"]
+    assert OverrideSchema.model_fields["rating"].annotation is float
+    assert OverrideSchema(name="n").rating == 0.5
 
 
 def test_config():
@@ -265,3 +322,98 @@ def test_model_schema_with_old_config():
             class Config:
                 model = "User"
                 model_fields = ["x"]
+
+
+def test_same_named_model_schemas_keep_their_own_body():
+    class CacheKeyPub(models.Model):
+        name = models.CharField(max_length=5)
+
+        class Meta:
+            app_label = "tests"
+
+    def make(value):
+        class CacheKeyPubSchema(ModelSchema):
+            class Meta:
+                model = CacheKeyPub
+                fields = ["id"]
+
+            @staticmethod
+            def resolve_id(obj):
+                return value
+
+        return CacheKeyPubSchema
+
+    first, second = make(1), make(2)
+
+    assert first is not second
+    assert first.__name__ != second.__name__
+    assert first.model_validate(CacheKeyPub(id=5)).id == 1
+    assert second.model_validate(CacheKeyPub(id=5)).id == 2
+
+
+def test_declared_field_also_in_fields_warns():
+    """#1563: a declared field repeated in Meta.fields - the declaration wins, with a warning."""
+
+    class Author(models.Model):
+        name = models.CharField()
+
+        class Meta:
+            app_label = "tests"
+
+    class Tip(models.Model):
+        name = models.CharField()
+        author = models.ForeignKey(Author, on_delete=models.CASCADE)
+
+        class Meta:
+            app_label = "tests"
+
+    class AuthorSchema(ModelSchema):
+        class Meta:
+            model = Author
+            fields = ["id", "name"]
+
+    with pytest.warns(
+        DeprecationWarning, match=r"'TipSchema' declares field\(s\) \['author'\]"
+    ):
+
+        class TipSchema(ModelSchema):
+            author: AuthorSchema
+
+            class Meta:
+                model = Tip
+                fields = ["id", "name", "author"]
+
+    properties = TipSchema.json_schema()["properties"]
+    assert set(properties) == {"id", "name", "author"}
+    assert properties["author"] == {"$ref": "#/$defs/AuthorSchema"}
+
+
+def test_declared_field_not_repeated_in_fields_does_not_warn():
+    class Note(models.Model):
+        title = models.CharField()
+        body = models.CharField()
+
+        class Meta:
+            app_label = "tests"
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+
+        class NoteSchema(ModelSchema):
+            title: int
+
+            class Meta:
+                model = Note
+                fields = ["body"]
+
+        class NoteSchemaAll(ModelSchema):
+            title: int
+
+            class Meta:
+                model = Note
+                fields = "__all__"
+
+    for schema in (NoteSchema, NoteSchemaAll):
+        properties = schema.json_schema()["properties"]
+        assert properties["title"] == {"title": "Title", "type": "integer"}
+        assert properties["body"] == {"title": "Body", "type": "string"}

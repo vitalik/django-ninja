@@ -1,10 +1,14 @@
-from typing import Any, Callable, Dict, TypeVar
+from typing import Any, Callable, TypeVar
 
-__all__ = ["DictStrAny", "TCallable"]
+from pydantic import BaseModel
 
-DictStrAny = Dict[str, Any]
+__all__ = ["DictStrAny", "TCallable", "TSchemaClass"]
+
+DictStrAny = dict[str, Any]
 
 TCallable = TypeVar("TCallable", bound=Callable[..., Any])
+
+TSchemaClass = TypeVar("TSchemaClass", bound=type[BaseModel])
 
 
 # unfortunately this doesn't work yet, see

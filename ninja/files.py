@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict
+from typing import Any, Callable
 
 from django.core.files.uploadedfile import UploadedFile as DjangoUploadedFile
 from pydantic_core import core_schema
@@ -10,9 +10,9 @@ class UploadedFile(DjangoUploadedFile):
     @classmethod
     def __get_pydantic_json_schema__(
         cls, core_schema: Any, handler: Callable[..., Any]
-    ) -> Dict:
+    ) -> dict:
         # calling handler(core_schema) here raises an exception
-        json_schema: Dict[str, str] = {}
+        json_schema: dict[str, str] = {}
         json_schema.update(type="string", format="binary")
         return json_schema
 

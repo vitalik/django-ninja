@@ -1,7 +1,7 @@
 import json
 from enum import Enum
 from ipaddress import IPv4Address, IPv6Address
-from typing import List, Union
+from typing import Union
 
 import pytest
 from django.http import HttpResponse
@@ -59,7 +59,7 @@ def check_model(request):
     return User(1, "John", "Password")
 
 
-@router.get("/check_list_model", response=List[UserModel])
+@router.get("/check_list_model", response=list[UserModel])
 def check_list_model(request):
     return [User(1, "John", "Password")]
 

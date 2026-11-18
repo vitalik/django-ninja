@@ -1,6 +1,6 @@
+from base64 import b64encode
 from datetime import date, timedelta
 from http import HTTPStatus
-from typing import List
 
 import django
 import pytest
@@ -15,31 +15,37 @@ from ninja.testing import TestAsyncClient, TestClient
 api = NinjaAPI()
 
 
-@api.get("/cursor_events", response=List[EventSchema])
+@api.get("/cursor_events", response=list[EventSchema])
 @paginate(CursorPagination, ordering=("start_date",), page_size=10)
 def cursor_events(request, **kwargs):
     return Event.objects.all()
 
 
-@api.get("/cursor_events_reverse", response=List[EventSchema])
+@api.get("/cursor_events_reverse", response=list[EventSchema])
 @paginate(CursorPagination, ordering=("-start_date",), page_size=10)
 def cursor_events_reverse(request, **kwargs):
     return Event.objects.all()
 
 
-@api.get("/cursor_events_end_date_offset", response=List[EventSchema])
+@api.get("/cursor_events_end_date_offset", response=list[EventSchema])
 @paginate(CursorPagination, ordering=("end_date", "start_date"), page_size=2)
 def cursor_events_end_date_offset(request, **kwargs):
     return Event.objects.all()
 
 
-@api.get("/cursor_events_default_size", response=List[EventSchema])
+@api.get("/cursor_events_default_size", response=list[EventSchema])
 @paginate(CursorPagination, ordering=("start_date",))
 def cursor_events_default_size(request, **kwargs):
     return Event.objects.all()
 
 
-@api.get("/cursor_events_with_params", response=List[EventSchema])
+@api.get("/cursor_events_tied_dates", response=list[EventSchema])
+@paginate(CursorPagination, ordering=("start_date",), page_size=100)
+def cursor_events_tied_dates(request, **kwargs):
+    return Event.objects.all()
+
+
+@api.get("/cursor_events_with_params", response=list[EventSchema])
 @paginate(CursorPagination, ordering=("start_date",), page_size=10)
 def cursor_events_with_params(request, title_filter: str = "", **kwargs):
     # API method with a filter in query parameter
@@ -49,31 +55,31 @@ def cursor_events_with_params(request, title_filter: str = "", **kwargs):
 
 
 # Async versions of all endpoints
-@api.get("/async_cursor_events", response=List[EventSchema])
+@api.get("/async_cursor_events", response=list[EventSchema])
 @paginate(CursorPagination, ordering=("start_date",), page_size=10)
 async def async_cursor_events(request, **kwargs):
     return Event.objects.all()
 
 
-@api.get("/async_cursor_events_reverse", response=List[EventSchema])
+@api.get("/async_cursor_events_reverse", response=list[EventSchema])
 @paginate(CursorPagination, ordering=("-start_date",), page_size=10)
 async def async_cursor_events_reverse(request, **kwargs):
     return Event.objects.all()
 
 
-@api.get("/async_cursor_events_end_date_offset", response=List[EventSchema])
+@api.get("/async_cursor_events_end_date_offset", response=list[EventSchema])
 @paginate(CursorPagination, ordering=("end_date", "start_date"), page_size=2)
 async def async_cursor_events_end_date_offset(request, **kwargs):
     return Event.objects.all()
 
 
-@api.get("/async_cursor_events_default_size", response=List[EventSchema])
+@api.get("/async_cursor_events_default_size", response=list[EventSchema])
 @paginate(CursorPagination, ordering=("start_date",))
 async def async_cursor_events_default_size(request, **kwargs):
     return Event.objects.all()
 
 
-@api.get("/async_cursor_events_with_params", response=List[EventSchema])
+@api.get("/async_cursor_events_with_params", response=list[EventSchema])
 @paginate(CursorPagination, ordering=("start_date",), page_size=10)
 async def async_cursor_events_with_params(request, title_filter: str = "", **kwargs):
     # API method with a filter in query parameter
@@ -249,9 +255,9 @@ def test_cursor_pagination_end_date_offset_backwards():
 
     # Verify results are sorted by start_date when iterating backwards
     start_dates = [result["start_date"] for result in all_results_backwards]
-    assert start_dates == sorted(
-        start_dates
-    ), "Results should be sorted by start_date when iterating backwards"
+    assert start_dates == sorted(start_dates), (
+        "Results should be sorted by start_date when iterating backwards"
+    )
 
 
 def test_cursor_pagination_default_page_size():
@@ -299,6 +305,62 @@ def test_cursor_pagination_invalid_cursor():
     response = client.get("/cursor_events?cursor=invalid&page_size=3")
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+
+
+@pytest.mark.parametrize(
+    "raw", ["o=abc", "o=-1", "r=maybe", "o=9223372036854775808", "p=zzz"]
+)
+def test_cursor_pagination_malformed_cursor(raw):
+    """Base64-valid but malformed cursors return 422, not 500."""
+    cursor = b64encode(raw.encode()).decode()
+
+    response = client.get(f"/cursor_events?cursor={cursor}&page_size=3")
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert response.json() == {"detail": [{"cursor": "Invalid Cursor"}]}
+
+
+def test_cursor_pagination_max_offset():
+    """The largest 64-bit offset is accepted and returns an empty page."""
+    cursor = b64encode(f"o={2**63 - 1}".encode()).decode()
+
+    response = client.get(f"/cursor_events?cursor={cursor}")
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json()["results"] == []
+
+
+def test_cursor_pagination_long_tie_run():
+    """A tie run longer than a page (offset >= 100) paginates fully."""
+
+    Event.objects.all().delete()
+    tied = date(2024, 6, 1)
+    Event.objects.bulk_create([
+        Event(title=f"Tied {i}", start_date=tied, end_date=tied) for i in range(250)
+    ])
+
+    response = client.get("/cursor_events_tied_dates")
+    assert response.status_code == HTTPStatus.OK
+    page = response.json()
+    assert len(page["results"]) == 100
+    assert page["next"] is not None
+
+    seen = []
+    current = page
+    guard = 0
+    while True:
+        seen.extend(item["title"] for item in current["results"])
+        if not current["next"]:
+            break
+        guard += 1
+        assert guard < 10
+        cursor = current["next"].split("cursor=")[1].split("&")[0]
+        follow = client.get(f"/cursor_events_tied_dates?cursor={cursor}")
+        assert follow.status_code == HTTPStatus.OK
+        current = follow.json()
+
+    assert len(seen) == 250
+    assert len(set(seen)) == 250
 
 
 def test_cursor_pagination_empty_cursor():
@@ -678,9 +740,9 @@ async def test_async_cursor_pagination_end_date_offset_backwards():
 
     # Verify results are sorted by start_date when iterating backwards
     start_dates = [result["start_date"] for result in all_results_backwards]
-    assert start_dates == sorted(
-        start_dates
-    ), "Results should be sorted by start_date when iterating backwards"
+    assert start_dates == sorted(start_dates), (
+        "Results should be sorted by start_date when iterating backwards"
+    )
 
 
 @pytest.mark.skipif(
@@ -747,6 +809,25 @@ async def test_async_cursor_pagination_invalid_cursor():
     response = await async_client.get("/async_cursor_events?cursor=invalid&page_size=3")
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+
+
+@pytest.mark.skipif(
+    django.VERSION < (4, 1), reason="Async QuerySet iteration requires Django 4.1+"
+)
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "raw", ["o=abc", "o=-1", "r=maybe", "o=9223372036854775808", "p=zzz"]
+)
+async def test_async_cursor_pagination_malformed_cursor(raw):
+    """Base64-valid but malformed cursors return 422, not 500, with async."""
+    cursor = b64encode(raw.encode()).decode()
+
+    response = await async_client.get(
+        f"/async_cursor_events?cursor={cursor}&page_size=3"
+    )
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert response.json() == {"detail": [{"cursor": "Invalid Cursor"}]}
 
 
 @pytest.mark.skipif(

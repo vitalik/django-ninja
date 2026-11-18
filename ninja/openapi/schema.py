@@ -1,10 +1,16 @@
 import itertools
 import re
+from collections.abc import Generator
 from http.client import responses
-from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Set, Tuple
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Optional,
+)
 
 from django.utils.termcolors import make_style
-from pydantic.json_schema import JsonSchemaMode
+from pydantic import BaseModel
+from pydantic.json_schema import JsonSchemaMode, models_json_schema
 
 from ninja.constants import NOT_SET
 from ninja.operation import Operation
@@ -12,6 +18,7 @@ from ninja.params.models import TModel, TModels
 from ninja.schema import NinjaGenerateJsonSchema
 from ninja.types import DictStrAny
 from ninja.utils import normalize_path
+from ninja.webhooks import Webhook, get_webhooks
 
 if TYPE_CHECKING:
     from ninja import NinjaAPI  # pragma: no cover
@@ -24,7 +31,7 @@ REF_TEMPLATE: str = "#/components/schemas/{model}"
 OPENAPI_VERSION: str = "3.1.0"
 OPENAPI_VERSION_WITH_QUERY: str = "3.2.0"
 
-BODY_CONTENT_TYPES: Dict[str, str] = {
+BODY_CONTENT_TYPES: dict[str, str] = {
     "body": "application/json",
     "form": "application/x-www-form-urlencoded",
     "file": "multipart/form-data",
@@ -45,14 +52,12 @@ class OpenAPISchema(dict):
         self.path_prefix = path_prefix
         self.schemas: DictStrAny = {}
         self.securitySchemes: DictStrAny = {}
-        self.all_operation_ids: Set = set()
-        self.uses_query_method = False
+        self.all_operation_ids: set = set()
         extra_info = api.openapi_extra.get("info", {})
-
-        # Walking the paths determines self.uses_query_method as a side
-        # effect, so it needs to run before we can pick an openapi version.
         paths = self.get_paths()
-        openapi_version = api.openapi_extra.get("openapi", self.get_openapi_version())
+        openapi_version = api.openapi_extra.get(
+            "openapi", self.get_openapi_version(paths)
+        )
 
         super().__init__([
             ("openapi", openapi_version),
@@ -69,11 +74,14 @@ class OpenAPISchema(dict):
             ("components", self.get_components()),
             ("servers", api.servers),
         ])
+        webhooks = self.get_webhooks()
+        if webhooks:
+            self["webhooks"] = {**api.openapi_extra.get("webhooks", {}), **webhooks}
         for k, v in api.openapi_extra.items():
             if k not in self:
                 self[k] = v
 
-    def get_openapi_version(self) -> str:
+    def get_openapi_version(self, paths: DictStrAny) -> str:
         """
         The lowest OpenAPI version that can represent this schema.
 
@@ -82,7 +90,7 @@ class OpenAPISchema(dict):
         other schema stays on the version it always has. Set `openapi` in
         `NinjaAPI(openapi_extra=...)` to override this.
         """
-        if self.uses_query_method:
+        if any("query" in path_item for path_item in paths.values()):
             return OPENAPI_VERSION_WITH_QUERY
         return OPENAPI_VERSION
 
@@ -106,19 +114,65 @@ class OpenAPISchema(dict):
 
         return result
 
+    def get_webhooks(self) -> DictStrAny:
+        result: DictStrAny = {}
+        for webhook in get_webhooks(self.api):
+            if webhook.include_in_schema:
+                result.setdefault(webhook.name, {})[webhook.method] = (
+                    self.webhook_details(webhook)
+                )
+        return result
+
+    def webhook_details(self, webhook: Webhook) -> DictStrAny:
+        result: DictStrAny = {"summary": webhook.summary}
+
+        if webhook.operation_id:
+            result["operationId"] = webhook.operation_id
+
+        if webhook.description:
+            result["description"] = webhook.description
+
+        if webhook.tags:
+            result["tags"] = webhook.tags
+
+        if webhook.deprecated:
+            result["deprecated"] = webhook.deprecated
+
+        payload_schema = self._create_ref_schema(webhook.schema, mode="serialization")
+        result["requestBody"] = {
+            "content": {self.api.renderer.media_type: {"schema": payload_schema}},
+            "required": True,
+        }
+        result["responses"] = {200: {"description": responses[200]}}
+
+        if webhook.openapi_extra:
+            self.deep_dict_update(result, webhook.openapi_extra)
+
+        return result
+
+    def _create_ref_schema(
+        self, model: type[BaseModel], mode: JsonSchemaMode = "validation"
+    ) -> DictStrAny:
+        "Adds model to components/schemas and returns a $ref to it"
+        refs, top_level = models_json_schema(
+            [(model, mode)],
+            ref_template=REF_TEMPLATE,
+            schema_generator=NinjaGenerateJsonSchema,
+        )
+        self.add_schema_definitions(top_level.get("$defs", {}))
+        return refs[(model, mode)]
+
     def methods(self, operations: list) -> DictStrAny:
         result = {}
         for op in operations:
             if op.include_in_schema:
                 operation_details = self.operation_details(op)
                 for method in op.methods:
-                    if method == "QUERY":
-                        self.uses_query_method = True
                     result[method.lower()] = operation_details
         return result
 
     def deep_dict_update(
-        self, main_dict: Dict[Any, Any], update_dict: Dict[Any, Any]
+        self, main_dict: dict[Any, Any], update_dict: dict[Any, Any]
     ) -> None:
         for key in update_dict:
             if (
@@ -176,14 +230,14 @@ class OpenAPISchema(dict):
 
         return result
 
-    def operation_parameters(self, operation: Operation) -> List[DictStrAny]:
+    def operation_parameters(self, operation: Operation) -> list[DictStrAny]:
         result = []
         for model in operation.models:
             if model.__ninja_param_source__ not in BODY_CONTENT_TYPES:
                 result.extend(self._extract_parameters(model))
         return result
 
-    def _extract_parameters(self, model: TModel) -> List[DictStrAny]:
+    def _extract_parameters(self, model: TModel) -> list[DictStrAny]:
         result = []
 
         schema = model.model_json_schema(
@@ -218,8 +272,23 @@ class OpenAPISchema(dict):
                 # copy description from schema description to param description
                 if "description" in p_schema:
                     param["description"] = p_schema["description"]
-                if "examples" in p_schema:
-                    param["examples"] = p_schema["examples"]
+                # Parameter `examples` is a map of Example Objects,
+                # while JSON Schema `examples` is a list of plain values
+                examples = p_schema.get("examples")
+                if isinstance(examples, list):  # Field(examples=["a", "b"])
+                    param["examples"] = {
+                        f"example{i}": {"value": v} for i, v in enumerate(examples)
+                    }
+                elif isinstance(examples, dict):  # Query(examples={"a": {...}})
+                    param["examples"] = examples
+                    param["schema"] = {
+                        **p_schema,
+                        "examples": [
+                            e["value"]
+                            for e in examples.values()
+                            if isinstance(e, dict) and "value" in e
+                        ],
+                    }
                 elif "example" in p_schema:
                     param["example"] = p_schema["example"]
                 if "deprecated" in p_schema:
@@ -247,7 +316,7 @@ class OpenAPISchema(dict):
         by_alias: bool = True,
         remove_level: bool = True,
         mode: JsonSchemaMode = "validation",
-    ) -> Tuple[DictStrAny, bool]:
+    ) -> tuple[DictStrAny, bool]:
         if hasattr(model, "__ninja_flatten_map__"):
             schema = self._flatten_schema(model)
         else:
@@ -275,7 +344,7 @@ class OpenAPISchema(dict):
         self,
         models: TModels,
         mode: JsonSchemaMode = "validation",
-    ) -> Tuple[DictStrAny, str]:
+    ) -> tuple[DictStrAny, str]:
         # We have File and Form or Body, so we need to use multipart (File)
         content_type = BODY_CONTENT_TYPES["file"]
 
@@ -316,7 +385,7 @@ class OpenAPISchema(dict):
             "required": required,
         }
 
-    def responses(self, operation: Operation) -> Dict[int, DictStrAny]:
+    def responses(self, operation: Operation) -> dict[int, DictStrAny]:
         assert bool(operation.response_models), f"{operation.response_models} empty"
 
         result = {}
@@ -325,7 +394,7 @@ class OpenAPISchema(dict):
                 continue  # it's not yet clear what it means if user wants to output any other code
 
             description = responses.get(status, "Unknown Status Code")
-            details: Dict[int, Any] = {status: {"description": description}}
+            details: dict[int, Any] = {status: {"description": description}}
             if model not in [None, NOT_SET]:
                 # ::TODO:: test this: by_alias == True
                 schema = self._create_schema_from_model(
@@ -343,13 +412,13 @@ class OpenAPISchema(dict):
 
         return result
 
-    def operation_security(self, operation: Operation) -> Optional[List[DictStrAny]]:
+    def operation_security(self, operation: Operation) -> Optional[list[DictStrAny]]:
         if not operation.auth_callbacks:
             return None
         result = []
         for auth in operation.auth_callbacks:
             if hasattr(auth, "openapi_security_schema"):
-                scopes: List[DictStrAny] = []  # TODO: scopes
+                scopes: list[DictStrAny] = []  # TODO: scopes
                 name = auth.__class__.__name__
                 result.append({name: scopes})  # TODO: check if unique
                 self.securitySchemes[name] = auth.openapi_security_schema
@@ -375,11 +444,12 @@ def flatten_properties(
     prop_details: DictStrAny,
     prop_required: bool,
     definitions: DictStrAny,
-) -> Generator[Tuple[str, DictStrAny, bool], None, None]:
+) -> Generator[tuple[str, DictStrAny, bool], None, None]:
     """
     extracts all nested model's properties into flat properties
     (used f.e. in GET params with multiple arguments and models)
     """
+    optional_model = _optional_model_definition(prop_details, definitions)
     if "allOf" in prop_details:
         resolve_allOf(prop_details, definitions)
         if len(prop_details["allOf"]) == 1 and "enum" in prop_details["allOf"][0]:
@@ -396,6 +466,13 @@ def flatten_properties(
         del prop_details["items"]["$ref"]  # seems num data is there so ref not needed
         yield prop_name, prop_details, prop_required
 
+    elif optional_model is not None:
+        # Optional[Model]: its fields are flattened, and none is required
+        for p_name, p_details, _ in flatten_properties(
+            prop_name, optional_model, False, definitions
+        ):
+            yield p_name, p_details, False
+
     elif "$ref" in prop_details:
         def_name = prop_details["$ref"].split("/")[-1]
         definition = definitions[def_name]
@@ -410,6 +487,18 @@ def flatten_properties(
         yield prop_name, prop_details, prop_required
 
 
+def _optional_model_definition(
+    prop_details: DictStrAny, definitions: DictStrAny
+) -> Optional[DictStrAny]:
+    "Returns the model definition for an `anyOf: [$ref, null]` property"
+    choices = prop_details.get("anyOf", [])
+    if len(choices) != 2 or {"type": "null"} not in choices:
+        return None
+    ref = next(c for c in choices if c != {"type": "null"}).get("$ref")
+    definition = definitions.get(ref.split("/")[-1]) if ref else None
+    return definition if definition and "properties" in definition else None
+
+
 def resolve_allOf(details: DictStrAny, definitions: DictStrAny) -> None:
     """
     resolves all $ref's in 'allOf' section
@@ -421,7 +510,7 @@ def resolve_allOf(details: DictStrAny, definitions: DictStrAny) -> None:
             del item["$ref"]
 
 
-def merge_schemas(schemas: List[DictStrAny]) -> DictStrAny:
+def merge_schemas(schemas: list[DictStrAny]) -> DictStrAny:
     result = schemas[0]
     for scm in schemas[1:]:
         result["properties"].update(scm["properties"])

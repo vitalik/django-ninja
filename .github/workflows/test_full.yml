@@ -6,33 +6,30 @@ on:
   pull_request:
     types: [assigned, opened, synchronize, reopened]
 
+env:
+  UV_NO_SYNC: "true"
+
 jobs:
   test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04  # Python 3.9 has no ubuntu-26.04 build
     strategy:
       matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13', '3.14', '3.15']
         django-version: ['<3.2', '<3.3', '<4.2', '<4.3', '<5.1', '<5.2', '<5.3', '<6.1', '<6.2']
         exclude:
-          - python-version: '3.7'
-            django-version: '<5.1'
-          
-          - python-version: '3.8'
-            django-version: '<5.1'
-          
           - python-version: '3.9'
             django-version: '<5.1'
-          
+
           - python-version: '3.12'
             django-version: '<3.2'
           - python-version: '3.12'
             django-version: '<3.3'
-          
+
           - python-version: '3.13'
             django-version: '<3.2'
           - python-version: '3.13'
             django-version: '<3.3'
-          
+
           # as of oct 2025 looks like django < 5.2 does not support python 3.14
           - python-version: '3.14'
             django-version: '<3.2'
@@ -46,51 +43,70 @@ jobs:
             django-version: '<5.1'
           - python-version: '3.14'
             django-version: '<5.2'
-    
+
+          # Django versions older than 5.2 fail on Python 3.15.
+          - python-version: '3.15'
+            django-version: '<3.2'
+          - python-version: '3.15'
+            django-version: '<3.3'
+          - python-version: '3.15'
+            django-version: '<4.2'
+          - python-version: '3.15'
+            django-version: '<4.3'
+          - python-version: '3.15'
+            django-version: '<5.1'
+          - python-version: '3.15'
+            django-version: '<5.2'
+
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.3.3
+        with:
+          version: '0.13.9'
+          enable-cache: true
       - name: Install core
-        run: pip install "Django${{ matrix.django-version }}" "pydantic<3"
+        run: uv pip install --system "Django${{ matrix.django-version }}" "pydantic<3"
       - name: Install tests
-        run: pip install pytest pytest-asyncio pytest-django psycopg2-binary
+        run: uv pip install --system pytest pytest-asyncio pytest-django psycopg2-binary
       - name: Test
         run: pytest
 
   coverage:
     runs-on: ubuntu-latest
-    
+
     steps:
-      - uses: actions/checkout@v6
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.3.3
         with:
-          python-version: 3.12
-      - name: Install Flit
-        run: pip install flit "django>=5.2"
+          version: '0.13.9'
+          python-version: '3.12'
+          enable-cache: true
       - name: Install Dependencies
-        run: flit install --symlink
+        run: uv sync --locked --no-default-groups --group test
       - name: Test
-        run: pytest --cov=ninja
+        run: uv run pytest --cov=ninja
 
   codestyle:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.3.3
         with:
-          python-version: 3.12
-      - name: Install Flit
-        run: pip install flit
+          version: '0.13.9'
+          python-version: '3.12'
+          enable-cache: true
       - name: Install Dependencies
-        run: flit install --symlink
+        run: uv sync --locked --no-default-groups --group test
       - name: Ruff format
-        run: ruff format --check ninja tests
+        run: uv run ruff format --check ninja tests
       - name: Ruff lint
-        run: ruff check ninja tests
+        run: uv run ruff check ninja tests
       - name: mypy
-        run: mypy ninja tests/mypy_test.py
+        run: uv run mypy ninja tests/mypy_test.py

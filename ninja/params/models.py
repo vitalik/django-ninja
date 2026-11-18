@@ -1,15 +1,12 @@
 from abc import ABC, abstractmethod
+from re import Pattern
 from typing import (
     TYPE_CHECKING,
     Any,
-    Dict,
-    List,
     Optional,
-    Pattern,
-    Tuple,
-    Type,
     TypeVar,
     Union,
+    get_args,
 )
 
 from django.conf import settings
@@ -35,7 +32,7 @@ __all__ = [
 ]
 
 TModel = TypeVar("TModel", bound="ParamModel")
-TModels = List[TModel]
+TModels = list[TModel]
 
 
 class ParamModel(BaseModel, ABC):
@@ -50,7 +47,7 @@ class ParamModel(BaseModel, ABC):
 
     @classmethod
     def resolve(
-        cls: Type[TModel],
+        cls: type[TModel],
         request: HttpRequest,
         api: "NinjaAPI",
         path_params: DictStrAny,
@@ -69,13 +66,22 @@ class ParamModel(BaseModel, ABC):
             return data
 
         mapped_data: DictStrAny = {}
+        sent = set()
         for key, path in flatten_map.items():
-            cls._map_data_path(mapped_data, data.get(key), path)
+            value = data.get(key)
+            if value is not None:
+                sent.add(path[0])
+            cls._map_data_path(mapped_data, value, path)
+        # an optional nested schema with nothing sent falls back to its default
+        for name, field in cls.model_fields.items():
+            key = field.alias or name
+            if key not in sent and type(None) in get_args(field.annotation):
+                mapped_data.pop(key, None)
         return mapped_data
 
     @classmethod
     def _map_data_path(
-        cls, data: DictStrAny, value: Any, path: Tuple[str, ...]
+        cls, data: DictStrAny, value: Any, path: tuple[str, ...]
     ) -> None:
         current = data
         for key in path[:-1]:
@@ -183,12 +189,10 @@ class _MultiPartBodyModel(BodyModel):
         for name, annotation in cls.__ninja_body_params__.items():
             if name in request.POST:
                 data = request.POST[name]
-                if (
-                    annotation is str
-                    and not data.startswith('"')
-                    and not data.endswith('"')
-                ):
-                    data = f'"{data}"'
+                if not annotation:
+                    # scalars are plain form values (as documented in OpenAPI)
+                    results[name] = data
+                    continue
                 req.body = data.encode()
                 results[name] = get_request_data(req, api, path_params)
         return results
@@ -209,7 +213,7 @@ class Param(FieldInfo):  # type: ignore[misc]
         min_length: Optional[int] = None,
         max_length: Optional[int] = None,
         example: Optional[Any] = None,
-        examples: Optional[Dict[str, Any]] = None,
+        examples: Optional[dict[str, Any]] = None,
         deprecated: Optional[bool] = None,
         include_in_schema: Optional[bool] = True,
         pattern: Union[str, Pattern[str], None] = None,

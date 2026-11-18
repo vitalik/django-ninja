@@ -1,23 +1,28 @@
 import typing
-from sys import version_info
 
 import pytest
 
 from ninja.signature.details import is_collection_type
 
+# The legacy typing aliases (typing.List, ...) are tested on purpose: user code may
+# still use them, so they must keep being detected as collections.
+
 
 @pytest.mark.parametrize(
     ("annotation", "expected"),
     [
-        pytest.param(typing.List, True, id="true_for_typing_List"),
+        pytest.param(typing.List, True, id="true_for_typing_List"),  # noqa: UP006
         pytest.param(list, True, id="true_for_native_list"),
-        pytest.param(typing.Set, True, id="true_for_typing_Set"),
+        pytest.param(typing.Set, True, id="true_for_typing_Set"),  # noqa: UP006
         pytest.param(set, True, id="true_for_native_set"),
-        pytest.param(typing.Tuple, True, id="true_for_typing_Tuple"),
+        pytest.param(typing.Tuple, True, id="true_for_typing_Tuple"),  # noqa: UP006
         pytest.param(tuple, True, id="true_for_native_tuple"),
         pytest.param(
-            typing.Optional[typing.List[str]], True, id="true_for_optional_list"
+            typing.Optional[typing.List[str]],  # noqa: UP006
+            True,
+            id="true_for_optional_typing_list",
         ),
+        pytest.param(typing.Optional[list[str]], True, id="true_for_optional_list"),
         pytest.param(
             type("Custom", (), {}),
             False,
@@ -31,20 +36,9 @@ from ninja.signature.details import is_collection_type
             False,
             id="false_for_instance_without_typing_origin",
         ),
-        # Can't mark with `pytest.mark.skipif` since we'd attempt to instantiate the
-        # parameterized value/type(e.g. `list[int]`). Which only works with Python >= 3.9)
-        *(
-            (
-                pytest.param(list[int], True, id="true_for_parameterized_native_list"),
-                pytest.param(set[int], True, id="true_for_parameterized_native_set"),
-                pytest.param(
-                    tuple[int], True, id="true_for_parameterized_native_tuple"
-                ),
-            )
-            # TODO: Remove conditional once support for <=3.8 is dropped
-            if version_info >= (3, 9)
-            else ()
-        ),
+        pytest.param(list[int], True, id="true_for_parameterized_native_list"),
+        pytest.param(set[int], True, id="true_for_parameterized_native_set"),
+        pytest.param(tuple[int], True, id="true_for_parameterized_native_tuple"),
     ],
 )
 def test_is_collection_type_returns(annotation: typing.Any, expected: bool):

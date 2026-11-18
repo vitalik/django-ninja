@@ -1,11 +1,8 @@
-from sys import version_info
-from typing import List, Optional
+from typing import Annotated, Optional
 from uuid import UUID
 
 import pydantic
-import pytest
 from django.urls import register_converter
-from typing_extensions import Annotated
 
 from ninja import Field, P, Path, PathEx, Query, Router, Schema
 
@@ -57,29 +54,13 @@ CustomValidatedInt = Annotated[
     }),
 ]
 
-# TODO: Remove this condition once support for <= 3.8 is dropped
-if version_info >= (3, 9):
 
-    @router.get("/path/param_ex/{item_id}")
-    def get_path_param_ex_id(
-        request,
-        item_id: PathEx[CustomValidatedInt, P(description="path_ex description")],
-    ):
-        return item_id
-
-else:
-
-    def test_annotated_path_ex_unsupported():
-        with pytest.raises(NotImplementedError, match="3.9+"):
-
-            @router.get("/path/param_ex/{item_id}")
-            def get_path_param_ex_id(
-                request,
-                item_id: PathEx[
-                    CustomValidatedInt, P(description="path_ex description")
-                ],
-            ):
-                return item_id
+@router.get("/path/param_ex/{item_id}")
+def get_path_param_ex_id(
+    request,
+    item_id: PathEx[CustomValidatedInt, P(description="path_ex description")],
+):
+    return item_id
 
 
 @router.get("/path/param/{item_id}")
@@ -274,12 +255,12 @@ def get_query_type_optional_10(request, query: int = 10):
 
 
 @router.get("/query/list")
-def get_query_list(request, query: List[str] = Query(...)):
+def get_query_list(request, query: list[str] = Query(...)):
     return ",".join(query)
 
 
 @router.get("/query/list-optional")
-def get_query_optional_list(request, query: Optional[List[str]] = Query(None)):
+def get_query_optional_list(request, query: Optional[list[str]] = Query(None)):
     if query:
         return ",".join(query)
     return query

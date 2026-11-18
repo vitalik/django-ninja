@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import Optional, Union
 from unittest.mock import Mock
 
 import pytest
@@ -63,8 +63,8 @@ class TagSchema(Schema):
 
 class UserSchema(Schema):
     name: str
-    groups: List[int] = Field(..., alias="group_set")
-    tags: List[TagSchema]
+    groups: list[int] = Field(..., alias="group_set")
+    tags: list[TagSchema]
     avatar: Optional[str] = None
 
 
@@ -227,3 +227,146 @@ def test_schema_skips_validation_when_validate_assignment_False(
         assert schema_inst.str_var == 5
     except ValidationError as ve:
         raise AssertionError() from ve
+
+
+def test_schema_exclude_unset_with_nested_schema():
+    """
+    Test that exclude_unset works for nested schemas.
+    Reproduces bug from https://github.com/vitalik/django-ninja/issues/939
+
+    A nested Schema instance passed to a parent schema must keep its own
+    model_fields_set - previously it was re-validated from attributes,
+    which marked every nested field as set.
+    """
+
+    class Bar(Schema):
+        b: Optional[str] = None
+
+    class Foo(Schema):
+        a: Optional[str] = None
+        bar: Optional[Bar] = None
+
+    foo = Foo(bar=Bar())
+    assert foo.model_dump(exclude_unset=True) == {"bar": {}}
+
+    foo = Foo(a="a", bar=Bar(b="b"))
+    assert foo.model_dump(exclude_unset=True) == {"a": "a", "bar": {"b": "b"}}
+
+
+def test_schema_nested_instance_keeps_fields_set():
+    """A nested Schema instance is re-validated, but keeps its model_fields_set."""
+
+    class Bar(Schema):
+        b: Optional[str] = None
+
+    class Foo(Schema):
+        bar: Optional[Bar] = None
+
+    bar = Bar()
+    foo = Foo(bar=bar)
+    assert foo.bar == bar
+    assert foo.bar.model_fields_set == set()
+    assert bar.model_fields_set == set()
+
+
+def test_schema_nested_instance_is_revalidated():
+    """
+    A nested Schema instance is re-validated against the declared type, so values
+    that never went through validation (model_construct, plain attribute
+    assignment) can't reach the output unfiltered.
+    """
+
+    class Profile(Schema):
+        bio: str
+
+    class User(Schema):
+        profile: Profile
+
+    class Users(Schema):
+        items: list[User]
+
+    constructed = User.model_construct(profile={"bio": "hi", "password": "secret"})
+    assigned = User(profile=Profile(bio="x"))
+    assigned.profile = {"bio": "hi", "password": "secret"}  # no validate_assignment
+
+    users = Users(items=[constructed, assigned])
+    assert users.model_dump() == {
+        "items": [{"profile": {"bio": "hi"}}, {"profile": {"bio": "hi"}}]
+    }
+
+
+def test_schema_nested_subclass_instance_keeps_only_declared_fields_set():
+    class Bar(Schema):
+        b: Optional[str] = None
+
+    class BarFull(Bar):
+        secret: str = "s"
+
+    class Foo(Schema):
+        bar: Optional[Bar] = None
+
+    foo = Foo(bar=BarFull(b="x", secret="s"))
+    assert type(foo.bar) is Bar
+    assert foo.bar.model_fields_set == {"b"}
+    assert foo.model_dump(exclude_unset=True) == {"bar": {"b": "x"}}
+
+
+@pytest.mark.parametrize(
+    "config",
+    [{}, {"extra": "forbid"}, {"validate_assignment": True}],
+    ids=["default", "forbid", "validate_assignment"],
+)
+def test_schema_exclude_unset_with_nested_schema_configs(config):
+    """exclude_unset works for nested schemas regardless of model_config."""
+
+    class Bar(Schema):
+        b: Optional[str] = None
+        c: int = 0
+        model_config = config
+
+    class Foo(Schema):
+        bar: Optional[Bar] = None
+        model_config = config
+
+    assert Foo(bar=Bar()).model_dump(exclude_unset=True) == {"bar": {}}
+    assert Foo(bar=Bar(b="x")).model_dump(exclude_unset=True) == {"bar": {"b": "x"}}
+    # dict input still goes through the regular path
+    assert Foo(bar={}).model_dump(exclude_unset=True) == {"bar": {}}
+
+
+def test_schema_nested_assignment_is_validated():
+    """validate_assignment still validates (and rejects) nested values."""
+
+    class Bar(Schema):
+        b: Optional[str] = None
+        model_config = {"validate_assignment": True}
+
+    class Foo(Schema):
+        n: int = 0
+        bar: Optional[Bar] = None
+        model_config = {"validate_assignment": True}
+
+    foo = Foo()
+
+    # a valid nested instance is re-validated and keeps its fields_set
+    bar = Bar(b="z")
+    foo.bar = bar
+    assert foo.bar == bar
+    assert foo.model_dump(exclude_unset=True) == {"bar": {"b": "z"}}
+
+    # a dict is still coerced into the nested schema
+    foo.bar = {"b": "y"}
+    assert isinstance(foo.bar, Bar)
+    assert foo.bar.b == "y"
+
+    with pytest.raises(ValidationError):
+        foo.bar = 123
+    with pytest.raises(ValidationError):
+        foo.bar = {"b": 1}
+    with pytest.raises(ValidationError):
+        foo.n = "x"
+
+    # top-level assignment still updates fields_set
+    bar2 = Bar()
+    bar2.b = "w"
+    assert bar2.model_fields_set == {"b"}

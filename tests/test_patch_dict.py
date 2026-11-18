@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 import pytest
 
@@ -19,7 +19,7 @@ class SomeSchema(Schema):
 
 class OtherSchema(SomeSchema):
     other: str
-    category: Optional[List[str]] = None
+    category: Optional[list[str]] = None
 
 
 @api.patch("/patch")
@@ -79,7 +79,7 @@ def test_patch_inherited():
 
 
 def test_inherited_schema():
-    "Checking that json schema properties for inherithed schemas are ok"
+    "Checking that json schema properties for inherited schemas are ok"
     schema = api.get_openapi_schema()
     assert schema["components"]["schemas"]["OtherSchemaPatch"] == {
         "title": "OtherSchemaPatch",

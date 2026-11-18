@@ -6,28 +6,27 @@ help:
 
 .PHONY: install
 install: ## Install dependencies
-	flit install --deps develop --symlink
+	uv sync
 
 .PHONY: lint
 lint: ## Run code linters
-	ruff format --check ninja tests
-	ruff check ninja tests
-	mypy ninja
+	uv run ruff format --check ninja tests
+	uv run ruff check ninja tests
+	uv run mypy ninja
 
 .PHONY: fmt format
 fmt format: ## Run code formatters
-	ruff format ninja tests
-	ruff check --fix ninja tests
+	uv run ruff format ninja tests
+	uv run ruff check --fix ninja tests
 
 .PHONY: test
 test: ## Run tests
-	pytest .
+	uv run pytest .
 
 .PHONY: test-cov
 test-cov: ## Run tests with coverage
-	pytest --cov=ninja --cov-report term-missing tests
+	uv run pytest --cov=ninja --cov-report term-missing tests
 
 .PHONY: docs
 docs: ## Serve documentation locally
-	pip install -r docs/requirements.txt
-	cd docs && mkdocs serve -a localhost:8090
+	cd docs && uv run --with-requirements requirements.txt mkdocs serve -a localhost:8090

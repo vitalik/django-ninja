@@ -1,6 +1,5 @@
-from typing import List
+from typing import Annotated
 
-from typing_extensions import Annotated
 from util import pydantic_ref_fix
 
 from ninja import Body, Cookie, Form, Header, NinjaAPI, Path, Query, Schema
@@ -33,7 +32,7 @@ def multi_op(
 @api.post("/query_list")
 def query_list(
     request,
-    q: Annotated[List[str], Query(description="User ID")],
+    q: Annotated[list[str], Query(description="User ID")],
 ):
     return {"q": q}
 

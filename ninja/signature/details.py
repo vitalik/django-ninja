@@ -1,14 +1,13 @@
 import inspect
 import warnings
 from collections import defaultdict, namedtuple
-from sys import version_info
-from typing import Any, Callable, Dict, Generator, List, Optional, Tuple
+from collections.abc import Generator
+from typing import Annotated, Any, Callable, Optional, get_args, get_origin
 
 import pydantic
 from django.http import HttpResponse
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
-from typing_extensions import Annotated, get_args, get_origin
 
 from ninja import UploadedFile
 from ninja.compatibility.util import UNION_TYPES
@@ -124,7 +123,7 @@ class ViewSignature:
                 )
 
     def _create_models(self) -> TModels:
-        params_by_source_cls: Dict[Any, List[FuncParam]] = defaultdict(list)
+        params_by_source_cls: dict[Any, list[FuncParam]] = defaultdict(list)
         for param in self.params:
             param_source_cls = type(param.source)
             params_by_source_cls[param_source_cls].append(param)
@@ -162,7 +161,7 @@ class ViewSignature:
                 assert attrs["__ninja_param_source__"] == "body"
                 if is_multipart_response_with_body:
                     attrs["__ninja_body_params__"] = {
-                        i.alias: i.annotation for i in args
+                        i.alias: is_multipart_json_part(i.annotation) for i in args
                     }
                 else:
                     # ::TODO:: this is still sus.  build some test cases
@@ -184,7 +183,7 @@ class ViewSignature:
             result.append(model_cls)
         return result
 
-    def _args_flatten_map(self, args: List[FuncParam]) -> Dict[str, Tuple[str, ...]]:
+    def _args_flatten_map(self, args: list[FuncParam]) -> dict[str, tuple[str, ...]]:
         flatten_map = {}
         arg_names: Any = {}
         for arg in args:
@@ -230,19 +229,10 @@ class ViewSignature:
                 if len(args) == 2:
                     annotation, default = args
                 else:
-                    # TODO: Remove version check once support for <=3.8 is dropped.
-                    # Annotated[] is only available at runtime in 3.9+ per
-                    # https://docs.python.org/3/library/typing.html#typing.Annotated
-                    if version_info >= (3, 9):
-                        # NOTE: Annotated[args[:-1]] seems to have the same runtime
-                        # behavior as Annotated[*args[:-1]], but the latter is
-                        # invalid in Python < 3.11 because star expressions
-                        # were not allowed in index expressions.
-                        annotation, default = Annotated[args[:-1]], args[-1]
-                    else:  # pragma: no cover -- requires specific Python versions
-                        raise NotImplementedError(
-                            "This definition requires Python version 3.9+"
-                        )
+                    # NOTE: Annotated[args[:-1]] has the same runtime behavior as
+                    # Annotated[*args[:-1]], but the latter is invalid syntax in
+                    # Python < 3.11 (no star expressions in index expressions).
+                    annotation, default = Annotated[args[:-1]], args[-1]
                 if prev_default != self.signature.empty:
                     default.default = prev_default
 
@@ -278,9 +268,9 @@ class ViewSignature:
 
         # 2) if param name is a part of the path parameter
         elif name in self.path_params_names:
-            assert (
-                default == self.signature.empty
-            ), f"'{name}' is a path param, default not allowed"
+            assert default == self.signature.empty, (
+                f"'{name}' is a path param, default not allowed"
+            )
             param_source = Path(...)
 
         # 3) if param is a collection, or annotation is part of pydantic model:
@@ -342,7 +332,7 @@ def is_collection_type(annotation: Any) -> bool:
                 return True
         return False
 
-    collection_types = (List, list, set, tuple)
+    collection_types = (list, set, tuple)
     if origin is None:
         return (
             isinstance(annotation, collection_types)
@@ -353,9 +343,41 @@ def is_collection_type(annotation: Any) -> bool:
         return origin in collection_types  # TODO: I guess we should handle only list
 
 
+_JSON_PRIMITIVE_TYPES = {"string", "integer", "number", "boolean", "null"}
+
+
+def is_multipart_json_part(annotation: Any) -> bool:
+    """
+    Whether a Body param mixed with File/Form is read from its multipart part as
+    JSON (True) or as a plain text value (False).
+
+    Follows the OpenAPI default multipart encoding for the param's schema:
+    primitives (str, int, date, Enum, Literal, UUID, ...) are plain text,
+    everything else (models, dicts, lists, TypedDict, Any, ...) is JSON.
+    """
+    try:
+        schema = pydantic.TypeAdapter(annotation).json_schema()
+        return not _is_primitive_schema(schema, schema.get("$defs", {}))
+    except Exception:  # no usable JSON schema - read JSON, as before 1.8
+        return True
+
+
+def _is_primitive_schema(schema: dict[str, Any], defs: dict[str, Any]) -> bool:
+    if "$ref" in schema:
+        return _is_primitive_schema(defs[schema["$ref"].split("/")[-1]], defs)
+    for key in ("anyOf", "oneOf", "allOf"):
+        if key in schema:
+            return all(_is_primitive_schema(s, defs) for s in schema[key])
+    if "type" not in schema:
+        # an untyped Literal[1, "a"] is primitive, {} (Any) is not
+        return "enum" in schema or "const" in schema
+    types = schema["type"]
+    return set(types if isinstance(types, list) else [types]) <= _JSON_PRIMITIVE_TYPES
+
+
 def detect_collection_fields(
-    args: List[FuncParam], flatten_map: Dict[str, Tuple[str, ...]]
-) -> List[str]:
+    args: list[FuncParam], flatten_map: dict[str, tuple[str, ...]]
+) -> list[str]:
     """
     Django QueryDict has values that are always lists, so we need to help django ninja to understand
     better the input parameters if it's a list or a single value

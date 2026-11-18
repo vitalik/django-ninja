@@ -8,7 +8,7 @@ authors = [
     {name = "Vitaliy Kucheryaviy", email = "ppr.vitaly@gmail.com"},
 ]
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 dynamic = ["version", "description"]
 classifiers = [
     "Intended Audience :: Information Technology",
@@ -25,14 +25,13 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Programming Language :: Python :: 3 :: Only",
     "Framework :: Django",
     "Framework :: Django :: 3.1",
@@ -60,7 +59,7 @@ Documentation = "https://django-ninja.dev"
 Repository = "https://github.com/vitalik/django-ninja"
 
 
-[project.optional-dependencies]
+[dependency-groups]
 test = [
     "pytest",
     "pytest-cov",
@@ -68,21 +67,27 @@ test = [
     "pytest-asyncio",
     "psycopg2-binary",
     "mypy==1.7.1",
-    "ruff==0.5.7",
+    "ruff==0.17.3",
     "django-stubs",
 ]
-doc = ["mkdocs", "mkdocs-material", "markdown-include", "mkdocstrings"]
-dev = ["pre-commit"]
+doc = ["mkdocs", "mkdocs-material"]
+dev = [
+    { include-group = "test" },
+    { include-group = "doc" },
+    "pre-commit",
+]
 
 [tool.flit.module]
 name = "ninja"
 
 
 [tool.ruff]
-target-version = "py37"
+target-version = "py39"
 
 [tool.ruff.format]
 preview = true
+# Keep documentation code blocks outside the Python formatting scope.
+exclude = ["*.md"]
 
 [tool.ruff.lint]
 preview = true
@@ -101,10 +106,10 @@ ignore = [
     "E501", # line too long, handled by black
     "B008", # do not perform function calls in argument defaults
     "C901", # too complex
+    "FURB189", # built-in subclasses preserve type and JSON serialization compatibility
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"ninja/compatibility/datastructures.py" = ["C416"]
 "ninja/utils.py" = ["B004"]
 "tests/*" = ["C408"]
 

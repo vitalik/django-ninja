@@ -1,13 +1,20 @@
 import datetime
 from decimal import Decimal
-from typing import Any, Callable, Dict, List, Tuple, Type, TypeVar, Union, no_type_check
+from typing import (
+    Annotated,
+    Any,
+    Callable,
+    TypeVar,
+    Union,
+    no_type_check,
+)
 from uuid import UUID
 
 from django.db.models import ManyToManyField
 from django.db.models.fields import Field as DjangoField
-from pydantic import IPvAnyAddress
+from pydantic import AfterValidator, IPvAnyAddress
 from pydantic.fields import FieldInfo
-from pydantic_core import PydanticUndefined, core_schema
+from pydantic_core import PydanticKnownError, PydanticUndefined, core_schema
 
 from ninja.errors import ConfigError
 from ninja.openapi.schema import OpenAPISchema
@@ -43,7 +50,7 @@ class AnyObject:
         return value
 
 
-TYPES = {
+TYPES: dict[str, Any] = {
     "AutoField": int,
     "BigAutoField": int,
     "BigIntegerField": int,
@@ -72,22 +79,62 @@ TYPES = {
     "TimeField": datetime.time,
     "UUIDField": UUID,
     # postgres fields:
-    "ArrayField": List,
+    "ArrayField": list,
     "CICharField": str,
     "CIEmailField": str,
     "CITextField": str,
-    "HStoreField": Dict,
+    "HStoreField": dict,
 }
 
 TModel = TypeVar("TModel")
 
 
-def register_field(django_field: str, python_type: Any) -> None:
-    TYPES[django_field] = python_type
+# Registrations by field class (see register_field). Kept apart from TYPES so
+# TYPES keeps its historical meaning: internal type name -> python type.
+FIELD_CLASS_TYPES: dict[type[DjangoField], Any] = {}
+
+
+def register_field(
+    django_field: Union[str, type[DjangoField]], python_type: Any
+) -> None:
+    """
+    Tells ModelSchema which python type to use for a django model field.
+
+    `django_field` is either:
+     - a field class, e.g. `register_field(MyIDField, str)` - applies to that
+       class and its subclasses, takes priority over internal type names
+     - an internal type name (`field.get_internal_type()`), e.g.
+       `register_field("VectorField", list[float])`
+    """
+    if isinstance(django_field, type) and issubclass(django_field, DjangoField):
+        FIELD_CLASS_TYPES[django_field] = python_type
+    else:
+        # internal type name (any other key is stored as before)
+        TYPES[django_field] = python_type
+
+
+def _lookup_python_type(field: DjangoField) -> Any:
+    "Raises KeyError when the field is not registered"
+    if FIELD_CLASS_TYPES:
+        for klass in type(field).__mro__:
+            if klass in FIELD_CLASS_TYPES:
+                return FIELD_CLASS_TYPES[klass]
+    return TYPES[field.get_internal_type()]
 
 
 @no_type_check
-def create_m2m_link_type(type_: Type[TModel]) -> Type[TModel]:
+def _relation_target_field(field: DjangoField) -> DjangoField:
+    "Model field whose values a relation holds"
+    if field.concrete and (field.many_to_one or field.one_to_one):
+        # forward ForeignKey / OneToOneField: the referenced field
+        # (the related pk, or `to_field` when given)
+        return field.target_field
+    # many-to-many and reverse relations: lists of related primary keys
+    return field.related_model._meta.pk
+
+
+@no_type_check
+def create_m2m_link_type(type_: type[TModel]) -> type[TModel]:
     class M2MLink(type_):  # type: ignore
         @classmethod
         def __get_pydantic_core_schema__(cls, source, handler):
@@ -113,10 +160,33 @@ def create_m2m_link_type(type_: Type[TModel]) -> Type[TModel]:
     return M2MLink
 
 
+def _request_max_length(limit: int) -> AfterValidator:
+    """
+    Length check applied to request data only.
+
+    Django does not enforce TextField.max_length at the model or database
+    level (it is only reflected in form widgets), so stored values may
+    legally exceed it.  A hard pydantic constraint would make response
+    serialization fail with a 500 for such rows (see #1692).  Instead we
+    validate incoming payloads (on par with Django forms and DRF) and skip
+    the check when serializing responses.
+    """
+
+    def check(value: Any, info: core_schema.ValidationInfo) -> Any:
+        context = info.context
+        if context and "response_status" in context:
+            return value  # serializing a response - skip
+        if value is not None and len(value) > limit:
+            raise PydanticKnownError("string_too_long", {"max_length": limit})
+        return value
+
+    return AfterValidator(check)
+
+
 @no_type_check
 def get_schema_field(
     field: DjangoField, *, depth: int = 0, optional: bool = False
-) -> Tuple:
+) -> tuple:
     "Returns pydantic field from django's model field"
     alias = None
     default = ...
@@ -129,9 +199,10 @@ def get_schema_field(
 
     if field.is_relation:
         if depth > 0:
-            return get_related_field_schema(field, depth=depth)
+            return get_related_field_schema(field, depth=depth, optional=optional)
 
-        internal_type = field.related_model._meta.pk.get_internal_type()
+        target_field = _relation_target_field(field)
+        internal_type = target_field.get_internal_type()
 
         if not field.concrete and field.auto_created or field.null or optional:
             default = None
@@ -139,10 +210,13 @@ def get_schema_field(
 
         alias = getattr(field, "get_attname", None) and field.get_attname()
 
-        pk_type = TYPES.get(internal_type, int)
+        try:
+            pk_type = _lookup_python_type(target_field)
+        except KeyError:
+            pk_type = int
         if field.one_to_many or field.many_to_many:
             m2m_type = create_m2m_link_type(pk_type)
-            python_type = List[m2m_type]  # type: ignore
+            python_type = list[m2m_type]  # type: ignore
         else:
             python_type = pk_type
 
@@ -154,12 +228,13 @@ def get_schema_field(
 
         internal_type = field.get_internal_type()
         try:
-            python_type = TYPES[internal_type]
+            python_type = _lookup_python_type(field)
         except KeyError as e:
             msg = [
                 f"Do not know how to convert django field '{internal_type}'.",
                 "Try from ninja.orm import register_field",
                 f"register_field('{internal_type}', <your-python-type>)",
+                f"or register_field({type(field).__name__}, <your-python-type>)",
             ]
             raise ConfigError("\n".join(msg)) from e
 
@@ -176,8 +251,16 @@ def get_schema_field(
     if default_factory:
         default = PydanticUndefined
 
+    json_schema_extra = None
+    if max_length is not None and internal_type == "TextField":
+        # TextField.max_length is a form-level hint in Django, not a model
+        # or database constraint - enforce it for input only (#1692)
+        python_type = Annotated[python_type, _request_max_length(max_length)]
+        json_schema_extra = {"maxLength": max_length}
+        max_length = None
+
     if nullable:
-        python_type = Union[python_type, None]  # aka Optional in 3.7+
+        python_type = Union[python_type, None]
 
     description = field.help_text or None
     title = title_if_lower(field.verbose_name)
@@ -193,21 +276,26 @@ def get_schema_field(
             title=title,
             description=description,
             max_length=max_length,
+            json_schema_extra=json_schema_extra,
         ),
     )
 
 
 @no_type_check
-def get_related_field_schema(field: DjangoField, *, depth: int) -> Tuple[OpenAPISchema]:
+def get_related_field_schema(
+    field: DjangoField, *, depth: int, optional: bool = False
+) -> tuple[OpenAPISchema]:
     from ninja.orm import create_schema
 
     model = field.related_model
     schema = create_schema(model, depth=depth - 1)
     default = ...
-    if not field.concrete and field.auto_created or field.null:
+    if not field.concrete and field.auto_created or field.null or optional:
         default = None
     if isinstance(field, ManyToManyField):
-        schema = List[schema]  # type: ignore
+        schema = list[schema]  # type: ignore
+    elif default is None:
+        schema = Union[schema, None]
 
     return (
         schema,

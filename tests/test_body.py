@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any
 
 import pytest
 from pydantic import field_validator
@@ -89,9 +89,9 @@ def test_incorrect_annotation():
 class CustomErrorAPI(NinjaAPI):
     def validation_error_from_error_contexts(
         self,
-        error_contexts: List[ValidationErrorContext],
+        error_contexts: list[ValidationErrorContext],
     ) -> ValidationError:
-        errors: List[Dict[str, Any]] = []
+        errors: list[dict[str, Any]] = []
         for context in error_contexts:
             model = context.model
             for e in context.pydantic_validation_error.errors(

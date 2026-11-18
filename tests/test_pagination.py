@@ -1,9 +1,10 @@
 import importlib
 from sys import version_info
-from typing import Any, List
+from typing import Annotated, Any, Literal, Optional, Union
 
 import pytest
 from django.test import override_settings
+from pydantic import Field
 from pydantic.errors import PydanticSchemaGenerationError
 
 from ninja import NinjaAPI, Schema
@@ -32,7 +33,7 @@ class CustomPagination(PaginationBase):
         skip: int
 
     class Output(Schema):
-        items: List[Any]
+        items: list[Any]
         count: str
         skip: int
 
@@ -64,7 +65,7 @@ class ResultsPaginator(PaginationBase):
         skip: int
 
     class Output(Schema):
-        results: List[int]
+        results: list[int]
         count: int
         skip: int
 
@@ -85,7 +86,7 @@ class NextPrevPagination(PaginationBase):
         skip: int
 
     class Output(Schema):
-        items: List[Any]
+        items: list[Any]
         next: str = None
         prev: str = None
 
@@ -107,7 +108,7 @@ class CustomItemsLimitOffsetPagination(LimitOffsetPagination):
     items_attribute = "results"
 
     class Output(Schema):
-        results: List[int]
+        results: list[int]
         count: int
 
 
@@ -117,7 +118,7 @@ class CustomItemsPageNumberPagination(PageNumberPagination):
     items_attribute = "results"
 
     class Output(Schema):
-        results: List[int]
+        results: list[int]
         count: int
 
 
@@ -135,80 +136,80 @@ class NoPagination(PaginationBase):
         }
 
 
-@api.get("/items_1", response=List[int])
+@api.get("/items_1", response=list[int])
 @paginate  # WITHOUT brackets (should use default pagination)
 def items_1(request, **kwargs):
     return ITEMS
 
 
-@api.get("/items_2", response=List[int])
+@api.get("/items_2", response=list[int])
 @paginate()  # with brackets (should use default pagination)
 def items_2(request, someparam: int = 0, **kwargs):
     # also having custom param `someparam` - that should not be lost
     return ITEMS
 
 
-@api.get("/items_3", response=List[int])
+@api.get("/items_3", response=list[int])
 @paginate(CustomPagination)
 def items_3(request, **kwargs):
     return ITEMS
 
 
-@api.get("/items_4", response=List[int])
+@api.get("/items_4", response=list[int])
 @paginate(PageNumberPagination, page_size=10)
 def items_4(request, **kwargs):
     return ITEMS
 
 
-@api.get("/items_5", response=List[int])
+@api.get("/items_5", response=list[int])
 @paginate(PageNumberPagination, page_size=10)
 def items_5(request):
     return ITEMS
 
 
-@api.get("/items_6", response={101: int, 200: List[Any]})
+@api.get("/items_6", response={101: int, 200: list[Any]})
 @paginate(PageNumberPagination, page_size=10, pass_parameter="page_info")
 def items_6(request, **kwargs):
     return ITEMS + [kwargs["page_info"]]
 
 
-@api.get("/items_7", response=List[int])
+@api.get("/items_7", response=list[int])
 @paginate(NoOutputPagination)
 def items_7(request):
     return list(range(15))
 
 
-@api.get("/items_8", response=List[int])
+@api.get("/items_8", response=list[int])
 @paginate(ResultsPaginator)
 def items_8(request):
     return list(range(1000))
 
 
-@api.get("/items_9", response=List[int])
+@api.get("/items_9", response=list[int])
 @paginate(NextPrevPagination)
 def items_9(request):
     return list(range(100))
 
 
-@api.get("/items_10", response=List[int])
+@api.get("/items_10", response=list[int])
 @paginate(PageNumberPagination, page_size=10, max_page_size=20)
 def items_10(request):
     return ITEMS
 
 
-@api.get("/items_11", response=List[int])
+@api.get("/items_11", response=list[int])
 @paginate(CustomItemsLimitOffsetPagination)
 def items_11(request):
     return list(range(100))
 
 
-@api.get("/items_12", response=List[int])
+@api.get("/items_12", response=list[int])
 @paginate(CustomItemsPageNumberPagination)
 def items_12(request):
     return list(range(100))
 
 
-@api.get("/items_no_pagination", response=List[int])
+@api.get("/items_no_pagination", response=list[int])
 @paginate(NoPagination)
 def items_no_pagination(request):
     return ITEMS
@@ -552,7 +553,7 @@ def test_10_max_limit_set():
     new_api = NinjaAPI()
     new_client = TestClient(new_api)
 
-    @new_api.get("/items_10", response=List[int])
+    @new_api.get("/items_10", response=list[int])
     @paginate  # LimitOffsetPagination is set as default
     def items_10(request, **kwargs):
         return ITEMS
@@ -599,7 +600,7 @@ def test_11_max_limit_set_and_exceeded():
     new_api = NinjaAPI()
     new_client = TestClient(new_api)
 
-    @new_api.get("/items_11", response=List[int])
+    @new_api.get("/items_11", response=list[int])
     @paginate  # LimitOffsetPagination is set as default
     def items_11(request, **kwargs):
         return ITEMS
@@ -621,7 +622,7 @@ def test_limit_offset_per_endpoint_max_limit():
     new_api = NinjaAPI()
     new_client = TestClient(new_api)
 
-    @new_api.get("/items_capped", response=List[int])
+    @new_api.get("/items_capped", response=list[int])
     @paginate(LimitOffsetPagination, max_limit=50)
     def items_capped(request, **kwargs):
         return ITEMS
@@ -669,8 +670,8 @@ def test_pagination_works_with_unnamed_classes():
     This test lets you check that the typing.Any case handled in `ninja.pagination.make_response_paginated`
     works for Python>=3.11, as a typing.Any does possess the __name__ attribute past that version
     """
-    operation = Operation("/whatever", ["GET"], lambda: None, response=List[int])
-    operation.response_models[200].__annotations__["response"] = List[object()]
+    operation = Operation("/whatever", ["GET"], lambda: None, response=list[int])
+    operation.response_models[200].__annotations__["response"] = list[object()]
     with pytest.raises(
         PydanticSchemaGenerationError
     ):  # It does fail after we passed the logic that we are testing
@@ -699,9 +700,9 @@ def test_no_pagination_without_query_params():
 
     # If there are any parameters, they should all be optional
     for param in params:
-        assert (
-            param.get("required", False) is False
-        ), f"Parameter {param['name']} should not be required"
+        assert param.get("required", False) is False, (
+            f"Parameter {param['name']} should not be required"
+        )
 
 
 def test_find_collection_response_skips_none_and_not_set():
@@ -711,7 +712,7 @@ def test_find_collection_response_skips_none_and_not_set():
         id: int
 
     # Create operation with a collection response
-    operation = Operation("/test", ["GET"], lambda: None, response=List[ItemSchema])
+    operation = Operation("/test", ["GET"], lambda: None, response=list[ItemSchema])
 
     # Manually add None and NOT_SET response models before the collection one
     original_200 = operation.response_models[200]
@@ -739,3 +740,144 @@ def test_find_collection_response_raises_when_no_collection():
     # Should raise ConfigError since ItemSchema is not a collection
     with pytest.raises(ConfigError, match="no collection response"):
         _find_collection_response(operation)
+
+
+class Foo1(Schema):
+    id: int
+    kind: Literal["foo1"]
+
+
+class Foo2(Schema):
+    id: int
+    kind: Literal["foo2"]
+
+
+class Bar1(Schema):
+    id: int
+    kind: Literal["bar1"]
+
+
+class Bar2(Schema):
+    id: int
+    kind: Literal["bar2"]
+
+
+FooUnion = Annotated[Union[Foo1, Foo2], Field(discriminator="kind")]
+BarUnion = Annotated[Union[Bar1, Bar2], Field(discriminator="kind")]
+
+
+def _paged_response_ref(schema, path):
+    content = schema["paths"][path]["get"]["responses"][200]["content"]
+    return content["application/json"]["schema"]["$ref"]
+
+
+def test_paginated_unions_get_their_own_schemas():
+    """
+    Each paginated union gets its own Paged schema in OpenAPI instead of
+    all of them sharing (and overwriting) "PagedAnnotated" / "PagedUnion".
+    https://github.com/vitalik/django-ninja/issues/1308
+    """
+    api = NinjaAPI(urls_namespace="paginated_unions")
+
+    @api.get("/foos", response=list[FooUnion])
+    @paginate
+    def foos(request):
+        return [{"id": 1, "kind": "foo1"}, {"id": 2, "kind": "foo2"}]
+
+    @api.get("/bars", response=list[BarUnion])
+    @paginate
+    def bars(request):
+        return [{"id": 3, "kind": "bar2"}]
+
+    @api.get("/foo1-or-bar1", response=list[Union[Foo1, Bar1]])
+    @paginate
+    def foo1_or_bar1(request):
+        return []
+
+    @api.get("/foo2-or-bar2", response=list[Union[Foo2, Bar2]])
+    @paginate
+    def foo2_or_bar2(request):
+        return []
+
+    @api.get("/optional-foo1", response=list[Optional[Foo1]])
+    @paginate
+    def optional_foo1(request):
+        return [None]
+
+    @api.get("/optional-bar1", response=list[Optional[Bar1]])
+    @paginate
+    def optional_bar1(request):
+        return []
+
+    schema = api.get_openapi_schema(path_prefix="")
+    refs = {
+        path: _paged_response_ref(schema, path)
+        for path in (
+            "/foos",
+            "/bars",
+            "/foo1-or-bar1",
+            "/foo2-or-bar2",
+            "/optional-foo1",
+            "/optional-bar1",
+        )
+    }
+    assert refs == {
+        "/foos": "#/components/schemas/PagedFoo1OrFoo2",
+        "/bars": "#/components/schemas/PagedBar1OrBar2",
+        "/foo1-or-bar1": "#/components/schemas/PagedFoo1OrBar1",
+        "/foo2-or-bar2": "#/components/schemas/PagedFoo2OrBar2",
+        "/optional-foo1": "#/components/schemas/PagedFoo1OrNone",
+        "/optional-bar1": "#/components/schemas/PagedBar1OrNone",
+    }
+
+    components = schema["components"]["schemas"]
+    foo_items = components["PagedFoo1OrFoo2"]["properties"]["items"]["items"]
+    assert foo_items["discriminator"] == {
+        "mapping": {
+            "foo1": "#/components/schemas/Foo1",
+            "foo2": "#/components/schemas/Foo2",
+        },
+        "propertyName": "kind",
+    }
+    bar_items = components["PagedBar1OrBar2"]["properties"]["items"]["items"]
+    assert bar_items["discriminator"] == {
+        "mapping": {
+            "bar1": "#/components/schemas/Bar1",
+            "bar2": "#/components/schemas/Bar2",
+        },
+        "propertyName": "kind",
+    }
+
+    client = TestClient(api)
+    assert client.get("/foos").json() == {
+        "items": [{"id": 1, "kind": "foo1"}, {"id": 2, "kind": "foo2"}],
+        "count": 2,
+    }
+    assert client.get("/bars").json() == {
+        "items": [{"id": 3, "kind": "bar2"}],
+        "count": 1,
+    }
+    assert client.get("/optional-foo1").json() == {"items": [None], "count": 1}
+
+
+@pytest.mark.skipif(version_info < (3, 10), reason="X | Y unions need Python 3.10+")
+def test_paginated_pipe_unions_get_their_own_schemas():
+    api = NinjaAPI(urls_namespace="paginated_pipe_unions")
+
+    @api.get("/foo1-or-bar1", response=list[Foo1 | Bar1])
+    @paginate
+    def foo1_or_bar1(request):
+        return []
+
+    @api.get("/foo2-or-bar2", response=list[Foo2 | Bar2])
+    @paginate
+    def foo2_or_bar2(request):
+        return []
+
+    schema = api.get_openapi_schema(path_prefix="")
+    assert _paged_response_ref(schema, "/foo1-or-bar1") == (
+        "#/components/schemas/PagedFoo1OrBar1"
+    )
+    assert _paged_response_ref(schema, "/foo2-or-bar2") == (
+        "#/components/schemas/PagedFoo2OrBar2"
+    )

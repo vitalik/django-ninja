@@ -1,10 +1,9 @@
-from typing import Optional
+from typing import Annotated, Optional
 
 import pytest
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Q, QuerySet
 from pydantic import Field
-from typing_extensions import Annotated
 
 from ninja import FilterConfigDict, FilterLookup, FilterSchema
 

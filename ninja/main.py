@@ -1,15 +1,12 @@
+from collections.abc import Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Dict,
-    List,
     Optional,
-    Sequence,
-    Tuple,
-    Type,
     TypeVar,
     Union,
+    overload,
 )
 
 from django.http import HttpRequest, HttpResponse
@@ -32,7 +29,7 @@ from ninja.parser import Parser
 from ninja.renderers import BaseRenderer, JSONRenderer
 from ninja.router import BoundRouter, Router, RouterMount
 from ninja.throttling import BaseThrottle
-from ninja.types import DictStrAny, TCallable
+from ninja.types import DictStrAny, TCallable, TSchemaClass
 
 if TYPE_CHECKING:
     from .operation import Operation  # pragma: no cover
@@ -40,7 +37,7 @@ if TYPE_CHECKING:
 __all__ = ["NinjaAPI"]
 
 _E = TypeVar("_E", bound=Exception)
-Exc = Union[_E, Type[_E]]
+Exc = Union[_E, type[_E]]
 ExcHandler = Callable[[HttpRequest, Exc[_E]], HttpResponse]
 
 
@@ -59,14 +56,16 @@ class NinjaAPI:
         docs: DocsBase = Swagger(),
         docs_url: Optional[str] = "/docs",
         docs_decorator: Optional[Callable[[TCallable], TCallable]] = None,
-        servers: Optional[List[DictStrAny]] = None,
+        servers: Optional[list[DictStrAny]] = None,
         urls_namespace: Optional[str] = None,
-        auth: Optional[Union[Sequence[Callable], Callable, NOT_SET_TYPE]] = NOT_SET,
-        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
+        auth: Optional[
+            Union[Sequence[Callable[..., Any]], Callable[..., Any], NOT_SET_TYPE]
+        ] = NOT_SET,
+        throttle: Union[BaseThrottle, list[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         renderer: Optional[BaseRenderer] = None,
         parser: Optional[Parser] = None,
         default_router: Optional[Router] = None,
-        openapi_extra: Optional[Dict[str, Any]] = None,
+        openapi_extra: Optional[dict[str, Any]] = None,
     ):
         """
         Args:
@@ -78,7 +77,7 @@ class NinjaAPI:
             openapi_extra: Additional attributes for the openAPI spec.
             docs_url: The relative URL to serve the API docs.
             servers: List of target hosts used in openAPI spec.
-            auth (Callable | Sequence[Callable] | NOT_SET | None): Authentication class
+            auth (Callable[..., Any] | Sequence[Callable[..., Any]] | NOT_SET | None): Authentication class
             renderer: Default response renderer
             parser: Default request parser
         """
@@ -95,10 +94,10 @@ class NinjaAPI:
         self.parser = parser or Parser()
         self.openapi_extra = openapi_extra or {}
 
-        self._exception_handlers: Dict[Exc, ExcHandler] = {}
+        self._exception_handlers: dict[Exc, ExcHandler] = {}
         self.set_default_exception_handlers()
 
-        self.auth: Optional[Union[Sequence[Callable], NOT_SET_TYPE]]
+        self.auth: Optional[Union[Sequence[Callable[..., Any]], NOT_SET_TYPE]]
 
         if callable(auth):
             self.auth = [auth]
@@ -109,13 +108,13 @@ class NinjaAPI:
 
         # Top-level router registrations (new architecture)
         # Stores (prefix, router, auth, throttle, tags, url_name_prefix) for each add_router call
-        self._router_registrations: List[
-            Tuple[str, Router, Any, Any, Optional[List[str]], Optional[str]]
+        self._router_registrations: list[
+            tuple[str, Router, Any, Any, Optional[list[str]], Optional[str]]
         ] = []
-        self._bound_routers_cache: Optional[List[BoundRouter]] = None
+        self._bound_routers_cache: Optional[list[BoundRouter]] = None
 
         # Backward compat: keep _routers list populated
-        self._routers: List[Tuple[str, Router]] = []
+        self._routers: list[tuple[str, Router]] = []
 
         self.default_router = default_router or Router()
         self.add_router("", self.default_router)
@@ -125,12 +124,12 @@ class NinjaAPI:
         path: str,
         *,
         auth: Any = NOT_SET,
-        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
+        throttle: Union[BaseThrottle, list[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        tags: Optional[list[str]] = None,
         deprecated: Optional[bool] = None,
         by_alias: Optional[bool] = None,
         exclude_unset: Optional[bool] = None,
@@ -138,7 +137,7 @@ class NinjaAPI:
         exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
-        openapi_extra: Optional[Dict[str, Any]] = None,
+        openapi_extra: Optional[dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         """
         `GET` operation. See <a href="../operations-parameters">operations
@@ -168,12 +167,12 @@ class NinjaAPI:
         path: str,
         *,
         auth: Any = NOT_SET,
-        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
+        throttle: Union[BaseThrottle, list[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        tags: Optional[list[str]] = None,
         deprecated: Optional[bool] = None,
         by_alias: Optional[bool] = None,
         exclude_unset: Optional[bool] = None,
@@ -181,7 +180,7 @@ class NinjaAPI:
         exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
-        openapi_extra: Optional[Dict[str, Any]] = None,
+        openapi_extra: Optional[dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         """
         `POST` operation. See <a href="../operations-parameters">operations
@@ -211,12 +210,12 @@ class NinjaAPI:
         path: str,
         *,
         auth: Any = NOT_SET,
-        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
+        throttle: Union[BaseThrottle, list[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        tags: Optional[list[str]] = None,
         deprecated: Optional[bool] = None,
         by_alias: Optional[bool] = None,
         exclude_unset: Optional[bool] = None,
@@ -224,7 +223,7 @@ class NinjaAPI:
         exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
-        openapi_extra: Optional[Dict[str, Any]] = None,
+        openapi_extra: Optional[dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         """
         `DELETE` operation. See <a href="../operations-parameters">operations
@@ -254,12 +253,12 @@ class NinjaAPI:
         path: str,
         *,
         auth: Any = NOT_SET,
-        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
+        throttle: Union[BaseThrottle, list[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        tags: Optional[list[str]] = None,
         deprecated: Optional[bool] = None,
         by_alias: Optional[bool] = None,
         exclude_unset: Optional[bool] = None,
@@ -267,7 +266,7 @@ class NinjaAPI:
         exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
-        openapi_extra: Optional[Dict[str, Any]] = None,
+        openapi_extra: Optional[dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         """
         `PATCH` operation. See <a href="../operations-parameters">operations
@@ -297,12 +296,12 @@ class NinjaAPI:
         path: str,
         *,
         auth: Any = NOT_SET,
-        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
+        throttle: Union[BaseThrottle, list[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        tags: Optional[list[str]] = None,
         deprecated: Optional[bool] = None,
         by_alias: Optional[bool] = None,
         exclude_unset: Optional[bool] = None,
@@ -310,7 +309,7 @@ class NinjaAPI:
         exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
-        openapi_extra: Optional[Dict[str, Any]] = None,
+        openapi_extra: Optional[dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         """
         `QUERY` operation. See <a href="../operations-parameters">operations
@@ -340,12 +339,12 @@ class NinjaAPI:
         path: str,
         *,
         auth: Any = NOT_SET,
-        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
+        throttle: Union[BaseThrottle, list[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        tags: Optional[list[str]] = None,
         deprecated: Optional[bool] = None,
         by_alias: Optional[bool] = None,
         exclude_unset: Optional[bool] = None,
@@ -353,7 +352,7 @@ class NinjaAPI:
         exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
-        openapi_extra: Optional[Dict[str, Any]] = None,
+        openapi_extra: Optional[dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         """
         `PUT` operation. See <a href="../operations-parameters">operations
@@ -380,16 +379,16 @@ class NinjaAPI:
 
     def api_operation(
         self,
-        methods: List[str],
+        methods: list[str],
         path: str,
         *,
         auth: Any = NOT_SET,
-        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
+        throttle: Union[BaseThrottle, list[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        tags: Optional[list[str]] = None,
         deprecated: Optional[bool] = None,
         by_alias: Optional[bool] = None,
         exclude_unset: Optional[bool] = None,
@@ -397,7 +396,7 @@ class NinjaAPI:
         exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
-        openapi_extra: Optional[Dict[str, Any]] = None,
+        openapi_extra: Optional[dict[str, Any]] = None,
     ) -> Callable[[TCallable], TCallable]:
         return self.default_router.api_operation(
             methods,
@@ -415,6 +414,59 @@ class NinjaAPI:
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
             url_name=url_name,
+            include_in_schema=include_in_schema,
+            openapi_extra=openapi_extra,
+        )
+
+    @overload
+    def webhook(self, name: TSchemaClass) -> TSchemaClass: ...
+
+    @overload
+    def webhook(
+        self,
+        name: Optional[str] = None,
+        *,
+        method: str = "POST",
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[list[str]] = None,
+        operation_id: Optional[str] = None,
+        deprecated: Optional[bool] = None,
+        include_in_schema: bool = True,
+        openapi_extra: Optional[dict[str, Any]] = None,
+    ) -> Callable[[TSchemaClass], TSchemaClass]: ...
+
+    def webhook(
+        self,
+        name: Union[str, TSchemaClass, None] = None,
+        *,
+        method: str = "POST",
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[list[str]] = None,
+        operation_id: Optional[str] = None,
+        deprecated: Optional[bool] = None,
+        include_in_schema: bool = True,
+        openapi_extra: Optional[dict[str, Any]] = None,
+    ) -> Union[TSchemaClass, Callable[[TSchemaClass], TSchemaClass]]:
+        """
+        Register a Schema class as the payload of a webhook your API sends.
+        Can be used as ``@api.webhook``, ``@api.webhook()`` or
+        ``@api.webhook("order.paid")`` - name defaults to the class name.
+
+        Webhooks are only documented (in the OpenAPI ``webhooks`` section),
+        Django Ninja does not send them.
+        """
+        if isinstance(name, type):  # used without parentheses: @api.webhook
+            return self.default_router.webhook(name)
+        return self.default_router.webhook(
+            name,
+            method=method,
+            summary=summary,
+            description=description,
+            tags=tags,
+            operation_id=operation_id,
+            deprecated=deprecated,
             include_in_schema=include_in_schema,
             openapi_extra=openapi_extra,
         )
@@ -441,8 +493,8 @@ class NinjaAPI:
         router: Union[Router, str],
         *,
         auth: Any = NOT_SET,
-        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
-        tags: Optional[List[str]] = None,
+        throttle: Union[BaseThrottle, list[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
+        tags: Optional[list[str]] = None,
         url_name_prefix: Optional[str] = None,
         parent_router: Optional[Router] = None,
     ) -> None:
@@ -492,7 +544,7 @@ class NinjaAPI:
         self._routers.append((prefix, router))
 
     @property
-    def urls(self) -> Tuple[List[Union[URLResolver, URLPattern]], str, str]:
+    def urls(self) -> tuple[list[Union[URLResolver, URLPattern]], str, str]:
         """
         str: URL configuration
 
@@ -508,11 +560,11 @@ class NinjaAPI:
             # ^ if api included into nested urls, we only care about last bit here
         )
 
-    def _get_bound_routers(self) -> List[BoundRouter]:
+    def _get_bound_routers(self) -> list[BoundRouter]:
         """Get or create bound router instances."""
         if self._bound_routers_cache is None:
             # Build mounts from registrations (delayed to capture all child routers)
-            all_mounts: List[RouterMount] = []
+            all_mounts: list[RouterMount] = []
 
             for (
                 prefix,
@@ -537,6 +589,8 @@ class NinjaAPI:
                     inherited_auth=auth,
                     inherited_throttle=throttle,
                     inherited_tags=tags,
+                    mount_auth=auth,
+                    mount_throttle=throttle,
                 )
 
                 # Apply mount-level overrides to the first (parent) mount
@@ -570,7 +624,7 @@ class NinjaAPI:
 
         return self._bound_routers_cache
 
-    def _get_urls(self) -> List[Union[URLResolver, URLPattern]]:
+    def _get_urls(self) -> list[Union[URLResolver, URLPattern]]:
         result = get_openapi_urls(self)
 
         for bound_router in self._get_bound_routers():
@@ -636,13 +690,13 @@ class NinjaAPI:
         return operation.view_func.__name__
 
     def add_exception_handler(
-        self, exc_class: Type[_E], handler: ExcHandler[_E]
+        self, exc_class: type[_E], handler: ExcHandler[_E]
     ) -> None:
         assert issubclass(exc_class, Exception)
         self._exception_handlers[exc_class] = handler
 
     def exception_handler(
-        self, exc_class: Type[Exception]
+        self, exc_class: type[Exception]
     ) -> Callable[[TCallable], TCallable]:
         def decorator(func: TCallable) -> TCallable:
             self.add_exception_handler(exc_class, func)
@@ -660,9 +714,9 @@ class NinjaAPI:
         return handler(request, exc)
 
     def validation_error_from_error_contexts(
-        self, error_contexts: List[ValidationErrorContext]
+        self, error_contexts: list[ValidationErrorContext]
     ) -> ValidationError:
-        errors: List[Dict[str, Any]] = []
+        errors: list[dict[str, Any]] = []
         for context in error_contexts:
             model = context.model
             e = context.pydantic_validation_error

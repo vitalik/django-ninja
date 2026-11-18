@@ -84,6 +84,11 @@ def query_on(request):
     return {"success": True}
 
 
+@csrf_ON.api_operation(["POST", "QUERY"], "/mixed")
+def mixed_on(request):
+    return {"success": True}
+
+
 TOKEN = "1bcdefghij2bcdefghij3bcdefghij4bcdefghij5bcdefghij6bcdefghijABCD"
 COOKIES = {settings.CSRF_COOKIE_NAME: TOKEN}
 
@@ -116,6 +121,16 @@ def test_csrf_query_is_safe():
 
     # no csrf token needed, just like GET
     assert client.query("/query", COOKIES=COOKIES).status_code == 200
+
+
+def test_csrf_query_exemption_does_not_leak_to_other_methods():
+    "An operation serving POST and QUERY must still CSRF-check the POST"
+    client = TestClient(csrf_ON)
+
+    assert client.query("/mixed", COOKIES=COOKIES).status_code == 200
+    assert client.post("/mixed", COOKIES=COOKIES).status_code == 403
+    response = client.post("/mixed", COOKIES=COOKIES, headers={"X-CSRFTOKEN": TOKEN})
+    assert response.status_code == 200
 
 
 def test_csrf_cookie_auth():
@@ -226,9 +241,9 @@ def test_no_auth_csrf_exempt():
 
     # If csrf_response is None, the request passed CSRF checks
     # If it's not None, it's a 403 Forbidden response
-    assert (
-        csrf_response is None
-    ), f"CSRF middleware blocked the request! Regular APIs should be CSRF exempt. Response: {csrf_response}"
+    assert csrf_response is None, (
+        f"CSRF middleware blocked the request! Regular APIs should be CSRF exempt. Response: {csrf_response}"
+    )
 
 
 def test_docs_cookie_auth():

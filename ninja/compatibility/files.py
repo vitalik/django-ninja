@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any
 
 from asgiref.sync import iscoroutinefunction, sync_to_async
 from django.conf import settings
@@ -12,7 +12,7 @@ FIX_MIDDLEWARE_PATH: str = "ninja.compatibility.files.fix_request_files_middlewa
 FIX_METHODS = ninja_settings.FIX_REQUEST_FILES_METHODS
 
 
-def need_to_fix_request_files(methods: List[str], params_models: List[Any]) -> bool:
+def need_to_fix_request_files(methods: list[str], params_models: list[Any]) -> bool:
     has_files_params = any(
         issubclass(model_class, FileModel) for model_class in params_models
     )

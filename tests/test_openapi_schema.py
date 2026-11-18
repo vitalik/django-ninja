@@ -1,6 +1,5 @@
 import sys
-from sys import version_info
-from typing import Any, List, Union
+from typing import Annotated, Any, Optional, Union
 from unittest.mock import Mock
 from uuid import uuid4
 
@@ -9,7 +8,6 @@ import pytest
 from django.contrib.admin.views.decorators import staff_member_required
 from django.db import models
 from django.test import Client, override_settings
-from typing_extensions import Annotated
 
 from ninja import (
     Body,
@@ -75,8 +73,8 @@ def method_alias(request, data: Payload):
     return data.dict()
 
 
-@api.post("/test_list", response=List[Response])
-def method_list_response(request, data: List[Payload]):
+@api.post("/test_list", response=list[Response])
+def method_list_response(request, data: list[Payload]):
     return []
 
 
@@ -99,32 +97,15 @@ def method_path(
     return dict(i=i, f=f)
 
 
-# This definition is only possible in Python 3.9+
-# TODO: Drop this condition once support for <= 3.8 is dropped
-if version_info >= (3, 9):
-
-    @api.get("/test-pathex/{path_ex}", response=AnnotatedStr)
-    def method_pathex(
-        request,
-        path_ex: PathEx[
-            AnnotatedStr,
-            P(description="path_ex description"),
-        ],
-    ):
-        return path_ex
-
-else:
-    with pytest.raises(NotImplementedError, match="3.9+"):
-
-        @api.get("/test-pathex/{path_ex}", response=AnnotatedStr)
-        def method_pathex(
-            request,
-            path_ex: PathEx[
-                AnnotatedStr,
-                P(description="path_ex description"),
-            ],
-        ):
-            return path_ex
+@api.get("/test-pathex/{path_ex}", response=AnnotatedStr)
+def method_pathex(
+    request,
+    path_ex: PathEx[
+        AnnotatedStr,
+        P(description="path_ex description"),
+    ],
+):
+    return path_ex
 
 
 @api.post("/test-form", response=Response)
@@ -143,14 +124,14 @@ def method_form_body(request, i: int = Form(10), s: str = Body("10")):
 
 
 @api.post("/test-form-file", response=Response)
-def method_form_file(request, files: List[UploadedFile], data: Payload = Form(...)):
+def method_form_file(request, files: list[UploadedFile], data: Payload = Form(...)):
     return dict(i=data.i, f=data.f)
 
 
 @api.post("/test-body-file", response=Response)
 def method_body_file(
     request,
-    files: List[UploadedFile],
+    files: list[UploadedFile],
     body: Payload = Body(...),
 ):
     return dict(i=body.i, f=body.f)
@@ -210,6 +191,7 @@ def method_test_deprecated_example_examples(
         },
     ),
     param4: int = Query(None, deprecated=True, include_in_schema=False),
+    param5: Annotated[str, Field(min_length=2, examples=["AA", "BB"])] = Query(...),
 ):
     return dict(i=param2, f=param3)
 
@@ -492,10 +474,6 @@ def test_schema_path(schema):
     }
 
 
-@pytest.mark.skipif(
-    version_info < (3, 9),
-    reason="requires py3.9+ for Annotated[] at the route definition site",
-)
 def test_schema_pathex(schema):
     method_list = schema["paths"]["/api/test-pathex/{path_ex}"]["get"]
 
@@ -781,17 +759,7 @@ def test_schema_deprecated_example_examples(schema):
                 "maxLength": 5,
                 "title": "Param3",
                 "type": "string",
-                "examples": {
-                    "invalid": {
-                        "summary": "Invalid data is rejected with an error",
-                        "value": "MoreThan5Length",
-                    },
-                    "normal": {
-                        "description": "A **normal** string works correctly.",
-                        "summary": "A normal example",
-                        "value": "Foo",
-                    },
-                },
+                "examples": ["MoreThan5Length", "Foo"],
             },
             "examples": {
                 "invalid": {
@@ -803,6 +771,21 @@ def test_schema_deprecated_example_examples(schema):
                     "summary": "A normal example",
                     "value": "Foo",
                 },
+            },
+        },
+        {
+            "in": "query",
+            "name": "param5",
+            "required": True,
+            "schema": {
+                "minLength": 2,
+                "title": "Param5",
+                "type": "string",
+                "examples": ["AA", "BB"],
+            },
+            "examples": {
+                "example0": {"value": "AA"},
+                "example1": {"value": "BB"},
             },
         },
     ]
@@ -1056,7 +1039,7 @@ def test_no_default_for_custom_items_attribute():
 
     class CustomPagination(PaginationBase):
         class Output(Schema):
-            data: List[Any]  # `items` is a default attribute
+            data: list[Any]  # `items` is a default attribute
             detail: str
             total: int
 
@@ -1068,7 +1051,7 @@ def test_no_default_for_custom_items_attribute():
     @api.get(
         "/employees",
         auth=["OAuth"],
-        response=List[EmployeeOut],
+        response=list[EmployeeOut],
     )
     @paginate(CustomPagination)
     def get_employees(request):
@@ -1165,5 +1148,35 @@ def test_by_alias_uses_serialization_alias_model():
             "id": {"title": "Id", "type": "string"},
             "created": {"type": "string", "format": "date-time", "title": "Created"},
         },
-        "required": ["id", "created"],
+        "required": ["created", "id"],
+    }
+
+
+def test_schema_field_examples_list_in_query_schema():
+    # pydantic Field(examples=[...]) is a JSON Schema list;
+    # OpenAPI Parameter.examples must be a map of Example Objects (#1636)
+    from ninja import FilterSchema
+
+    class Filters(FilterSchema):
+        status: Optional[str] = Field(None, examples=["active", "pending"])
+        # a dict *value* must not be mistaken for an Example Object
+        size: Optional[dict] = Field(None, examples=[{"value": 1, "unit": "cm"}])
+
+    api = NinjaAPI()
+
+    @api.get("/items")
+    def items(request, filters: Query[Filters]):
+        pass  # pragma: no cover
+
+    params = api.get_openapi_schema()["paths"]["/api/items"]["get"]["parameters"]
+    examples = {p["name"]: (p["examples"], p["schema"]["examples"]) for p in params}
+    assert examples == {
+        "status": (
+            {"example0": {"value": "active"}, "example1": {"value": "pending"}},
+            ["active", "pending"],
+        ),
+        "size": (
+            {"example0": {"value": {"value": 1, "unit": "cm"}}},
+            [{"value": 1, "unit": "cm"}],
+        ),
     }

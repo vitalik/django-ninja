@@ -92,8 +92,7 @@ class Command(BaseCommand):
         )
 
         if options["output"]:
-            with Path(options["output"]).open("wb") as f:
-                f.write(result.encode())
+            Path(options["output"]).write_bytes(result.encode())
         else:
             self.stdout.write(result)
 
