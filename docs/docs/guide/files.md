@@ -276,7 +276,7 @@ MIDDLEWARE = [
 ```
 
 By default the middleware (and the `ConfigError` check) applies to `PUT`,
-`PATCH` and `DELETE`. Override which methods it covers with the
+`PATCH`, `DELETE` and `QUERY`. Override which methods it covers with the
 `NINJA_FIX_REQUEST_FILES_METHODS` setting:
 
 ```python

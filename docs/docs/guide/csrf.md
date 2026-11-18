@@ -40,7 +40,8 @@ api = NinjaAPI(auth=CookieAuth())
 ```
 
 A `POST`/`PUT`/`PATCH`/`DELETE` against any operation on this `api` now
-requires a valid CSRF token, exactly as it would for a regular Django view.
+requires a valid CSRF token, exactly as it would for a regular Django view. `QUERY` is safe and idempotent
+like `GET`, so it is never CSRF-checked.
 
 ## Session (`django_auth`) authentication
 

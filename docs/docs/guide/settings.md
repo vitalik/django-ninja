@@ -40,7 +40,7 @@ raises a validation error.
 | `NINJA_PAGINATION_DEFAULT_ORDERING` | `("-pk",)` | Default `ordering` for `CursorPagination` |
 | `NINJA_DEFAULT_THROTTLE_RATES` | `{"auth": "10000/day", "user": "10000/day", "anon": "1000/day"}` | Rate used by a built-in [throttle](throttling.md) instantiated without one |
 | `NINJA_NUM_PROXIES` | `None` | Number of trusted proxies `AnonRateThrottle`/friends skip in `X-Forwarded-For` |
-| `NINJA_FIX_REQUEST_FILES_METHODS` | `{"PUT", "PATCH", "DELETE"}` | Methods the [file-upload compatibility middleware](files.md#requestfiles-with-put-and-patch) covers |
+| `NINJA_FIX_REQUEST_FILES_METHODS` | `{"PUT", "PATCH", "DELETE", "QUERY"}` | Methods the [file-upload compatibility middleware](files.md#requestfiles-with-put-and-patch) covers |
 
 !!! note
     `NINJA_MAX_PER_PAGE_SIZE` is the odd one out — the underlying Python
