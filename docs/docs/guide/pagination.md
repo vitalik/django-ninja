@@ -95,6 +95,17 @@ def list_users(request):
     ...
 ```
 
+!!! warning
+    `LimitOffsetPagination` is the default `NINJA_PAGINATION_CLASS`, and its
+    `limit` has no upper bound out of the box: `GET /api/users?limit=1000000`
+    loads and serializes up to a million rows in one request. On a public
+    API, set a project-wide cap:
+
+    ```python
+    # settings.py
+    NINJA_PAGINATION_MAX_LIMIT = 1000
+    ```
+
 ### PageNumberPagination
 
 ```python hl_lines="1 4"

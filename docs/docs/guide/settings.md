@@ -94,7 +94,8 @@ NINJA_NUM_PROXIES = 1
   of your API. `AnonRateThrottle` and the IP-fallback path of the other
   throttles use it to pick the real client address out of
   `X-Forwarded-For`. Left as `None` (the default), the whole header is used
-  as-is.
+  as-is, which a client can change on every request to dodge IP-based
+  throttles. Set it explicitly (`0` if there is no proxy) in production.
 
 See [Throttling](throttling.md#default-rates-per-scope) for details and
 custom throttle classes.

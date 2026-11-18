@@ -121,6 +121,15 @@ NINJA_NUM_PROXIES = 1
 
 With `NINJA_NUM_PROXIES` unset (the default), the entire `X-Forwarded-For` header (whitespace stripped) is used as the identifier.
 
+!!! warning
+    `X-Forwarded-For` is a request header, so the client controls it unless a
+    trusted proxy overwrites it. With `NINJA_NUM_PROXIES` unset, a client can
+    send a different `X-Forwarded-For` value on every request and get a fresh
+    `AnonRateThrottle` bucket each time, which defeats IP-based throttling
+    (for example on a login endpoint). Set `NINJA_NUM_PROXIES` to the number
+    of proxies in front of the app, or to `0` if there are none, so the
+    client IP comes from `REMOTE_ADDR` or the address your own proxy appended.
+
 ## Custom throttles
 
 Subclass `BaseThrottle` (or any built-in throttle) and implement `allow_request(self, request)`, returning `True` to allow the request and `False` to throttle it:
