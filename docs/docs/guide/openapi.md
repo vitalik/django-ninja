@@ -158,6 +158,10 @@ api = NinjaAPI(
 operation's schema entry (extra responses, a hand-written `requestBody`, ...) — see
 [`openapi_extra`](operations.md#openapi_extra) in the Operations guide.
 
+The schema's `openapi` version is `3.1.0`, or `3.2.0` when the API has a
+[`QUERY`](operations.md#defining-operations) operation (3.1 has no `query` path
+item). To pin it, set `openapi_extra={"openapi": "3.1.0"}`.
+
 ## Reversing the docs URL
 
 The docs view is registered under the name `openapi-view`, namespaced like any other

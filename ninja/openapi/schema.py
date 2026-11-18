@@ -25,6 +25,12 @@ if TYPE_CHECKING:
 
 REF_TEMPLATE: str = "#/components/schemas/{model}"
 
+# OpenAPI 3.1 has no `query` PathItem field; 3.2 added it. We only need to
+# bump to the newer version when a QUERY operation is actually present, so
+# every other API keeps generating the version it always has.
+OPENAPI_VERSION: str = "3.1.0"
+OPENAPI_VERSION_WITH_QUERY: str = "3.2.0"
+
 BODY_CONTENT_TYPES: dict[str, str] = {
     "body": "application/json",
     "form": "application/x-www-form-urlencoded",
@@ -48,8 +54,13 @@ class OpenAPISchema(dict):
         self.securitySchemes: DictStrAny = {}
         self.all_operation_ids: set = set()
         extra_info = api.openapi_extra.get("info", {})
+        paths = self.get_paths()
+        openapi_version = api.openapi_extra.get(
+            "openapi", self.get_openapi_version(paths)
+        )
+
         super().__init__([
-            ("openapi", "3.1.0"),
+            ("openapi", openapi_version),
             (
                 "info",
                 {
@@ -59,7 +70,7 @@ class OpenAPISchema(dict):
                     **extra_info,
                 },
             ),
-            ("paths", self.get_paths()),
+            ("paths", paths),
             ("components", self.get_components()),
             ("servers", api.servers),
         ])
@@ -69,6 +80,19 @@ class OpenAPISchema(dict):
         for k, v in api.openapi_extra.items():
             if k not in self:
                 self[k] = v
+
+    def get_openapi_version(self, paths: DictStrAny) -> str:
+        """
+        The lowest OpenAPI version that can represent this schema.
+
+        OpenAPI 3.1 has no `query` PathItem field; 3.2 added it, so a schema
+        with at least one QUERY operation needs the newer version. Every
+        other schema stays on the version it always has. Set `openapi` in
+        `NinjaAPI(openapi_extra=...)` to override this.
+        """
+        if any("query" in path_item for path_item in paths.values()):
+            return OPENAPI_VERSION_WITH_QUERY
+        return OPENAPI_VERSION
 
     def get_paths(self) -> DictStrAny:
         result: DictStrAny = {}
