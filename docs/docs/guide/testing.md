@@ -35,7 +35,7 @@ def test_hello():
 ```
 
 `TestClient` accepts either a full `NinjaAPI` instance or a bare `Router`. `get`, `post`,
-`put`, `patch`, `delete` and `query` all take the path first, then whatever the request needs — see
+`put`, `patch` and `delete` all take the path first, then whatever the request needs — see
 below.
 
 ### Without pytest

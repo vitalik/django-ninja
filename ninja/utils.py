@@ -28,10 +28,6 @@ def _no_view() -> None:
 def check_csrf(
     request: HttpRequest, callback: Callable = _no_view
 ) -> Optional[HttpResponseForbidden]:
-    # Django's CsrfViewMiddleware only knows GET/HEAD/OPTIONS/TRACE as safe
-    # methods. QUERY (RFC 10008) is safe and idempotent too, so skip the check.
-    if request.method == "QUERY":
-        return None
     mware = CsrfViewMiddleware(lambda x: HttpResponseForbidden())  # pragma: no cover
     request.csrf_processing_done = False  # type: ignore
     mware.process_request(request)

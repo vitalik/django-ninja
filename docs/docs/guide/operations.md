@@ -8,7 +8,7 @@ methods. You declare one by decorating a view function on a `NinjaAPI` instance
 
 **Django Ninja** has a decorator for each of the standard HTTP methods:
 
-```python hl_lines="6 11 16 21 26 31"
+```python hl_lines="6 11 16 21 26"
 from ninja import NinjaAPI
 
 api = NinjaAPI()
@@ -37,34 +37,7 @@ def patch_hello(request, id: int):
 @api.delete("/hello/{id}")
 def delete_hello(request, id: int):
     return {"message": "hello"}
-
-
-@api.query("/hello/search")
-def query_hello(request):
-    return {"message": "hello"}
 ```
-
-`QUERY` ([RFC 10008](https://www.rfc-editor.org/rfc/rfc10008)) is safe and
-idempotent like `GET`, but carries a request body like `POST`. It suits search
-and filter endpoints whose criteria don't fit in a query string. Declare the
-body as usual (see [Request Body](body.md)):
-
-```python
-@api.query("/products/search", response=list[Product])
-def search_products(request, payload: SearchRequest):
-    ...
-```
-
-A few things behave differently for `QUERY`:
-
-- It is never CSRF-checked, like `GET` (Django's CSRF middleware does not know
-  the method). Other methods on the same operation are still checked.
-- The generated OpenAPI schema is bumped from `3.1.0` to `3.2.0`, the first
-  version with a `query` path item, but only if the API has a `QUERY` operation.
-  Set `openapi` in [`openapi_extra`](openapi.md#extending-the-openapi-schema)
-  to pin the version yourself.
-- `File`/`Form` parameters work: `QUERY` is covered by
-  [`NINJA_FIX_REQUEST_FILES_METHODS`](files.md#requestfiles-with-put-and-patch).
 
 The same decorators are available on a `Router`, so everything on this page applies
 whether you register operations directly on `api` or on a router mounted with
@@ -126,7 +99,7 @@ code from your views.
 
 ## Operation options
 
-Every operation decorator (`get`, `post`, `put`, `patch`, `delete`, `query`, `api_operation`)
+Every operation decorator (`get`, `post`, `put`, `patch`, `delete`, `api_operation`)
 accepts the same set of keyword-only arguments, on top of `path`:
 
 | Argument | Type | Default | Description |
