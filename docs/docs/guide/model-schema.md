@@ -311,3 +311,10 @@ key (or `to_field`) is that field.
 - Prefer `ModelSchema` when a schema should track a model's fields declaratively; reach for
   [`create_schema()`](create-schema.md) instead when you need to build a schema dynamically at
   runtime (e.g. the model or field list is only known at call time).
+- **Primary keys and `blank=True` fields become optional.** `ModelSchema` generates a field as
+  `Optional[...]` (default `None`) when the Django field has `null=True` or `blank=True`, and for
+  the auto-created primary key - so in the generated OpenAPI/JSON schema they appear as nullable
+  (e.g. `{"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"}`). If such a field
+  should be required and non-nullable in a particular schema (for example an `id` that's always
+  present in a response), [declare it explicitly](#overriding-and-adding-fields) to override the
+  generated field.
