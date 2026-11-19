@@ -37,6 +37,27 @@ TModels = list[TModel]
 
 class ParamModel(BaseModel, ABC):
     __ninja_param_source__ = None
+    __ninja_optional_paths__: tuple[tuple[str, ...], ...] = ()
+
+    @classmethod
+    def __pydantic_init_subclass__(cls, **kwargs: Any) -> None:
+        super().__pydantic_init_subclass__(**kwargs)
+        # every path prefix whose field allows None (nested: and has a default)
+        optional = set()
+        for path in getattr(cls, "__ninja_flatten_map__", {}).values():
+            model: Any = cls
+            for depth, key in enumerate(path, 1):
+                fields = getattr(model, "model_fields", {})
+                field = next(
+                    (f for n, f in fields.items() if (f.alias or n) == key), None
+                )
+                if field is None:
+                    break
+                args = get_args(field.annotation)
+                if type(None) in args and (depth == 1 or not field.is_required()):
+                    optional.add(path[:depth])
+                model = next((a for a in args if a is not type(None)), field.annotation)
+        cls.__ninja_optional_paths__ = tuple(optional)
 
     @classmethod
     @abstractmethod
@@ -66,17 +87,19 @@ class ParamModel(BaseModel, ABC):
             return data
 
         mapped_data: DictStrAny = {}
-        sent = set()
+        sent: set[tuple[str, ...]] = set()
         for key, path in flatten_map.items():
             value = data.get(key)
             if value is not None:
-                sent.add(path[0])
+                sent.update(path[:depth] for depth in range(1, len(path) + 1))
             cls._map_data_path(mapped_data, value, path)
         # an optional nested schema with nothing sent falls back to its default
-        for name, field in cls.model_fields.items():
-            key = field.alias or name
-            if key not in sent and type(None) in get_args(field.annotation):
-                mapped_data.pop(key, None)
+        for path in cls.__ninja_optional_paths__:
+            if path not in sent:
+                parent = mapped_data
+                for key in path[:-1]:
+                    parent = parent.get(key, {})
+                parent.pop(path[-1], None)
         return mapped_data
 
     @classmethod
