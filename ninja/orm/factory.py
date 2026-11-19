@@ -114,7 +114,7 @@ class SchemaFactory:
             ordered = {k: schema.model_fields[k] for k in definitions}
             ordered.update(schema.model_fields)  # keep any other inherited fields
             setattr(schema, PYDANTIC_FIELDS_ATTR, ordered)
-            schema.model_rebuild(force=True)
+            schema.model_rebuild(force=True, raise_errors=False)
         self.schemas[key] = schema
         self.schema_names.add(name)
         return schema
