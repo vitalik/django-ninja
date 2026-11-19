@@ -3,6 +3,7 @@ import asyncio
 import pytest
 
 from ninja import NinjaAPI
+from ninja.errors import AuthorizationError
 from ninja.security import APIKeyQuery, HttpBearer
 from ninja.testing import TestAsyncClient, TestClient
 
@@ -86,6 +87,84 @@ async def test_async_view_handles_multi_auth():
 
     res = await client.get("/async?key=secret")
     assert res.json() == {"key": "secret"}
+
+
+@pytest.mark.asyncio
+async def test_async_multi_auth_falls_back_after_unauthorized_exception():
+    class ExternalAuthenticationFailed(Exception):
+        status_code = 401
+
+    calls = []
+    api = NinjaAPI()
+
+    async def jwt_auth(request):
+        calls.append("jwt")
+        raise ExternalAuthenticationFailed
+
+    async def anonymous_auth(request):
+        calls.append("anonymous")
+        return "anonymous"
+
+    @api.get("/multiple", auth=[jwt_auth, anonymous_auth])
+    async def view(request):
+        return {"auth": request.auth}
+
+    response = await TestAsyncClient(api).get("/multiple")
+
+    assert response.status_code == 200
+    assert response.json() == {"auth": "anonymous"}
+    assert calls == ["jwt", "anonymous"]
+
+
+@pytest.mark.asyncio
+async def test_async_multi_auth_does_not_fall_back_after_forbidden_exception():
+    calls = []
+    api = NinjaAPI()
+
+    async def forbidden_auth(request):
+        calls.append("forbidden")
+        raise AuthorizationError
+
+    async def anonymous_auth(request):
+        calls.append("anonymous")
+        return "anonymous"
+
+    @api.get("/multiple", auth=[forbidden_auth, anonymous_auth])
+    async def view(request):
+        return {"auth": request.auth}
+
+    response = await TestAsyncClient(api).get("/multiple")
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Forbidden"}
+    assert calls == ["forbidden"]
+
+
+@pytest.mark.asyncio
+async def test_async_multi_auth_preserves_last_unauthorized_exception():
+    class ExternalAuthenticationFailed(Exception):
+        status_code = 401
+
+    api = NinjaAPI()
+
+    @api.exception_handler(ExternalAuthenticationFailed)
+    def on_authentication_failed(request, exc):
+        return api.create_response(request, {"detail": "Token expired"}, status=401)
+
+    async def no_credentials(request):
+        return None
+
+    async def expired_token(request):
+        raise ExternalAuthenticationFailed
+
+    @api.get("/multiple", auth=[no_credentials, expired_token])
+    async def view(request):
+        return {"auth": request.auth}
+
+    response = await TestAsyncClient(api).get("/multiple")
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Token expired"}
 
 
 @pytest.mark.asyncio
