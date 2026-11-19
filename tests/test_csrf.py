@@ -5,7 +5,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
 from ninja import NinjaAPI
-from ninja.security import APIKeyCookie, APIKeyHeader, django_auth
+from ninja.security import APIKeyCookie, APIKeyHeader, HttpBearer, django_auth
 from ninja.testing import TestClient as BaseTestClient
 
 
@@ -81,6 +81,8 @@ def obtain_csrf_token_post_no_auth_route(request):
 
 TOKEN = "1bcdefghij2bcdefghij3bcdefghij4bcdefghij5bcdefghij6bcdefghijABCD"
 COOKIES = {settings.CSRF_COOKIE_NAME: TOKEN}
+# CSRF cookie plus the auth cookie that AnyCookieAuth reads
+AUTH_COOKIES = {**COOKIES, "key": "any"}
 
 
 def test_csrf_off():
@@ -91,14 +93,18 @@ def test_csrf_off():
 def test_csrf_on():
     client = TestClient(csrf_ON)
 
-    assert client.post("/post", COOKIES=COOKIES).status_code == 403
+    assert client.post("/post", COOKIES=AUTH_COOKIES).status_code == 403
 
     # check with token in formdata
-    response = client.post("/post", {"csrfmiddlewaretoken": TOKEN}, COOKIES=COOKIES)
+    response = client.post(
+        "/post", {"csrfmiddlewaretoken": TOKEN}, COOKIES=AUTH_COOKIES
+    )
     assert response.status_code == 200
 
     # check with headers
-    response = client.post("/post", COOKIES=COOKIES, headers={"X-CSRFTOKEN": TOKEN})
+    response = client.post(
+        "/post", COOKIES=AUTH_COOKIES, headers={"X-CSRFTOKEN": TOKEN}
+    )
     assert response.status_code == 200
 
     # exempt check
@@ -121,8 +127,8 @@ def test_csrf_cookie_auth():
 
     client = TestClient(api)
 
-    # No auth - access denied
-    assert client.post("/test").status_code == 403
+    # No auth cookie - not authenticated
+    assert client.post("/test").status_code == 401
 
     # Cookie auth + valid csrf
     cookies = {"key": "test"}
@@ -238,3 +244,63 @@ def test_docs_cookie_auth():
     resp = client.get("/docs")
     csrf_token = re.findall(r'data-csrf-token="(.*?)"', resp.content.decode("utf8"))[0]
     assert len(csrf_token) == 0
+
+
+class GoodBearer(HttpBearer):
+    def authenticate(self, request, token):
+        return token == "good" and token
+
+
+def _multi_auth_api(namespace):
+    api = NinjaAPI(urls_namespace=namespace, auth=[django_auth, GoodBearer()])
+
+    @api.post("/post")
+    def post(request):
+        return {"auth": request.auth if isinstance(request.auth, str) else "session"}
+
+    return api
+
+
+def test_cookie_auth_without_cookie_falls_back_to_next_auth():
+    "Issue #1464: a missing session cookie must not block a later Bearer auth"
+    client = TestClient(_multi_auth_api("csrf_multi_fallback"))
+
+    response = client.post("/post", headers={"Authorization": "Bearer good"})
+    assert response.status_code == 200, response.content
+    assert response.json() == {"auth": "good"}
+
+    # nothing valid at all - still rejected
+    response = client.post("/post", headers={"Authorization": "Bearer bad"})
+    assert response.status_code == 401
+
+
+def test_cookie_auth_with_cookie_and_bad_csrf_does_not_fall_back():
+    "With the session cookie present a failed CSRF check stays a hard 403"
+    client = TestClient(_multi_auth_api("csrf_multi_no_fallback"))
+
+    response = client.post(
+        "/post",
+        COOKIES={settings.SESSION_COOKIE_NAME: "abc"},
+        headers={"Authorization": "Bearer good"},
+    )
+    assert response.status_code == 403
+    assert response.json() == {"detail": "CSRF check Failed"}
+
+
+def test_cookie_auth_without_cookie_does_not_call_authenticate():
+    calls = []
+
+    class TrackingCookieAuth(APIKeyCookie):
+        def authenticate(self, request, key):
+            calls.append(key)
+            return True
+
+    api = NinjaAPI(urls_namespace="csrf_no_authenticate", auth=TrackingCookieAuth())
+
+    @api.post("/post")
+    def post(request):
+        return {"success": True}
+
+    response = TestClient(api).post("/post")
+    assert response.status_code == 401
+    assert calls == []
