@@ -401,3 +401,81 @@ def test_optional_query_schema_openapi_params():
 
     assert params("/api/optional") == {"x": False, "y": False, "order": False}
     assert params("/api/required") == {"x": True, "y": False}
+
+
+def test_optional_schema_nested_in_param_schema():
+    """An Optional schema field inside a param schema falls back to None when
+    none of its fields are sent, like a top-level Optional schema (#1805)."""
+
+    class Inner(Schema):
+        a: int
+        b: int
+
+    class AllOptional(Schema):
+        c: Optional[int] = None
+
+    class Deep(Schema):
+        d: int
+
+    class Middle(Schema):
+        deep: Optional[Deep] = None
+
+    class Outer(Schema):
+        q: str = "x"
+        inner: Optional[Inner] = None
+        loose: Optional[AllOptional] = None
+        middle: Middle = Middle()
+
+    temp_api = NinjaAPI()
+
+    @temp_api.get("/query")
+    def query(request, f: Query[Outer]):
+        return f.model_dump()
+
+    @temp_api.get("/header")
+    def header(request, f: Header[Outer]):
+        return f.model_dump()
+
+    @temp_api.post("/form")
+    def form(request, f: Form[Outer]):
+        return f.model_dump()
+
+    client = TestClient(temp_api)
+
+    empty = {"q": "y", "inner": None, "loose": None, "middle": {"deep": None}}
+    assert client.get("/query?q=y").json() == empty
+    assert client.get("/header", headers={"q": "y"}).json() == empty
+    assert client.post("/form", POST={"q": "y"}).json() == empty
+
+    assert client.get("/query?a=1&b=2&c=3&d=4").json() == {
+        "q": "x",
+        "inner": {"a": 1, "b": 2},
+        "loose": {"c": 3},
+        "middle": {"deep": {"d": 4}},
+    }
+
+    # a partly sent Optional schema is still validated
+    resp = client.get("/query?a=1")
+    assert resp.status_code == 422
+    assert [e["loc"] for e in resp.json()["detail"]] == [["query", "b"]]
+
+
+def test_required_nullable_schema_nested_in_param_schema():
+    """A nested Optional schema with no default is still built from defaults."""
+
+    class AllOptional(Schema):
+        c: Optional[int] = None
+
+    class Outer(Schema):
+        loose: Optional[AllOptional]
+
+    temp_api = NinjaAPI()
+
+    @temp_api.get("/query")
+    def query(request, f: Query[Outer]):
+        return f.model_dump()
+
+    client = TestClient(temp_api)
+
+    assert client.get("/query").json() == {"loose": {"c": None}}
+    assert client.get("/query?c=1").json() == {"loose": {"c": 1}}
