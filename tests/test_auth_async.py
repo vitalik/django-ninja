@@ -202,3 +202,22 @@ async def test_async_with_bearer():
 
     res = await client.get("/async", headers={"Authorization": "Bearer secret"})
     assert res.json() == {"auth": "secret"}
+
+
+@pytest.mark.asyncio
+async def test_async_auth_error_keeps_traceback_in_debug(settings):
+    """Exception handlers run while the auth exception is being handled."""
+    settings.DEBUG = True
+
+    async def broken_auth(request):
+        raise KeyError("auth backend down")
+
+    api = NinjaAPI(urls_namespace="auth-async-traceback")
+
+    @api.get("/x", auth=broken_auth)
+    async def x(request):
+        return 1  # pragma: no cover
+
+    response = await TestAsyncClient(api).get("/x")
+    assert response.status_code == 500
+    assert b"KeyError: 'auth backend down'" in response.content

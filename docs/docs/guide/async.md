@@ -250,6 +250,8 @@ itself:
 - **Pagination** — all built-in pagination classes work transparently with `async def`
   operations, and a custom paginator can subclass `AsyncPaginationBase` to support them
   too. See [Pagination: async support](pagination.md#async-support).
+- **WebSockets** — `@api.websocket(...)` handlers are always `async def`, and they
+  are served by the ASGI application from `ninja.asgi`. See [WebSockets](websockets.md).
 - **Testing** — `ninja.testing` provides `TestAsyncClient` alongside the sync
   `TestClient`, for exercising async operations with `await client.get(...)` in your
   tests without running a real ASGI server. See [Testing](testing.md).

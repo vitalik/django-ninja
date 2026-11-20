@@ -91,6 +91,7 @@ nav:
       - guide/errors.md
       - guide/decorators.md
       - guide/async.md
+      - guide/websockets.md
       - guide/versioning.md
       - guide/openapi.md
       - guide/webhooks.md

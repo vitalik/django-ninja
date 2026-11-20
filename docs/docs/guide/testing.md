@@ -292,6 +292,22 @@ async def test_hello():
     it's a dev dependency of Django Ninja itself, so its own test suite uses the same
     pattern.
 
+## Testing websockets
+
+Both clients have a `websocket_connect()` method that opens an in-memory
+websocket connection, with no server:
+
+```python
+def test_echo():
+    client = TestClient(api)
+    with client.websocket_connect("/echo") as ws:
+        ws.send_text("hi")
+        assert ws.receive_text() == "echo: hi"
+```
+
+See [WebSockets: Testing](websockets.md#testing) for rejected handshakes,
+the async version and more.
+
 ## Tips
 
 - `TestClient`/`TestAsyncClient` bypass URL resolution and Django's middleware to keep

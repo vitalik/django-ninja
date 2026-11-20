@@ -11,6 +11,13 @@ from django.http.request import HttpHeaders, HttpRequest
 from ninja import NinjaAPI, Router
 from ninja.responses import NinjaJSONEncoder
 from ninja.responses import Response as HttpResponse
+from ninja.testing.websocket import (
+    AsyncWebSocketTestSession,
+    TestNinjaASGI,
+    WebSocketTestSession,
+    build_websocket_scope,
+)
+from ninja.websockets.types import Scope
 
 
 def build_absolute_uri(location: Optional[str] = None) -> str:
@@ -129,6 +136,26 @@ class NinjaClientBase:
                 self._urls_cache = api.urls[0]
         return self._urls_cache
 
+    def _websocket_args(
+        self,
+        path: str,
+        headers: Optional[dict[str, str]],
+        cookies: Optional[dict[str, str]],
+        subprotocols: Optional[list[str]],
+    ) -> tuple[Any, Scope]:
+        if not hasattr(self, "_websocket_app"):
+            # a stable urlconf object: django caches one resolver per urlconf
+            urlconf = type("TestUrlConf", (), {"urlpatterns": self.urls})()
+            self._websocket_app = TestNinjaASGI(urlconf=urlconf)
+        all_headers = {**self.headers, **(headers or {})}
+        all_cookies = {**self.cookies, **(cookies or {})}
+        if all_cookies:
+            all_headers["cookie"] = "; ".join(
+                f"{k}={v}" for k, v in all_cookies.items()
+            )
+        scope = build_websocket_scope(path, all_headers, subprotocols)
+        return self._websocket_app, scope
+
     def _resolve(
         self, method: str, path: str, data: dict[str, Any], request_params: Any
     ) -> tuple[Callable, HttpRequest, dict]:
@@ -212,6 +239,24 @@ class NinjaClientBase:
 
 
 class TestClient(NinjaClientBase):
+    def websocket_connect(
+        self,
+        path: str,
+        headers: Optional[dict[str, str]] = None,
+        cookies: Optional[dict[str, str]] = None,
+        subprotocols: Optional[list[str]] = None,
+        timeout: Optional[float] = 10,
+    ) -> WebSocketTestSession:
+        """
+        Open an in-memory websocket connection (use it as a context manager).
+
+        Raises ``WebSocketDisconnect`` if the handler closes the connection
+        before accepting it, and ``ninja.testing.WebSocketDenied`` if the
+        handshake is rejected with an HTTP response (auth, invalid params...).
+        """
+        app, scope = self._websocket_args(path, headers, cookies, subprotocols)
+        return WebSocketTestSession(app, scope, timeout)
+
     def _call(
         self, func: Callable, request: HttpRequest, kwargs: dict
     ) -> "NinjaResponse":
@@ -219,6 +264,18 @@ class TestClient(NinjaClientBase):
 
 
 class TestAsyncClient(NinjaClientBase):
+    def websocket_connect(
+        self,
+        path: str,
+        headers: Optional[dict[str, str]] = None,
+        cookies: Optional[dict[str, str]] = None,
+        subprotocols: Optional[list[str]] = None,
+        timeout: Optional[float] = 10,
+    ) -> AsyncWebSocketTestSession:
+        """Async version of ``TestClient.websocket_connect`` (``async with``)."""
+        app, scope = self._websocket_args(path, headers, cookies, subprotocols)
+        return AsyncWebSocketTestSession(app, scope, timeout)
+
     async def request(  # type: ignore[override]
         self,
         method: str,
