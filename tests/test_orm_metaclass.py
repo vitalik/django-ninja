@@ -1,9 +1,11 @@
 import warnings
+from typing import Optional
 
 import pytest
 from django.db import models
+from pydantic import PydanticUserError
 
-from ninja import ModelSchema
+from ninja import ModelSchema, Schema
 from ninja.errors import ConfigError
 
 
@@ -138,6 +140,39 @@ def test_custom_field_overriding_model_field():
     assert list(OverrideSchema.model_fields) == ["name", "rating", "extra"]
     assert OverrideSchema.model_fields["rating"].annotation is float
     assert OverrideSchema(name="n").rating == 0.5
+
+
+def test_custom_field_with_forward_ref():
+    class ForwardRefModel(models.Model):
+        name = models.CharField()
+
+        class Meta:
+            app_label = "tests"
+
+    # "LaterSchema" is not defined yet: the class must still build
+    class ForwardRefSchema(ModelSchema):
+        later: Optional["LaterSchema"] = None
+
+        class Meta:
+            model = ForwardRefModel
+            fields = ["id", "name"]
+
+    with pytest.raises(PydanticUserError, match="not fully defined"):
+        ForwardRefSchema(id=1, name="n")
+
+    class LaterSchema(Schema):
+        x: int
+
+    ForwardRefSchema.model_rebuild()
+
+    assert list(ForwardRefSchema.model_fields) == ["id", "name", "later"]
+    instance = ForwardRefSchema(id=1, name="n", later={"x": 2})
+    assert instance.model_dump() == {"id": 1, "name": "n", "later": {"x": 2}}
+    assert list(ForwardRefSchema.json_schema()["properties"]) == [
+        "id",
+        "name",
+        "later",
+    ]
 
 
 def test_config():
