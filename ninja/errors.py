@@ -1,7 +1,7 @@
 import logging
 import traceback
 from functools import partial
-from typing import TYPE_CHECKING, Generic, List, Optional, TypeVar
+from typing import TYPE_CHECKING, Generic, Optional, TypeVar
 
 import pydantic
 from django.conf import settings
@@ -53,17 +53,17 @@ class ValidationError(Exception):
     the errors attribute as well holds the location of the error(body, form, query, etc.)
     """
 
-    def __init__(self, errors: List[DictStrAny]) -> None:
+    def __init__(self, errors: list[DictStrAny]) -> None:
         self.errors = errors
         super().__init__(errors)
 
 
-def _clean_pydantic_errors(error: pydantic.ValidationError) -> List[DictStrAny]:
+def _clean_pydantic_errors(error: pydantic.ValidationError) -> list[DictStrAny]:
     """
     ``error.errors()`` without pydantic hints, safe to render as JSON: the
     ``input`` is removed and exceptions in ``ctx`` are turned into strings.
     """
-    errors: List[DictStrAny] = []
+    errors: list[DictStrAny] = []
     for i in error.errors(include_url=False):
         del i["input"]  # type: ignore
         if (

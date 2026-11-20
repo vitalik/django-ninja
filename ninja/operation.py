@@ -1,17 +1,12 @@
 import inspect
 import math
 import warnings
+from collections.abc import Coroutine, Iterable, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Coroutine,
-    Dict,
-    Iterable,
-    List,
     Optional,
-    Sequence,
-    Type,
     TypeVar,
     Union,
     cast,
@@ -98,7 +93,7 @@ async def _authenticate_async(
 
 
 def _throttled_response(
-    api: "NinjaAPI", throttle_objects: List[BaseThrottle], request: HttpRequest
+    api: "NinjaAPI", throttle_objects: list[BaseThrottle], request: HttpRequest
 ) -> Optional[HttpResponse]:
     """Run throttles; return the 429 response (with Retry-After) if any denies."""
     throttle_durations = []
@@ -125,18 +120,18 @@ class Operation:
     def __init__(
         self,
         path: str,
-        methods: List[str],
+        methods: list[str],
         view_func: Callable[..., Any],
         *,
         auth: Optional[
             Union[Sequence[Callable[..., Any]], Callable[..., Any], NOT_SET_TYPE]
         ] = NOT_SET,
-        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
+        throttle: Union[BaseThrottle, list[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        tags: Optional[list[str]] = None,
         deprecated: Optional[bool] = None,
         by_alias: Optional[bool] = None,
         exclude_unset: Optional[bool] = None,
@@ -144,11 +139,11 @@ class Operation:
         exclude_none: Optional[bool] = None,
         include_in_schema: bool = True,
         url_name: Optional[str] = None,
-        openapi_extra: Optional[Dict[str, Any]] = None,
+        openapi_extra: Optional[dict[str, Any]] = None,
     ) -> None:
         self.is_async = False
         self.path: str = path
-        self.methods: List[str] = methods
+        self.methods: list[str] = methods
         self.view_func: Callable[..., Any] = view_func
         self.api: NinjaAPI = cast("NinjaAPI", None)
         self.csrf_exempt: bool = getattr(view_func, "csrf_exempt", False)
@@ -164,7 +159,7 @@ class Operation:
         if isinstance(throttle, BaseThrottle):
             throttle = [throttle]
         self.throttle_param = throttle
-        self.throttle_objects: List[BaseThrottle] = []
+        self.throttle_objects: list[BaseThrottle] = []
         if throttle is not NOT_SET:
             for th in throttle:  # type: ignore
                 assert isinstance(th, BaseThrottle), (
@@ -180,9 +175,9 @@ class Operation:
             )
         self.models: TModels = self.signature.models
 
-        self.stream_format: Optional[Type[StreamFormat]] = None
-        self.stream_item_model: Optional[Type[Schema]] = None
-        self.response_models: Dict[Any, Any]
+        self.stream_format: Optional[type[StreamFormat]] = None
+        self.stream_item_model: Optional[type[Schema]] = None
+        self.response_models: dict[Any, Any]
         if isinstance(response, _StreamAlias):
             self.stream_format = response.format_cls
             self.stream_item_model = self._create_response_model(response.item_type)
@@ -216,7 +211,7 @@ class Operation:
 
         if hasattr(view_func, "_ninja_contribute_to_operation"):
             # Allow 3rd party code to contribute to the operation behavior
-            callbacks: List[Callable[..., Any]] = (
+            callbacks: list[Callable[..., Any]] = (
                 view_func._ninja_contribute_to_operation
             )
             for callback in callbacks:
@@ -314,7 +309,7 @@ class Operation:
             resp_object, context={"request": request, "response_status": 200}
         )
 
-        model_dump_kwargs: Dict[str, Any] = {}
+        model_dump_kwargs: dict[str, Any] = {}
         if pydantic_version >= [2, 7]:  # pragma: no branch
             # pydantic added support for serialization context at 2.7
             model_dump_kwargs.update(
@@ -411,8 +406,8 @@ class Operation:
     def _check_throttles(self, request: HttpRequest) -> Optional[HttpResponse]:
         return _throttled_response(self.api, self.throttle_objects, request)
 
-    def _model_dump_kwargs(self, request: HttpRequest, status: int) -> Dict[str, Any]:
-        kwargs: Dict[str, Any] = {}
+    def _model_dump_kwargs(self, request: HttpRequest, status: int) -> dict[str, Any]:
+        kwargs: dict[str, Any] = {}
         if pydantic_version >= [2, 7]:
             kwargs["context"] = {"request": request, "response_status": status}
         return kwargs
@@ -482,7 +477,7 @@ class Operation:
             # so subclass-only fields are not leaked into the response.
             # (model_dump() is the same call on type(self); calling the
             # serializer directly is also faster than model_dump())
-            serializer = cast(Type[BaseModel], resp_annotation).__pydantic_serializer__
+            serializer = cast(type[BaseModel], resp_annotation).__pydantic_serializer__
             result = serializer.to_python(
                 result,
                 by_alias=self.by_alias,
@@ -516,7 +511,7 @@ class Operation:
         self, request: HttpRequest, path_params: Any, temporal_response: HttpResponse
     ) -> DictStrAny:
         values = {}
-        error_contexts: List[ValidationErrorContext] = []
+        error_contexts: list[ValidationErrorContext] = []
         for model in self.models:
             try:
                 data = model.resolve(request, self.api, path_params)
@@ -536,7 +531,7 @@ class Operation:
 
     def _create_response_model_multiple(
         self, response_param: DictStrAny
-    ) -> Dict[str, Optional[Type[Schema]]]:
+    ) -> dict[str, Optional[type[Schema]]]:
         result = {}
         for key, model in response_param.items():
             status_codes = isinstance(key, Iterable) and key or [key]
@@ -544,7 +539,7 @@ class Operation:
                 result[code] = self._create_response_model(model)
         return result
 
-    def _create_response_model(self, response_param: Any) -> Optional[Type[Schema]]:
+    def _create_response_model(self, response_param: Any) -> Optional[type[Schema]]:
         if response_param is None:
             return None
         attrs = {"__annotations__": {"response": response_param}}
@@ -612,7 +607,8 @@ class AsyncOperation(Operation):
 
         # Throttling:
         if self.throttle_objects:
-            error = self._check_throttles(request)
+            # cache backends are sync only (DatabaseCache raises here)
+            error = await sync_to_async(self._check_throttles)(request)
             if error:
                 return error
 
@@ -628,25 +624,25 @@ class AsyncOperation(Operation):
 
 class PathView:
     def __init__(self) -> None:
-        self.operations: List[Operation] = []
+        self.operations: list[Operation] = []
         self.is_async = False  # if at least one operation is async - will become True
         self.url_name: Optional[str] = None
 
     def add_operation(
         self,
         path: str,
-        methods: List[str],
+        methods: list[str],
         view_func: Callable[..., Any],
         *,
         auth: Optional[
             Union[Sequence[Callable[..., Any]], Callable[..., Any], NOT_SET_TYPE]
         ] = NOT_SET,
-        throttle: Union[BaseThrottle, List[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
+        throttle: Union[BaseThrottle, list[BaseThrottle], NOT_SET_TYPE] = NOT_SET,
         response: Any = NOT_SET,
         operation_id: Optional[str] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        tags: Optional[list[str]] = None,
         deprecated: Optional[bool] = None,
         by_alias: Optional[bool] = None,
         exclude_unset: Optional[bool] = None,
@@ -654,7 +650,7 @@ class PathView:
         exclude_none: Optional[bool] = None,
         url_name: Optional[str] = None,
         include_in_schema: bool = True,
-        openapi_extra: Optional[Dict[str, Any]] = None,
+        openapi_extra: Optional[dict[str, Any]] = None,
     ) -> Operation:
         if url_name:
             self.url_name = url_name

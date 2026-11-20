@@ -1,5 +1,5 @@
 import json
-from typing import List, cast
+from typing import cast
 
 from django.http import HttpRequest
 from django.utils.datastructures import MultiValueDict
@@ -16,7 +16,7 @@ class Parser:
         return cast(DictStrAny, json.loads(request.body))
 
     def parse_querydict(
-        self, data: MultiValueDict, list_fields: List[str], request: HttpRequest
+        self, data: MultiValueDict, list_fields: list[str], request: HttpRequest
     ) -> DictStrAny:
         result: DictStrAny = {}
         for key in data.keys():

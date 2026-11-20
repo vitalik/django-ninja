@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import Union
 
 import pytest
 from pydantic import ValidationError
@@ -70,7 +70,7 @@ def check_model(request):
     return 202, User(1, "John", "Password")
 
 
-@api.get("/check_list_model", response={200: List[UserModel]})
+@api.get("/check_list_model", response={200: list[UserModel]})
 def check_list_model(request):
     return 200, [User(1, "John", "Password")]
 

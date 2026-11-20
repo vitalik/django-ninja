@@ -1,11 +1,10 @@
 import warnings
-from typing import Any, List, Optional, TypeVar, Union, cast
+from typing import Any, Literal, Optional, TypeVar, Union, cast
 
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Q, QuerySet
 from pydantic import ConfigDict
 from pydantic.fields import FieldInfo
-from typing_extensions import Literal
 
 from .constants import NOT_SET
 from .schema import Schema
@@ -30,7 +29,7 @@ class FilterLookup:
 
     def __init__(
         self,
-        q: Union[str, List[str], None],
+        q: Union[str, list[str], None],
         *,
         expression_connector: ExpressionConnector = DEFAULT_FIELD_LEVEL_EXPRESSION_CONNECTOR,
         ignore_none: bool = DEFAULT_IGNORE_NONE,
@@ -109,14 +108,14 @@ class FilterSchema(Schema):
         self,
         field_name: str,
         field_info: FieldInfo,
-    ) -> Union[str, List[str], None]:
+    ) -> Union[str, list[str], None]:
         filter_lookup = self._get_filter_lookup(field_name, field_info)
         if filter_lookup:
             return filter_lookup.q
 
         # Legacy approach, consider removing in future versions
         return cast(
-            Union[str, List[str], None],
+            Union[str, list[str], None],
             self._get_from_deprecated_field_extra(field_name, field_info, "q"),
         )
 

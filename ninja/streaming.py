@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, Generic, Type, TypeVar
+from typing import Any, Generic, TypeVar
 
 from ninja.responses import NinjaJSONEncoder
 
@@ -15,7 +15,7 @@ def _serialize_item(item: Any) -> str:
 class _StreamAlias:  # noqa: B903 - Keep identity-based equality for this marker.
     """Marker created by StreamFormat[ItemType]."""
 
-    def __init__(self, format_cls: Type["StreamFormat[Any]"], item_type: type) -> None:
+    def __init__(self, format_cls: type["StreamFormat[Any]"], item_type: type) -> None:
         self.format_cls = format_cls
         self.item_type = item_type
 
@@ -39,7 +39,7 @@ class StreamFormat(Generic[_T]):
         return {cls.media_type: {"schema": item_schema}}
 
     @classmethod
-    def response_headers(cls) -> Dict[str, str]:
+    def response_headers(cls) -> dict[str, str]:
         """Extra headers for the streaming response."""
         return {}
 
@@ -60,7 +60,7 @@ class SSE(StreamFormat, Generic[_T]):
         return f"data: {data}\n\n"
 
     @classmethod
-    def response_headers(cls) -> Dict[str, str]:
+    def response_headers(cls) -> dict[str, str]:
         return {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
 
     @classmethod

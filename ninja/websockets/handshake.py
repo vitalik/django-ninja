@@ -1,7 +1,7 @@
 """Helpers used while a websocket handshake is being processed."""
 
 import json
-from typing import Any, List, Tuple
+from typing import Any
 from urllib.parse import urlsplit
 
 from django.conf import settings
@@ -56,8 +56,7 @@ def origin_is_allowed(request: HttpRequest) -> bool:
                 continue
         else:
             host = trusted
-        if host.startswith("*"):
-            host = host[1:]  # "*.example.com" -> ".example.com" (subdomains)
+        host = host.removeprefix("*")  # "*.example.com" -> ".example.com" (subdomains)
         if is_same_domain(parsed.netloc, host):
             return True
     return False
@@ -112,7 +111,7 @@ def _supports_http_response(websocket: WebSocket) -> bool:
     return "websocket.http.response" in (websocket.scope.get("extensions") or {})
 
 
-def _response_headers(response: HttpResponseBase) -> List[Tuple[bytes, bytes]]:
+def _response_headers(response: HttpResponseBase) -> list[tuple[bytes, bytes]]:
     headers = [
         (name.lower().encode("latin-1"), value.encode("latin-1"))
         for name, value in response.items()

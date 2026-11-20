@@ -22,8 +22,6 @@ import warnings
 from typing import (
     Any,
     Callable,
-    Dict,
-    Type,
     TypeVar,
     Union,
     no_type_check,
@@ -53,7 +51,7 @@ S = TypeVar("S", bound="Schema")
 class DjangoGetter:
     __slots__ = ("_obj", "_schema_cls", "_context", "__dict__")
 
-    def __init__(self, obj: Any, schema_cls: Type[S], context: Any = None):
+    def __init__(self, obj: Any, schema_cls: type[S], context: Any = None):
         self._obj = obj
         self._schema_cls = schema_cls
         self._context = context
@@ -168,7 +166,7 @@ class Resolver:
 
 @dataclass_transform(kw_only_default=True, field_specifiers=(Field,))
 class ResolverMetaclass(ModelMetaclass):
-    _ninja_resolvers: Dict[str, Resolver]
+    _ninja_resolvers: dict[str, Resolver]
 
     @no_type_check
     def __new__(cls, name, bases, namespace, **kwargs):
@@ -235,7 +233,7 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
             handler(values)
 
         # An instance of this Schema (e.g. nested in another schema, or an item of a
-        # List[...] response) is rebuilt via DjangoGetter like any other input, so its
+        # list[...] response) is rebuilt via DjangoGetter like any other input, so its
         # values are re-validated and resolvers run with the current context. Values
         # that never went through validation (model_construct, plain attribute
         # assignment) can't reach the output unfiltered that way.
@@ -251,7 +249,7 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
         return result
 
     @classmethod
-    def from_orm(cls: Type[S], obj: Any, **kw: Any) -> S:
+    def from_orm(cls: type[S], obj: Any, **kw: Any) -> S:
         return cls.model_validate(obj, **kw)
 
     def dict(self, *a: Any, **kw: Any) -> DictStrAny:

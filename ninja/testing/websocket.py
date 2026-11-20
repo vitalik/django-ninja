@@ -15,7 +15,8 @@ In-memory websocket test sessions (no server, no third-party dependencies).
 import asyncio
 import json
 import threading
-from typing import Any, Coroutine, Dict, List, Optional, Tuple, TypeVar
+from collections.abc import Coroutine
+from typing import Any, Optional, TypeVar
 
 from asgiref.sync import sync_to_async
 from django.db import connections
@@ -58,7 +59,7 @@ class WebSocketDenied(Exception):
     """The handshake was rejected with an HTTP response (e.g. 401 from auth)."""
 
     def __init__(
-        self, status_code: int, headers: List[Tuple[bytes, bytes]], body: bytes
+        self, status_code: int, headers: list[tuple[bytes, bytes]], body: bytes
     ):
         self.status_code = status_code
         self.headers = headers
@@ -71,8 +72,8 @@ class WebSocketDenied(Exception):
 
 def build_websocket_scope(
     path: str,
-    headers: Optional[Dict[str, str]] = None,
-    subprotocols: Optional[List[str]] = None,
+    headers: Optional[dict[str, str]] = None,
+    subprotocols: Optional[list[str]] = None,
 ) -> Scope:
     path, _, query = path.partition("?")
     raw_headers = [(b"host", b"testserver")]
@@ -109,7 +110,7 @@ class AsyncWebSocketTestSession:
         self.scope = scope
         self.timeout = timeout
         self.accepted_subprotocol: Optional[str] = None
-        self.accepted_headers: List[Tuple[bytes, bytes]] = []
+        self.accepted_headers: list[tuple[bytes, bytes]] = []
         self._to_app: Optional[asyncio.Queue[Message]] = None
         self._from_app: Optional[asyncio.Queue[Message]] = None
         self._task: Optional[asyncio.Future[None]] = None
@@ -271,7 +272,7 @@ class WebSocketTestSession:
         return self._session.accepted_subprotocol
 
     @property
-    def accepted_headers(self) -> List[Tuple[bytes, bytes]]:
+    def accepted_headers(self) -> list[tuple[bytes, bytes]]:
         return self._session.accepted_headers
 
     def _call(self, coro: Coroutine[Any, Any, T]) -> T:

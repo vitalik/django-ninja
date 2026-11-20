@@ -1,6 +1,7 @@
 import io
+from collections.abc import Awaitable
 from importlib import import_module
-from typing import Any, Awaitable, Callable
+from typing import Any, Callable
 
 from django.http import HttpRequest
 

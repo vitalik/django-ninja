@@ -20,9 +20,8 @@ connections are resolved against the project's URLconf, where every
 plugging it into other ASGI routers (e.g. ``channels.routing.ProtocolTypeRouter``).
 """
 
-import asyncio
 import logging
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Optional
 
 from asgiref.sync import sync_to_async
 from django.conf import settings
@@ -101,7 +100,7 @@ class NinjaASGI:
 
     def resolve_operation(
         self, websocket: WebSocket
-    ) -> Tuple[Optional[WebSocketOperation], Dict[str, Any]]:
+    ) -> tuple[Optional[WebSocketOperation], dict[str, Any]]:
         try:
             match = resolve(websocket.request.path_info, self.get_urlconf(websocket))
         except Resolver404:
@@ -115,7 +114,7 @@ class NinjaASGI:
         set_script_prefix(_get_script_prefix(scope))
         websocket = WebSocket(scope, receive, send)
         operation: Optional[WebSocketOperation] = None
-        values: Optional[Dict[str, Any]] = None
+        values: Optional[dict[str, Any]] = None
         try:
             # The handshake is processed like a Django request: its sync code
             # (signals, auth callbacks, throttles) runs in a thread of its own and
@@ -142,8 +141,6 @@ class NinjaASGI:
             pass
         except WebSocketException as e:
             await _close(websocket, e.code, truncate_reason(e.reason))
-        except asyncio.CancelledError:
-            raise  # server shutdown (an Exception subclass on Python 3.7)
         except Exception as exc:
             if operation is None:
                 raise  # not raised by user code (host check, URL resolution)

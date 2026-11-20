@@ -23,7 +23,7 @@ TODO: When dropping Django < 4.2 support:
          )
 """
 
-from typing import Any, Dict
+from typing import Any
 
 import django
 from django.http import HttpResponse, StreamingHttpResponse
@@ -50,7 +50,7 @@ if ASYNC_STREAMING:
         content_type: str,
         status: int,
         temporal_response: HttpResponse,
-        extra_headers: Dict[str, str],
+        extra_headers: dict[str, str],
     ) -> StreamingHttpResponse:
         """Create a StreamingHttpResponse from an async content generator.
 
@@ -80,7 +80,7 @@ else:
         content_type: str,
         status: int,
         temporal_response: HttpResponse,
-        extra_headers: Dict[str, str],
+        extra_headers: dict[str, str],
     ) -> StreamingHttpResponse:
         """Create a StreamingHttpResponse from an async content generator.
 

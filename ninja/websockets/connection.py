@@ -7,16 +7,10 @@ an exchange of dictionaries between the server and the application
 """
 
 import json
+from collections.abc import AsyncIterator, Iterable, Mapping
 from typing import (
     Any,
-    AsyncIterator,
-    Dict,
-    Iterable,
-    List,
-    Mapping,
     Optional,
-    Tuple,
-    Type,
     TypeVar,
     Union,
     overload,
@@ -65,7 +59,7 @@ class WebSocket:
         self._send = send
         self.client_state = WebSocketState.CONNECTING
         self.application_state = WebSocketState.CONNECTING
-        self.path_params: Dict[str, Any] = {}
+        self.path_params: dict[str, Any] = {}
         self.auth: Any = None
         # set to the API renderer (when it renders JSON) by WebSocketOperation
         self.renderer: Optional[BaseRenderer] = None
@@ -88,17 +82,17 @@ class WebSocket:
         return self.request.headers
 
     @property
-    def cookies(self) -> Dict[str, str]:
+    def cookies(self) -> dict[str, str]:
         """Same as ``websocket.request.COOKIES``."""
         return self.request.COOKIES
 
     @property
-    def client(self) -> Optional[Tuple[str, int]]:
+    def client(self) -> Optional[tuple[str, int]]:
         client = self.scope.get("client")
         return tuple(client) if client else None
 
     @property
-    def subprotocols(self) -> List[str]:
+    def subprotocols(self) -> list[str]:
         return list(self.scope.get("subprotocols", []))
 
     @property
@@ -198,7 +192,7 @@ class WebSocket:
     async def accept(
         self,
         subprotocol: Optional[str] = None,
-        headers: Optional[Iterable[Tuple[bytes, bytes]]] = None,
+        headers: Optional[Iterable[tuple[bytes, bytes]]] = None,
     ) -> None:
         if self.client_state == WebSocketState.CONNECTING:
             # wait for the "websocket.connect" message
@@ -262,7 +256,7 @@ class WebSocket:
     async def receive_json(self, mode: str = ..., *, schema: None = ...) -> Any: ...
 
     @overload
-    async def receive_json(self, mode: str = ..., *, schema: Type[T]) -> T: ...
+    async def receive_json(self, mode: str = ..., *, schema: type[T]) -> T: ...
 
     @overload
     async def receive_json(self, mode: str = ..., *, schema: Any) -> Any: ...
@@ -351,7 +345,7 @@ class WebSocket:
     ) -> AsyncIterator[Any]: ...
 
     @overload
-    def iter_json(self, mode: str = ..., *, schema: Type[T]) -> AsyncIterator[T]: ...
+    def iter_json(self, mode: str = ..., *, schema: type[T]) -> AsyncIterator[T]: ...
 
     @overload
     def iter_json(self, mode: str = ..., *, schema: Any) -> AsyncIterator[Any]: ...

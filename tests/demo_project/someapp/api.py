@@ -1,5 +1,4 @@
 from datetime import date
-from typing import List
 
 from django.shortcuts import get_object_or_404
 from pydantic import BaseModel
@@ -25,7 +24,7 @@ def create_event(request, event: EventSchema):
     return event
 
 
-@router.get("", response=List[EventSchema])
+@router.get("", response=list[EventSchema])
 def list_events(request):
     return list(Event.objects.all())
 

@@ -1,8 +1,7 @@
 # The goal of this file is to test that mypy "likes" all the combinations of parametrization
-from typing import Any, List
+from typing import Annotated, Any
 
 from django.http import HttpRequest
-from typing_extensions import Annotated
 
 from ninja import (
     Body,
@@ -81,7 +80,7 @@ async def websocket_typing(websocket: WebSocket, room: int) -> None:
     await websocket.accept()
     payload = await websocket.receive_json(schema=Payload)
     payload.s.capitalize()
-    payloads = await websocket.receive_json("binary", schema=List[Payload])
+    payloads = await websocket.receive_json("binary", schema=list[Payload])
     payloads[0].s.capitalize()
     async for item in websocket.iter_json(schema=Payload):
         item.s.capitalize()

@@ -1,5 +1,6 @@
 import enum
-from typing import Any, Awaitable, Callable, MutableMapping, Optional
+from collections.abc import Awaitable, MutableMapping
+from typing import Any, Callable, Optional
 
 __all__ = [
     "Scope",

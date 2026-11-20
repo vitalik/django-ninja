@@ -1,4 +1,5 @@
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Sequence, cast
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any, Callable, Optional, cast
 
 import pydantic
 from asgiref.sync import sync_to_async
@@ -73,7 +74,7 @@ class WebSocketOperation:
         if isinstance(throttle, BaseThrottle):
             throttle = [throttle]
         self.throttle_param = throttle
-        self.throttle_objects: List[BaseThrottle] = []
+        self.throttle_objects: list[BaseThrottle] = []
         if throttle is not NOT_SET and throttle is not None:
             for th in throttle:
                 assert isinstance(th, BaseThrottle), (
@@ -147,7 +148,7 @@ class WebSocketOperation:
 
     def _get_values(self, request: HttpRequest, path_params: DictStrAny) -> DictStrAny:
         values: DictStrAny = {}
-        error_contexts: List[ValidationErrorContext] = []
+        error_contexts: list[ValidationErrorContext] = []
         for model in self.models:
             try:
                 values.update(model.resolve(request, self.api, path_params))
@@ -205,14 +206,14 @@ class WebSocketOperation:
             raise exc
         await reject(websocket, response)
 
-    async def run(self, websocket: WebSocket, path_params: Dict[str, Any]) -> None:
+    async def run(self, websocket: WebSocket, path_params: dict[str, Any]) -> None:
         """Process the handshake and, if it is not rejected, call the handler."""
         values = await self.handshake(websocket, path_params)
         if values is not None:
             await self.view_func(**values)
 
     async def handshake(
-        self, websocket: WebSocket, path_params: Dict[str, Any]
+        self, websocket: WebSocket, path_params: dict[str, Any]
     ) -> Optional[DictStrAny]:
         """
         Process the handshake (origin, auth, throttling, params).

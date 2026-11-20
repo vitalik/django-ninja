@@ -1,9 +1,8 @@
 import json
 from datetime import date
-from typing import List
+from typing import Annotated
 
 import pytest
-from typing_extensions import Annotated
 from ws_util import unique_namespace
 
 from ninja import NinjaAPI, Schema, WebSocket, WebSocketDisconnect
@@ -43,7 +42,7 @@ def make_client():
     async def bulk(websocket: WebSocket):
         await websocket.accept()
         try:
-            items = await websocket.receive_json(schema=List[Item])
+            items = await websocket.receive_json(schema=list[Item])
         except ValidationError as e:
             # JSON-safe errors (no pydantic input objects), like HTTP 422
             await websocket.send_json({"errors": e.errors})
@@ -54,7 +53,7 @@ def make_client():
     async def orm(websocket: WebSocket):
         await websocket.accept()
         await websocket.send_json(OrmLike("a"), schema=ItemOut)
-        await websocket.send_json([OrmLike("b")], schema=List[ItemOut])
+        await websocket.send_json([OrmLike("b")], schema=list[ItemOut])
 
     @api.websocket("/unhashable")
     async def unhashable(websocket: WebSocket):

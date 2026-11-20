@@ -17,7 +17,7 @@ def type_adapter(tp: Any) -> TypeAdapter:
         return TypeAdapter(tp)
 
 
-@functools.lru_cache(maxsize=None)
+@functools.cache
 def _cached_type_adapter(tp: Any) -> TypeAdapter:
     return TypeAdapter(tp)
 

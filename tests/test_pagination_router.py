@@ -1,5 +1,3 @@
-from typing import List
-
 import pytest
 
 from ninja import NinjaAPI, Schema
@@ -13,7 +11,7 @@ class ItemSchema(Schema):
     id: int
 
 
-@api.get("/items", response=List[ItemSchema])
+@api.get("/items", response=list[ItemSchema])
 def items(request):
     return [{"id": i} for i in range(1, 51)]
 
@@ -23,13 +21,13 @@ def items_nolist(request):
     return {"id": 1}
 
 
-@api.get("/items_extra_layer", response=List[ItemSchema])
+@api.get("/items_extra_layer", response=list[ItemSchema])
 @paginate  # has not to break down
 def items_extra_layer(request):
     return [{"id": i} for i in range(1, 51)]
 
 
-@api.get("/items_overridden", response=List[ItemSchema])
+@api.get("/items_overridden", response=list[ItemSchema])
 @paginate(PageNumberPagination, page_size=3)  # has precedence over router pagination
 def items_overridden_pagination(request):
     return [{"id": i} for i in range(1, 51)]
@@ -147,7 +145,7 @@ async def test_async_pagination():
     # Create separate API for async test to avoid frozen router issues
     async_api = NinjaAPI(default_router=RouterPaginated(), urls_namespace="async_test")
 
-    @async_api.get("/items_async", response=List[ItemSchema])
+    @async_api.get("/items_async", response=list[ItemSchema])
     async def items_async(request):
         return [{"id": i} for i in range(1, 51)]
 

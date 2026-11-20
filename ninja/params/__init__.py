@@ -1,6 +1,5 @@
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Pattern, TypeVar, Union
-
-from typing_extensions import Annotated
+from re import Pattern
+from typing import TYPE_CHECKING, Annotated, Any, Callable, Optional, TypeVar, Union
 
 from ninja.params import functions as param_functions
 
@@ -48,13 +47,13 @@ if TYPE_CHECKING:  # pragma: nocover
     Query = Annotated[T, param_functions.Query()]
     # mypy does not like to extend already annotated params
     # with extra annotation (so need to cheat with these XXX-Ex types):
-    from typing_extensions import Annotated as BodyEx
-    from typing_extensions import Annotated as CookieEx
-    from typing_extensions import Annotated as FileEx
-    from typing_extensions import Annotated as FormEx
-    from typing_extensions import Annotated as HeaderEx
-    from typing_extensions import Annotated as PathEx
-    from typing_extensions import Annotated as QueryEx
+    from typing import Annotated as BodyEx
+    from typing import Annotated as CookieEx
+    from typing import Annotated as FileEx
+    from typing import Annotated as FormEx
+    from typing import Annotated as HeaderEx
+    from typing import Annotated as PathEx
+    from typing import Annotated as QueryEx
 else:
     Body = ParamShortcut(param_functions.Body)
     Cookie = ParamShortcut(param_functions.Cookie)
@@ -87,11 +86,11 @@ def P(
     max_length: Optional[int] = None,
     pattern: Union[str, Pattern[str], None] = None,
     example: Any = None,
-    examples: Optional[Dict[str, Any]] = None,
+    examples: Optional[dict[str, Any]] = None,
     deprecated: Optional[bool] = None,
     include_in_schema: bool = True,
     **extra: Any,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     "Arguments for BodyEx, QueryEx, etc."
     return dict(
         alias=alias,

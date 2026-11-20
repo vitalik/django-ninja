@@ -1,12 +1,11 @@
 import importlib
 from sys import version_info
-from typing import Any, List, Optional, Union
+from typing import Annotated, Any, Literal, Optional, Union
 
 import pytest
 from django.test import override_settings
 from pydantic import Field
 from pydantic.errors import PydanticSchemaGenerationError
-from typing_extensions import Annotated, Literal
 
 from ninja import NinjaAPI, Schema
 from ninja.constants import NOT_SET
@@ -34,7 +33,7 @@ class CustomPagination(PaginationBase):
         skip: int
 
     class Output(Schema):
-        items: List[Any]
+        items: list[Any]
         count: str
         skip: int
 
@@ -66,7 +65,7 @@ class ResultsPaginator(PaginationBase):
         skip: int
 
     class Output(Schema):
-        results: List[int]
+        results: list[int]
         count: int
         skip: int
 
@@ -87,7 +86,7 @@ class NextPrevPagination(PaginationBase):
         skip: int
 
     class Output(Schema):
-        items: List[Any]
+        items: list[Any]
         next: str = None
         prev: str = None
 
@@ -109,7 +108,7 @@ class CustomItemsLimitOffsetPagination(LimitOffsetPagination):
     items_attribute = "results"
 
     class Output(Schema):
-        results: List[int]
+        results: list[int]
         count: int
 
 
@@ -119,7 +118,7 @@ class CustomItemsPageNumberPagination(PageNumberPagination):
     items_attribute = "results"
 
     class Output(Schema):
-        results: List[int]
+        results: list[int]
         count: int
 
 
@@ -137,80 +136,80 @@ class NoPagination(PaginationBase):
         }
 
 
-@api.get("/items_1", response=List[int])
+@api.get("/items_1", response=list[int])
 @paginate  # WITHOUT brackets (should use default pagination)
 def items_1(request, **kwargs):
     return ITEMS
 
 
-@api.get("/items_2", response=List[int])
+@api.get("/items_2", response=list[int])
 @paginate()  # with brackets (should use default pagination)
 def items_2(request, someparam: int = 0, **kwargs):
     # also having custom param `someparam` - that should not be lost
     return ITEMS
 
 
-@api.get("/items_3", response=List[int])
+@api.get("/items_3", response=list[int])
 @paginate(CustomPagination)
 def items_3(request, **kwargs):
     return ITEMS
 
 
-@api.get("/items_4", response=List[int])
+@api.get("/items_4", response=list[int])
 @paginate(PageNumberPagination, page_size=10)
 def items_4(request, **kwargs):
     return ITEMS
 
 
-@api.get("/items_5", response=List[int])
+@api.get("/items_5", response=list[int])
 @paginate(PageNumberPagination, page_size=10)
 def items_5(request):
     return ITEMS
 
 
-@api.get("/items_6", response={101: int, 200: List[Any]})
+@api.get("/items_6", response={101: int, 200: list[Any]})
 @paginate(PageNumberPagination, page_size=10, pass_parameter="page_info")
 def items_6(request, **kwargs):
     return ITEMS + [kwargs["page_info"]]
 
 
-@api.get("/items_7", response=List[int])
+@api.get("/items_7", response=list[int])
 @paginate(NoOutputPagination)
 def items_7(request):
     return list(range(15))
 
 
-@api.get("/items_8", response=List[int])
+@api.get("/items_8", response=list[int])
 @paginate(ResultsPaginator)
 def items_8(request):
     return list(range(1000))
 
 
-@api.get("/items_9", response=List[int])
+@api.get("/items_9", response=list[int])
 @paginate(NextPrevPagination)
 def items_9(request):
     return list(range(100))
 
 
-@api.get("/items_10", response=List[int])
+@api.get("/items_10", response=list[int])
 @paginate(PageNumberPagination, page_size=10, max_page_size=20)
 def items_10(request):
     return ITEMS
 
 
-@api.get("/items_11", response=List[int])
+@api.get("/items_11", response=list[int])
 @paginate(CustomItemsLimitOffsetPagination)
 def items_11(request):
     return list(range(100))
 
 
-@api.get("/items_12", response=List[int])
+@api.get("/items_12", response=list[int])
 @paginate(CustomItemsPageNumberPagination)
 def items_12(request):
     return list(range(100))
 
 
-@api.get("/items_no_pagination", response=List[int])
+@api.get("/items_no_pagination", response=list[int])
 @paginate(NoPagination)
 def items_no_pagination(request):
     return ITEMS
@@ -554,7 +553,7 @@ def test_10_max_limit_set():
     new_api = NinjaAPI()
     new_client = TestClient(new_api)
 
-    @new_api.get("/items_10", response=List[int])
+    @new_api.get("/items_10", response=list[int])
     @paginate  # LimitOffsetPagination is set as default
     def items_10(request, **kwargs):
         return ITEMS
@@ -601,7 +600,7 @@ def test_11_max_limit_set_and_exceeded():
     new_api = NinjaAPI()
     new_client = TestClient(new_api)
 
-    @new_api.get("/items_11", response=List[int])
+    @new_api.get("/items_11", response=list[int])
     @paginate  # LimitOffsetPagination is set as default
     def items_11(request, **kwargs):
         return ITEMS
@@ -623,7 +622,7 @@ def test_limit_offset_per_endpoint_max_limit():
     new_api = NinjaAPI()
     new_client = TestClient(new_api)
 
-    @new_api.get("/items_capped", response=List[int])
+    @new_api.get("/items_capped", response=list[int])
     @paginate(LimitOffsetPagination, max_limit=50)
     def items_capped(request, **kwargs):
         return ITEMS
@@ -671,8 +670,8 @@ def test_pagination_works_with_unnamed_classes():
     This test lets you check that the typing.Any case handled in `ninja.pagination.make_response_paginated`
     works for Python>=3.11, as a typing.Any does possess the __name__ attribute past that version
     """
-    operation = Operation("/whatever", ["GET"], lambda: None, response=List[int])
-    operation.response_models[200].__annotations__["response"] = List[object()]
+    operation = Operation("/whatever", ["GET"], lambda: None, response=list[int])
+    operation.response_models[200].__annotations__["response"] = list[object()]
     with pytest.raises(
         PydanticSchemaGenerationError
     ):  # It does fail after we passed the logic that we are testing
@@ -713,7 +712,7 @@ def test_find_collection_response_skips_none_and_not_set():
         id: int
 
     # Create operation with a collection response
-    operation = Operation("/test", ["GET"], lambda: None, response=List[ItemSchema])
+    operation = Operation("/test", ["GET"], lambda: None, response=list[ItemSchema])
 
     # Manually add None and NOT_SET response models before the collection one
     original_200 = operation.response_models[200]
@@ -780,32 +779,32 @@ def test_paginated_unions_get_their_own_schemas():
     """
     api = NinjaAPI(urls_namespace="paginated_unions")
 
-    @api.get("/foos", response=List[FooUnion])
+    @api.get("/foos", response=list[FooUnion])
     @paginate
     def foos(request):
         return [{"id": 1, "kind": "foo1"}, {"id": 2, "kind": "foo2"}]
 
-    @api.get("/bars", response=List[BarUnion])
+    @api.get("/bars", response=list[BarUnion])
     @paginate
     def bars(request):
         return [{"id": 3, "kind": "bar2"}]
 
-    @api.get("/foo1-or-bar1", response=List[Union[Foo1, Bar1]])
+    @api.get("/foo1-or-bar1", response=list[Union[Foo1, Bar1]])
     @paginate
     def foo1_or_bar1(request):
         return []
 
-    @api.get("/foo2-or-bar2", response=List[Union[Foo2, Bar2]])
+    @api.get("/foo2-or-bar2", response=list[Union[Foo2, Bar2]])
     @paginate
     def foo2_or_bar2(request):
         return []
 
-    @api.get("/optional-foo1", response=List[Optional[Foo1]])
+    @api.get("/optional-foo1", response=list[Optional[Foo1]])
     @paginate
     def optional_foo1(request):
         return [None]
 
-    @api.get("/optional-bar1", response=List[Optional[Bar1]])
+    @api.get("/optional-bar1", response=list[Optional[Bar1]])
     @paginate
     def optional_bar1(request):
         return []
@@ -865,12 +864,12 @@ def test_paginated_unions_get_their_own_schemas():
 def test_paginated_pipe_unions_get_their_own_schemas():
     api = NinjaAPI(urls_namespace="paginated_pipe_unions")
 
-    @api.get("/foo1-or-bar1", response=List[Foo1 | Bar1])
+    @api.get("/foo1-or-bar1", response=list[Foo1 | Bar1])
     @paginate
     def foo1_or_bar1(request):
         return []
 
-    @api.get("/foo2-or-bar2", response=List[Foo2 | Bar2])
+    @api.get("/foo2-or-bar2", response=list[Foo2 | Bar2])
     @paginate
     def foo2_or_bar2(request):
         return []

@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any, List
+from typing import Any
 
 import django
 import pytest
@@ -27,7 +27,7 @@ class NoAsyncPagination(PaginationBase):
         skip: int
 
     class Output(Schema):
-        items: List[Any]
+        items: list[Any]
         count: str
         skip: int
 
@@ -96,7 +96,7 @@ async def test_async_config_error():
         ConfigError, match="Pagination class not configured for async requests"
     ):
 
-        @api.get("/items_async_undefined", response=List[int])
+        @api.get("/items_async_undefined", response=list[int])
         @paginate(NoAsyncPagination)
         async def items_async_undefined(request, **kwargs):
             return ITEMS
@@ -106,7 +106,7 @@ async def test_async_config_error():
 async def test_async_custom_pagination():
     api = NinjaAPI()
 
-    @api.get("/items_async", response=List[int])
+    @api.get("/items_async", response=list[int])
     @paginate(AsyncNoOutputPagination)
     async def items_async(request):
         return ITEMS
@@ -121,7 +121,7 @@ async def test_async_custom_pagination():
 async def test_async_default():
     api = NinjaAPI()
 
-    @api.get("/items_default", response=List[int])
+    @api.get("/items_default", response=list[int])
     @paginate  # WITHOUT brackets (should use default pagination)
     async def items_default(request, someparam: int = 0, **kwargs):
         await asyncio.sleep(0)
@@ -137,7 +137,7 @@ async def test_async_default():
 async def test_async_page_number():
     api = NinjaAPI()
 
-    @api.get("/items_page_number", response=List[Any])
+    @api.get("/items_page_number", response=list[Any])
     @paginate(PageNumberPagination, page_size=10, pass_parameter="page_info")
     async def items_page_number(request, **kwargs):
         return ITEMS + [kwargs["page_info"]]
@@ -214,7 +214,7 @@ async def test_async_no_pagination_without_query_params():
     """
     api = NinjaAPI()
 
-    @api.get("/items_no_pagination_async", response=List[int])
+    @api.get("/items_no_pagination_async", response=list[int])
     @paginate(AsyncNoPagination)
     async def items_no_pagination_async(request):
         await asyncio.sleep(0)

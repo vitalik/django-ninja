@@ -1,10 +1,9 @@
 import textwrap
-from typing import Type
 
 from django.core.management.base import BaseCommand
 
 
-def command_docstring(cmd: Type[BaseCommand]) -> str:
+def command_docstring(cmd: type[BaseCommand]) -> str:
     base_args = []
     if cmd is not BaseCommand:  # pragma: no branch
         base_parser = cmd().create_parser("base", "")

@@ -1,5 +1,5 @@
 import warnings
-from typing import Any, List, Optional, Union, no_type_check
+from typing import Any, Optional, Union, no_type_check
 
 from django.apps import apps
 from django.db.models import Model as DjangoModel
@@ -16,9 +16,9 @@ _is_modelschema_class_defined = False
 @dataclass
 class MetaConf:
     model: Any
-    fields: Optional[List[str]] = None
-    exclude: Union[List[str], str, None] = None
-    fields_optional: Union[List[str], str, None] = None
+    fields: Optional[list[str]] = None
+    exclude: Union[list[str], str, None] = None
+    fields_optional: Union[list[str], str, None] = None
 
     @staticmethod
     def from_schema_class(name: str, namespace: dict) -> "MetaConf":

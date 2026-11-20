@@ -1,6 +1,5 @@
 import sys
-from sys import version_info
-from typing import Any, List, Optional, Union
+from typing import Annotated, Any, Optional, Union
 from unittest.mock import Mock
 from uuid import uuid4
 
@@ -9,7 +8,6 @@ import pytest
 from django.contrib.admin.views.decorators import staff_member_required
 from django.db import models
 from django.test import Client, override_settings
-from typing_extensions import Annotated
 
 from ninja import (
     Body,
@@ -75,8 +73,8 @@ def method_alias(request, data: Payload):
     return data.dict()
 
 
-@api.post("/test_list", response=List[Response])
-def method_list_response(request, data: List[Payload]):
+@api.post("/test_list", response=list[Response])
+def method_list_response(request, data: list[Payload]):
     return []
 
 
@@ -99,32 +97,15 @@ def method_path(
     return dict(i=i, f=f)
 
 
-# This definition is only possible in Python 3.9+
-# TODO: Drop this condition once support for <= 3.8 is dropped
-if version_info >= (3, 9):
-
-    @api.get("/test-pathex/{path_ex}", response=AnnotatedStr)
-    def method_pathex(
-        request,
-        path_ex: PathEx[
-            AnnotatedStr,
-            P(description="path_ex description"),
-        ],
-    ):
-        return path_ex
-
-else:
-    with pytest.raises(NotImplementedError, match="3.9+"):
-
-        @api.get("/test-pathex/{path_ex}", response=AnnotatedStr)
-        def method_pathex(
-            request,
-            path_ex: PathEx[
-                AnnotatedStr,
-                P(description="path_ex description"),
-            ],
-        ):
-            return path_ex
+@api.get("/test-pathex/{path_ex}", response=AnnotatedStr)
+def method_pathex(
+    request,
+    path_ex: PathEx[
+        AnnotatedStr,
+        P(description="path_ex description"),
+    ],
+):
+    return path_ex
 
 
 @api.post("/test-form", response=Response)
@@ -143,14 +124,14 @@ def method_form_body(request, i: int = Form(10), s: str = Body("10")):
 
 
 @api.post("/test-form-file", response=Response)
-def method_form_file(request, files: List[UploadedFile], data: Payload = Form(...)):
+def method_form_file(request, files: list[UploadedFile], data: Payload = Form(...)):
     return dict(i=data.i, f=data.f)
 
 
 @api.post("/test-body-file", response=Response)
 def method_body_file(
     request,
-    files: List[UploadedFile],
+    files: list[UploadedFile],
     body: Payload = Body(...),
 ):
     return dict(i=body.i, f=body.f)
@@ -493,10 +474,6 @@ def test_schema_path(schema):
     }
 
 
-@pytest.mark.skipif(
-    version_info < (3, 9),
-    reason="requires py3.9+ for Annotated[] at the route definition site",
-)
 def test_schema_pathex(schema):
     method_list = schema["paths"]["/api/test-pathex/{path_ex}"]["get"]
 
@@ -1025,7 +1002,7 @@ def test_no_default_for_custom_items_attribute():
 
     class CustomPagination(PaginationBase):
         class Output(Schema):
-            data: List[Any]  # `items` is a default attribute
+            data: list[Any]  # `items` is a default attribute
             detail: str
             total: int
 
@@ -1037,7 +1014,7 @@ def test_no_default_for_custom_items_attribute():
     @api.get(
         "/employees",
         auth=["OAuth"],
-        response=List[EmployeeOut],
+        response=list[EmployeeOut],
     )
     @paginate(CustomPagination)
     def get_employees(request):

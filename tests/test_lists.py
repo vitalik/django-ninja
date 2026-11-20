@@ -1,5 +1,3 @@
-from typing import List
-
 import pytest
 from django.http import QueryDict  # noqa
 from pydantic import BaseModel, Field, conlist
@@ -13,8 +11,8 @@ router = Router()
 @router.post("/list1")
 def listview1(
     request,
-    query: List[int] = Query(...),
-    form: List[int] = Form(...),
+    query: list[int] = Query(...),
+    form: list[int] = Form(...),
 ):
     return {
         "query": query,
@@ -25,8 +23,8 @@ def listview1(
 @router.post("/list2")
 def listview2(
     request,
-    body: List[int],
-    query: List[int] = Query(...),
+    body: list[int],
+    query: list[int] = Query(...),
 ):
     return {
         "query": query,
@@ -40,23 +38,23 @@ class BodyModel(BaseModel):
 
 
 @router.post("/list3")
-def listview3(request, body: List[BodyModel]):
+def listview3(request, body: list[BodyModel]):
     return {
         "body": body,
     }
 
 
 @router.post("/list-default")
-def listviewdefault(request, body: List[int] = [1]):  # noqa: B006
-    # By default List[anything] is treated for body
+def listviewdefault(request, body: list[int] = [1]):  # noqa: B006
+    # By default list[anything] is treated for body
     return {
         "body": body,
     }
 
 
 class Filters(Schema):
-    tags: List[str] = []
-    other_tags: List[str] = Field([], alias="other_tags_alias")
+    tags: list[str] = []
+    other_tags: list[str] = Field([], alias="other_tags_alias")
 
 
 @router.post("/list4")
@@ -92,7 +90,7 @@ def listview5(
 @router.post("/list6")
 def listview6(
     request,
-    object_id: List[int] = Query(None, alias="id"),
+    object_id: list[int] = Query(None, alias="id"),
 ):
     return {"query": object_id}
 

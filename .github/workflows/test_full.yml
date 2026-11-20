@@ -11,18 +11,12 @@ env:
 
 jobs:
   test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04  # Python 3.9 has no ubuntu-26.04 build
     strategy:
       matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12', '3.13', '3.14', '3.15']
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13', '3.14', '3.15']
         django-version: ['<3.2', '<3.3', '<4.2', '<4.3', '<5.1', '<5.2', '<5.3', '<6.1', '<6.2']
         exclude:
-          - python-version: '3.7'
-            django-version: '<5.1'
-
-          - python-version: '3.8'
-            django-version: '<5.1'
-
           - python-version: '3.9'
             django-version: '<5.1'
 
@@ -65,15 +59,15 @@ jobs:
             django-version: '<5.2'
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
       - name: Set up uv
-        uses: astral-sh/setup-uv@v10.0.1
+        uses: astral-sh/setup-uv@v10.3.3
         with:
-          version: '0.11.32'
+          version: '0.13.9'
           enable-cache: true
       - name: Install core
         run: uv pip install --system "Django${{ matrix.django-version }}" "pydantic<3"
@@ -86,11 +80,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Set up uv
-        uses: astral-sh/setup-uv@v10.0.1
+        uses: astral-sh/setup-uv@v10.3.3
         with:
-          version: '0.11.32'
+          version: '0.13.9'
           python-version: '3.12'
           enable-cache: true
       - name: Install Dependencies
@@ -101,11 +95,11 @@ jobs:
   codestyle:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Set up uv
-        uses: astral-sh/setup-uv@v10.0.1
+        uses: astral-sh/setup-uv@v10.3.3
         with:
-          version: '0.11.32'
+          version: '0.13.9'
           python-version: '3.12'
           enable-cache: true
       - name: Install Dependencies

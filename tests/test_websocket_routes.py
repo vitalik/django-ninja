@@ -1,5 +1,3 @@
-from typing import List
-
 import pytest
 from ws_util import FakeTransport, make_scope, unique_namespace
 
@@ -189,7 +187,7 @@ async def test_run_resolves_params():
     async def room(
         websocket: WebSocket,
         room_id: int,
-        tags: List[str] = Query([]),
+        tags: list[str] = Query([]),
         lang: str = "en",
         x_token: str = Header(None),
     ):

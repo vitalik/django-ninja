@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 import pytest
 
@@ -19,7 +19,7 @@ class SomeSchema(Schema):
 
 class OtherSchema(SomeSchema):
     other: str
-    category: Optional[List[str]] = None
+    category: Optional[list[str]] = None
 
 
 @api.patch("/patch")

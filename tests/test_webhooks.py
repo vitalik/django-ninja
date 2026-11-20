@@ -1,6 +1,5 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import List
 
 import pytest
 from pydantic import BaseModel
@@ -165,7 +164,7 @@ def test_nested_schemas_go_to_components():
 
     @api.webhook("order.created")
     class OrderCreated(Schema):
-        items: List[Item]
+        items: list[Item]
         created: datetime
 
     schema = api.get_openapi_schema(path_prefix="")
