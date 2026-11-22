@@ -1,3 +1,4 @@
+import functools
 import inspect
 import math
 import warnings
@@ -20,7 +21,8 @@ from django.http import (
     StreamingHttpResponse,
 )
 from django.http.response import HttpResponseBase
-from pydantic import BaseModel
+from pydantic import BaseModel, TypeAdapter
+from pydantic_core import SchemaSerializer
 
 from ninja.compatibility.files import FIX_MIDDLEWARE_PATH, need_to_fix_request_files
 from ninja.compatibility.streaming import create_streaming_response
@@ -32,6 +34,7 @@ from ninja.errors import (
     ValidationErrorContext,
 )
 from ninja.params.models import TModels
+from ninja.renderers import PydanticJSONRenderer
 from ninja.responses import Status
 from ninja.schema import Schema, pydantic_version
 from ninja.signature import ViewSignature, is_async
@@ -44,6 +47,13 @@ if TYPE_CHECKING:
     from ninja import NinjaAPI  # pragma: no cover
 
 __all__ = ["Operation", "PathView", "ResponseObject"]
+
+
+@functools.cache
+def _response_serializer(response_model: type[BaseModel]) -> SchemaSerializer:
+    # the "response" field on its own, to dump it without the wrapper model
+    annotation = response_model.model_fields["response"].rebuild_annotation()
+    return TypeAdapter(annotation).serializer
 
 
 async def _await_coroutine(coroutine: Coroutine[Any, Any, Any]) -> Any:
@@ -416,7 +426,14 @@ class Operation:
             # Empty response.
             return temporal_response
 
-        model_dump_kwargs = self._model_dump_kwargs(request, status)
+        dump_kwargs: dict[str, Any] = {
+            "by_alias": self.by_alias,
+            "exclude_unset": self.exclude_unset,
+            "exclude_defaults": self.exclude_defaults,
+            "exclude_none": self.exclude_none,
+            **self._model_dump_kwargs(request, status),
+        }
+        renderer = self.api.renderer
 
         # Skip re-validation for pydantic model instances matching the response type
         resp_field = response_model.model_fields["response"]
@@ -432,14 +449,12 @@ class Operation:
             # (model_dump() is the same call on type(self); calling the
             # serializer directly is also faster than model_dump())
             serializer = cast(type[BaseModel], resp_annotation).__pydantic_serializer__
-            result = serializer.to_python(
-                result,
-                by_alias=self.by_alias,
-                exclude_unset=self.exclude_unset,
-                exclude_defaults=self.exclude_defaults,
-                exclude_none=self.exclude_none,
-                **model_dump_kwargs,
-            )
+            if isinstance(renderer, PydanticJSONRenderer):
+                temporal_response.content = serializer.to_json(
+                    result, fallback=renderer.fallback, **dump_kwargs
+                )
+                return temporal_response
+            result = serializer.to_python(result, **dump_kwargs)
             return self.api.create_response(
                 request, result, temporal_response=temporal_response
             )
@@ -450,13 +465,13 @@ class Operation:
             resp_object, context={"request": request, "response_status": status}
         )
 
-        result = validated_object.model_dump(
-            by_alias=self.by_alias,
-            exclude_unset=self.exclude_unset,
-            exclude_defaults=self.exclude_defaults,
-            exclude_none=self.exclude_none,
-            **model_dump_kwargs,
-        )["response"]
+        if isinstance(renderer, PydanticJSONRenderer):
+            temporal_response.content = _response_serializer(response_model).to_json(
+                validated_object.response, fallback=renderer.fallback, **dump_kwargs
+            )
+            return temporal_response
+
+        result = validated_object.model_dump(**dump_kwargs)["response"]
         return self.api.create_response(
             request, result, temporal_response=temporal_response
         )

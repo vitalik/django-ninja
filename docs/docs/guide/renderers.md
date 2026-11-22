@@ -82,6 +82,42 @@ class PrettyJSONRenderer(JSONRenderer):
 api = NinjaAPI(renderer=PrettyJSONRenderer())
 ```
 
+## Faster JSON with pydantic
+
+`ninja.renderers.PydanticJSONRenderer` serializes with pydantic's own JSON
+serializer, written in Rust. For operations with a `response=` schema it
+also skips the intermediate step: the validated response is written straight
+to JSON bytes, instead of first being dumped to Python objects with
+`model_dump()` and then encoded with `json.dumps`. Responses without a
+schema and Django Ninja's own error responses go through
+`pydantic_core.to_json`.
+
+```python hl_lines="2 4"
+from ninja import NinjaAPI
+from ninja.renderers import PydanticJSONRenderer
+
+api = NinjaAPI(renderer=PydanticJSONRenderer())
+```
+
+For a list of 500 small objects, turning the validated response into JSON
+is about four times faster. How much of a whole request that saves depends on
+how long validation and the view itself take.
+
+The output follows pydantic's JSON rules, so it differs from the default
+renderer in a few places:
+
+- the JSON is compact (`{"a":1}`), and non-ASCII characters are written as
+  UTF-8 instead of `\u` escapes
+- `datetime` and `time` values keep their microseconds (Django's encoder
+  cuts them to milliseconds), and `timedelta` is written in the short ISO
+  8601 form (`P1DT5S`)
+- `Enum` members are written as their value
+- `json_dumps_params` is not used, and for responses with a schema neither
+  `render()` nor `NinjaAPI.create_response()` is called
+
+Values pydantic can't serialize itself, such as lazy translation strings in
+an `Any` field, are still handed to `encoder_class`.
+
 ## Example: a faster JSON renderer
 
 [orjson](https://github.com/ijl/orjson) is a fast JSON library that also
