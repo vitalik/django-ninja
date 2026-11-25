@@ -18,6 +18,7 @@ dotted attributes and resolver methods. For example::
 
 """
 
+import re
 import warnings
 from typing import (
     Any,
@@ -42,6 +43,9 @@ from ninja.types import DictStrAny
 
 pydantic_version = list(map(int, pydantic.VERSION.split(".")[:2]))
 assert pydantic_version >= [2, 0], "Pydantic 2.0+ required"
+
+# Django template Variable only accepts word chars and dots (no dashes, spaces, etc.)
+_DJANGO_VAR_RE = re.compile(r"^[\w.]+$")
 
 __all__ = ["BaseModel", "Field", "DjangoGetter", "Schema"]
 
@@ -72,6 +76,8 @@ class DjangoGetter:
                 try:
                     value = getattr(self._obj, key)
                 except AttributeError:
+                    if not _DJANGO_VAR_RE.match(key):
+                        raise
                     try:
                         # value = attrgetter(key)(self._obj)
                         variable = Variable(key)
