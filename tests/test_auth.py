@@ -267,6 +267,15 @@ def test_auth(path, kwargs, expected_code, expected_body, settings):
         assert response.status_code == expected_code
         assert response.json() == expected_body
 
+        expected_challenge = None
+        if expected_code == 401:
+            expected_challenge = {
+                "/basic": 'Basic realm="api"',
+                "/bearer": "Bearer",
+                "/async_bearer": "Bearer",
+            }.get(path)
+        assert response.headers.get("WWW-Authenticate") == expected_challenge
+
 
 @pytest.mark.parametrize(
     "username,password",
@@ -383,3 +392,21 @@ def test_bearer_debug_log_does_not_include_credential(settings, caplog):
     assert response.status_code == 401
     assert "s3cr3t" not in caplog.text
     assert "'Token'" in caplog.text
+
+
+def test_multiple_authentication_challenges():
+    def custom_auth(request):
+        return None
+
+    custom_auth.www_authenticate = "Custom"
+
+    api = NinjaAPI(auth=[BearerAuth(), BasicAuth(), custom_auth])
+
+    @api.get("/protected")
+    def protected(request):
+        return {"ok": True}
+
+    response = TestClient(api).get("/protected")
+
+    assert response.status_code == 401
+    assert response.headers["WWW-Authenticate"] == ('Bearer, Basic realm="api", Custom')
