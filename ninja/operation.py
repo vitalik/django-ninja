@@ -338,7 +338,18 @@ class Operation:
             if result:
                 request.auth = result  # type: ignore
                 return None
-        return self.api.on_exception(request, AuthenticationError())
+        return self._authentication_error(request)
+
+    def _authentication_error(self, request: HttpRequest) -> HttpResponse:
+        response = self.api.on_exception(request, AuthenticationError())
+        challenges = [
+            challenge
+            for callback in self.auth_callbacks
+            if (challenge := getattr(callback, "www_authenticate", None))
+        ]
+        if response.status_code == 401 and challenges:
+            response["WWW-Authenticate"] = ", ".join(challenges)
+        return response
 
     def _check_throttles(self, request: HttpRequest) -> Optional[HttpResponse]:
         throttle_durations = []
@@ -585,7 +596,7 @@ class AsyncOperation(Operation):
             if result:
                 request.auth = result  # type: ignore
                 return None
-        return self.api.on_exception(request, AuthenticationError())
+        return self._authentication_error(request)
 
 
 class PathView:

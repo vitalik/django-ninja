@@ -199,6 +199,7 @@ async def test_async_with_bearer():
 
     res = await client.get("/async")  # NO key
     assert res.json() == {"detail": "Unauthorized"}
+    assert res.headers.get("WWW-Authenticate") == "Bearer"
 
     res = await client.get("/async", headers={"Authorization": "Bearer secret"})
     assert res.json() == {"auth": "secret"}

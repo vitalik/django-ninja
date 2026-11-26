@@ -20,6 +20,7 @@ class HttpAuthBase(AuthBase, ABC):
 
 class HttpBearer(HttpAuthBase, ABC):
     openapi_scheme: str = "bearer"
+    www_authenticate: str = "Bearer"
     header: str = "Authorization"
 
     def __call__(self, request: HttpRequest) -> Optional[Any]:
@@ -51,6 +52,7 @@ class DecodeError(Exception):
 
 class HttpBasicAuth(HttpAuthBase, ABC):  # TODO: maybe HttpBasicAuthBase
     openapi_scheme = "basic"
+    www_authenticate: str = 'Basic realm="api"'
     header = "Authorization"
 
     def __call__(self, request: HttpRequest) -> Optional[Any]:
