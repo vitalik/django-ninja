@@ -14,7 +14,7 @@ modes:
 | Mode | Wraps | Runs | Receives | Returns |
 |---|---|---|---|---|
 | `"view"` | Ninja's whole request handler | before authentication, throttling and parameter parsing | the raw `HttpRequest` and unparsed URL kwargs, exactly like a normal Django view | a Django `HttpResponse` |
-| `"operation"` (default) | your endpoint function itself | after parameters are parsed and validated, and auth/throttle checks pass | the same validated arguments your function normally receives | whatever your function returns (a dict, a `Schema`, a `(status, data)` tuple, …) — not yet turned into a response |
+| `"operation"` (default) | your endpoint function itself | after parameters are parsed and validated, and auth/throttle checks pass | the same validated arguments your function normally receives | whatever your function returns (a dict, a `Schema`, a `Status(code, body)`, …) — not yet turned into a response |
 
 Use **VIEW** mode for anything that works at the HTTP level — caching, adding
 headers, rate limiting, or reusing an existing Django view decorator such as
@@ -270,13 +270,15 @@ def slow_endpoint(request):
 # -> {"message": "done", "_timing": "1.001s"}
 ```
 
-**Feature-flag gate** (OPERATION mode) — reject with a `(status, data)` tuple
-instead of raising:
+**Feature-flag gate** (OPERATION mode) — reject with `Status(code, body)`
+instead of raising. The rejection fails with `ConfigError` unless the
+operation's `response` [covers that status](responses.md#multiple-response-schemas),
+so declare it on every gated operation:
 
 ```python
 from functools import wraps
 
-from ninja import Router
+from ninja import Router, Status
 
 router = Router()
 
@@ -288,7 +290,7 @@ def require_feature_flag(flag_name):
         @wraps(func)
         def wrapper(request, *args, **kwargs):
             if flag_name not in ENABLED_FLAGS:
-                return 403, {"error": f"Feature '{flag_name}' is not enabled"}
+                return Status(403, {"error": f"Feature '{flag_name}' is not enabled"})
             return func(request, *args, **kwargs)
 
         return wrapper
@@ -299,7 +301,7 @@ def require_feature_flag(flag_name):
 router.add_decorator(require_feature_flag("new_api"))
 
 
-@router.get("/new-feature")
+@router.get("/new-feature", response={200: dict, 403: dict})
 def new_feature(request):
     return {"feature": "enabled"}
 ```

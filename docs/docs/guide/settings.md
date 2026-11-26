@@ -55,7 +55,7 @@ raises a validation error.
 NINJA_PAGINATION_CLASS = "ninja.pagination.LimitOffsetPagination"
 NINJA_PAGINATION_PER_PAGE = 100
 NINJA_MAX_PER_PAGE_SIZE = 100
-NINJA_PAGINATION_MAX_LIMIT = 1000
+NINJA_PAGINATION_MAX_LIMIT = 1000  # unbounded by default
 NINJA_PAGINATION_DEFAULT_ORDERING = ("-pk",)
 ```
 
