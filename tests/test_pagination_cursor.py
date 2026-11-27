@@ -1,6 +1,7 @@
 from base64 import b64encode
 from datetime import date, timedelta
 from http import HTTPStatus
+from urllib.parse import urlsplit
 
 import django
 import pytest
@@ -42,6 +43,12 @@ def cursor_events_default_size(request, **kwargs):
 @api.get("/cursor_events_tied_dates", response=list[EventSchema])
 @paginate(CursorPagination, ordering=("start_date",), page_size=100)
 def cursor_events_tied_dates(request, **kwargs):
+    return Event.objects.all()
+
+
+@api.get("/cursor_composite", response=list[EventSchema])
+@paginate(CursorPagination, ordering=("end_date", "-pk"), page_size=2)
+def cursor_composite(request, **kwargs):
     return Event.objects.all()
 
 
@@ -1065,3 +1072,37 @@ async def test_async_cursor_pagination_last_item_deleted():
     assert len(response_data["results"]) == 0
     assert response_data["next"] is None
     assert response_data["previous"] is not None
+
+
+def test_composite_cursor_navigates_ties_without_offset(django_assert_num_queries):
+    path = "/cursor_composite"
+    expected = list(
+        Event.objects.order_by("end_date", "-pk").values_list("title", flat=True)
+    )
+    pages = []
+    url = path
+    while url:
+        with django_assert_num_queries(1) as queries:
+            response = client.get(url).json()
+        assert " OFFSET " not in queries.captured_queries[0]["sql"].upper()
+        pages.append([item["title"] for item in response["results"]])
+        url = (
+            path + "?" + urlsplit(response["next"]).query if response["next"] else None
+        )
+    assert [title for page in pages for title in page] == expected
+
+    for page in reversed(pages[:-1]):
+        url = path + "?" + urlsplit(response["previous"]).query
+        response = client.get(url).json()
+        assert [item["title"] for item in response["results"]] == page
+    assert response["previous"] is None
+
+
+def test_composite_ordering_accepts_legacy_cursor():
+    ordered = Event.objects.order_by("end_date", "-pk")
+    cursor = CursorPagination.Cursor(p=str(ordered[0].end_date), o=2)
+    url = CursorPagination._add_cursor_to_URL("/cursor_composite", cursor)
+    page = client.get(url).json()
+    assert [item["title"] for item in page["results"]] == list(
+        ordered.values_list("title", flat=True)[2:4]
+    )
