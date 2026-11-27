@@ -16,8 +16,9 @@ from typing import (
 )
 from urllib import parse
 
+from django.core.exceptions import FieldDoesNotExist
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.db.models import QuerySet
+from django.db.models import Q, QuerySet
 from django.http import HttpRequest
 from django.utils.module_loading import import_string
 from pydantic import BaseModel, field_validator
@@ -269,7 +270,9 @@ class CursorPagination(AsyncPaginationBase):
             description="Number of items to skip from the current position",
         )
 
-        @field_validator("*", mode="before")
+        keys: Optional[list[str]] = None
+
+        @field_validator("p", "r", "o", mode="before")
         @classmethod
         def validate_individual_queryparam(cls, value: Any) -> Any:
             """
@@ -459,10 +462,44 @@ class CursorPagination(AsyncPaginationBase):
 
         return queryset.order_by(*self.ordering)
 
+    def _supports_composite_position(self, queryset: QuerySet) -> bool:
+        if len(self.ordering) < 2:
+            return False
+        meta = queryset.model._meta
+        for order in self.ordering:
+            name = order.removeprefix("-")
+            try:
+                field = meta.pk if name == "pk" else meta.get_field(name)
+            except FieldDoesNotExist:
+                return False
+            if not field.concrete or field.null or field.is_relation:
+                return False
+        return bool(field.unique)
+
     def _find_position(self, queryset: QuerySet, cursor: Cursor) -> QuerySet:
         """
         Filter queryset to start from the cursor position.
         """
+        if cursor.keys is not None:
+            if (
+                not self._supports_composite_position(queryset)
+                or len(cursor.keys) != len(self.ordering)
+                or cursor.p is not None
+                or cursor.o
+            ):
+                raise ValidationError([{"cursor": "Invalid Cursor"}])
+            after = Q()
+            equal: dict[str, str] = {}
+            for order, value in zip(self.ordering, cursor.keys):
+                name = order.removeprefix("-")
+                comparison = "lt" if order.startswith("-") != cursor.r else "gt"
+                after |= Q(**equal, **{f"{name}__{comparison}": value})
+                equal[name] = value
+            try:
+                return queryset.filter(after)
+            except (DjangoValidationError, ValueError, TypeError, OverflowError) as e:
+                raise ValidationError([{"cursor": "Invalid Cursor"}]) from e
+
         if cursor.p is None:
             return queryset
 
@@ -491,36 +528,9 @@ class CursorPagination(AsyncPaginationBase):
 
         # fetch results here and turn into a list
         results_plus_one = list(queryset[cursor.o : cursor.o + page_size + 1])
-        additional_position = (
-            self._get_position(results_plus_one[-1])
-            if len(results_plus_one) > page_size
-            else None
+        return self._page_response(
+            queryset, cursor, results_plus_one, page_size, request
         )
-
-        if cursor.r:
-            results = list(reversed(results_plus_one[:page_size]))
-        else:
-            results = results_plus_one[:page_size]
-
-        next_cursor = self._build_next_cursor(
-            current_cursor=cursor,
-            results=results,
-            additional_position=additional_position,
-        )
-
-        previous_cursor = self._build_previous_cursor(
-            current_cursor=cursor,
-            results=results,
-            additional_position=additional_position,
-        )
-
-        base_url = request.build_absolute_uri()
-
-        return {
-            "next": self._add_cursor_to_URL(base_url, next_cursor),
-            "previous": self._add_cursor_to_URL(base_url, previous_cursor),
-            self.items_attribute: results,
-        }
 
     async def apaginate_queryset(
         self,
@@ -546,6 +556,18 @@ class CursorPagination(AsyncPaginationBase):
         results_plus_one = [
             obj async for obj in queryset[cursor.o : cursor.o + page_size + 1]
         ]
+        return self._page_response(
+            queryset, cursor, results_plus_one, page_size, request
+        )
+
+    def _page_response(
+        self,
+        queryset: QuerySet,
+        cursor: Cursor,
+        results_plus_one: list[Any],
+        page_size: int,
+        request: HttpRequest,
+    ) -> Any:
         additional_position = (
             self._get_position(results_plus_one[-1])
             if len(results_plus_one) > page_size
@@ -557,17 +579,39 @@ class CursorPagination(AsyncPaginationBase):
         else:
             results = results_plus_one[:page_size]
 
-        next_cursor = self._build_next_cursor(
-            current_cursor=cursor,
-            results=results,
-            additional_position=additional_position,
-        )
+        if self._supports_composite_position(queryset) and cursor.p is None:
 
-        previous_cursor = self._build_previous_cursor(
-            current_cursor=cursor,
-            results=results,
-            additional_position=additional_position,
-        )
+            def boundary(item: Any, reverse: bool) -> CursorPagination.Cursor:
+                keys = [
+                    str(getattr(item, order.removeprefix("-")))
+                    for order in self.ordering
+                ]
+                return self.Cursor(keys=keys, r=reverse)
+
+            has_more = len(results_plus_one) > page_size
+            has_next = cursor.r or has_more
+            has_previous = has_more if cursor.r else cursor.keys is not None
+            next_cursor = boundary(results[-1], False) if results and has_next else None
+            previous_cursor = (
+                boundary(results[0], True) if results and has_previous else None
+            )
+            if not results and cursor.keys:
+                if cursor.r:
+                    next_cursor = self.Cursor(keys=cursor.keys)
+                else:
+                    previous_cursor = self.Cursor(keys=cursor.keys, r=True)
+        else:
+            next_cursor = self._build_next_cursor(
+                current_cursor=cursor,
+                results=results,
+                additional_position=additional_position,
+            )
+
+            previous_cursor = self._build_previous_cursor(
+                current_cursor=cursor,
+                results=results,
+                additional_position=additional_position,
+            )
 
         base_url = request.build_absolute_uri()
 
